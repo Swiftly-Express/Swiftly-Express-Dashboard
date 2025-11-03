@@ -4,15 +4,9 @@ import Button from '../components/Button';
 import PageWrapper from '../components/PageWrapper';
 import { YummyText } from '../components/YummyText';
 import HandDrawnSvg from '../components/HandDrawnSvg';
-import { Zap, ShoppingBag, Truck, Briefcase, ChevronUp, ChevronDown } from 'lucide-react';
+import { ChevronUp, ChevronDown } from 'lucide-react';
 
-type Step = {
-  title: string;
-  description: string;
-  image: string;
-};
-
-const steps: Step[] = [
+const steps = [
   {
     title: 'Book',
     description: 'Schedule your pickup online or via our mobile app in just a few clicks Choose your service type andp delivery speed.',

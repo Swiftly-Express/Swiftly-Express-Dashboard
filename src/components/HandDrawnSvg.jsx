@@ -1,14 +1,6 @@
 import React from 'react';
 
-type Props = {
-  className?: string;
-  width?: string | number;
-  height?: string | number;
-  ariaLabel?: string;
-  strokeColor?: string;
-};
-
-const HandDrawnSvg: React.FC<Props> = ({
+const HandDrawnSvg= ({
   className,
   width = 90,
   height = 18,

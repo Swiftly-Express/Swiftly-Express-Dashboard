@@ -2,7 +2,7 @@ import React from 'react';
 import { IonContent, IonHeader, IonPage, IonTitle, IonToolbar, IonCard, IonCardHeader, IonCardTitle, IonCardContent, IonAvatar, IonItem, IonLabel, IonButton, IonIcon, IonList } from '@ionic/react';
 import { mail, call, location } from 'ionicons/icons';
 
-const Profile: React.FC = () => {
+const Profile = () => {
   return (
     <IonPage>
       <IonHeader>
