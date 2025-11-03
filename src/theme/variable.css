@@ -1,0 +1,92 @@
+
+@import url("https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,200..800&display=swap");
+
+.bricolage-font {
+    font-family: "Bricolage Grotesque", sans-serif, -apple-system, BlinkMacSystemFont,
+      "Helvetica Neue", "Roboto", sans-serif;
+  }
+/* Swiftly Brand Colors */
+:root {
+    /* Primary Brand Green */
+    --brand-green: #00B75A;
+    --brand-green-light: #34d399;
+    --brand-green-dark: #059669;
+    
+    /* Primary Brand Black */
+    --brand-black: #1f2937;
+    --brand-black-light: #374151;
+    --brand-black-dark: #111827;
+    
+    /* Swiftly Background */
+    --brand-bg: #f5f5f5;
+  }
+  
+  /* Custom utility classes for Swiftly brand colors */
+  .bg-brand-green {
+    background-color: var(--brand-green);
+  }
+  
+  .bg-brand-green-light {
+    background-color: var(--brand-green-light);
+  }
+  
+  .bg-brand-green-dark {
+    background-color: var(--brand-green-dark);
+  }
+  
+  .bg-brand-black {
+    background-color: var(--brand-black);
+  }
+  
+  .bg-brand-black-light {
+    background-color: var(--brand-black-light);
+  }
+  
+  .bg-brand-black-dark {
+    background-color: var(--brand-black-dark);
+  }
+  
+  .text-brand-green {
+    color: var(--brand-green);
+  }
+  
+  .text-brand-green-light {
+    color: var(--brand-green-light);
+  }
+  
+  .text-brand-green-dark {
+    color: var(--brand-green-dark);
+  }
+  
+  .text-brand-black {
+    color: var(--brand-black);
+  }
+  
+  .text-brand-black-light {
+    color: var(--brand-black-light);
+  }
+  
+  .text-brand-black-dark {
+    color: var(--brand-black-dark);
+  }
+  
+  .border-brand-green {
+    border-color: var(--brand-green);
+  }
+  
+  .border-brand-black {
+    border-color: var(--brand-black);
+  }
+  
+  /* Hover state utilities */
+  .hover\:bg-brand-green-dark:hover {
+    background-color: var(--brand-green-dark);
+  }
+  
+  .hover\:bg-brand-green:hover {
+    background-color: var(--brand-green);
+  }
+  
+  .hover\:text-brand-green-dark:hover {
+    color: var(--brand-green-dark);
+  }
