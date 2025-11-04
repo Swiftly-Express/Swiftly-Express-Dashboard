@@ -71,6 +71,10 @@ const SwiftlyLanding = () => {
       question: 'Is Swiftly available 24/7?',
       answer: 'Yes, we’re always on! Swiftly runs 24/7 so you can send or receive deliveries anytime, day or night.',
     },
+    {
+      question: 'Is Swiftly available 24/7?',
+      answer: 'Yes, we’re always on! Swiftly runs 24/7 so you can send or receive deliveries anytime, day or night.',
+    },
   ];
 
   return (
@@ -381,7 +385,7 @@ const SwiftlyLanding = () => {
           </div>
 
           {/* Carton Box - Right */}
-          <div className="absolute right-14 top-24 -translate-y-1/2 w-60 h-60 pointer-events-none">
+          <div className="absolute right-14 top-24 z-20 -translate-y-1/2 w-60 h-60 pointer-events-none">
             <img
               src="/carton.svg"
               alt="Carton Box"
@@ -458,53 +462,207 @@ const SwiftlyLanding = () => {
         </section>
 
         {/* FAQ Section */}
-        <section className="bg-[#1a1a1a] py-20">
-          <PageWrapper className="max-w-5xl mx-auto">
-            <div className="max-w-7xl mx-auto flex flex-col md:flex-row items-center justify-between gap-16 px-6 md:px-8">
+        <section className="bg-[#1a1a1a] h-auto relative overflow-hidden">
+          <PageWrapper className="max-w-6xl mx-auto">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-12 px-6">
               {/* Left Section - FAQ Text */}
-              <div className="flex-1 space-y-6">
-                <div>
-                  <p className="text-[#10b981] font-medium text-lg mb-2">FAQs - Frequently asked questions</p>
-                  <h2 className="text-4xl md:text-5xl font-bold mb-10 leading-tight">Got questions?</h2>
+              <div className="space-y-6">
+                <div className="flex flex-col">
+                  <YummyText className="text-[#10b981] font-[400] text-sm mb-4 mt-12 py-10">
+                    FAQs - Frequently asked questions
+                  </YummyText>
+                  <YummyText className="text-4xl text-[#F9FAFB] font-medium leading-tight -mt-14 mb-6">
+                    Got questions?
+                  </YummyText>
+                  <YummyText className="text-sm text-[#F9FAFB] font-[300] mb-18 -mt-6">
+                    Here are a few things people always ask — and our <br/> answers to them
+                  </YummyText>
                 </div>
-      
-                <div className="space-y-4">
+                <div className="space-y-3">
                   {faqs.map((faq, index) => (
                     <div
                       key={index}
-                      className="border border-gray-700 rounded-2xl overflow-hidden bg-[#111]"
+                      className="border border-[#F9FAFB] rounded-lg overflow-hidden bg-[#1a1a1a]"
                     >
                       <button
                         onClick={() => setOpenIndex(openIndex === index ? null : index)}
-                        className="w-full flex justify-between items-center px-6 py-4 text-left focus:outline-none"
+                        className="w-full flex justify-between items-center px-5 py-3 text-left focus:outline-none hover:bg-[#222] transition-colors"
                       >
-                        <span className="text-lg font-medium text-white">{faq.question}</span>
+                        <YummyText className="text-base font-[300] text-[#10b981]">{faq.question}</YummyText>
                         {openIndex === index ? (
-                          <ChevronUp className="text-[#10b981] w-5 h-5" />
+                          <ChevronUp className="text-[#10b981] w-5 h-5 flex-shrink-0 ml-4" />
                         ) : (
-                          <ChevronDown className="text-[#10b981] w-5 h-5" />
+                          <ChevronDown className="text-[#10b981] w-5 h-5 flex-shrink-0 ml-4" />
                         )}
                       </button>
       
                       {openIndex === index && (
-                        <div className="px-6 pb-4 text-gray-400 text-base leading-relaxed">{faq.answer}</div>
+                        <div className="px-5 pb-4">
+                          <YummyText className="text-gray-400 text-sm font-[300] leading-relaxed">
+                            {faq.answer}
+                          </YummyText>
+                        </div>
                       )}
                     </div>
                   ))}
                 </div>
               </div>
       
-              {/* Right Section - Image */}
-              <div className="flex-1 flex justify-center relative">
-                <img
-                  src="/images/green-delivery-box.png"
-                  alt="Swiftly delivery box"
-                  className="w-[300px] md:w-[420px] object-contain"
-                />
+              {/* Right Section - Image (Fixed position) */}
+              <div className="hidden md:flex items-end justify-center">
+                <div className="sticky top-20">
+                  <img
+                    src="/deliverybike.svg"
+                    alt="Delivery Bike"
+                    className="w-[5200px] object-contain"
+                  />
+                </div>
               </div>
             </div>
           </PageWrapper>
-        </section>      
+        </section>
+
+        {/* Download App & Quote Section */}
+        <section className="bg-white py-10">
+          <PageWrapper className="max-w-6xl mx-auto px-20">
+            <div className="grid grid-cols-2 w-[106%] h-[668px] gap-6 -ml-7">
+              {/* Download App Card */}
+              <div className="bg-[#1a1a1a] rounded-3xl p-14 relative overflow-hidden">
+                <div className="relative z-10 -mt-5">
+                  <YummyText className="text-white text-5xl font-[300] mb-4 leading-tight">
+                    Download Our<br />Mobile App
+                  </YummyText>
+                  <YummyText className="text-[#FFEDD4] flex text-sm font-[300] mb-6 max-w-xs mt-4 leading-relaxed">
+                    Book deliveries, track packages, and manage your shipments on the go. Available for iOS and Android.
+                  </YummyText>
+                  
+                  {/* App Store Buttons */}
+                  <div className="flex gap-3 mb-8">
+                    <a href="https://play.google.com/store" target="_blank" rel="noopener noreferrer">
+                      <img src="/playstore.svg" alt="Get it on Google Play" className="h-11" />
+                    </a>
+                    <a href="https://www.apple.com/app-store/" target="_blank" rel="noopener noreferrer">
+                      <img src="/applestore.svg" alt="Download on the App Store" className="h-11" />
+                    </a>
+                  </div>
+                </div>
+
+                {/* Illustration */}
+                <div className="absolute bottom-0 right-0 w-full">
+                  <img src="/orderbox.svg" alt="Mobile App" className="w-full object-contain" />
+                </div>
+              </div>
+
+              {/* Get Quote Card */}
+              <div className="bg-[#10b981] rounded-3xl p-10 relative overflow-hidden">
+                <div className="relative z-10">
+                  <YummyText className="text-white text-5xl font-[300] mb-4 leading-tight">
+                    Get a Free<br />Quote
+                  </YummyText>
+                  <YummyText className="text-[#FFEDD4] flex text-sm font-[300] mb-6 max-w-xs mt-4 leading-relaxed">
+                    Need a custom logistics solution? Contact us for a personalized quote tailored to your business needs.
+                  </YummyText>
+                  
+                  <Button variant="light" className="!bg-white !text-[#10b981] hover:!bg-gray-100 !px-5 !py-2.5 !rounded-full">
+                    <YummyText className="font-[400] text-[#001900] text-xs">Book a delivery</YummyText>
+                  </Button>
+                </div>
+
+                {/* Illustration */}
+                <div className="absolute bottom-0 right-12 w-[70%]">
+                  <img src="/quotation.svg" alt="Quotation" className="w-full object-contain" />
+                </div>
+              </div>
+            </div>
+          </PageWrapper>
+        </section>
+
+        {/* Footer */}
+        <footer className="bg-[#111111] text-white py-12">
+          <PageWrapper className="max-w-6xl mx-auto px-6">
+            <div className="grid grid-cols-1 md:grid-cols-4 gap-10 mb-12">
+              {/* Company Info */}
+              <div>
+                <YummyText className="text-2xl font-medium mb-4">Swiftly Express</YummyText>
+                <YummyText className="flex text-gray-400 text-sm font-[300] leading-relaxed mb-6">
+                  Your trusted logistics partner delivering excellence across the nation with speed, security, and reliability.
+                </YummyText>
+                
+                {/* Social Icons */}
+                <div className="flex gap-3">
+                  <a href="#" className="w-10 h-10 rounded-lg bg-[#1a1a1a] flex items-center justify-center hover:bg-[#10b981] transition-colors">
+                    <span className="text-lg">f</span>
+                  </a>
+                  <a href="#" className="w-10 h-10 rounded-lg bg-[#1a1a1a] flex items-center justify-center hover:bg-[#10b981] transition-colors">
+                    <span className="text-lg">𝕏</span>
+                  </a>
+                  <a href="#" className="w-10 h-10 rounded-lg bg-[#1a1a1a] flex items-center justify-center hover:bg-[#10b981] transition-colors">
+                    <span className="text-lg">in</span>
+                  </a>
+                  <a href="#" className="w-10 h-10 rounded-lg bg-[#1a1a1a] flex items-center justify-center hover:bg-[#10b981] transition-colors">
+                    <span className="text-lg">📷</span>
+                  </a>
+                </div>
+              </div>
+
+              {/* Quick Links */}
+              <div>
+                <YummyText className="text-lg font-medium mb-4">Quick Links</YummyText>
+                <ul className="space-y-3">
+                  <li><a href="#" className="text-gray-400 hover:text-[#10b981] text-sm font-[300] transition-colors">About Us</a></li>
+                  <li><a href="#" className="text-gray-400 hover:text-[#10b981] text-sm font-[300] transition-colors">Our Services</a></li>
+                  <li><a href="#" className="text-gray-400 hover:text-[#10b981] text-sm font-[300] transition-colors">Smart Ride</a></li>
+                  <li><a href="#" className="text-gray-400 hover:text-[#10b981] text-sm font-[300] transition-colors">Track Package</a></li>
+                  <li><a href="#" className="text-gray-400 hover:text-[#10b981] text-sm font-[300] transition-colors">Careers</a></li>
+                  <li><a href="#" className="text-gray-400 hover:text-[#10b981] text-sm font-[300] transition-colors">Blog</a></li>
+                </ul>
+              </div>
+
+              {/* Services */}
+              <div>
+                <YummyText className="text-lg font-medium mb-4">Services</YummyText>
+                <ul className="space-y-3">
+                  <li><a href="#" className="text-gray-400 hover:text-[#10b981] text-sm font-[300] transition-colors">Express Delivery</a></li>
+                  <li><a href="#" className="text-gray-400 hover:text-[#10b981] text-sm font-[300] transition-colors">E-commerce Fulfillment</a></li>
+                  <li><a href="#" className="text-gray-400 hover:text-[#10b981] text-sm font-[300] transition-colors">Interstate Logistics</a></li>
+                  <li><a href="#" className="text-gray-400 hover:text-[#10b981] text-sm font-[300] transition-colors">Corporate Delivery</a></li>
+                  <li><a href="#" className="text-gray-400 hover:text-[#10b981] text-sm font-[300] transition-colors">Same-Day Delivery</a></li>
+                </ul>
+              </div>
+
+              {/* Contact Us */}
+              <div>
+                <YummyText className="text-lg font-medium mb-4">Contact Us</YummyText>
+                <ul className="space-y-4">
+                  <li className="flex items-start gap-3">
+                    <span className="text-[#10b981] mt-1">📍</span>
+                    <YummyText className="text-gray-400 text-sm font-[300]">123 Logistics Avenue, Suite 100</YummyText>
+                  </li>
+                  <li className="flex items-start gap-3">
+                    <span className="text-[#10b981] mt-1">📞</span>
+                    <YummyText className="text-gray-400 text-sm font-[300]">+1 (800) SWIFTLY</YummyText>
+                  </li>
+                  <li className="flex items-start gap-3">
+                    <span className="text-[#10b981] mt-1">✉️</span>
+                    <YummyText className="text-gray-400 text-sm font-[300]">support@swiftlyexpress.com</YummyText>
+                  </li>
+                </ul>
+              </div>
+            </div>
+
+            {/* Bottom Bar */}
+            <div className="border-t border-gray-800 pt-6 flex flex-col md:flex-row justify-between items-center gap-4">
+              <YummyText className="text-gray-500 text-sm font-[300]">
+                © 2025 Swiftly Express. All rights reserved.
+              </YummyText>
+              <div className="flex gap-6">
+                <a href="#" className="text-gray-500 hover:text-[#10b981] text-sm font-[300] transition-colors">Privacy Policy</a>
+                <a href="#" className="text-gray-500 hover:text-[#10b981] text-sm font-[300] transition-colors">Terms of Service</a>
+                <a href="#" className="text-gray-500 hover:text-[#10b981] text-sm font-[300] transition-colors">Cookie Policy</a>
+              </div>
+            </div>
+          </PageWrapper>
+        </footer>      
       </IonContent>
     </IonPage>
   );
