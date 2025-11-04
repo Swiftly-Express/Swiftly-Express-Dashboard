@@ -76,7 +76,7 @@ const SwiftlyLanding = () => {
   return (
     <IonPage>
       <IonHeader className="ion-no-border -mb-6">
-        <IonToolbar className="bg-white gap-10 -mb-3">
+        <IonToolbar className="bg-white gap-10 px-3 -mb-3">
           <PageWrapper className="py-3 flex items-center justify-between">
             {/* Logo */}
             <YummyText className="text-3xl  px-3 font-sm text-black">
@@ -211,11 +211,11 @@ const SwiftlyLanding = () => {
               ))}
             </div> */}
 
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 ml-3 mr-0.5 -mt-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 ml-3 mr-0.5 -mt-4 px-3">
               {services.map((service, index) => (
                 <div
                   key={index}
-                  className="bg-[#1E1E1E] rounded-2xl p-5 text-left flex flex-col items-start h-[370px] relative overflow-hidden"
+                  className="bg-[#1E1E1E] rounded-3xl p-5 text-left flex flex-col items-start h-[370px] relative overflow-hidden"
                   style={{
                     background: "radial-gradient(circle at center, #1a1a1a, #0d0d0d)",
                   }}
@@ -245,12 +245,12 @@ const SwiftlyLanding = () => {
         </section>
 
         {/* No Hassle Section */}
-        <section className="px-1 -mt-12 ml-3 mb-14">
+        <section className="px-4 -mt-12 ml-2 mb-14">
           <PageWrapper className="max-w-7xl">
-            <div className="relative rounded-xl overflow-hidden h-[430px] flex items-stretch">
+            <div className="relative rounded-3xl overflow-hidden  h-[430px] flex items-center">
               {/* Background Image */}
               <div
-                className="absolute inset-0 bg-cover bg-center"
+                className="absolute inset-0 bg-cover opacity-100 bg-center"
                 style={{
                   backgroundImage: 'url(/lady.svg)',
                 }}
@@ -258,13 +258,13 @@ const SwiftlyLanding = () => {
               />
 
               {/* Dark gradient overlay */}
-              {/* <div className="absolute inset-0 bg-gradient-to-r from-black/80 via-black/50 to-transparent" /> */}
+              <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/5" />
 
               {/* Content Layer */}
-              <div className="relative z-10 w-full flex flex-col md:flex-row items-center justify-between md:px-12">
+              <div className="relative z-10 w-full flex flex-row items-center justify-between md:px-11">
                 {/* Left Text Section */}
                 <div className="flex flex-col justify-center text-left text-white max-w-full">
-                  <YummyText className="text-5xl font-[700] leading-tight mb-3 -mt-12 -ml-3">
+                  <YummyText className="text-5xl font-[600] leading-tight mb-3 -mt-12 -ml-3">
                     No Hassle. Just<br />Swiftly Am.
                   </YummyText>
 
@@ -292,7 +292,7 @@ const SwiftlyLanding = () => {
                         className="w-37 h-37"
                       >
                         <img
-                          src="applestore.svg"
+                          src="/applestore.svg"
                           alt="Download on the App Store"
                           className="w-full h-full object-contain"
                         />
@@ -323,37 +323,40 @@ const SwiftlyLanding = () => {
                 >How It Works
                 </YummyText>
               </div>
-              <YummyText className="text-2xl font-semibold text-[#1E1E1E] mb-1">
+              <YummyText className="text-4xl font-semibold text-[#1E1E1E] mb-1">
                 Three simple steps to get your <br/> package delivered
               </YummyText>
             </div>
 
             {/* Steps */}
-            <div className="grid grid-cols-1 md:grid-cols-3 -mt-8 mb-8 gap-4">
+            <div className="grid grid-cols-1 md:grid-cols-3 ml-3.5 -mt-11 mb-8 px-3 mx-2 gap-4">
               {steps.map((step, index) => (
                 <div
                   key={index}
-                  className="bg-[#111111] rounded-2xl p-8 text-left flex flex-col items-start h-[420px] relative overflow-hidden"
+                  className="bg-[#111111] !rounded-3xl p-14 px-12 h-[410px] text-left flex flex-col items-start  relative overflow-hidden"
                   style={{
                     background: "radial-gradient(circle at center, #1a1a1a, #0d0d0d)",
                   }}
                 >
                   {/* Top content: title + description stacked tightly */}
                   <div className="flex flex-col">
-                    <YummyText className="text-white text-3xxl font-sm">
+                    <YummyText className="text-[#F9FAFB] text-3xl font-sm">
                       {step.title}
                     </YummyText>
-                    <YummyText className="text-gray-300 text-sm leading-tight mt-2">
+                    <YummyText className="text-[#E5E7EB] text-sm font-[200] leading-snug mt-2">
                       {step.description}
                     </YummyText>
                   </div>
 
                   {/* Illustration - occupy remaining space at bottom */}
-                  <div className="mt-auto w-full flex justify-center">
+                  <div className="absolute bottom-0 left-0 right-0 w-full flex justify-center pb-0">
                     <img
                       src={step.image}
                       alt={step.title}
-                      className="max-w-[220px] h-auto object-contain"
+                      className="w-full max-w-[240px] h-auto object-contain"
+                      style={{
+                        maxHeight: '220px'
+                      }}
                     />
                   </div>
                 </div>
@@ -363,11 +366,11 @@ const SwiftlyLanding = () => {
         </section>
               
         {/* Testimonials Section */}
-        <section className="relative py-20  overflow-hidden">
+        <section className="relative py-14 overflow-hidden">
           {/* Carton Box - Left */}
-          <div className="absolute left-0 top-1/2 -translate-y-1/2 w-64 h-64 pointer-events-none">
+          <div className="absolute left-8 top-80 mt-3 -translate-y-1/2 w-60 h-60 pointer-events-none">
             <img
-              src="/images/carton-box.png"
+              src="/cartonback.svg"
               alt="Carton Box"
               className="w-full h-full object-contain"
               style={{
@@ -378,19 +381,19 @@ const SwiftlyLanding = () => {
           </div>
 
           {/* Carton Box - Right */}
-          <div className="absolute right-0 top-1/2 -translate-y-1/2 w-80 h-80 pointer-events-none">
+          <div className="absolute right-14 top-24 -translate-y-1/2 w-60 h-60 pointer-events-none">
             <img
-              src="/images/carton-box-2.png"
+              src="/carton.svg"
               alt="Carton Box"
               className="w-full h-full object-contain"
               style={{
-                transform: 'translateX(30%) rotate(15deg)',
+                transform: 'translateX(30%) rotate(1deg)',
                 filter: 'drop-shadow(0 10px 20px rgba(0,0,0,0.1))'
               }}
             />
           </div>
 
-          <PageWrapper className="max-w-5xl mx-auto relative z-10">
+          <PageWrapper className="max-w-5xl mx-auto relative -mb-8 z-10">
             {/* Header */}
             <div className="flex flex-col items-center text-center mb-12 -mt-12">
               <YummyText className="px-6 py-1.5 bg-green-200 text-green-700 rounded-full text-xs font-[400] mb-1">
@@ -405,7 +408,7 @@ const SwiftlyLanding = () => {
             </div>
 
             {/* Testimonial Card */}
-            <div className="rounded-2xl p-12 -mt-8 text-center">
+            <div className="rounded-2xl text-center max-w-2xl mx-auto">
               <YummyText className="text-xl md:text-xl font-medium text-black leading-relaxed">
                 Swiftly saved my day! My client needed documents<br />
                 in less than an hour, and these guys showed up<br />
@@ -422,31 +425,31 @@ const SwiftlyLanding = () => {
                 <HandDrawnSvg className="-mb-3 mr-0 -mt-2" />
 
                 {/* Avatar Cluster */}
-                <div className="flex items-center justify-center ml-4">
+                <div className="flex items-center justify-center">
                   {/* Left avatars (comes first) */}
                   <div className="w-11 h-11 mr-2 -mb-3 rounded-full bg-gray-300 mt-8 border-2 border-white overflow-hidden">
-                    <img src="/images/avatar-1.jpg" alt="Customer" className="w-full h-full object-cover" />
+                    <img src="/lockedhair.svg" alt="Customer" className="w-full h-full object-cover" />
                   </div>
 
                   {/* left avatar (second) */}
-                  <div className="w-11 h-11 mt-28 mb-3 -mr-4  rounded-full bg-gray-400 border-2 border-white overflow-hidden">
-                    <img src="/images/avatar-2.jpg" alt="Customer" className="w-full h-full object-cover" />
+                  <div className="w-11 h-11 mt-28 mb-3 -mr-4  rounded-full bg-gray-400 border-2 border-white overflow-hidden opacity-30">
+                    <img src="/normalwig.svg" alt="Customer" className="w-full h-full object-cover" />
                   </div>
                   
                   {/* central avatar(big icon)*/}
                   <div className="w-[75px] h-[75px] rounded-full bg-purple-200 border-2 border-[#10b981] overflow-hidden relative -ml-5 -mt-12 -mb-5 z-10">
-                    <img src="/images/avatar-main.jpg" alt="Chinonso Eze" className="w-full h-full object-cover" />
+                    <img src="/lockedhair.svg" alt="Chinonso Eze" className="w-full h-full object-cover" />
                   </div>
                   
 
                   {/* Bottom avatars 3rd */}
-                  <div className="w-11 h-11 rounded-full bg-gray-200 mt-[52%] -ml-8 border-2 border-white overflow-hidden -ml-1">
-                    <img src="/images/avatar-3.jpg" alt="Customer" className="w-full h-full object-cover" />
+                  <div className="w-11 h-11 rounded-full bg-gray-200 mt-[52%] -ml-8 border-2 border-white overflow-hidden opacity-30 -ml-1">
+                    <img src="/roundcuthair.svg" alt="Customer" className="w-full h-full object-cover" />
                   </div>
 
                   {/* fianl image */}
-                  <div className="w-11 h-11 rounded-full bg-gray-500 border-2 border-white overflow-hidden ml-1.5 mt-7">
-                    <img src="/images/avatar-4.jpg" alt="Customer" className="w-full h-full object-cover" />
+                  <div className="w-11 h-11 rounded-full bg-gray-500 border-2 border-white overflow-hidden opacity-30 ml-1.5 mt-9">
+                    <img src="/afrowig.svg" alt="Customer" className="w-full h-full object-cover" />
                   </div>
                 </div>
               </div>
