@@ -25,7 +25,10 @@ import "./theme/variable.css";
 
 /* App pages */
 import Home from "./pages/Home";
-import Profile from "./pages/Profile";
+import Services from "./pages/Services";
+import Contact from "./pages/Contact";
+import HowItWorks from "./pages/HowItWorks";
+import SmartRide from "./pages/SmartRide";
 
 setupIonicReact();
 
@@ -36,8 +39,17 @@ const App = () => (
         <Route exact path="/home">
           <Home />
         </Route>
-        <Route exact path="/profile">
-          <Profile />
+        <Route exact path="/services">
+          <Services />
+        </Route>
+        <Route exact path="/how-it-works">
+          <HowItWorks />
+        </Route>
+        <Route exact path="/smart-ride">
+          <SmartRide />
+        </Route>
+        <Route exact path="/contact">
+          <Contact />
         </Route>
         <Route exact path="/">
           <Redirect to="/home" />

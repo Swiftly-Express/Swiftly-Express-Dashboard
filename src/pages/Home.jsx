@@ -4,6 +4,8 @@ import Button from '../components/Button';
 import PageWrapper from '../components/PageWrapper';
 import { YummyText } from '../components/YummyText';
 import HandDrawnSvg from '../components/HandDrawnSvg';
+import Navbar from '../components/Navbar';
+import StoreButtons from '../components/StoreButtons';
 import { ChevronUp, ChevronDown } from 'lucide-react';
 
 const steps = [
@@ -88,33 +90,7 @@ const SwiftlyLanding = () => {
             </YummyText>
 
             {/* Navbar */}
-            <nav className="hidden md:flex gap-10 items-center -mr-16 text-base">
-              <YummyText>
-                <a href="#home" className="text-[#10b981] font-sm text-sm hover:text-[#059669] transition-colors">
-                  Home
-                </a>
-              </YummyText>
-              <YummyText>
-                <a href="#services" className="text-gray-700 font-sm text-sm hover:text-black transition-colors">
-                  Services
-                </a>
-              </YummyText>
-              <YummyText>
-                <a href="#how-it-works" className="text-gray-700 font-sm text-sm hover:text-black transition-colors">
-                  How It Works
-                </a>
-              </YummyText>
-              <YummyText>
-                <a href="#smart-ride" className="text-gray-700 font-sm text-sm hover:text-black transition-colors">
-                  Smart Ride
-                </a>
-              </YummyText>
-              <YummyText>
-                <a href="#contact" className="text-gray-700 font-sm text-sm hover:text-black transition-colors">
-                  Contact
-                </a>
-              </YummyText>
-            </nav>
+            <Navbar />
 
             {/* Buttons */}
             <div className="flex items-center px-4 gap-3">
@@ -273,36 +249,7 @@ const SwiftlyLanding = () => {
                   </YummyText>
 
                   {/* App Store Buttons */}
-                  <div className="flex gap-2 -ml-3">
-                    <div>
-                      <a
-                        href="https://play.google.com/store"
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="w-42 h-42 mb-4"
-                      >
-                        <img
-                          src="/playstore.svg"
-                          alt="Get it on Google Play"
-                          className="w-full h-full object-contain"
-                        />
-                      </a>
-                    </div>
-                    <div className="flex items-center">
-                      <a
-                        href="https://www.apple.com/app-store/"
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="w-37 h-37"
-                      >
-                        <img
-                          src="/applestore.svg"
-                          alt="Download on the App Store"
-                          className="w-full h-full object-contain"
-                        />
-                      </a>
-                    </div>
-                  </div>
+                  <StoreButtons className="-ml-3" />
                 </div>
 
                 {/* Right Description Text */}
@@ -337,11 +284,12 @@ const SwiftlyLanding = () => {
               {steps.map((step, index) => (
                 <div
                   key={index}
-                  className="bg-[#111111] !rounded-3xl p-14 px-12 h-[410px] text-left flex flex-col items-start  relative overflow-hidden"
+                  className="bg-[#1E1E1E] !rounded-3xl p-14 px-12 h-[410px] text-left flex flex-col items-start  relative overflow-hidden"
                   style={{
-                    background: "radial-gradient(circle at center, #1a1a1a, #0d0d0d)",
+                    backgroundImage: 'url(/doublecircle.svg) background: #D9D9D9 w-[40%]',
                   }}
                 >
+                  
                   {/* Top content: title + description stacked tightly */}
                   <div className="flex flex-col">
                     <YummyText className="text-[#F9FAFB] text-3xl font-sm">
@@ -525,7 +473,7 @@ const SwiftlyLanding = () => {
         {/* Download App & Quote Section */}
         <section className="bg-white py-10">
           <PageWrapper className="max-w-6xl mx-auto px-20">
-            <div className="grid grid-cols-2 w-[106%] h-[668px] gap-6 -ml-7">
+            <div className="grid grid-cols-2 w-[106%] h-[668px] gap-4 -ml-7">
               {/* Download App Card */}
               <div className="bg-[#1a1a1a] rounded-3xl p-14 relative overflow-hidden">
                 <div className="relative z-10 -mt-5">
@@ -537,14 +485,7 @@ const SwiftlyLanding = () => {
                   </YummyText>
                   
                   {/* App Store Buttons */}
-                  <div className="flex gap-3 mb-8">
-                    <a href="https://play.google.com/store" target="_blank" rel="noopener noreferrer">
-                      <img src="/playstore.svg" alt="Get it on Google Play" className="h-11" />
-                    </a>
-                    <a href="https://www.apple.com/app-store/" target="_blank" rel="noopener noreferrer">
-                      <img src="/applestore.svg" alt="Download on the App Store" className="h-11" />
-                    </a>
-                  </div>
+                  <StoreButtons />
                 </div>
 
                 {/* Illustration */}
@@ -568,9 +509,20 @@ const SwiftlyLanding = () => {
                   </Button>
                 </div>
 
-                {/* Illustration */}
-                <div className="absolute bottom-0 right-12 w-[70%]">
-                  <img src="/quotation.svg" alt="Quotation" className="w-full object-contain" />
+                <div className="absolute bottom-0 right-9 w-[70%] h-[200px]">
+                  {/* quotes.svg underneath (yellow folder) */}
+                  <img
+                    src="/quotes.svg"
+                    alt="Quotes"
+                    className="w-full h-full object-contain absolute bottom-0 left-32"
+                  />
+                  
+                  {/* quotation.svg on top (paper) */}
+                  <img
+                    src="/quotation.svg"
+                    alt="Quotation"
+                    className="w-[85%] h-auto object-contain absolute bottom-0 left-16 z-10"
+                  />
                 </div>
               </div>
             </div>
