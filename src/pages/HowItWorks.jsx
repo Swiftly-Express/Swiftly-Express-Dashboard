@@ -284,30 +284,48 @@ const HowItWorks = () => {
           </section>
         </PageWrapper>
 
-        {/* ✅ LIVE GPS TRACKING (Full Width) */}
-        <section className="relative w-full overflow-hidden mt-20 rounded-3xl mx-auto max-w-6xl bg-black px-10 py-16 flex items-center justify-between text-white">
+        {/* ✅ LIVE GPS TRACKING (Perfect Match — Two Images, Right-Aligned) */}
+        <section className="w-full flex justify-center mt-2 px-12">
+          <div className="relative w-full max-w-5xl bg-[#1A1A1A] rounded-[40px] py-12 mb-8 px-14 flex items-center justify-between overflow-hidden">
 
-          <div className="max-w-md">
-            <YummyText className="text-3xl mb-4">Live GPS Tracking</YummyText>
-            <YummyText className="text-sm opacity-90 leading-relaxed mb-6">
-              Our advanced tracking system uses GPS technology to give you real-time updates 
-              on your package location.
-            </YummyText>
+            {/* LEFT TEXT */}
+            <div className="max-w-lg z-10">
+              <YummyText className="text-3xl mb-3 text-[#F9FAFB] flex">Live GPS Tracking</YummyText>
+              <YummyText className="text-sm opacity-90 leading-relaxed mb-7 text-[#F9FAFB]">
+                Our advanced tracking system uses GPS technology to give you real-time
+                updates on your package location. Watch as your driver moves closer to
+                the destination, with accurate ETA calculations based on traffic conditions.
+              </YummyText>
 
-            <Button
-              variant="light"
-              className="!bg-[#16A34A] hover:!bg-[#149C46] !text-white !px-6 !py-3 rounded-lg"
-            >
-              <YummyText>Try Demo Tracking</YummyText>
-            </Button>
+              <Button
+                variant="light"
+                className="!bg-[#16A34A] hover:!bg-[#149C46] flex text-xs !text-white mt-4 !px-4 !py-3 rounded-lg"
+              >
+                <YummyText>Try Demo Tracking</YummyText>
+              </Button>
+            </div>
+
+            {/* RIGHT IMAGES (Two images layered exactly like your screenshot) */}
+            <div className="relative  w-[30%] flex items-center justify-center">
+
+              {/* FLOATING PACKAGE (TOP IMAGE) */}
+              <img
+                src="/phonemap-flyingbox.svg"
+                alt="Flying Package"
+                className="absolute right-10 w-85 h-auto object-contain z-20"
+              />
+
+              {/* PHONE GPS IMAGE (BOTTOM IMAGE) */}
+              {/* <img
+                src="/phonemap.svg"
+                alt="GPS Phone UI"
+                className="relative w-72 h-auto object-contain z-10 mt-10"
+              /> */}
+            </div>
+
           </div>
-
-          <img 
-            src="/gpsphone.svg" 
-            className="w-60 h-auto object-contain"
-            alt="GPS"
-          />
         </section>
+
 
         <Footer />
       </IonContent>
