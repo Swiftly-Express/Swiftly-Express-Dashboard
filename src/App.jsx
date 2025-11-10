@@ -30,6 +30,16 @@ import Contact from "./pages/Contact";
 import HowItWorks from "./pages/HowItWorks";
 import SmartRide from "./pages/SmartRide";
 
+/* Additional pages */
+import About from "./pages/About";
+import Blog from "./pages/Blog";
+import Careers from "./pages/Careers";
+import TrackPackage from "./pages/TrackPackage";
+import PrivacyPolicy from "./pages/PrivacyPolicy";
+import TermsOfService from "./pages/TermsOfService";
+import CookiePolicy from "./pages/CookiePolicy";
+import ForgotPassword from "./pages/auth/ForgotPassword";
+
 /* Auth pages */
 import RoleSelect from "./pages/auth/RoleSelect";
 import CustomerLogin from "./pages/auth/CustomerLogin";
@@ -91,6 +101,32 @@ const App = () => (
         </Route>
         <Route exact path="/rider/dashboard">
           <RiderDashboard />
+        </Route>
+
+        {/* Additional Routes */}
+        <Route exact path="/about">
+          <About />
+        </Route>
+        <Route exact path="/blog">
+          <Blog />
+        </Route>
+        <Route exact path="/careers">
+          <Careers />
+        </Route>
+        <Route exact path="/track-package">
+          <TrackPackage />
+        </Route>
+        <Route exact path="/privacy-policy">
+          <PrivacyPolicy />
+        </Route>
+        <Route exact path="/terms-of-service">
+          <TermsOfService />
+        </Route>
+        <Route exact path="/cookie-policy">
+          <CookiePolicy />
+        </Route>
+        <Route exact path="/forgot-password">
+          <ForgotPassword />
         </Route>
 
         <Route exact path="/">

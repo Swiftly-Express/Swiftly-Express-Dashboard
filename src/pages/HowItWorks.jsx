@@ -47,10 +47,18 @@ const HowItWorks = () => {
 
             {/* Buttons */}
             <div className="flex items-center px-4 gap-3">
-              <Button variant="primary" className="!px-3 !py-2 font-[100] text-[9px]">
+              <Button 
+              variant="primary" 
+              className="!px-3 !py-2 font-[100] text-[9px]"
+              onClick={() => window.location.href = '/auth/customer/signup'}
+              >
                 <YummyText>Book a delivery</YummyText>
               </Button>
-              <Button variant="dark" className="!px-2.5 !py-2 font-[100] text-[9px]">
+              <Button 
+              variant="dark" 
+              className="!px-2.5 !py-2 font-[100] text-[9px]"
+              onClick={() => window.location.href = '/auth/role-select'}
+              >
                 <YummyText>Get Started</YummyText>
               </Button>
             </div>

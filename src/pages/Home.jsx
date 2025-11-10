@@ -577,12 +577,12 @@ const SwiftlyLanding = () => {
               <div>
                 <YummyText className="text-lg font-medium mb-4">Quick Links</YummyText>
                 <ul className="space-y-3">
-                  <li><a href="#" className="text-gray-400 hover:text-[#10b981] text-sm font-[300] transition-colors">About Us</a></li>
-                  <li><a href="#" className="text-gray-400 hover:text-[#10b981] text-sm font-[300] transition-colors">Our Services</a></li>
-                  <li><a href="#" className="text-gray-400 hover:text-[#10b981] text-sm font-[300] transition-colors">Smart Ride</a></li>
-                  <li><a href="#" className="text-gray-400 hover:text-[#10b981] text-sm font-[300] transition-colors">Track Package</a></li>
-                  <li><a href="#" className="text-gray-400 hover:text-[#10b981] text-sm font-[300] transition-colors">Careers</a></li>
-                  <li><a href="#" className="text-gray-400 hover:text-[#10b981] text-sm font-[300] transition-colors">Blog</a></li>
+                  <li><span onClick={() => window.location.href = '/about'} className="text-gray-400 hover:text-[#10b981] text-sm font-[300] transition-colors cursor-pointer">About Us</span></li>
+                  <li><span onClick={() => window.location.href = '/services'} className="text-gray-400 hover:text-[#10b981] text-sm font-[300] transition-colors cursor-pointer">Our Services</span></li>
+                  <li><span onClick={() => window.location.href = '/smart-ride'} className="text-gray-400 hover:text-[#10b981] text-sm font-[300] transition-colors cursor-pointer">Smart Ride</span></li>
+                  <li><span onClick={() => window.location.href = '/track-package'} className="text-gray-400 hover:text-[#10b981] text-sm font-[300] transition-colors cursor-pointer">Track Package</span></li>
+                  <li><span onClick={() => window.location.href = '/careers'} className="text-gray-400 hover:text-[#10b981] text-sm font-[300] transition-colors cursor-pointer">Careers</span></li>
+                  <li><span onClick={() => window.location.href = '/blog'} className="text-gray-400 hover:text-[#10b981] text-sm font-[300] transition-colors cursor-pointer">Blog</span></li>
                 </ul>
               </div>
 
@@ -590,11 +590,11 @@ const SwiftlyLanding = () => {
               <div>
                 <YummyText className="text-lg font-medium mb-4">Services</YummyText>
                 <ul className="space-y-3">
-                  <li><a href="#" className="text-gray-400 hover:text-[#10b981] text-sm font-[300] transition-colors">Express Delivery</a></li>
-                  <li><a href="#" className="text-gray-400 hover:text-[#10b981] text-sm font-[300] transition-colors">E-commerce Fulfillment</a></li>
-                  <li><a href="#" className="text-gray-400 hover:text-[#10b981] text-sm font-[300] transition-colors">Interstate Logistics</a></li>
-                  <li><a href="#" className="text-gray-400 hover:text-[#10b981] text-sm font-[300] transition-colors">Corporate Delivery</a></li>
-                  <li><a href="#" className="text-gray-400 hover:text-[#10b981] text-sm font-[300] transition-colors">Same-Day Delivery</a></li>
+                  <li><span onClick={() => window.location.href = '/services'} className="text-gray-400 hover:text-[#10b981] text-sm font-[300] transition-colors cursor-pointer">Express Delivery</span></li>
+                  <li><span onClick={() => window.location.href = '/services'} className="text-gray-400 hover:text-[#10b981] text-sm font-[300] transition-colors cursor-pointer">E-commerce Fulfillment</span></li>
+                  <li><span onClick={() => window.location.href = '/services'} className="text-gray-400 hover:text-[#10b981] text-sm font-[300] transition-colors cursor-pointer">Interstate Logistics</span></li>
+                  <li><span onClick={() => window.location.href = '/services'} className="text-gray-400 hover:text-[#10b981] text-sm font-[300] transition-colors cursor-pointer">Corporate Delivery</span></li>
+                  <li><span onClick={() => window.location.href = '/services'} className="text-gray-400 hover:text-[#10b981] text-sm font-[300] transition-colors cursor-pointer">Same-Day Delivery</span></li>
                 </ul>
               </div>
 
@@ -624,9 +624,9 @@ const SwiftlyLanding = () => {
                 © 2025 Swiftly Express. All rights reserved.
               </YummyText>
               <div className="flex gap-6">
-                <a href="#" className="text-gray-500 hover:text-[#10b981] text-sm font-[300] transition-colors">Privacy Policy</a>
-                <a href="#" className="text-gray-500 hover:text-[#10b981] text-sm font-[300] transition-colors">Terms of Service</a>
-                <a href="#" className="text-gray-500 hover:text-[#10b981] text-sm font-[300] transition-colors">Cookie Policy</a>
+                <span onClick={() => window.location.href = '/privacy-policy'} className="text-gray-500 hover:text-[#10b981] text-sm font-[300] transition-colors cursor-pointer">Privacy Policy</span>
+                <span onClick={() => window.location.href = '/terms-of-service'} className="text-gray-500 hover:text-[#10b981] text-sm font-[300] transition-colors cursor-pointer">Terms of Service</span>
+                <span onClick={() => window.location.href = '/cookie-policy'} className="text-gray-500 hover:text-[#10b981] text-sm font-[300] transition-colors cursor-pointer">Cookie Policy</span>
               </div>
             </div>
           </PageWrapper>

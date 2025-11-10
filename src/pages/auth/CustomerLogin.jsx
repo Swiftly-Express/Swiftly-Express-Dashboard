@@ -9,17 +9,47 @@ const CustomerLogin = () => {
     email: '',
     password: ''
   });
-
-  const history = useHistory();
+  const [error, setError] = useState('');
 
   const handleSubmit = (e) => {
     e.preventDefault();
-    console.log('Form submitted:', formData);
-    // Handle login logic here
-    history.push('/customer/dashboard');
+    setError('');
+
+    // Basic validation
+    if (!formData.email || !formData.password) {
+      setError('Please fill in all fields');
+      return;
+    }
+
+    // Email validation
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(formData.email)) {
+      setError('Please enter a valid email address');
+      return;
+    }
+
+    try {
+      // Simulated API call
+      // In a real app, you would make a POST request to your auth endpoint
+      
+      // Store auth data
+      localStorage.setItem('auth_token', 'customer_token_123');
+      localStorage.setItem('user_type', 'customer');
+      localStorage.setItem('user_data', JSON.stringify({
+        id: '123',
+        email: formData.email,
+        type: 'customer'
+      }));
+
+      // Redirect to customer dashboard
+      window.location.href = '/customer/dashboard';
+    } catch (error) {
+      setError('Login failed. Please try again.');
+    }
   };
 
   const handleChange = (e) => {
+    setError('');
     setFormData({
       ...formData,
       [e.target.name]: e.target.value
@@ -83,6 +113,11 @@ const CustomerLogin = () => {
                 </div>
 
                 {/* Submit Button */}
+                {error && (
+                  <div className="text-red-500 text-sm mb-4 text-center">
+                    {error}
+                  </div>
+                )}
                 <Button
                   type="submit"
                   variant="primary"
@@ -95,9 +130,12 @@ const CustomerLogin = () => {
                 <div className="text-center mt-6">
                   <YummyText className="text-sm text-gray-600">
                     Don't have an account?{' '}
-                    <Link to="/customer/signup" className="text-[#00D68F] hover:underline">
+                    <span 
+                      onClick={() => window.location.href = '/auth/customer/signup'}
+                      className="text-[#00D68F] hover:underline cursor-pointer"
+                    >
                       Sign Up
-                    </Link>
+                    </span>
                   </YummyText>
                 </div>
               </form>

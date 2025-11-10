@@ -12,12 +12,70 @@ const RiderSignup = () => {
     agreeToTerms: false
   });
 
+  const [error, setError] = useState('');
+
   const handleSubmit = () => {
-    console.log('Form submitted:', formData);
-    // Handle signup logic here
+    // Reset error
+    setError('');
+
+    // Basic validation
+    if (!formData.fullName || !formData.email || !formData.password || !formData.confirmPassword) {
+      setError('Please fill in all fields');
+      return;
+    }
+
+    // Email validation
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(formData.email)) {
+      setError('Please enter a valid email address');
+      return;
+    }
+
+    // Password validation
+    if (formData.password.length < 8) {
+      setError('Password must be at least 8 characters long');
+      return;
+    }
+
+    // Password match validation
+    if (formData.password !== formData.confirmPassword) {
+      setError('Passwords do not match');
+      return;
+    }
+
+    // Terms agreement validation
+    if (!formData.agreeToTerms) {
+      setError('Please agree to the Terms of Service and Privacy Policy');
+      return;
+    }
+
+    try {
+      // Simulated API call for signup
+      // In a real app, you would:
+      // 1. Make a POST request to your registration endpoint
+      // 2. Get back a token and user data
+      // 3. Store the token in localStorage/sessionStorage
+      // 4. Store user data in app state/context
+
+      // Simulate storing auth token
+      localStorage.setItem('auth_token', 'rider_token_123');
+      localStorage.setItem('user_type', 'rider');
+      localStorage.setItem('user_data', JSON.stringify({
+        id: '123',
+        email: formData.email,
+        name: formData.fullName,
+        type: 'rider'
+      }));
+
+      // Redirect to rider dashboard
+      window.location.href = '/rider/dashboard';
+    } catch (error) {
+      setError('Registration failed. Please try again.');
+    }
   };
 
   const handleChange = (field, value) => {
+    setError(''); // Clear error when user makes changes
     setFormData({
       ...formData,
       [field]: value
@@ -25,8 +83,7 @@ const RiderSignup = () => {
   };
 
   const handleSignIn = () => {
-    console.log('Navigate to sign in');
-    // Add navigation logic
+    window.location.href = '/auth/rider/login';
   };
 
   return (
@@ -119,10 +176,16 @@ const RiderSignup = () => {
                 </div>
 
                 {/* Create Account Button */}
+                {error && (
+                  <div className="text-red-500 text-sm mb-4 text-center">
+                    {error}
+                  </div>
+                )}
                 <Button
                   variant="primary"
                   onClick={handleSubmit}
-                  className="!w-full !py-3 !bg-[#00B75A] text-sm opacity-50 hover:!bg-[#00D68F] !text-white rounded-lg transition-all duration-300"
+                  className={`!w-full !py-3 !bg-[#00B75A] text-sm !text-white rounded-lg transition-all duration-300 ${formData.agreeToTerms ? 'hover:!bg-[#00D68F] opacity-100' : 'opacity-50 cursor-not-allowed'}`}
+                  disabled={!formData.agreeToTerms}
                 >
                   <YummyText>Create Account</YummyText>
                 </Button>

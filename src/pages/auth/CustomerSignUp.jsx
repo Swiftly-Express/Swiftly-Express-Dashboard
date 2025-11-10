@@ -12,17 +12,68 @@ const CustomerSignUp = () => {
     password: '',
     confirmPassword: ''
   });
-
-  const history = useHistory();
+  const [error, setError] = useState('');
 
   const handleSubmit = (e) => {
     e.preventDefault();
-    console.log('Form submitted:', formData);
-    // Handle signup logic here
-    history.push('/customer/dashboard');
+    setError('');
+
+    // Basic validation
+    if (!formData.fullName || !formData.email || !formData.phone || !formData.password || !formData.confirmPassword) {
+      setError('Please fill in all fields');
+      return;
+    }
+
+    // Email validation
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(formData.email)) {
+      setError('Please enter a valid email address');
+      return;
+    }
+
+    // Phone validation
+    const phoneRegex = /^\+?[1-9]\d{9,14}$/;
+    if (!phoneRegex.test(formData.phone.replace(/[^\d+]/g, ''))) {
+      setError('Please enter a valid phone number');
+      return;
+    }
+
+    // Password validation
+    if (formData.password.length < 8) {
+      setError('Password must be at least 8 characters long');
+      return;
+    }
+
+    // Password match validation
+    if (formData.password !== formData.confirmPassword) {
+      setError('Passwords do not match');
+      return;
+    }
+
+    try {
+      // Simulated API call
+      // In a real app, you would make a POST request to your registration endpoint
+      
+      // Store auth data
+      localStorage.setItem('auth_token', 'customer_token_123');
+      localStorage.setItem('user_type', 'customer');
+      localStorage.setItem('user_data', JSON.stringify({
+        id: '123',
+        email: formData.email,
+        name: formData.fullName,
+        phone: formData.phone,
+        type: 'customer'
+      }));
+
+      // Redirect to customer dashboard
+      window.location.href = '/customer/dashboard';
+    } catch (error) {
+      setError('Registration failed. Please try again.');
+    }
   };
 
   const handleChange = (e) => {
+    setError('');
     setFormData({
       ...formData,
       [e.target.name]: e.target.value
