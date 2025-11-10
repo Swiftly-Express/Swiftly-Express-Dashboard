@@ -81,8 +81,8 @@ const SwiftlyLanding = () => {
 
   return (
     <IonPage>
-      <IonHeader className="ion-no-border -mb-6">
-        <IonToolbar className="bg-white gap-10 px-3 -mb-3">
+      <IonHeader className="ion-no-border mb-6">
+        <IonToolbar className="bg-white gap-10 px-3 -mb-6">
           <PageWrapper className="py-3 flex items-center justify-between">
             {/* Logo */}
             <YummyText className="text-3xl  px-3 font-sm text-black">
@@ -94,10 +94,18 @@ const SwiftlyLanding = () => {
 
             {/* Buttons */}
             <div className="flex items-center px-4 gap-3">
-              <Button variant="primary" className="!px-3 !py-2 font-[100] text-[9px]">
+              <Button 
+                variant="primary" 
+                className="!px-3 !py-2 font-[100] text-[9px]"
+                onClick={() => window.location.href = '/auth/customer/signup'}
+              >
                 <YummyText>Book a delivery</YummyText>
               </Button>
-              <Button variant="dark" className="!px-2.5 !py-2 font-[100] text-[9px]">
+              <Button 
+                variant="dark" 
+                className="!px-2.5 !py-2 font-[100] text-[9px]"
+                onClick={() => window.location.href = '/auth/role-select'}
+              >
                 <YummyText>Get Started</YummyText>
               </Button>
             </div>
@@ -106,7 +114,7 @@ const SwiftlyLanding = () => {
       </IonHeader>
 
       <IonContent className="bg-[#f5f5f5]">
-        <div className="relative flex flex-col items-center justify-center min-h-[calc(100vh-80px)] px-4 -mt-16 text-center">
+        <div className="relative flex flex-col items-center justify-center min-h-[calc(100vh-80px)] px-4 -mt-10 text-center">
           {/* Background Image with Gradient Overlay */}
           <div className="absolute inset-0 -top-20 -bottom-5 pointer-events-none">
             <div className="relative w-full h-full">
@@ -143,7 +151,11 @@ const SwiftlyLanding = () => {
           </YummyText>
 
           {/* CTA Button */}
-          <Button variant="dark" className="px-10 -mt-4 !py-2 text-xs font-[100] rounded-full z-10">
+          <Button 
+            variant="dark" 
+            className="px-10 -mt-4 !py-2 text-xs font-[100] rounded-full z-10"
+            onClick={() => window.location.href = '/auth/role-select'}
+          >
             <YummyText>Get app now</YummyText>
           </Button>
         </div>
@@ -504,7 +516,11 @@ const SwiftlyLanding = () => {
                     Need a custom logistics solution? Contact us for a personalized quote tailored to your business needs.
                   </YummyText>
                   
-                  <Button variant="light" className="!bg-white !text-[#10b981] hover:!bg-gray-100 !px-5 !py-2.5 !rounded-full">
+                  <Button 
+                    variant="light" 
+                    className="!bg-white !text-[#10b981] hover:!bg-gray-100 !px-5 !py-2.5 !rounded-full"
+                    onClick={() => window.location.href = '/auth/customer/signup'}
+                  >
                     <YummyText className="font-[400] text-[#001900] text-xs">Book a delivery</YummyText>
                   </Button>
                 </div>
