@@ -5,6 +5,7 @@ import Button from '../../components/Button';
 import { Link, useHistory } from 'react-router-dom';
 
 const CustomerLogin = () => {
+  const history = useHistory();
   const [formData, setFormData] = useState({
     email: '',
     password: ''
@@ -41,8 +42,9 @@ const CustomerLogin = () => {
         type: 'customer'
       }));
 
-      // Redirect to customer dashboard
-      window.location.href = '/customer/dashboard';
+  // Redirect to customer dashboard
+  if (document && document.activeElement) document.activeElement.blur();
+  history.push('/customer/dashboard');
     } catch (error) {
       setError('Login failed. Please try again.');
     }
@@ -131,7 +133,7 @@ const CustomerLogin = () => {
                   <YummyText className="text-sm text-gray-600">
                     Don't have an account?{' '}
                     <span 
-                      onClick={() => window.location.href = '/auth/customer/signup'}
+                      onClick={() => { if (document && document.activeElement) document.activeElement.blur(); history.push('/auth/customer/signup'); }}
                       className="text-[#00D68F] hover:underline cursor-pointer"
                     >
                       Sign Up

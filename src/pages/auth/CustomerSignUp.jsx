@@ -5,6 +5,7 @@ import Button from '../../components/Button';
 import { Link, useHistory } from 'react-router-dom';
 
 const CustomerSignUp = () => {
+  const history = useHistory();
   const [formData, setFormData] = useState({
     fullName: '',
     email: '',
@@ -65,8 +66,9 @@ const CustomerSignUp = () => {
         type: 'customer'
       }));
 
-      // Redirect to customer dashboard
-      window.location.href = '/customer/dashboard';
+  // Redirect to customer dashboard
+  if (document && document.activeElement) document.activeElement.blur();
+  history.push('/customer/dashboard');
     } catch (error) {
       setError('Registration failed. Please try again.');
     }

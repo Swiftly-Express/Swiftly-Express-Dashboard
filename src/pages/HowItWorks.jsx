@@ -1,5 +1,6 @@
 import { IonPage, IonHeader, IonToolbar, IonContent } from '@ionic/react';
 import React from 'react';
+import { useHistory } from 'react-router-dom';
 import Button from '../components/Button';
 import PageWrapper from '../components/PageWrapper';
 import { YummyText } from '../components/YummyText';
@@ -23,6 +24,7 @@ const ProcessStep = ({ icon, title }) => (
 );
 
 const HowItWorks = () => {
+  const history = useHistory();
   const steps = [
     { icon: '/phoneicon.svg', title: 'Create Your Account' },
     { icon: '/blockicon-white.svg', title: 'Enter Package Details' },
@@ -50,14 +52,14 @@ const HowItWorks = () => {
               <Button 
               variant="primary" 
               className="!px-3 !py-2 font-[100] text-[9px]"
-              onClick={() => window.location.href = '/auth/customer/signup'}
+              onClick={() => { if (document && document.activeElement) document.activeElement.blur(); history.push('/auth/customer/signup'); }}
               >
                 <YummyText>Book a delivery</YummyText>
               </Button>
               <Button 
               variant="dark" 
               className="!px-2.5 !py-2 font-[100] text-[9px]"
-              onClick={() => window.location.href = '/auth/role-select'}
+              onClick={() => { if (document && document.activeElement) document.activeElement.blur(); history.push('/auth/role-select'); }}
               >
                 <YummyText>Get Started</YummyText>
               </Button>

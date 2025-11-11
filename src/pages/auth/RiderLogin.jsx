@@ -2,8 +2,10 @@ import { IonPage, IonContent } from '@ionic/react';
 import React, { useState } from 'react';
 import { YummyText } from '../../components/YummyText';
 import Button from '../../components/Button';
+import { useHistory } from 'react-router-dom';
 
 const RiderSignIn = () => {
+  const history = useHistory();
   const [formData, setFormData] = useState({
     email: '',
     password: '',
@@ -48,8 +50,9 @@ const RiderSignIn = () => {
         type: 'rider'
       }));
 
-      // Redirect to rider dashboard
-      window.location.href = '/rider/dashboard';
+  // Redirect to rider dashboard
+  if (document && document.activeElement) document.activeElement.blur();
+  history.push('/rider/dashboard');
     } catch (error) {
       setError('Login failed. Please try again.');
     }
@@ -68,7 +71,8 @@ const RiderSignIn = () => {
   };
 
   const handleCreateAccount = () => {
-    window.location.href = '/auth/rider/signup';
+    if (document && document.activeElement) document.activeElement.blur();
+    history.push('/auth/rider/signup');
   };
 
   return (

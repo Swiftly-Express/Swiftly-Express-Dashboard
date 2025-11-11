@@ -1,5 +1,6 @@
 import { IonPage, IonHeader, IonToolbar, IonContent } from '@ionic/react';
 import React from 'react';
+import { useHistory } from 'react-router-dom';
 import Navbar from '../components/Navbar';
 import Footer from '../components/Footer';
 import Button from '../components/Button';
@@ -41,6 +42,7 @@ const StepCard = ({ number, title, description }) => (
 );
 
 const SmartRide = () => {
+  const history = useHistory();
   const features = [
     {
       icon: (
@@ -127,14 +129,14 @@ const SmartRide = () => {
               <Button 
               variant="primary" 
               className="!px-3 !py-2 font-[100] text-[9px]"
-              onClick={() => window.location.href = '/auth/customer/signup'} 
+              onClick={() => { if (document && document.activeElement) document.activeElement.blur(); history.push('/auth/customer/signup'); }} 
               >
                 <YummyText>Book a delivery</YummyText>
               </Button>
               <Button 
               variant="dark" 
               className="!px-2.5 !py-2 font-[100] text-[9px]"
-              onClick={() => window.location.href = '/auth/role-select'}
+              onClick={() => { if (document && document.activeElement) document.activeElement.blur(); history.push('/auth/role-select'); }}
               >
                 <YummyText>Get Started</YummyText>
               </Button>

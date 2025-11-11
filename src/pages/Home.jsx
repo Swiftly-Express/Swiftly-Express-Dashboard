@@ -1,5 +1,6 @@
 import { IonPage, IonHeader, IonToolbar, IonContent } from '@ionic/react';
 import React, { useState } from 'react';
+import { useHistory } from 'react-router-dom';
 import Button from '../components/Button';
 import PageWrapper from '../components/PageWrapper';
 import { YummyText } from '../components/YummyText';
@@ -27,6 +28,7 @@ const steps = [
 ];
 
 const SwiftlyLanding = () => {
+  const history = useHistory();
   const services = [
     {
       image: '/drone.svg',
@@ -97,14 +99,14 @@ const SwiftlyLanding = () => {
               <Button 
                 variant="primary" 
                 className="!px-3 !py-2 font-[100] text-[9px]"
-                onClick={() => window.location.href = '/auth/customer/signup'}
+                onClick={() => { if (document && document.activeElement) document.activeElement.blur(); history.push('/auth/customer/signup'); }}
               >
                 <YummyText>Book a delivery</YummyText>
               </Button>
               <Button 
                 variant="dark" 
                 className="!px-2.5 !py-2 font-[100] text-[9px]"
-                onClick={() => window.location.href = '/auth/role-select'}
+                onClick={() => { if (document && document.activeElement) document.activeElement.blur(); history.push('/auth/role-select'); }}
               >
                 <YummyText>Get Started</YummyText>
               </Button>
@@ -154,7 +156,7 @@ const SwiftlyLanding = () => {
           <Button 
             variant="dark" 
             className="px-10 -mt-4 !py-2 text-xs font-[100] rounded-full z-10"
-            onClick={() => window.location.href = '/auth/role-select'}
+            onClick={() => { if (document && document.activeElement) document.activeElement.blur(); history.push('/auth/role-select'); }}
           >
             <YummyText>Get app now</YummyText>
           </Button>
@@ -519,7 +521,7 @@ const SwiftlyLanding = () => {
                   <Button 
                     variant="light" 
                     className="!bg-white !text-[#10b981] hover:!bg-gray-100 !px-5 !py-2.5 !rounded-full"
-                    onClick={() => window.location.href = '/auth/customer/signup'}
+                    onClick={() => { if (document && document.activeElement) document.activeElement.blur(); history.push('/auth/customer/signup'); }}
                   >
                     <YummyText className="font-[400] text-[#001900] text-xs">Book a delivery</YummyText>
                   </Button>
@@ -577,12 +579,12 @@ const SwiftlyLanding = () => {
               <div>
                 <YummyText className="text-lg font-medium mb-4">Quick Links</YummyText>
                 <ul className="space-y-3">
-                  <li><span onClick={() => window.location.href = '/about'} className="text-gray-400 hover:text-[#10b981] text-sm font-[300] transition-colors cursor-pointer">About Us</span></li>
-                  <li><span onClick={() => window.location.href = '/services'} className="text-gray-400 hover:text-[#10b981] text-sm font-[300] transition-colors cursor-pointer">Our Services</span></li>
-                  <li><span onClick={() => window.location.href = '/smart-ride'} className="text-gray-400 hover:text-[#10b981] text-sm font-[300] transition-colors cursor-pointer">Smart Ride</span></li>
-                  <li><span onClick={() => window.location.href = '/track-package'} className="text-gray-400 hover:text-[#10b981] text-sm font-[300] transition-colors cursor-pointer">Track Package</span></li>
-                  <li><span onClick={() => window.location.href = '/careers'} className="text-gray-400 hover:text-[#10b981] text-sm font-[300] transition-colors cursor-pointer">Careers</span></li>
-                  <li><span onClick={() => window.location.href = '/blog'} className="text-gray-400 hover:text-[#10b981] text-sm font-[300] transition-colors cursor-pointer">Blog</span></li>
+                  <li><span onClick={() => { if (document && document.activeElement) document.activeElement.blur(); history.push('/about'); }} className="text-gray-400 hover:text-[#10b981] text-sm font-[300] transition-colors cursor-pointer">About Us</span></li>
+                  <li><span onClick={() => { if (document && document.activeElement) document.activeElement.blur(); history.push('/services'); }} className="text-gray-400 hover:text-[#10b981] text-sm font-[300] transition-colors cursor-pointer">Our Services</span></li>
+                  <li><span onClick={() => { if (document && document.activeElement) document.activeElement.blur(); history.push('/smart-ride'); }} className="text-gray-400 hover:text-[#10b981] text-sm font-[300] transition-colors cursor-pointer">Smart Ride</span></li>
+                  <li><span onClick={() => { if (document && document.activeElement) document.activeElement.blur(); history.push('/track-package'); }} className="text-gray-400 hover:text-[#10b981] text-sm font-[300] transition-colors cursor-pointer">Track Package</span></li>
+                  <li><span onClick={() => { if (document && document.activeElement) document.activeElement.blur(); history.push('/careers'); }} className="text-gray-400 hover:text-[#10b981] text-sm font-[300] transition-colors cursor-pointer">Careers</span></li>
+                  <li><span onClick={() => { if (document && document.activeElement) document.activeElement.blur(); history.push('/blog'); }} className="text-gray-400 hover:text-[#10b981] text-sm font-[300] transition-colors cursor-pointer">Blog</span></li>
                 </ul>
               </div>
 
@@ -590,11 +592,11 @@ const SwiftlyLanding = () => {
               <div>
                 <YummyText className="text-lg font-medium mb-4">Services</YummyText>
                 <ul className="space-y-3">
-                  <li><span onClick={() => window.location.href = '/services'} className="text-gray-400 hover:text-[#10b981] text-sm font-[300] transition-colors cursor-pointer">Express Delivery</span></li>
-                  <li><span onClick={() => window.location.href = '/services'} className="text-gray-400 hover:text-[#10b981] text-sm font-[300] transition-colors cursor-pointer">E-commerce Fulfillment</span></li>
-                  <li><span onClick={() => window.location.href = '/services'} className="text-gray-400 hover:text-[#10b981] text-sm font-[300] transition-colors cursor-pointer">Interstate Logistics</span></li>
-                  <li><span onClick={() => window.location.href = '/services'} className="text-gray-400 hover:text-[#10b981] text-sm font-[300] transition-colors cursor-pointer">Corporate Delivery</span></li>
-                  <li><span onClick={() => window.location.href = '/services'} className="text-gray-400 hover:text-[#10b981] text-sm font-[300] transition-colors cursor-pointer">Same-Day Delivery</span></li>
+                  <li><span onClick={() => { if (document && document.activeElement) document.activeElement.blur(); history.push('/services'); }} className="text-gray-400 hover:text-[#10b981] text-sm font-[300] transition-colors cursor-pointer">Express Delivery</span></li>
+                  <li><span onClick={() => { if (document && document.activeElement) document.activeElement.blur(); history.push('/services'); }} className="text-gray-400 hover:text-[#10b981] text-sm font-[300] transition-colors cursor-pointer">E-commerce Fulfillment</span></li>
+                  <li><span onClick={() => { if (document && document.activeElement) document.activeElement.blur(); history.push('/services'); }} className="text-gray-400 hover:text-[#10b981] text-sm font-[300] transition-colors cursor-pointer">Interstate Logistics</span></li>
+                  <li><span onClick={() => { if (document && document.activeElement) document.activeElement.blur(); history.push('/services'); }} className="text-gray-400 hover:text-[#10b981] text-sm font-[300] transition-colors cursor-pointer">Corporate Delivery</span></li>
+                  <li><span onClick={() => { if (document && document.activeElement) document.activeElement.blur(); history.push('/services'); }} className="text-gray-400 hover:text-[#10b981] text-sm font-[300] transition-colors cursor-pointer">Same-Day Delivery</span></li>
                 </ul>
               </div>
 
@@ -624,9 +626,9 @@ const SwiftlyLanding = () => {
                 © 2025 Swiftly Express. All rights reserved.
               </YummyText>
               <div className="flex gap-6">
-                <span onClick={() => window.location.href = '/privacy-policy'} className="text-gray-500 hover:text-[#10b981] text-sm font-[300] transition-colors cursor-pointer">Privacy Policy</span>
-                <span onClick={() => window.location.href = '/terms-of-service'} className="text-gray-500 hover:text-[#10b981] text-sm font-[300] transition-colors cursor-pointer">Terms of Service</span>
-                <span onClick={() => window.location.href = '/cookie-policy'} className="text-gray-500 hover:text-[#10b981] text-sm font-[300] transition-colors cursor-pointer">Cookie Policy</span>
+                <span onClick={() => { if (document && document.activeElement) document.activeElement.blur(); history.push('/privacy-policy'); }} className="text-gray-500 hover:text-[#10b981] text-sm font-[300] transition-colors cursor-pointer">Privacy Policy</span>
+                <span onClick={() => { if (document && document.activeElement) document.activeElement.blur(); history.push('/terms-of-service'); }} className="text-gray-500 hover:text-[#10b981] text-sm font-[300] transition-colors cursor-pointer">Terms of Service</span>
+                <span onClick={() => { if (document && document.activeElement) document.activeElement.blur(); history.push('/cookie-policy'); }} className="text-gray-500 hover:text-[#10b981] text-sm font-[300] transition-colors cursor-pointer">Cookie Policy</span>
               </div>
             </div>
           </PageWrapper>
