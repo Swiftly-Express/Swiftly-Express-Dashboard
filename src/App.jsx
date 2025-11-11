@@ -50,6 +50,11 @@ import RiderSignUp from "./pages/auth/RiderSignUp";
 /* Dashboard pages */
 import CustomerDashboard from "./pages/dashboard/CustomerDashboard";
 import RiderDashboard from "./pages/dashboard/RiderDashboard";
+import AvailableOrders from "./pages/dashboard/AvailableOrders";
+import ActiveDeliveries from "./pages/dashboard/ActiveDeliveries";
+import Earnings from "./pages/dashboard/Earnings";
+import Profile from "./pages/dashboard/Profile";
+import Support from "./pages/dashboard/Support";
 
 setupIonicReact();
 
@@ -101,6 +106,21 @@ const App = () => (
         </Route>
         <Route exact path="/rider/dashboard">
           <RiderDashboard />
+        </Route>
+        <Route exact path="/rider/available">
+          <AvailableOrders />
+        </Route>
+        <Route exact path="/rider/active">
+          <ActiveDeliveries />
+        </Route>
+        <Route exact path="/rider/earnings">
+          <Earnings />
+        </Route>
+        <Route exact path="/rider/profile">
+          <Profile />
+        </Route>
+        <Route exact path="/rider/support">
+          <Support />
         </Route>
 
         {/* Additional Routes */}
