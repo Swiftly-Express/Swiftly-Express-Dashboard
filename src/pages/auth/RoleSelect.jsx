@@ -1,15 +1,21 @@
 import { IonPage, IonContent } from '@ionic/react';
 import React from 'react';
+import { useHistory } from 'react-router-dom';
 import Button from '../../components/Button';
 import { YummyText } from '../../components/YummyText';
 
 const RoleSelect = () => {
+  const history = useHistory();
+
   const handleRiderSignup = () => {
-    window.location.href = '/auth/rider/signup';
+    // remove focus from any element on the current page before navigating
+    if (document && document.activeElement) document.activeElement.blur();
+    history.push('/auth/rider/signup');
   };
 
   const handleCustomerSignup = () => {
-    window.location.href = '/auth/customer/signup';
+    if (document && document.activeElement) document.activeElement.blur();
+    history.push('/auth/customer/signup');
   };
 
   return (
