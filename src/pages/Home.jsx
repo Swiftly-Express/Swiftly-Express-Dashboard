@@ -1,6 +1,5 @@
-import { IonPage, IonHeader, IonToolbar, IonContent } from '@ionic/react';
+import { IonPage, IonHeader, IonToolbar, IonContent, useIonRouter } from '@ionic/react';
 import React, { useState } from 'react';
-import { useHistory } from 'react-router-dom';
 import Button from '../components/Button';
 import PageWrapper from '../components/PageWrapper';
 import { YummyText } from '../components/YummyText';
@@ -28,7 +27,7 @@ const steps = [
 ];
 
 const SwiftlyLanding = () => {
-  const history = useHistory();
+  const router = useIonRouter();
   const services = [
     {
       image: '/drone.svg',

@@ -1,13 +1,13 @@
 import React from 'react';
 import { IonPage, IonContent } from '@ionic/react';
-import DashboardLayout from '../../components/dashboard/DashboardLayout';
-import { YummyText } from '../../components/YummyText';
-import Button from '../../components/Button';
+import CustomerLayout from '../components/CustomerLayout';
+import { YummyText } from '../../../components/YummyText';
+import Button from '../../../components/Button';
 
 const CustomerDashboard = () => {
   return (
     <IonPage>
-      <DashboardLayout role="customer">
+      <CustomerLayout>
         <IonContent className="ion-no-padding">
           <div>
             <YummyText className="text-3xl font-medium mb-6">Welcome back, John!</YummyText>
@@ -51,7 +51,7 @@ const CustomerDashboard = () => {
             </div>
           </div>
         </IonContent>
-      </DashboardLayout>
+      </CustomerLayout>
     </IonPage>
   );
 };

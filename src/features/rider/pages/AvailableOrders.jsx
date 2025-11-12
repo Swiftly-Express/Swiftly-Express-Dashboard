@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { IonPage, IonContent } from '@ionic/react';
-import DashboardLayout from '../../components/dashboard/DashboardLayout';
+import RiderLayout from '../components/RiderLayout';
 
 // Shadow only on left, right and bottom - no top shadow for seamless blend
 const sideBottomShadow = {
@@ -171,7 +171,7 @@ const AvailableOrders = () => {
 
   return (
     <IonPage>
-      <DashboardLayout role="rider">
+      <RiderLayout>
         <IonContent className="ion-no-padding">
           {/* Header */}
           <div className="mb-8 py-2">
@@ -266,7 +266,7 @@ const AvailableOrders = () => {
         ))}
       </div>
         </IonContent>
-      </DashboardLayout>
+      </RiderLayout>
     </IonPage>
   );
 };

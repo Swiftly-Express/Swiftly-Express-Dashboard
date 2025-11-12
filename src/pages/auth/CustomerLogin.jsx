@@ -1,11 +1,10 @@
-import { IonPage, IonContent } from '@ionic/react';
+import { IonPage, IonContent, useIonRouter } from '@ionic/react';
 import React, { useState } from 'react';
 import { YummyText } from '../../components/YummyText';
 import Button from '../../components/Button';
-import { Link, useHistory } from 'react-router-dom';
 
 const CustomerLogin = () => {
-  const history = useHistory();
+  const router = useIonRouter();
   const [formData, setFormData] = useState({
     email: '',
     password: ''
@@ -44,7 +43,7 @@ const CustomerLogin = () => {
 
   // Redirect to customer dashboard
   if (document && document.activeElement) document.activeElement.blur();
-  history.push('/customer/dashboard');
+  router.push('/customer/dashboard', 'forward', 'push');
     } catch (error) {
       setError('Login failed. Please try again.');
     }
@@ -133,7 +132,7 @@ const CustomerLogin = () => {
                   <YummyText className="text-sm text-gray-600">
                     Don't have an account?{' '}
                     <span 
-                      onClick={() => { if (document && document.activeElement) document.activeElement.blur(); history.push('/auth/customer/signup'); }}
+                      onClick={() => { if (document && document.activeElement) document.activeElement.blur(); router.push('/auth/customer/signup', 'forward', 'push'); }}
                       className="text-[#00D68F] hover:underline cursor-pointer"
                     >
                       Sign Up

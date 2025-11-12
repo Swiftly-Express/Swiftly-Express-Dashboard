@@ -1,12 +1,12 @@
 import React from 'react';
 import { IonPage, IonContent } from '@ionic/react';
-import DashboardLayout from '../../components/dashboard/DashboardLayout';
-import { YummyText } from '../../components/YummyText';
+import RiderLayout from '../components/RiderLayout';
+import { YummyText } from '../../../components/YummyText';
 
 const Profile = () => {
   return (
     <IonPage>
-      <DashboardLayout role="rider">
+      <RiderLayout>
         <IonContent className="ion-no-padding">
           <div>
             <YummyText className="text-2xl font-semibold mb-2">Profile</YummyText>
@@ -17,7 +17,7 @@ const Profile = () => {
             </div>
           </div>
         </IonContent>
-      </DashboardLayout>
+      </RiderLayout>
     </IonPage>
   );
 };

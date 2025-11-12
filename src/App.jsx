@@ -23,6 +23,9 @@ import "@ionic/react/css/display.css";
 /* Global styles with brand colors */
 import "./theme/variable.css";
 
+/* Error Boundary */
+import ErrorBoundary from "./components/ErrorBoundary";
+
 /* App pages */
 import Home from "./pages/Home";
 import Services from "./pages/Services";
@@ -47,25 +50,27 @@ import CustomerSignUp from "./pages/auth/CustomerSignUp";
 import RiderLogin from "./pages/auth/RiderLogin";
 import RiderSignUp from "./pages/auth/RiderSignUp";
 
-/* Dashboard pages */
-import CustomerDashboard from "./pages/dashboard/CustomerDashboard";
-import RiderDashboard from "./pages/dashboard/RiderDashboard";
-import AvailableOrders from "./pages/dashboard/AvailableOrders";
-import ActiveDeliveries from "./pages/dashboard/ActiveDeliveries";
-import Earnings from "./pages/dashboard/Earnings";
-import Profile from "./pages/dashboard/Profile";
-import Support from "./pages/dashboard/Support";
+/* Dashboard pages - Feature-based structure */
+import CustomerDashboard from "./features/customer/pages/Dashboard";
+import RiderDashboard from "./features/rider/pages/Dashboard";
+import AvailableOrders from "./features/rider/pages/AvailableOrders";
+import ActiveDeliveries from "./features/rider/pages/ActiveDeliveries";
+import Earnings from "./features/rider/pages/Earnings";
+import Profile from "./features/rider/pages/Profile";
+import Support from "./features/rider/pages/Support";
+import AdminDashboard from "./features/admin/pages/Dashboard";
 
 setupIonicReact();
 
 const App = () => (
   <IonApp>
     <IonReactRouter>
-      <IonRouterOutlet>
-        {/* Public Routes */}
-        <Route exact path="/home">
-          <Home />
-        </Route>
+      <ErrorBoundary>
+        <IonRouterOutlet>
+          {/* Public Routes */}
+          <Route exact path="/home">
+            <Home />
+          </Route>
         <Route exact path="/services">
           <Services />
         </Route>
@@ -100,10 +105,12 @@ const App = () => (
           <RiderSignUp />
         </Route>
 
-        {/* Protected Dashboard Routes */}
+        {/* Protected Dashboard Routes - Customer */}
         <Route exact path="/customer/dashboard">
           <CustomerDashboard />
         </Route>
+        
+        {/* Protected Dashboard Routes - Rider */}
         <Route exact path="/rider/dashboard">
           <RiderDashboard />
         </Route>
@@ -121,6 +128,11 @@ const App = () => (
         </Route>
         <Route exact path="/rider/support">
           <Support />
+        </Route>
+
+        {/* Protected Dashboard Routes - Admin */}
+        <Route exact path="/admin/dashboard">
+          <AdminDashboard />
         </Route>
 
         {/* Additional Routes */}
@@ -152,7 +164,8 @@ const App = () => (
         <Route exact path="/">
           <Redirect to="/home" />
         </Route>
-      </IonRouterOutlet>
+        </IonRouterOutlet>
+      </ErrorBoundary>
     </IonReactRouter>
   </IonApp>
 );

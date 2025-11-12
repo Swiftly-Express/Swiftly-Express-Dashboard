@@ -1,6 +1,6 @@
 import React from 'react';
 import { IonContent, IonPage } from '@ionic/react';
-import DashboardLayout from '../../components/dashboard/DashboardLayout';
+import RiderLayout from '../components/RiderLayout';
 
 // Shadow only on left, right and bottom
 const sideBottomShadow = {
@@ -165,7 +165,7 @@ const ActiveDeliveries = () => {
 
   return (
     <IonPage>
-      <DashboardLayout role="rider">
+      <RiderLayout>
         <IonContent className="ion-padding">
           {/* Header */}
           <div className="mb-8 py-2">
@@ -202,7 +202,7 @@ const ActiveDeliveries = () => {
             ))}
           </div>
         </IonContent>
-      </DashboardLayout>
+      </RiderLayout>
     </IonPage>
   );
 };

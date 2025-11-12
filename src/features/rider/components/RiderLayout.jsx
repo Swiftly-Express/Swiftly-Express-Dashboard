@@ -1,15 +1,15 @@
 import React from 'react';
-import Sidebar from '../../components/Sidebar';
-import { YummyText } from '../../components/YummyText';
+import RiderSidebar from './RiderSidebar';
+import { YummyText } from '../../../components/YummyText';
 
-const DashboardLayout = ({ role, children }) => {
+const RiderLayout = ({ children }) => {
   return (
     <div className="flex h-screen bg-[#f5f5f5]">
-      <Sidebar role={role} />
+      <RiderSidebar />
       <div className="ml-64 flex-1 flex flex-col min-h-0 bricolage-font bg-white">
         {/* Fixed Top Header that overlays the sidebar */}
         <div className="fixed top-0 left-0 right-0 z-40">
-          <div className="bg-white border-b border-gray-200  py-4 shadow-sm">
+          <div className="bg-white border-b border-gray-200 py-4 shadow-sm">
             <div className="flex items-center justify-between">
               {/* Left: logo + title */}
               <div className="flex items-center gap-3 ml-4">
@@ -19,7 +19,7 @@ const DashboardLayout = ({ role, children }) => {
                   </svg>
                 </div>
                 <YummyText className="text-lg font-medium text-[#0F172A]">
-                  {role === 'rider' ? 'Rider Dashboard' : 'Dashboard'}
+                  Rider Dashboard
                 </YummyText>
               </div>
 
@@ -33,8 +33,6 @@ const DashboardLayout = ({ role, children }) => {
                   </label>
                   <div className="w-2 h-2 bg-[#00D68F] rounded-full"></div>
                 </div>
-
-                
 
                 <button className="relative p-2 hover:bg-gray-50 rounded-lg transition-colors">
                   <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
@@ -60,4 +58,4 @@ const DashboardLayout = ({ role, children }) => {
   );
 };
 
-export default DashboardLayout;
+export default RiderLayout;

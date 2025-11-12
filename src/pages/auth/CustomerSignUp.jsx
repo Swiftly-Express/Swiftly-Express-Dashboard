@@ -1,11 +1,10 @@
-import { IonPage, IonContent } from '@ionic/react';
+import { IonPage, IonContent, useIonRouter } from '@ionic/react';
 import React, { useState } from 'react';
 import { YummyText } from '../../components/YummyText';
 import Button from '../../components/Button';
-import { Link, useHistory } from 'react-router-dom';
 
 const CustomerSignUp = () => {
-  const history = useHistory();
+  const router = useIonRouter();
   const [formData, setFormData] = useState({
     fullName: '',
     email: '',
@@ -68,7 +67,7 @@ const CustomerSignUp = () => {
 
   // Redirect to customer dashboard
   if (document && document.activeElement) document.activeElement.blur();
-  history.push('/customer/dashboard');
+  router.push('/customer/dashboard', 'forward', 'push');
     } catch (error) {
       setError('Registration failed. Please try again.');
     }

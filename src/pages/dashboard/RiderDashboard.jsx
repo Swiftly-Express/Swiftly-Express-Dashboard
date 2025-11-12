@@ -1,20 +1,25 @@
+import React from 'react';
+import { IonPage, IonContent } from '@ionic/react';
 import DashboardLayout from '../../components/dashboard/DashboardLayout';
 
+// Shadow only on left, right and bottom - no top shadow for seamless blend
+const sideBottomShadow = { boxShadow: '1px 2px 3px rgba(0, 0, 0, 0.04), -1px 2px 3px rgba(0, 0, 0, 0.04), 0 2px 4px rgba(0, 0, 0, 0.06)' };
+
 const StatCard = ({ icon, title, value, subtitle, iconBg }) => (
-  <div className="bg-white rounded-2xl p-6 shadow-sm border border-gray-100">
-    <div className="flex items-start justify-between mb-3">
-      <div className="text-sm text-[#64748B]">{title}</div>
+  <div className="bg-white rounded-xl p-7 border-none" style={sideBottomShadow}>
+    <div className="flex items-start justify-between mb-10">
+      <div className="text-xs text-[#4A5565]">{title}</div>
       <div className={`w-10 h-10 ${iconBg} rounded-xl flex items-center justify-center`}>
         {icon}
       </div>
     </div>
-    <div className="text-3xl font-normal text-[#0F172A] mb-1">{value}</div>
-    <div className="text-sm text-[#64748B]">{subtitle}</div>
+    <div className="text-[29px] font-normal text-[#0F172A] mb-1">{value}</div>
+    <div className="text-[11px] text-[#64748B] leading-none">{subtitle}</div>
   </div>
 );
 
 const DeliveryCard = ({ packageId, status, from, to, customer, price, distance, time, statusColor }) => (
-  <div className="bg-[#F0F9FF] rounded-2xl p-6 mb-4">
+  <div className="bg-gradient-to-br from-[#EFF6FF] to-[#EDFFF9] rounded-2xl p-6 mb-4">
     <div className="flex items-start justify-between mb-4">
       <div className="flex items-center gap-3">
         <div className="text-base font-normal text-[#0F172A]">{packageId}</div>
@@ -28,29 +33,20 @@ const DeliveryCard = ({ packageId, status, from, to, customer, price, distance, 
       </div>
     </div>
     
-    <div className="space-y-2 mb-4">
-      <div>
-        <div className="text-xs text-[#64748B] mb-1">From:</div>
-        <div className="text-sm text-[#0F172A]">{from}</div>
-      </div>
-      <div>
-        <div className="text-xs text-[#64748B] mb-1">To:</div>
-        <div className="text-sm text-[#0F172A]">{to}</div>
-      </div>
-      <div>
-        <div className="text-xs text-[#64748B] mb-1">Customer:</div>
-        <div className="text-sm text-[#0F172A]">{customer}</div>
-      </div>
+    <div className="space-y-1 mb-4">
+      <div className="text-xs text-[#64748B]">From: <span className="text-[#0F172A]">{from}</span></div>
+      <div className="text-xs text-[#64748B]">To: <span className="text-[#0F172A]">{to}</span></div>
+      <div className="text-xs text-[#64748B]">Customer: <span className="text-[#0F172A]">{customer}</span></div>
     </div>
 
     <div className="flex gap-3">
-      <button className="flex-1 bg-[#00D68F] hover:bg-[#00B876] text-white py-3 rounded-xl transition-colors font-normal">
+      <button className="flex-1 bg-[#00B75A] hover:bg-[#00B876] text-white py-2.5 rounded-xl transition-colors font-[300]">
         Navigate
       </button>
-      <button className="px-6 py-3 bg-white border border-gray-200 hover:bg-gray-50 rounded-xl transition-colors text-[#0F172A] font-normal">
+      <button className="flex-1 py-2.5 bg-white border border-gray-200 hover:bg-gray-50 rounded-xl transition-colors text-[#0F172A] font-[300]">
         Contact Customer
       </button>
-      <button className="px-6 py-3 bg-white border border-gray-200 hover:bg-gray-50 rounded-xl transition-colors text-[#0F172A] font-normal">
+      <button className="px-6 py-2.5 bg-white border border-gray-200 hover:bg-gray-50 rounded-xl transition-colors text-[#0F172A] font-[300]">
         Update Status
       </button>
     </div>
@@ -58,7 +54,7 @@ const DeliveryCard = ({ packageId, status, from, to, customer, price, distance, 
 );
 
 const AvailableOrderCard = ({ packageId, location, distance, price }) => (
-  <div className="flex items-center justify-between p-5 bg-white border border-gray-200 rounded-xl hover:shadow-md transition-shadow mb-3">
+  <div className="flex items-center justify-between p-5 bg-white border border-gray-200 rounded-xl mb-3">
     <div>
       <div className="text-base font-normal text-[#0F172A] mb-1">{packageId}</div>
       <div className="text-sm text-[#64748B] mb-0.5">{location}</div>
@@ -75,26 +71,26 @@ const AvailableOrderCard = ({ packageId, location, distance, price }) => (
 
 const RiderDashboard = () => {
   return (
-    <DashboardLayout role="rider">
-      {/* Welcome Section */}
-      <div className="mb-8">
-        <div className="text-3xl font-normal text-[#0F172A] mb-2">
+    <IonPage>
+      <DashboardLayout role="rider">
+        <IonContent className="ion-no-padding">
+          {/* Welcome Section */}
+          <div className="mb-8 py-2">
+        <div className="text-3xl font-medium text-[#0F172A] mb-2">
           Welcome back, Marcus!
         </div>
-        <div className="text-[#64748B]">
+        <div className="text-[#4A5565] text-[15px] font-[400]">
           You're doing great today. Keep up the excellent work!
         </div>
       </div>
 
       {/* Stats Grid */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
         <StatCard
           icon={
-            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-              <path d="M20 6h-4V4c0-1.11-.89-2-2-2h-4c-1.11 0-2 .89-2 2v2H4c-1.11 0-1.99.89-1.99 2L2 19c0 1.11.89 2 2 2h16c1.11 0 2-.89 2-2V8c0-1.11-.89-2-2-2zm-6 0h-4V4h4v2z" fill="#3B82F6"/>
-            </svg>
+            <img width="24" height="24" src="/blockicon.svg" alt="Deliveries Icon"/>
           }
-          iconBg="bg-blue-50"
+          iconBg="bg-[#EFF6FF]"
           title="Today's Deliveries"
           value="8"
           subtitle="3 completed, 5 pending"
@@ -135,7 +131,7 @@ const RiderDashboard = () => {
       </div>
 
       {/* Active Deliveries */}
-      <div className="mb-8">
+      <div className="mb-8 bg-white p-6 rounded-2xl" style={sideBottomShadow}>
         <div className="mb-4">
           <div className="text-xl font-normal text-[#0F172A] mb-1">
             Active Deliveries
@@ -145,33 +141,48 @@ const RiderDashboard = () => {
           </div>
         </div>
         
-        <DeliveryCard
-          packageId="PKG-2401"
-          status="Picked Up"
-          statusColor="bg-blue-50 text-blue-600"
-          from="Central Mall, 5th Ave"
-          to="123 Oak Street"
-          customer="Sarah Mitchell"
-          price="N2300.50"
-          distance="3.2 mi"
-          time="15 min"
-        />
-        
-        <DeliveryCard
-          packageId="PKG-2403"
-          status="En Route to Pickup"
-          statusColor="bg-orange-50 text-orange-600"
-          from="Tech Store, Main St"
-          to="456 Elm Avenue"
-          customer="Mike Johnson"
-          price="N1300.50"
-          distance="1.8 mi"
-          time="8 min"
-        />
+        {/* Scrollable container for delivery cards */}
+        <div className="max-h-[600px] overflow-y-auto pr-2">
+          <DeliveryCard
+            packageId="PKG-2401"
+            status="Picked Up"
+            statusColor="bg-blue-100 text-blue-600"
+            from="Central Mall, 5th Ave"
+            to="123 Oak Street"
+            customer="Sarah Mitchell"
+            price="N2300.50"
+            distance="3.2 mi"
+            time="15 min"
+          />
+          
+          <DeliveryCard
+            packageId="PKG-2403"
+            status="En Route to Pickup"
+            statusColor="bg-orange-100 text-orange-600"
+            from="Tech Store, Main St"
+            to="456 Elm Avenue"
+            customer="Mike Johnson"
+            price="N1300.50"
+            distance="1.8 mi"
+            time="8 min"
+          />
+          
+          <DeliveryCard
+            packageId="PKG-2404"
+            status="Not Yet Moved"
+            statusColor="bg-red-500 text-gray-600"
+            from="Downtown Store, 2nd St"
+            to="789 Pine Road"
+            customer="John Doe"
+            price="N1800.00"
+            distance="2.5 mi"
+            time="12 min"
+          />
+        </div>
       </div>
 
       {/* Available Orders Nearby */}
-      <div>
+      <div className="mb-8 bg-white p-6 rounded-2xl" style={sideBottomShadow}>
         <div className="flex items-center justify-between mb-4">
           <div>
             <div className="text-xl font-normal text-[#0F172A] mb-1">
@@ -201,7 +212,9 @@ const RiderDashboard = () => {
           />
         </div>
       </div>
-    </DashboardLayout>
+        </IonContent>
+      </DashboardLayout>
+    </IonPage>
   );
 };
 
