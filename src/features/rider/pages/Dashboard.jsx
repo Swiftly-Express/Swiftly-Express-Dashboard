@@ -196,7 +196,8 @@ const Dashboard = () => {
               </button>
             </div>
 
-            <div>
+            {/* Make available orders list scrollable independently */}
+            <div className="max-h-[360px] overflow-y-auto pr-2">
               <AvailableOrderCard
                 packageId="PKG-2405"
                 location="Downtown Market"

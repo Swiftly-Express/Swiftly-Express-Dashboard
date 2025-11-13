@@ -49,8 +49,11 @@ const RiderLayout = ({ children }) => {
           </div>
         </div>
 
-        {/* Scrollable Content (add top padding so header doesn't overlap content) */}
-        <div className="flex-1 overflow-y-auto p-8 pt-24">
+        {/* Main Content (header has fixed position).
+            Allow page scrolling but hide the visible scrollbar using a utility class.
+            Inner sections (with their own overflow-y-auto) will still show scrollbars.
+        */}
+        <div className="flex-1 p-8 pt-24 overflow-y-auto no-scrollbar">
           {children}
         </div>
       </div>

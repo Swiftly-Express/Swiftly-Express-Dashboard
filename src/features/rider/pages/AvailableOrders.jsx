@@ -63,6 +63,9 @@ const OrderCard = ({ packageId, priority, size, pickupName, pickupAddress, deliv
       </div>
     </div>
 
+    {/* Divider separating addresses from order meta (distance/time/size) */}
+    <div className="my-3 border-t border-gray-200"></div>
+
     {/* Order Details */}
     <div className="flex items-center gap-4 mb-4 text-xs text-[#64748B]">
       <div className="flex items-center gap-1">
