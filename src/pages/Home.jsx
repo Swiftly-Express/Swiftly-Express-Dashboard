@@ -114,7 +114,7 @@ const SwiftlyLanding = () => {
         </IonToolbar>
       </IonHeader>
 
-      <IonContent className="bg-[#f5f5f5]">
+      <IonContent className="bg-[#f5f5f5] !fullscreen">
         <div className="relative flex flex-col items-center justify-center min-h-[calc(100vh-80px)] px-4 -mt-10 text-center">
           {/* Background Image with Gradient Overlay */}
           <div className="absolute inset-0 -top-20 -bottom-5 pointer-events-none">

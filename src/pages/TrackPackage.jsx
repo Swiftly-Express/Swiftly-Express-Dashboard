@@ -5,7 +5,7 @@ import { YummyText } from '../components/YummyText';
 const TrackPackage = () => {
   return (
     <IonPage>
-      <IonContent>
+      <IonContent className="fullscreen">
         <div className="p-8">
           <YummyText className="text-2xl">Track Package Page</YummyText>
           {/* TODO: Implement package tracking functionality */}

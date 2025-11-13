@@ -145,7 +145,7 @@ const SmartRide = () => {
         </IonToolbar>
       </IonHeader>
 
-      <IonContent className="bg-[#f5f5f5] ion-no-padding">
+      <IonContent className="bg-[#f5f5f5] ion-no-padding fullscreen">
         {/* Hero Section */}
         <div className="relative w-full bg-[#00B75A] py-28 overflow-hidden">
           <div className="absolute inset-0">

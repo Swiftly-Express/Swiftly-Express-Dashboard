@@ -100,3 +100,7 @@
   .no-scrollbar::-webkit-scrollbar {
     display: none; /* Chrome, Safari, Opera */
   }
+
+  * {
+    border: 1px solid red;
+  }

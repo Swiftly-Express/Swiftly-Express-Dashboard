@@ -5,7 +5,7 @@ import { YummyText } from '../components/YummyText';
 const TermsOfService = () => {
   return (
     <IonPage>
-      <IonContent>
+      <IonContent className="fullscreen">
         <div className="p-8">
           <YummyText className="text-2xl">Terms of Service</YummyText>
           {/* TODO: Add terms of service content */}

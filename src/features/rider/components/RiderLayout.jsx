@@ -7,7 +7,7 @@ const RiderLayout = ({ children }) => {
     <div className="flex h-screen bg-[#f5f5f5]">
       <RiderSidebar />
       <div className="ml-64 flex-1 flex flex-col min-h-0 bricolage-font bg-white">
-        {/* Fixed Top Header that overlays the sidebar */}
+        {/* Fixed Top Header - positioned to respect sidebar width (ml-64) */}
         <div className="fixed top-0 left-0 right-0 z-40">
           <div className="bg-white border-b border-gray-200 py-4 shadow-sm">
             <div className="flex items-center justify-between">
