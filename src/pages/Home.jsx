@@ -1,28 +1,37 @@
-import { IonPage, IonHeader, IonToolbar, IonContent, useIonRouter } from '@ionic/react';
-import React, { useState } from 'react';
-import Button from '../components/Button';
-import PageWrapper from '../components/PageWrapper';
-import { YummyText } from '../components/YummyText';
-import HandDrawnSvg from '../components/HandDrawnSvg';
-import Navbar from '../components/Navbar';
-import StoreButtons from '../components/StoreButtons';
-import { ChevronUp, ChevronDown } from 'lucide-react';
+import {
+  IonPage,
+  IonHeader,
+  IonToolbar,
+  IonContent,
+  useIonRouter,
+} from "@ionic/react";
+import React, { useState } from "react";
+import Button from "../components/Button";
+import PageWrapper from "../components/PageWrapper";
+import { YummyText } from "../components/YummyText";
+import HandDrawnSvg from "../components/HandDrawnSvg";
+import Navbar from "../components/Navbar";
+import StoreButtons from "../components/StoreButtons";
+import { ChevronUp, ChevronDown } from "lucide-react";
 
 const steps = [
   {
-    title: 'Book',
-    description: 'Schedule your pickup online or via our mobile app in just a few clicks Choose your service type andp delivery speed.',
-    image: '/palmphone.svg',
+    title: "Book",
+    description:
+      "Schedule your pickup online or via our mobile app in just a few clicks Choose your service type andp delivery speed.",
+    image: "/palmphone.svg",
   },
   {
-    title: 'Track',
-    description: 'Monitor your package in real-time with our advanced tracking system. Get updpate at every milestone of the journey.',
-    image: '/laptopbox.svg',
+    title: "Track",
+    description:
+      "Monitor your package in real-time with our advanced tracking system. Get updpate at every milestone of the journey.",
+    image: "/laptopbox.svg",
   },
   {
-    title: 'Deliver',
-    description: 'Receive your package safely and on time. Get instant delivery confirmation with photo proof and signature.',
-    image: '/humanbox.svg',
+    title: "Deliver",
+    description:
+      "Receive your package safely and on time. Get instant delivery confirmation with photo proof and signature.",
+    image: "/humanbox.svg",
   },
 ];
 
@@ -30,53 +39,58 @@ const SwiftlyLanding = () => {
   const router = useIonRouter();
   const services = [
     {
-      image: '/drone.svg',
-      title: 'Express Delivery',
-      description: 'Lightning-fast delivery within hours. Perfect for urgent packages and time-sensitive documents.',
+      image: "/drone.svg",
+      title: "Express Delivery",
+      description:
+        "Lightning-fast delivery within hours. Perfect for urgent packages and time-sensitive documents.",
     },
     {
-      image: '/giftcard.svg',
-      title: 'E-commerce Fulfillment',
-      description: 'Complete fulfillment solutions for online stores. From secure warehousing to fast, reliable last-mile delivery service.',
+      image: "/giftcard.svg",
+      title: "E-commerce Fulfillment",
+      description:
+        "Complete fulfillment solutions for online stores. From secure warehousing to fast, reliable last-mile delivery service.",
     },
     {
-      image: '/parachute.svg',
-      title: 'Interstate Logistics',
-      description: 'Reliable cross-country shipping with real-time tracking, full insurance, and guaranteed safety for total peace of mind.', 
+      image: "/parachute.svg",
+      title: "Interstate Logistics",
+      description:
+        "Reliable cross-country shipping with real-time tracking, full insurance, and guaranteed safety for total peace of mind.",
     },
     {
-      image: '/24hrs.svg',
-      title: 'Corporate Delivery',
-      description: 'Tailored logistics solutions for businesses. Bulk shipping, scheduled deliveries, and dedicated support.',
-    }
+      image: "/24hrs.svg",
+      title: "Corporate Delivery",
+      description:
+        "Tailored logistics solutions for businesses. Bulk shipping, scheduled deliveries, and dedicated support.",
+    },
   ];
 
   const [openIndex, setOpenIndex] = useState(null);
 
-
   const faqs = [
     {
-      question: 'How fast can I get a delivery?',
+      question: "How fast can I get a delivery?",
       answer:
-        'Swiftly ensures deliveries within minutes depending on your location and distance. Most local deliveries arrive in less than 60 minutes.',
+        "Swiftly ensures deliveries within minutes depending on your location and distance. Most local deliveries arrive in less than 60 minutes.",
     },
     {
-      question: 'Can I track my delivery in real-time?',
+      question: "Can I track my delivery in real-time?",
       answer:
-        'Absolutely! You can track your delivery in real-time through the app. You’ll see your driver’s location and estimated arrival time.',
+        "Absolutely! You can track your delivery in real-time through the app. You’ll see your driver’s location and estimated arrival time.",
     },
     {
-      question: 'Do you deliver outside my city?',
+      question: "Do you deliver outside my city?",
       answer:
-        'We currently operate across major cities and are expanding rapidly. Check the app to see if we’re available in your area.',
+        "We currently operate across major cities and are expanding rapidly. Check the app to see if we’re available in your area.",
     },
     {
-      question: 'Is Swiftly available 24/7?',
-      answer: 'Yes, we’re always on! Swiftly runs 24/7 so you can send or receive deliveries anytime, day or night.',
+      question: "Is Swiftly available 24/7?",
+      answer:
+        "Yes, we’re always on! Swiftly runs 24/7 so you can send or receive deliveries anytime, day or night.",
     },
     {
-      question: 'Is Swiftly available 24/7?',
-      answer: 'Yes, we’re always on! Swiftly runs 24/7 so you can send or receive deliveries anytime, day or night.',
+      question: "Is Swiftly available 24/7?",
+      answer:
+        "Yes, we’re always on! Swiftly runs 24/7 so you can send or receive deliveries anytime, day or night.",
     },
   ];
 
@@ -95,17 +109,25 @@ const SwiftlyLanding = () => {
 
             {/* Buttons */}
             <div className="flex items-center px-4 gap-3">
-              <Button 
-                variant="primary" 
+              <Button
+                variant="primary"
                 className="!px-3 !py-2 font-[100] text-[9px]"
-                onClick={() => { if (document && document.activeElement) document.activeElement.blur(); history.push('/auth/customer/signup'); }}
+                onClick={() => {
+                  if (document && document.activeElement)
+                    document.activeElement.blur();
+                  history.push("/auth/customer/signup");
+                }}
               >
                 <YummyText>Book a delivery</YummyText>
               </Button>
-              <Button 
-                variant="dark" 
+              <Button
+                variant="dark"
                 className="!px-2.5 !py-2 font-[100] text-[9px]"
-                onClick={() => { if (document && document.activeElement) document.activeElement.blur(); history.push('/auth/role-select'); }}
+                onClick={() => {
+                  if (document && document.activeElement)
+                    document.activeElement.blur();
+                  history.push("/auth/role-select");
+                }}
               >
                 <YummyText>Get Started</YummyText>
               </Button>
@@ -115,53 +137,73 @@ const SwiftlyLanding = () => {
       </IonHeader>
 
       <IonContent className="bg-[#f5f5f5] !fullscreen">
-        <div className="relative flex flex-col items-center justify-center min-h-[calc(100vh-80px)] px-4 -mt-10 text-center">
+        <div className="relative flex flex-col items-center justify-center h-full px-4 text-center">
           {/* Background Image with Gradient Overlay */}
-          <div className="absolute inset-0 -top-20 -bottom-5 pointer-events-none">
+          <div className="absolute inset-0 h-full pointer-events-none -z-10">
             <div className="relative w-full h-full">
               {/* White gradient overlay */}
-              <div className="absolute inset-0 z-[1] bg-gradient-to-b from-white via-white/100 to-transparent"></div>
+              <div className="absolute inset-0 bottom-auto h-[calc(55%+2.5rem)] z-[1] bg-gradient-to-b from-white via-white/100 to-transparent" />
               <img
                 src="/bike.svg"
                 alt="bike"
-                className="w-full !max-w-12xl mx-auto object-contain"
+                className="w-full h-full object-cover object-bottom !max-w-12xl mx-auto"
                 style={{
-                  filter: 'drop-shadow(0 20px 36px rgba(0,0,0,0.08))'
+                  filter: "drop-shadow(0 20px 36px rgba(0,0,0,0.08))",
                 }}
               />
             </div>
           </div>
 
-          {/* Trust Badge */}
-          <div className="inline-flex items-center gap-2 bg-[#d1fae5] border border-[#008C45] rounded-full px-3 py-1.5 z-10 -mt-20 mb-1">
-            <div className="flex -space-x-2 mr-2">
-              <img src="/roundcuthair.svg" alt="Customer 1" className="w-8 h-8 rounded-full bg-purple-600 object-cover" />
-              <img src="/normalwig.svg" alt="Customer 2" className="w-8 h-8 rounded-full bg-rose-500  object-cover" />
-              <img src="/lockedhair.svg" alt="Customer 3" className="w-8 h-8 rounded-full bg-amber-500 object-cover" />
-              <img src="/afrowig.svg" alt="Customer 4" className="w-8 h-8 rounded-full bg-teal-600 object-cover" />
+          <div className="-translate-y-[80%]">
+            {/* Trust Badge */}
+            <div className="inline-flex items-center gap-2 bg-[#d1fae5] border border-[#008C45] rounded-full px-3 py-1.5 z-10 mb-1">
+              <div className="flex -space-x-2 mr-2">
+                <img
+                  src="/roundcuthair.svg"
+                  alt="Customer 1"
+                  className="w-8 h-8 rounded-full bg-purple-600 object-cover"
+                />
+                <img
+                  src="/normalwig.svg"
+                  alt="Customer 2"
+                  className="w-8 h-8 rounded-full bg-rose-500  object-cover"
+                />
+                <img
+                  src="/lockedhair.svg"
+                  alt="Customer 3"
+                  className="w-8 h-8 rounded-full bg-amber-500 object-cover"
+                />
+                <img
+                  src="/afrowig.svg"
+                  alt="Customer 4"
+                  className="w-8 h-8 rounded-full bg-teal-600 object-cover"
+                />
+              </div>
+              <YummyText className="text-[#059669] text-sm font-[300] whitespace-nowrap">
+                Trusted by 10,000+ customers
+              </YummyText>
             </div>
-            <YummyText className="text-[#059669] text-sm font-[300] whitespace-nowrap">
-              Trusted by 10,000+ customers
+
+            {/* Main Heading */}
+            <YummyText className="text-5xl font-sm leading-[1] mb-6 max-w-5xl text-black z-10">
+              Delivering <span className="text-[#008C45]">Swiftly</span>,<br />
+              Anywhere, Anytime
             </YummyText>
+
+            {/* CTA Button */}
+            <Button
+              variant="dark"
+              className="px-10 -mt-4 !py-2 text-xs font-[100] rounded-full z-10"
+              onClick={() => {
+                if (document && document.activeElement)
+                  document.activeElement.blur();
+                history.push("/auth/role-select");
+              }}
+            >
+              <YummyText>Get app now</YummyText>
+            </Button>
           </div>
-
-          {/* Main Heading */}
-          <YummyText className="text-5xl font-sm leading-[1] mb-6 max-w-5xl text-black z-10">
-            Delivering <span className="text-[#008C45]">Swiftly</span>,<br />
-            Anywhere, Anytime
-          </YummyText>
-
-          {/* CTA Button */}
-          <Button 
-            variant="dark" 
-            className="px-10 -mt-4 !py-2 text-xs font-[100] rounded-full z-10"
-            onClick={() => { if (document && document.activeElement) document.activeElement.blur(); history.push('/auth/role-select'); }}
-          >
-            <YummyText>Get app now</YummyText>
-          </Button>
         </div>
-        
-
 
         {/* Services Section */}
         <section className="py-20 bg-white">
@@ -175,28 +217,29 @@ const SwiftlyLanding = () => {
                 Our Services
               </YummyText>
               <YummyText className="text-gray-600 text-sm font-sm max-w-2xl">
-                Comprehensive logistics solutions designed to meet <br/> your every delivery need
+                Comprehensive logistics solutions designed to meet <br /> your
+                every delivery need
               </YummyText>
             </div>
 
             {/* Services Grid */}
             {/* <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-5 ml-3 mr-0.5 -mt-4">
               {services.map((service, index) => (
-                <div 
+                <div
                   key={index}
                   className="bg-white rounded-xl p-4 py-2 shadow-lg border border-gray-100 flex flex-col"
                 >
-                  
+
                   <div className={`${service.bgColor} ${service.iconColor} w-11 h-11 rounded-lg flex items-center justify-center mt-3 mb-4`}>
                     {service.icon}
                   </div>
 
-                  
+
                   <YummyText className="text-medium font-sm text-black mb-6">
                     {service.title}
                   </YummyText>
 
-                  
+
                   <YummyText className="text-gray-600 text-sm font-[400] leading-relaxed -mt-2 mb-2">
                     {service.description}
                   </YummyText>
@@ -210,7 +253,8 @@ const SwiftlyLanding = () => {
                   key={index}
                   className="bg-[#1E1E1E] rounded-3xl p-5 text-left flex flex-col items-start h-[370px] relative overflow-hidden"
                   style={{
-                    background: "radial-gradient(circle at center, #1a1a1a, #0d0d0d)",
+                    background:
+                      "radial-gradient(circle at center, #1a1a1a, #0d0d0d)",
                   }}
                 >
                   {/* Top content: title + description stacked tightly */}
@@ -245,9 +289,8 @@ const SwiftlyLanding = () => {
               <div
                 className="absolute inset-0 bg-cover opacity-100 bg-center"
                 style={{
-                  backgroundImage: 'url(/lady.svg)',
+                  backgroundImage: "url(/lady.svg)",
                 }}
-                
               />
 
               {/* Dark gradient overlay */}
@@ -258,7 +301,9 @@ const SwiftlyLanding = () => {
                 {/* Left Text Section */}
                 <div className="flex flex-col justify-center text-left text-white max-w-full">
                   <YummyText className="text-5xl font-[600] leading-tight mb-3 -mt-12 -ml-3">
-                    No Hassle. Just<br />Swiftly Am.
+                    No Hassle. Just
+                    <br />
+                    Swiftly Am.
                   </YummyText>
 
                   {/* App Store Buttons */}
@@ -268,8 +313,8 @@ const SwiftlyLanding = () => {
                 {/* Right Description Text */}
                 <div className="hidden md:flex flex-col justify-center max-w-sm pr-4 -mr-6 text-right">
                   <YummyText className="text-white text-lg md:text-[18px] leading-relaxed font-light">
-                    Swiftly makes delivery effortless — from pickup to drop-off, we
-                    handle it all with speed and care.
+                    Swiftly makes delivery effortless — from pickup to drop-off,
+                    we handle it all with speed and care.
                   </YummyText>
                 </div>
               </div>
@@ -283,12 +328,12 @@ const SwiftlyLanding = () => {
             {/* Header */}
             <div className="flex flex-col items-center mb-14">
               <div className="flex justify-center mt-10">
-                <YummyText className="px-6 py-1.5 bg-[#A7F3D0] text-[#00B75A] rounded-full text-xs font-[400]"
-                >How It Works
+                <YummyText className="px-6 py-1.5 bg-[#A7F3D0] text-[#00B75A] rounded-full text-xs font-[400]">
+                  How It Works
                 </YummyText>
               </div>
               <YummyText className="text-4xl font-semibold text-[#1E1E1E] mb-1">
-                Three simple steps to get your <br/> package delivered
+                Three simple steps to get your <br /> package delivered
               </YummyText>
             </div>
 
@@ -299,10 +344,10 @@ const SwiftlyLanding = () => {
                   key={index}
                   className="bg-[#1E1E1E] !rounded-3xl p-14 px-12 h-[410px] text-left flex flex-col items-start  relative overflow-hidden"
                   style={{
-                    backgroundImage: 'url(/doublecircle.svg) background: #D9D9D9 w-[40%]',
+                    backgroundImage:
+                      "url(/doublecircle.svg) background: #D9D9D9 w-[40%]",
                   }}
                 >
-                  
                   {/* Top content: title + description stacked tightly */}
                   <div className="flex flex-col">
                     <YummyText className="text-[#F9FAFB] text-3xl font-sm">
@@ -320,7 +365,7 @@ const SwiftlyLanding = () => {
                       alt={step.title}
                       className="w-full max-w-[240px] h-auto object-contain"
                       style={{
-                        maxHeight: '220px'
+                        maxHeight: "220px",
                       }}
                     />
                   </div>
@@ -329,7 +374,7 @@ const SwiftlyLanding = () => {
             </div>
           </PageWrapper>
         </section>
-              
+
         {/* Testimonials Section */}
         <section className="relative py-14 overflow-hidden">
           {/* Carton Box - Left */}
@@ -339,8 +384,8 @@ const SwiftlyLanding = () => {
               alt="Carton Box"
               className="w-full h-full object-contain"
               style={{
-                transform: 'translateX(-30%)',
-                filter: 'drop-shadow(0 10px 20px rgba(0,0,0,0.1))'
+                transform: "translateX(-30%)",
+                filter: "drop-shadow(0 10px 20px rgba(0,0,0,0.1))",
               }}
             />
           </div>
@@ -352,8 +397,8 @@ const SwiftlyLanding = () => {
               alt="Carton Box"
               className="w-full h-full object-contain"
               style={{
-                transform: 'translateX(30%) rotate(1deg)',
-                filter: 'drop-shadow(0 10px 20px rgba(0,0,0,0.1))'
+                transform: "translateX(30%) rotate(1deg)",
+                filter: "drop-shadow(0 10px 20px rgba(0,0,0,0.1))",
               }}
             />
           </div>
@@ -368,24 +413,28 @@ const SwiftlyLanding = () => {
                 Results that speaks volumes
               </YummyText>
               <YummyText className="text-gray-600 text-[12.5px] -mb-12">
-                Don't just take our word for it - hear from our satisfied clients
+                Don't just take our word for it - hear from our satisfied
+                clients
               </YummyText>
             </div>
 
             {/* Testimonial Card */}
             <div className="rounded-2xl text-center max-w-2xl mx-auto">
               <YummyText className="text-xl md:text-xl font-medium text-black leading-relaxed">
-                Swiftly saved my day! My client needed documents<br />
-                in less than an hour, and these guys showed up<br />
+                Swiftly saved my day! My client needed documents
+                <br />
+                in less than an hour, and these guys showed up
+                <br />
                 sharp-sharp. Very reliable!
               </YummyText>
 
               {/* Customer Info */}
               <div className="flex flex-col items-center">
                 <YummyText className="text-gray-700 text-sm mb-1 mt-3">
-                  Chinonso Eze, <span className="text-[#10b981] font-medium">Lagos</span>
+                  Chinonso Eze,{" "}
+                  <span className="text-[#10b981] font-medium">Lagos</span>
                 </YummyText>
-                
+
                 {/* Hand-drawn style underline (now a reusable component) */}
                 <HandDrawnSvg className="-mb-3 mr-0 -mt-2" />
 
@@ -393,28 +442,47 @@ const SwiftlyLanding = () => {
                 <div className="flex items-center justify-center">
                   {/* Left avatars (comes first) */}
                   <div className="w-11 h-11 mr-2 -mb-3 rounded-full bg-gray-300 mt-8 border-2 border-white overflow-hidden">
-                    <img src="/lockedhair.svg" alt="Customer" className="w-full h-full object-cover" />
+                    <img
+                      src="/lockedhair.svg"
+                      alt="Customer"
+                      className="w-full h-full object-cover"
+                    />
                   </div>
 
                   {/* left avatar (second) */}
                   <div className="w-11 h-11 mt-28 mb-3 -mr-4  rounded-full bg-gray-400 border-2 border-white overflow-hidden opacity-30">
-                    <img src="/normalwig.svg" alt="Customer" className="w-full h-full object-cover" />
+                    <img
+                      src="/normalwig.svg"
+                      alt="Customer"
+                      className="w-full h-full object-cover"
+                    />
                   </div>
-                  
+
                   {/* central avatar(big icon)*/}
                   <div className="w-[75px] h-[75px] rounded-full bg-purple-200 border-2 border-[#10b981] overflow-hidden relative -ml-5 -mt-12 -mb-5 z-10">
-                    <img src="/lockedhair.svg" alt="Chinonso Eze" className="w-full h-full object-cover" />
+                    <img
+                      src="/lockedhair.svg"
+                      alt="Chinonso Eze"
+                      className="w-full h-full object-cover"
+                    />
                   </div>
-                  
 
                   {/* Bottom avatars 3rd */}
                   <div className="w-11 h-11 rounded-full bg-gray-200 mt-[52%] -ml-8 border-2 border-white overflow-hidden opacity-30 -ml-1">
-                    <img src="/roundcuthair.svg" alt="Customer" className="w-full h-full object-cover" />
+                    <img
+                      src="/roundcuthair.svg"
+                      alt="Customer"
+                      className="w-full h-full object-cover"
+                    />
                   </div>
 
                   {/* fianl image */}
                   <div className="w-11 h-11 rounded-full bg-gray-500 border-2 border-white overflow-hidden opacity-30 ml-1.5 mt-9">
-                    <img src="/afrowig.svg" alt="Customer" className="w-full h-full object-cover" />
+                    <img
+                      src="/afrowig.svg"
+                      alt="Customer"
+                      className="w-full h-full object-cover"
+                    />
                   </div>
                 </div>
               </div>
@@ -436,7 +504,8 @@ const SwiftlyLanding = () => {
                     Got questions?
                   </YummyText>
                   <YummyText className="text-sm text-[#F9FAFB] font-[300] mb-18 -mt-6">
-                    Here are a few things people always ask — and our <br/> answers to them
+                    Here are a few things people always ask — and our <br />{" "}
+                    answers to them
                   </YummyText>
                 </div>
                 <div className="space-y-3">
@@ -446,17 +515,21 @@ const SwiftlyLanding = () => {
                       className="border border-[#F9FAFB] rounded-lg overflow-hidden bg-[#1a1a1a]"
                     >
                       <button
-                        onClick={() => setOpenIndex(openIndex === index ? null : index)}
+                        onClick={() =>
+                          setOpenIndex(openIndex === index ? null : index)
+                        }
                         className="w-full flex justify-between items-center px-5 py-3 text-left focus:outline-none hover:bg-[#222] transition-colors"
                       >
-                        <YummyText className="text-base font-[300] text-[#10b981]">{faq.question}</YummyText>
+                        <YummyText className="text-base font-[300] text-[#10b981]">
+                          {faq.question}
+                        </YummyText>
                         {openIndex === index ? (
                           <ChevronUp className="text-[#10b981] w-5 h-5 flex-shrink-0 ml-4" />
                         ) : (
                           <ChevronDown className="text-[#10b981] w-5 h-5 flex-shrink-0 ml-4" />
                         )}
                       </button>
-      
+
                       {openIndex === index && (
                         <div className="px-5 pb-4">
                           <YummyText className="text-gray-400 text-sm font-[300] leading-relaxed">
@@ -468,7 +541,7 @@ const SwiftlyLanding = () => {
                   ))}
                 </div>
               </div>
-      
+
               {/* Right Section - Image (Fixed position) */}
               <div className="hidden md:flex items-end justify-center">
                 <div className="sticky top-20">
@@ -491,19 +564,26 @@ const SwiftlyLanding = () => {
               <div className="bg-[#1a1a1a] rounded-3xl p-14 relative overflow-hidden">
                 <div className="relative z-10 -mt-5">
                   <YummyText className="text-white text-5xl font-[300] mb-4 leading-tight">
-                    Download Our<br />Mobile App
+                    Download Our
+                    <br />
+                    Mobile App
                   </YummyText>
                   <YummyText className="text-[#FFEDD4] flex text-sm font-[300] mb-6 max-w-xs mt-4 leading-relaxed">
-                    Book deliveries, track packages, and manage your shipments on the go. Available for iOS and Android.
+                    Book deliveries, track packages, and manage your shipments
+                    on the go. Available for iOS and Android.
                   </YummyText>
-                  
+
                   {/* App Store Buttons */}
                   <StoreButtons />
                 </div>
 
                 {/* Illustration */}
                 <div className="absolute bottom-0 right-0 w-full">
-                  <img src="/orderbox.svg" alt="Mobile App" className="w-full object-contain" />
+                  <img
+                    src="/orderbox.svg"
+                    alt="Mobile App"
+                    className="w-full object-contain"
+                  />
                 </div>
               </div>
 
@@ -511,18 +591,27 @@ const SwiftlyLanding = () => {
               <div className="bg-[#10b981] rounded-3xl p-10 relative overflow-hidden">
                 <div className="relative z-10">
                   <YummyText className="text-white text-5xl font-[300] mb-4 leading-tight">
-                    Get a Free<br />Quote
+                    Get a Free
+                    <br />
+                    Quote
                   </YummyText>
                   <YummyText className="text-[#FFEDD4] flex text-sm font-[300] mb-6 max-w-xs mt-4 leading-relaxed">
-                    Need a custom logistics solution? Contact us for a personalized quote tailored to your business needs.
+                    Need a custom logistics solution? Contact us for a
+                    personalized quote tailored to your business needs.
                   </YummyText>
-                  
-                  <Button 
-                    variant="light" 
+
+                  <Button
+                    variant="light"
                     className="!bg-white !text-[#10b981] hover:!bg-gray-100 !px-5 !py-2.5 !rounded-full"
-                    onClick={() => { if (document && document.activeElement) document.activeElement.blur(); history.push('/auth/customer/signup'); }}
+                    onClick={() => {
+                      if (document && document.activeElement)
+                        document.activeElement.blur();
+                      history.push("/auth/customer/signup");
+                    }}
                   >
-                    <YummyText className="font-[400] text-[#001900] text-xs">Book a delivery</YummyText>
+                    <YummyText className="font-[400] text-[#001900] text-xs">
+                      Book a delivery
+                    </YummyText>
                   </Button>
                 </div>
 
@@ -533,7 +622,7 @@ const SwiftlyLanding = () => {
                     alt="Quotes"
                     className="w-full h-full object-contain absolute bottom-0 left-32"
                   />
-                  
+
                   {/* quotation.svg on top (paper) */}
                   <img
                     src="/quotation.svg"
@@ -552,23 +641,38 @@ const SwiftlyLanding = () => {
             <div className="grid grid-cols-1 md:grid-cols-4 gap-10 mb-12">
               {/* Company Info */}
               <div>
-                <YummyText className="text-2xl font-medium mb-4">Swiftly Express</YummyText>
-                <YummyText className="flex text-gray-400 text-sm font-[300] leading-relaxed mb-6">
-                  Your trusted logistics partner delivering excellence across the nation with speed, security, and reliability.
+                <YummyText className="text-2xl font-medium mb-4">
+                  Swiftly Express
                 </YummyText>
-                
+                <YummyText className="flex text-gray-400 text-sm font-[300] leading-relaxed mb-6">
+                  Your trusted logistics partner delivering excellence across
+                  the nation with speed, security, and reliability.
+                </YummyText>
+
                 {/* Social Icons */}
                 <div className="flex gap-3">
-                  <a href="#" className="w-10 h-10 rounded-lg bg-[#1a1a1a] flex items-center justify-center hover:bg-[#10b981] transition-colors">
+                  <a
+                    href="#"
+                    className="w-10 h-10 rounded-lg bg-[#1a1a1a] flex items-center justify-center hover:bg-[#10b981] transition-colors"
+                  >
                     <span className="text-lg">f</span>
                   </a>
-                  <a href="#" className="w-10 h-10 rounded-lg bg-[#1a1a1a] flex items-center justify-center hover:bg-[#10b981] transition-colors">
+                  <a
+                    href="#"
+                    className="w-10 h-10 rounded-lg bg-[#1a1a1a] flex items-center justify-center hover:bg-[#10b981] transition-colors"
+                  >
                     <span className="text-lg">𝕏</span>
                   </a>
-                  <a href="#" className="w-10 h-10 rounded-lg bg-[#1a1a1a] flex items-center justify-center hover:bg-[#10b981] transition-colors">
+                  <a
+                    href="#"
+                    className="w-10 h-10 rounded-lg bg-[#1a1a1a] flex items-center justify-center hover:bg-[#10b981] transition-colors"
+                  >
                     <span className="text-lg">in</span>
                   </a>
-                  <a href="#" className="w-10 h-10 rounded-lg bg-[#1a1a1a] flex items-center justify-center hover:bg-[#10b981] transition-colors">
+                  <a
+                    href="#"
+                    className="w-10 h-10 rounded-lg bg-[#1a1a1a] flex items-center justify-center hover:bg-[#10b981] transition-colors"
+                  >
                     <span className="text-lg">📷</span>
                   </a>
                 </div>
@@ -576,44 +680,177 @@ const SwiftlyLanding = () => {
 
               {/* Quick Links */}
               <div>
-                <YummyText className="text-lg font-medium mb-4">Quick Links</YummyText>
+                <YummyText className="text-lg font-medium mb-4">
+                  Quick Links
+                </YummyText>
                 <ul className="space-y-3">
-                  <li><span onClick={() => { if (document && document.activeElement) document.activeElement.blur(); history.push('/about'); }} className="text-gray-400 hover:text-[#10b981] text-sm font-[300] transition-colors cursor-pointer">About Us</span></li>
-                  <li><span onClick={() => { if (document && document.activeElement) document.activeElement.blur(); history.push('/services'); }} className="text-gray-400 hover:text-[#10b981] text-sm font-[300] transition-colors cursor-pointer">Our Services</span></li>
-                  <li><span onClick={() => { if (document && document.activeElement) document.activeElement.blur(); history.push('/smart-ride'); }} className="text-gray-400 hover:text-[#10b981] text-sm font-[300] transition-colors cursor-pointer">Smart Ride</span></li>
-                  <li><span onClick={() => { if (document && document.activeElement) document.activeElement.blur(); history.push('/track-package'); }} className="text-gray-400 hover:text-[#10b981] text-sm font-[300] transition-colors cursor-pointer">Track Package</span></li>
-                  <li><span onClick={() => { if (document && document.activeElement) document.activeElement.blur(); history.push('/careers'); }} className="text-gray-400 hover:text-[#10b981] text-sm font-[300] transition-colors cursor-pointer">Careers</span></li>
-                  <li><span onClick={() => { if (document && document.activeElement) document.activeElement.blur(); history.push('/blog'); }} className="text-gray-400 hover:text-[#10b981] text-sm font-[300] transition-colors cursor-pointer">Blog</span></li>
+                  <li>
+                    <span
+                      onClick={() => {
+                        if (document && document.activeElement)
+                          document.activeElement.blur();
+                        history.push("/about");
+                      }}
+                      className="text-gray-400 hover:text-[#10b981] text-sm font-[300] transition-colors cursor-pointer"
+                    >
+                      About Us
+                    </span>
+                  </li>
+                  <li>
+                    <span
+                      onClick={() => {
+                        if (document && document.activeElement)
+                          document.activeElement.blur();
+                        history.push("/services");
+                      }}
+                      className="text-gray-400 hover:text-[#10b981] text-sm font-[300] transition-colors cursor-pointer"
+                    >
+                      Our Services
+                    </span>
+                  </li>
+                  <li>
+                    <span
+                      onClick={() => {
+                        if (document && document.activeElement)
+                          document.activeElement.blur();
+                        history.push("/smart-ride");
+                      }}
+                      className="text-gray-400 hover:text-[#10b981] text-sm font-[300] transition-colors cursor-pointer"
+                    >
+                      Smart Ride
+                    </span>
+                  </li>
+                  <li>
+                    <span
+                      onClick={() => {
+                        if (document && document.activeElement)
+                          document.activeElement.blur();
+                        history.push("/track-package");
+                      }}
+                      className="text-gray-400 hover:text-[#10b981] text-sm font-[300] transition-colors cursor-pointer"
+                    >
+                      Track Package
+                    </span>
+                  </li>
+                  <li>
+                    <span
+                      onClick={() => {
+                        if (document && document.activeElement)
+                          document.activeElement.blur();
+                        history.push("/careers");
+                      }}
+                      className="text-gray-400 hover:text-[#10b981] text-sm font-[300] transition-colors cursor-pointer"
+                    >
+                      Careers
+                    </span>
+                  </li>
+                  <li>
+                    <span
+                      onClick={() => {
+                        if (document && document.activeElement)
+                          document.activeElement.blur();
+                        history.push("/blog");
+                      }}
+                      className="text-gray-400 hover:text-[#10b981] text-sm font-[300] transition-colors cursor-pointer"
+                    >
+                      Blog
+                    </span>
+                  </li>
                 </ul>
               </div>
 
               {/* Services */}
               <div>
-                <YummyText className="text-lg font-medium mb-4">Services</YummyText>
+                <YummyText className="text-lg font-medium mb-4">
+                  Services
+                </YummyText>
                 <ul className="space-y-3">
-                  <li><span onClick={() => { if (document && document.activeElement) document.activeElement.blur(); history.push('/services'); }} className="text-gray-400 hover:text-[#10b981] text-sm font-[300] transition-colors cursor-pointer">Express Delivery</span></li>
-                  <li><span onClick={() => { if (document && document.activeElement) document.activeElement.blur(); history.push('/services'); }} className="text-gray-400 hover:text-[#10b981] text-sm font-[300] transition-colors cursor-pointer">E-commerce Fulfillment</span></li>
-                  <li><span onClick={() => { if (document && document.activeElement) document.activeElement.blur(); history.push('/services'); }} className="text-gray-400 hover:text-[#10b981] text-sm font-[300] transition-colors cursor-pointer">Interstate Logistics</span></li>
-                  <li><span onClick={() => { if (document && document.activeElement) document.activeElement.blur(); history.push('/services'); }} className="text-gray-400 hover:text-[#10b981] text-sm font-[300] transition-colors cursor-pointer">Corporate Delivery</span></li>
-                  <li><span onClick={() => { if (document && document.activeElement) document.activeElement.blur(); history.push('/services'); }} className="text-gray-400 hover:text-[#10b981] text-sm font-[300] transition-colors cursor-pointer">Same-Day Delivery</span></li>
+                  <li>
+                    <span
+                      onClick={() => {
+                        if (document && document.activeElement)
+                          document.activeElement.blur();
+                        history.push("/services");
+                      }}
+                      className="text-gray-400 hover:text-[#10b981] text-sm font-[300] transition-colors cursor-pointer"
+                    >
+                      Express Delivery
+                    </span>
+                  </li>
+                  <li>
+                    <span
+                      onClick={() => {
+                        if (document && document.activeElement)
+                          document.activeElement.blur();
+                        history.push("/services");
+                      }}
+                      className="text-gray-400 hover:text-[#10b981] text-sm font-[300] transition-colors cursor-pointer"
+                    >
+                      E-commerce Fulfillment
+                    </span>
+                  </li>
+                  <li>
+                    <span
+                      onClick={() => {
+                        if (document && document.activeElement)
+                          document.activeElement.blur();
+                        history.push("/services");
+                      }}
+                      className="text-gray-400 hover:text-[#10b981] text-sm font-[300] transition-colors cursor-pointer"
+                    >
+                      Interstate Logistics
+                    </span>
+                  </li>
+                  <li>
+                    <span
+                      onClick={() => {
+                        if (document && document.activeElement)
+                          document.activeElement.blur();
+                        history.push("/services");
+                      }}
+                      className="text-gray-400 hover:text-[#10b981] text-sm font-[300] transition-colors cursor-pointer"
+                    >
+                      Corporate Delivery
+                    </span>
+                  </li>
+                  <li>
+                    <span
+                      onClick={() => {
+                        if (document && document.activeElement)
+                          document.activeElement.blur();
+                        history.push("/services");
+                      }}
+                      className="text-gray-400 hover:text-[#10b981] text-sm font-[300] transition-colors cursor-pointer"
+                    >
+                      Same-Day Delivery
+                    </span>
+                  </li>
                 </ul>
               </div>
 
               {/* Contact Us */}
               <div>
-                <YummyText className="text-lg font-medium mb-4">Contact Us</YummyText>
+                <YummyText className="text-lg font-medium mb-4">
+                  Contact Us
+                </YummyText>
                 <ul className="space-y-4">
                   <li className="flex items-start gap-3">
                     <span className="text-[#10b981] mt-1">📍</span>
-                    <YummyText className="text-gray-400 text-sm font-[300]">123 Logistics Avenue, Suite 100</YummyText>
+                    <YummyText className="text-gray-400 text-sm font-[300]">
+                      123 Logistics Avenue, Suite 100
+                    </YummyText>
                   </li>
                   <li className="flex items-start gap-3">
                     <span className="text-[#10b981] mt-1">📞</span>
-                    <YummyText className="text-gray-400 text-sm font-[300]">+1 (800) SWIFTLY</YummyText>
+                    <YummyText className="text-gray-400 text-sm font-[300]">
+                      +1 (800) SWIFTLY
+                    </YummyText>
                   </li>
                   <li className="flex items-start gap-3">
                     <span className="text-[#10b981] mt-1">✉️</span>
-                    <YummyText className="text-gray-400 text-sm font-[300]">support@swiftlyexpress.com</YummyText>
+                    <YummyText className="text-gray-400 text-sm font-[300]">
+                      support@swiftlyexpress.com
+                    </YummyText>
                   </li>
                 </ul>
               </div>
@@ -625,13 +862,40 @@ const SwiftlyLanding = () => {
                 © 2025 Swiftly Express. All rights reserved.
               </YummyText>
               <div className="flex gap-6">
-                <span onClick={() => { if (document && document.activeElement) document.activeElement.blur(); history.push('/privacy-policy'); }} className="text-gray-500 hover:text-[#10b981] text-sm font-[300] transition-colors cursor-pointer">Privacy Policy</span>
-                <span onClick={() => { if (document && document.activeElement) document.activeElement.blur(); history.push('/terms-of-service'); }} className="text-gray-500 hover:text-[#10b981] text-sm font-[300] transition-colors cursor-pointer">Terms of Service</span>
-                <span onClick={() => { if (document && document.activeElement) document.activeElement.blur(); history.push('/cookie-policy'); }} className="text-gray-500 hover:text-[#10b981] text-sm font-[300] transition-colors cursor-pointer">Cookie Policy</span>
+                <span
+                  onClick={() => {
+                    if (document && document.activeElement)
+                      document.activeElement.blur();
+                    history.push("/privacy-policy");
+                  }}
+                  className="text-gray-500 hover:text-[#10b981] text-sm font-[300] transition-colors cursor-pointer"
+                >
+                  Privacy Policy
+                </span>
+                <span
+                  onClick={() => {
+                    if (document && document.activeElement)
+                      document.activeElement.blur();
+                    history.push("/terms-of-service");
+                  }}
+                  className="text-gray-500 hover:text-[#10b981] text-sm font-[300] transition-colors cursor-pointer"
+                >
+                  Terms of Service
+                </span>
+                <span
+                  onClick={() => {
+                    if (document && document.activeElement)
+                      document.activeElement.blur();
+                    history.push("/cookie-policy");
+                  }}
+                  className="text-gray-500 hover:text-[#10b981] text-sm font-[300] transition-colors cursor-pointer"
+                >
+                  Cookie Policy
+                </span>
               </div>
             </div>
           </PageWrapper>
-        </footer>      
+        </footer>
       </IonContent>
     </IonPage>
   );
