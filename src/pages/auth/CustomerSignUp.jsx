@@ -98,6 +98,12 @@ const CustomerSignUp = () => {
               </div>
 
               <form onSubmit={handleSubmit} className="space-y-4">
+                {error && (
+                  <div className="text-red-500 text-sm mb-4 text-center">
+                    {error}
+                  </div>
+                )}
+                
                 {/* Full Name */}
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-2">
@@ -121,7 +127,7 @@ const CustomerSignUp = () => {
                   </label>
                   <input
                     type="email"
-                    name="email"
+                    name="email"  
                     value={formData.email}
                     onChange={handleChange}
                     placeholder="Enter your email"
@@ -191,9 +197,12 @@ const CustomerSignUp = () => {
                 <div className="text-center mt-6">
                   <YummyText className="text-sm text-gray-600">
                     Already have an account?{' '}
-                    <Link to="/customer/login" className="text-[#00D68F] hover:underline">
+                    <span 
+                      onClick={() => router.push('/auth/customer/login', 'back', 'pop')}
+                      className="text-[#00D68F] hover:underline cursor-pointer"
+                    >
                       Login
-                    </Link>
+                    </span>
                   </YummyText>
                 </div>
               </form>

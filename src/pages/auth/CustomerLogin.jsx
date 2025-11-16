@@ -108,9 +108,12 @@ const CustomerLogin = () => {
 
                 {/* Forgot Password */}
                 <div className="text-right">
-                  <Link to="/forgot-password" className="text-sm text-[#00D68F] hover:underline">
+                  <span 
+                    onClick={() => router.push('/forgot-password', 'forward', 'push')}
+                    className="text-sm text-[#00D68F] hover:underline cursor-pointer"
+                  >
                     Forgot Password?
-                  </Link>
+                  </span>
                 </div>
 
                 {/* Submit Button */}

@@ -6,11 +6,7 @@ import {
 } from "@ionic/react";
 import { IonReactRouter } from "@ionic/react-router";
 import { Route, Redirect } from "react-router-dom";
-
-/* Core CSS required for Ionic components to work properly */
 import "@ionic/react/css/core.css";
-
-/* Basic CSS for apps built with Ionic */
 import "@ionic/react/css/normalize.css";
 import "@ionic/react/css/structure.css";
 import "@ionic/react/css/typography.css";
@@ -19,11 +15,7 @@ import "@ionic/react/css/typography.css";
 import "@ionic/react/css/padding.css";
 import "@ionic/react/css/flex-utils.css";
 import "@ionic/react/css/display.css";
-
-/* Global styles with brand colors */
 import "./theme/variable.css";
-
-/* Error Boundary */
 import ErrorBoundary from "./components/ErrorBoundary";
 
 /* App pages */
@@ -50,14 +42,23 @@ import CustomerSignUp from "./pages/auth/CustomerSignUp";
 import RiderLogin from "./pages/auth/RiderLogin";
 import RiderSignUp from "./pages/auth/RiderSignUp";
 
-/* Dashboard pages - Feature-based structure */
+/* Customer Dashboard pages */
 import CustomerDashboard from "./features/customer/pages/Dashboard";
+import Track from "./features/customer/pages/Track";
+import MyDeliveries from "./features/customer/pages/MyDeliveries";
+import Book from "./features/customer/pages/Book";
+import CustomerProfile from "./features/customer/pages/CustomerProfile";
+import CustomerSupport from "./features/customer/pages/CustomerSupport";
+
+/* Rider Dashboard pages */
 import RiderDashboard from "./features/rider/pages/Dashboard";
 import AvailableOrders from "./features/rider/pages/AvailableOrders";
 import ActiveDeliveries from "./features/rider/pages/ActiveDeliveries";
 import Earnings from "./features/rider/pages/Earnings";
 import Profile from "./features/rider/pages/Profile";
 import Support from "./features/rider/pages/Support";
+
+/* Admin Dashboard pages */
 import AdminDashboard from "./features/admin/pages/Dashboard";
 
 setupIonicReact();
@@ -67,7 +68,6 @@ const App = () => (
     <IonReactRouter>
       <ErrorBoundary>
         <IonRouterOutlet>
-          {/* Public Routes */}
           <Route exact path="/home">
             <Home />
           </Route>
@@ -108,6 +108,21 @@ const App = () => (
         {/* Protected Dashboard Routes - Customer */}
         <Route exact path="/customer/dashboard">
           <CustomerDashboard />
+        </Route>
+        <Route exact path="/customer/track">
+          <Track />
+        </Route>
+        <Route exact path="/customer/deliveries">
+          <MyDeliveries />
+        </Route>
+        <Route exact path="/customer/book">
+          <Book />
+        </Route>
+        <Route exact path="/customer/profile">
+          <CustomerProfile />
+        </Route>
+        <Route exact path="/customer/support">
+          <CustomerSupport />
         </Route>
         
         {/* Protected Dashboard Routes - Rider */}

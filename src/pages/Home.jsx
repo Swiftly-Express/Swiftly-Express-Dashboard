@@ -111,22 +111,22 @@ const SwiftlyLanding = () => {
             <div className="flex items-center px-4 gap-3">
               <Button
                 variant="primary"
-                className="!px-3 !py-2 font-[100] text-[9px]"
+                className="!px-4 !py-3 text-medium font-[300] text-[10px]"
                 onClick={() => {
                   if (document && document.activeElement)
                     document.activeElement.blur();
-                  history.push("/auth/customer/signup");
+                  router.push("/auth/customer/signup");
                 }}
               >
                 <YummyText>Book a delivery</YummyText>
               </Button>
               <Button
                 variant="dark"
-                className="!px-2.5 !py-2 font-[100] text-[9px]"
+                className="!px-4 text-medium !py-3 font-[300] text-[10px]"
                 onClick={() => {
                   if (document && document.activeElement)
                     document.activeElement.blur();
-                  history.push("/auth/role-select");
+                  router.push("/auth/role-select");
                 }}
               >
                 <YummyText>Get Started</YummyText>
@@ -191,25 +191,63 @@ const SwiftlyLanding = () => {
             </YummyText>
 
             {/* CTA Button */}
-            <Button
-              variant="dark"
-              className="px-10 -mt-4 !py-2 text-xs font-[100] rounded-full z-10"
-              onClick={() => {
-                if (document && document.activeElement)
-                  document.activeElement.blur();
-                history.push("/auth/role-select");
-              }}
-            >
-              <YummyText>Get app now</YummyText>
-            </Button>
+            <div className="flex justify-center mt-4">
+              <div className="group relative inline-block">
+                <Button
+                  variant="dark"
+                  className="relative px-10 !py-4 text-sm font-[300] rounded-full z-10 overflow-hidden transition-all !duration-[2000ms] ease-out group-hover:px-16"
+                  onClick={() => {
+                    if (document && document.activeElement)
+                      document.activeElement.blur();
+                    history.push("/auth/role-select");
+                  }}
+                >
+                  <div className="flex items-center justify-center duration-2000 transition-all ease-out">
+                    {/* Icons Container - Slides in from left */}
+                    <div className="flex items-center absolute left-6 top-1/2 -translate-y-1/2 opacity-0 -translate-x-4 transition-all duration-1000 ease-out group-hover:opacity-100 group-hover:translate-x-0">
+                      {/* App Store Icon */}
+                      <div className="w-7 h-7 flex-shrink-0">
+                        <svg className="w-full h-full" viewBox="0 0 24 24" fill="currentColor">
+                          <path d="M18.71 19.5c-.83 1.24-1.71 2.45-3.05 2.47-1.34.03-1.77-.79-3.29-.79-1.53 0-2 .77-3.27.82-1.31.05-2.3-1.32-3.14-2.53C4.25 17 2.94 12.45 4.7 9.39c.87-1.52 2.43-2.48 4.12-2.51 1.28-.02 2.5.87 3.29.87.78 0 2.26-1.07 3.81-.91.65.03 2.47.26 3.64 1.98-.09.06-2.17 1.28-2.15 3.81.03 3.02 2.65 4.03 2.68 4.04-.03.07-.42 1.44-1.38 2.83M13 3.5c.73-.83 1.94-1.46 2.94-1.5.13 1.17-.34 2.35-1.04 3.19-.69.85-1.83 1.51-2.95 1.42-.15-1.15.41-2.35 1.05-3.11z"/>
+                        </svg>
+                      </div>
+
+                      {/* Google Play Icon */}
+                      <div className="w-7 h-7 flex-shrink-0">
+                        <svg className="w-full h-full" viewBox="0 0 24 24" fill="currentColor">
+                          <path d="M3,20.5V3.5C3,2.91 3.34,2.39 3.84,2.15L13.69,12L3.84,21.85C3.34,21.6 3,21.09 3,20.5M16.81,15.12L6.05,21.34L14.54,12.85L16.81,15.12M20.16,10.81C20.5,11.08 20.75,11.5 20.75,12C20.75,12.5 20.53,12.9 20.18,13.18L17.89,14.5L15.39,12L17.89,9.5L20.16,10.81M6.05,2.66L16.81,8.88L14.54,11.15L6.05,2.66Z"/>
+                        </svg>
+                      </div>
+                    </div>
+
+                    {/* Text - Stays centered, slides slightly right on hover */}
+                    <div className="overflow-hidden text-nowrap relative">
+                      {/* Default Text */}
+                      <YummyText
+                        className="transition-all duration-500 ease-out group-hover:opacity-0 group-hover:translate-x-4"
+                      >
+                        Get app now
+                      </YummyText>
+
+                      {/* Hover Text */}
+                      <YummyText
+                        className="absolute text-nowrap flex inset-0 items-center !justify-center opacity-0 -translate-x-6 transition-all duration-1000 ease-out group-hover:translate-x-0 group-hover:opacity-100 group-hover:pl-4"
+                      >
+                        Store Download
+                      </YummyText>
+                    </div>
+                  </div>
+                </Button>
+              </div>
+            </div>
           </div>
         </div>
 
         {/* Services Section */}
-        <section className="py-20 bg-white">
+        <section className="bg-white">
           <PageWrapper className="max-w-7xl mx-auto">
             {/* Section Header */}
-            <div className="flex flex-col items-center text-center !mt-16 mb-8 space-y-1">
+            <div className="flex flex-col items-center text-center mb-8 space-y-1">
               <YummyText className="text-[#10b981] text-xs font-xs -mb-1">
                 What we do best.
               </YummyText>
@@ -282,7 +320,7 @@ const SwiftlyLanding = () => {
         </section>
 
         {/* No Hassle Section */}
-        <section className="px-4 -mt-12 ml-2 mb-14">
+        <section className="px-4 mt-10 mb-14">
           <PageWrapper className="max-w-7xl">
             <div className="relative rounded-3xl overflow-hidden  h-[430px] flex items-center">
               {/* Background Image */}
