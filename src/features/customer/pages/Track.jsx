@@ -20,7 +20,7 @@ const Track = () => {
       <CustomerLayout>
         <IonContent className="ion-padding">
           {/* Header */}
-          <div className="mb-8 py-2">
+          <div className="mb-8 ">
             <div className="text-3xl font-medium text-[#0F172A] mb-2">
               Track Your Package
             </div>

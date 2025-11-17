@@ -19,7 +19,7 @@ const SidebarButton = ({ to, active, icon, label, count }) => {
           active ? 'bg-[#00B75A] text-white' : 'text-[#64748B] hover:bg-gray-50'
         }`}
       >
-        <img src={icon} alt={label} className="w-5 h-5" style={{ filter: active ? 'brightness(0) invert(1)' : 'none' }} />
+        <img src={icon} alt={label} className="w-5 h-5" style={{ filter: active ? 'brightness(0) invert(1)' : 'brightness(0)' }} />
         <YummyText className="flex-1 text-left text-[15px]">{label}</YummyText>
         {count !== undefined && (
           <span className="bg-[#FF6B00] text-white text-xs font-medium px-2 py-0.5 rounded-full min-w-[24px] text-center">
@@ -32,47 +32,56 @@ const SidebarButton = ({ to, active, icon, label, count }) => {
 };
 
 const RiderSidebar = () => {
+  const router = useIonRouter();
+  const location = useLocation();
+  
+  const handleLogout = () => {
+    localStorage.removeItem('auth_token');
+    localStorage.removeItem('user_type');
+    localStorage.removeItem('user_data');
+    if (document && document.activeElement) document.activeElement.blur();
+    router.push('/auth/role-select', 'back', 'pop');
+  };
+
   const menuItems = [
     {
       id: 'dashboard',
       to: '/rider/dashboard',
-      icon: '/icons/dashboard.svg',
+      icon: '/dashboard-icon.svg',
       label: 'Dashboard',
     },
     {
       id: 'available',
       to: '/rider/available',
-      icon: '/icons/orders.svg',
+      icon: '/blockicon.svg',
       label: 'Available Orders',
       count: 5,
     },
     {
       id: 'active',
       to: '/rider/active',
-      icon: '/icons/delivery.svg',
+      icon: '/locationicon.svg',
       label: 'Active Deliveries',
     },
     {
       id: 'earnings',
       to: '/rider/earnings',
-      icon: '/icons/earnings.svg',
+      icon: '/dollar-icon.svg',
       label: 'Earnings',
     },
     {
       id: 'profile',
       to: '/rider/profile',
-      icon: '/icons/profile.svg',
+      icon: '/profileicon.svg',
       label: 'Profile',
     },
     {
       id: 'support',
       to: '/rider/support',
-      icon: '/icons/support.svg',
+      icon: '/supporticon.svg',
       label: 'Support',
     },
   ];
-
-  const location = useLocation();
 
   return (
     <div className="w-64 bg-white h-screen fixed left-0 top-0 border-r border-gray-300 shadow-sm flex flex-col pt-20">
@@ -92,7 +101,10 @@ const RiderSidebar = () => {
 
       {/* Logout Button */}
       <div className="px-6 py-6 border-t border-gray-200">
-        <button className="flex items-center gap-3 text-[#EF4444] hover:bg-red-50 transition-colors w-full px-3 py-2 rounded-lg">
+        <button 
+          onClick={handleLogout}
+          className="flex items-center gap-3 text-[#EF4444] hover:bg-red-50 transition-colors w-full px-3 py-2 rounded-lg"
+        >
           <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
             <path d="M17 7l-1.41 1.41L18.17 11H8v2h10.17l-2.58 2.58L17 17l5-5zM4 5h8V3H4c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h8v-2H4V5z" fill="currentColor"/>
           </svg>

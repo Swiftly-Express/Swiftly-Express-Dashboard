@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { IonContent, IonPage } from '@ionic/react';
-import DashboardLayout from '../../../components/dashboard/DashboardLayout';
+import RiderLayout from '../components/RiderLayout';
 
 const sideBottomShadow = {
   boxShadow: '0.5px 1.5px 2px rgba(0, 0, 0, 0.05), -0.5px 1.5px 2px rgba(0, 0, 0, 0.05), 0 1.5px 3px rgba(0, 0, 0, 0.07)'
@@ -95,7 +95,7 @@ const Earnings = () => {
 
   return (
     <IonPage>
-      <DashboardLayout role="rider">
+      <RiderLayout>
         <IonContent className="ion-padding">
           {/* Header */}
           <div className="flex items-center justify-between mb-8 py-2">
@@ -318,7 +318,7 @@ const Earnings = () => {
             </div>
           </div>
         </IonContent>
-      </DashboardLayout>
+      </RiderLayout>
     </IonPage>
   );
 };

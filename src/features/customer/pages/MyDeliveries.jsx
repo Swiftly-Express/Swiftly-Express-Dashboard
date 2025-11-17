@@ -13,7 +13,7 @@ const DeliveryCard = ({ packageId, status, statusColor, statusBg, from, to, book
         {/* Package Icon */}
         <div className="w-12 h-12 bg-blue-50 rounded-xl flex items-center justify-center flex-shrink-0">
           <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-            <path d="M20 6h-4V4c0-1.11-.89-2-2-2h-4c-1.11 0-2 .89-2 2v2H4c-1.11 0-1.99.89-1.99 2L2 19c0 1.11.89 2 2 2h16c1.11 0 2-.89 2-2V8c0-1.11-.89-2-2-2zm-6 0h-4V4h4v2z" fill="#3B82F6"/>
+            <path d="M20 8h-3V4H3c-1.1 0-2 .9-2 2v11h2c0 1.66 1.34 3 3 3s3-1.34 3-3h6c0 1.66 1.34 3 3 3s3-1.34 3-3h2v-5l-3-4zM6 18c-.55 0-1-.45-1-1s.45-1 1-1 1 .45 1 1-.45 1-1 1zm13.5-9l1.96 2.5H17V9h2.5zm-1.5 9c-.55 0-1-.45-1-1s.45-1 1-1 1 .45 1 1-.45 1-1 1z" fill="#3B82F6"/>
           </svg>
         </div>
 
@@ -122,7 +122,7 @@ const MyDeliveries = () => {
       <CustomerLayout>
         <IonContent className="ion-padding">
           {/* Header */}
-          <div className="mb-8 py-2">
+          <div className="mb-8">
             <div className="text-3xl font-medium text-[#0F172A] mb-2">
               My Deliveries
             </div>
