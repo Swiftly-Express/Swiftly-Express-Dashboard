@@ -1,61 +1,112 @@
 import React, { useState } from 'react';
-import { IonContent, IonPage } from '@ionic/react';
+import { IonContent, IonPage, IonIcon } from '@ionic/react';
+import { eye, eyeOff, arrowForward } from 'ionicons/icons';
 import CustomerLayout from '../components/CustomerLayout';
+import { YummyText } from '../../../components/YummyText';
 
 const sideBottomShadow = {
   boxShadow: '2px 4px 4px rgba(0,0,0,0.06), -2px 4px 4px rgba(0,0,0,0.06), 0 4px 8px rgba(0,0,0,0.08)'
 };
 
-const DeliveryCard = ({ packageId, status, statusColor, statusBg, from, to, bookedDate, progress }) => (
-  <div className="bg-white rounded-2xl p-6 mb-4 border border-gray-100" style={sideBottomShadow}>
-    <div className="flex items-start justify-between">
-      <div className="flex items-start gap-4 flex-1">
+const DeliveryCard = ({ packageId, status, statusColor, statusBg, from, to, bookedDate, progress }) => {
+  const [isOpen, setIsOpen] = useState(false);
+  
+  return (
+    <div className="bg-white rounded-2xl p-6 mb-4" style={sideBottomShadow}>
+      <div className="flex items-center justify-between">
+        <div className="flex items-start gap-4 flex-1">
         {/* Package Icon */}
         <div className="w-12 h-12 bg-blue-50 rounded-xl flex items-center justify-center flex-shrink-0">
-          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-            <path d="M20 8h-3V4H3c-1.1 0-2 .9-2 2v11h2c0 1.66 1.34 3 3 3s3-1.34 3-3h6c0 1.66 1.34 3 3 3s3-1.34 3-3h2v-5l-3-4zM6 18c-.55 0-1-.45-1-1s.45-1 1-1 1 .45 1 1-.45 1-1 1zm13.5-9l1.96 2.5H17V9h2.5zm-1.5 9c-.55 0-1-.45-1-1s.45-1 1-1 1 .45 1 1-.45 1-1 1z" fill="#3B82F6"/>
-          </svg>
+          <img src="/blockicon.svg" alt="Package" className="w-6 h-6" />
         </div>
 
         {/* Package Details */}
         <div className="flex-1">
           <div className="flex items-center gap-3 mb-2">
-            <div className="text-lg font-medium text-[#0F172A]">{packageId}</div>
-            <span className={`px-3 py-1 rounded-full text-xs font-medium ${statusBg} ${statusColor}`}>
-              {status}
-            </span>
+            <YummyText className="text-lg font-medium text-[#0F172A]">{packageId}</YummyText>
+            <YummyText>
+              <span className={`px-3 py-1 rounded-full text-xs font-medium ${statusBg} ${statusColor}`}>
+                {status}
+              </span>
+            </YummyText>
           </div>
-          <div className="text-sm text-[#64748B] mb-2">
-            {from} → {to}
-          </div>
-          <div className="text-xs text-[#64748B] mb-3">
-            Booked: {bookedDate}
-          </div>
+          <YummyText>
+            <div className="text-sm text-[#4A5565] mb-1 flex items-center gap-1">
+              <span>{from}</span>
+              <IonIcon icon={arrowForward} className="text-sm" />
+              <span>{to}</span>
+            </div>
+            <div className="text-xs text-[#4A5565] mb-1">
+              Booked: {bookedDate}
+            </div>
+          </YummyText>
 
           {/* Progress Bar */}
-          <div className="flex items-center gap-3">
-            <div className="text-xs text-[#64748B]">Progress</div>
-            <div className="flex-1 relative h-2 bg-gray-200 rounded-full overflow-hidden">
+          <div className="flex-1 max-w-[30%]">
+            <div className="flex justify-between items-center mb-1">
+              <YummyText className="text-xs text-[#4A5565]">Progress</YummyText>
+              <YummyText className="text-xs font-medium text-[#4A5565]">{progress}%</YummyText>
+            </div>
+            <div className="relative h-2 bg-gray-200 rounded-full overflow-hidden">
               <div 
                 className="absolute top-0 left-0 h-full bg-[#00D68F] rounded-full transition-all duration-300"
                 style={{ width: `${progress}%` }}
               ></div>
             </div>
-            <div className="text-xs font-medium text-[#0F172A]">{progress}%</div>
           </div>
         </div>
       </div>
 
       {/* View Details Button */}
-      <button className="flex items-center gap-2 text-sm text-[#64748B] hover:text-[#0F172A] transition-colors">
-        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-          <path d="M12 4.5C7 4.5 2.73 7.61 1 12c1.73 4.39 6 7.5 11 7.5s9.27-3.11 11-7.5c-1.73-4.39-6-7.5-11-7.5zM12 17c-2.76 0-5-2.24-5-5s2.24-5 5-5 5 2.24 5 5-2.24 5-5 5zm0-8c-1.66 0-3 1.34-3 3s1.34 3 3 3 3-1.34 3-3-1.34-3-3-3z" fill="currentColor"/>
-        </svg>
-        View Details
+      <button 
+        onClick={() => setIsOpen(!isOpen)}
+        className="flex items-center gap-2 text-sm text-[#64748B] shadow-sm px-3 py-2 rounded-xl hover:text-[#0F172A] hover:border-gray-800 transition-colors"
+        style={{ border: '1,5px solid #0000001A' }}
+      >
+        <IonIcon icon={isOpen ? eyeOff : eye} className="text-lg" />
+        <YummyText>View Details</YummyText>
       </button>
     </div>
   </div>
-);
+  );
+};
+
+const CompletedDeliveryRow = ({ delivery }) => {
+  const [isOpen, setIsOpen] = useState(false);
+  
+  return (
+    <tr className="border-b border-gray-100 hover:bg-gray-50">
+      <td className="py-4 px-4 text-sm font-medium text-[#0A0A0A]">{delivery.id}</td>
+      <td className="py-4 px-4 text-sm text-[#0A0A0A]">
+        <div className="flex items-center gap-1">
+          <span>{delivery.from}</span>
+          <IonIcon icon={arrowForward} className="text-sm" />
+          <span>{delivery.to}</span>
+        </div>
+      </td>
+      <td className="py-4 px-4 text-sm text-[#0A0A0A]">{delivery.bookedDate}</td>
+      <td className="py-4 px-4 text-sm text-[#0A0A0A]">{delivery.deliveredDate}</td>
+      <td className="py-4 px-4">
+        <span className="px-3 py-1 bg-green-100 text-green-700 rounded-full text-xs font-medium">
+          {delivery.status}
+        </span>
+      </td>
+      <td className="py-4 px-4">
+        <div className="flex items-center justify-center gap-6">
+          <button 
+            onClick={() => setIsOpen(!isOpen)}
+            className="text-[#0A0A0A] hover:text-[#0F172A] transition-colors"
+          >
+            <IonIcon icon={isOpen ? eyeOff : eye} className="text-xl" />
+          </button>
+          <button className="text-[#0A0A0A] -mt-2 hover:text-[#0F172A] transition-colors">
+            <img src="/downloadicon.svg" alt="Download" className="w-5 h-5" />
+          </button>
+        </div>
+      </td>
+    </tr>
+  );
+};
 
 const MyDeliveries = () => {
   const [activeTab, setActiveTab] = useState('active');
@@ -96,21 +147,24 @@ const MyDeliveries = () => {
   const completedDeliveries = [
     {
       id: 'PKG-2398',
-      route: 'San Francisco, CA → Portland, OR',
+      from: 'San Francisco, CA',
+      to: 'Portland, OR',
       bookedDate: 'Oct 18, 2025',
       deliveredDate: 'Oct 20, 2025',
       status: 'Delivered'
     },
     {
       id: 'PKG-2395',
-      route: 'Austin, TX → Denver, CO',
+      from: 'Austin, TX',
+      to: 'Denver, CO',
       bookedDate: 'Oct 15, 2025',
       deliveredDate: 'Oct 17, 2025',
       status: 'Delivered'
     },
     {
       id: 'PKG-2390',
-      route: 'Atlanta, GA → Nashville, TN',
+      from: 'Atlanta, GA',
+      to: 'Nashville, TN',
       bookedDate: 'Oct 12, 2025',
       deliveredDate: 'Oct 13, 2025',
       status: 'Delivered'
@@ -123,19 +177,19 @@ const MyDeliveries = () => {
         <IonContent className="ion-padding">
           {/* Header */}
           <div className="mb-8">
-            <div className="text-3xl font-medium text-[#0F172A] mb-2">
+            <YummyText className="text-3xl font-medium text-[#0F172A] mb-2">
               My Deliveries
-            </div>
-            <div className="text-[#4A5565] text-[15px] font-[400]">
+            </YummyText>
+            <YummyText className="text-[#4A5565] text-[15px] font-[400]">
               View and manage all your shipments
-            </div>
+            </YummyText>
           </div>
 
           {/* Tab Navigation */}
-          <div className="flex items-center gap-2 mb-8 bg-gray-100 p-1 rounded-xl w-fit">
+          <div className="flex items-center gap-2 mb-8 bg-gray-100 p-1 rounded-full w-fit">
             <button
               onClick={() => setActiveTab('active')}
-              className={`px-6 py-2 rounded-lg text-sm font-normal transition-colors ${
+              className={`px-14 py-2 rounded-full text-sm font-normal transition-colors ${
                 activeTab === 'active'
                   ? 'text-[#0F172A] bg-white shadow-sm'
                   : 'text-[#64748B]'
@@ -145,7 +199,7 @@ const MyDeliveries = () => {
             </button>
             <button
               onClick={() => setActiveTab('completed')}
-              className={`px-6 py-2 rounded-lg text-sm font-normal transition-colors ${
+              className={`px-14 py-2 rounded-full text-sm font-normal transition-colors ${
                 activeTab === 'completed'
                   ? 'text-[#0F172A] bg-white shadow-sm'
                   : 'text-[#64748B]'
@@ -176,7 +230,7 @@ const MyDeliveries = () => {
 
           {/* Completed Deliveries Table */}
           {activeTab === 'completed' && (
-            <div className="bg-white rounded-2xl p-6 border border-gray-100" style={sideBottomShadow}>
+            <div className="bg-white rounded-2xl p-6" style={sideBottomShadow}>
               <div className="overflow-x-auto">
                 <table className="w-full">
                   <thead>
@@ -191,31 +245,7 @@ const MyDeliveries = () => {
                   </thead>
                   <tbody>
                     {completedDeliveries.map((delivery, index) => (
-                      <tr key={index} className="border-b border-gray-100 hover:bg-gray-50">
-                        <td className="py-4 px-4 text-sm font-medium text-[#0F172A]">{delivery.id}</td>
-                        <td className="py-4 px-4 text-sm text-[#64748B]">{delivery.route}</td>
-                        <td className="py-4 px-4 text-sm text-[#64748B]">{delivery.bookedDate}</td>
-                        <td className="py-4 px-4 text-sm text-[#64748B]">{delivery.deliveredDate}</td>
-                        <td className="py-4 px-4">
-                          <span className="px-3 py-1 bg-green-100 text-green-700 rounded-full text-xs font-medium">
-                            {delivery.status}
-                          </span>
-                        </td>
-                        <td className="py-4 px-4">
-                          <div className="flex items-center justify-center gap-3">
-                            <button className="text-[#64748B] hover:text-[#0F172A] transition-colors">
-                              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                                <path d="M12 4.5C7 4.5 2.73 7.61 1 12c1.73 4.39 6 7.5 11 7.5s9.27-3.11 11-7.5c-1.73-4.39-6-7.5-11-7.5zM12 17c-2.76 0-5-2.24-5-5s2.24-5 5-5 5 2.24 5 5-2.24 5-5 5zm0-8c-1.66 0-3 1.34-3 3s1.34 3 3 3 3-1.34 3-3-1.34-3-3-3z" fill="currentColor"/>
-                              </svg>
-                            </button>
-                            <button className="text-[#64748B] hover:text-[#0F172A] transition-colors">
-                              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                                <path d="M19 9h-4V3H9v6H5l7 7 7-7zM5 18v2h14v-2H5z" fill="currentColor"/>
-                              </svg>
-                            </button>
-                          </div>
-                        </td>
-                      </tr>
+                      <CompletedDeliveryRow key={index} delivery={delivery} />
                     ))}
                   </tbody>
                 </table>

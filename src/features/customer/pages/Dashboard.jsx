@@ -1,29 +1,31 @@
 import React from 'react';
-import { IonContent, IonPage } from '@ionic/react';
+import { IonContent, IonPage, IonIcon } from '@ionic/react';
+import { arrowForward } from 'ionicons/icons';
 import CustomerLayout from '../components/CustomerLayout';
+import { YummyText } from '../../../components/YummyText';
 
 const sideBottomShadow = {
   boxShadow: '2px 4px 4px rgba(0,0,0,0.06), -2px 4px 4px rgba(0,0,0,0.06), 0 4px 8px rgba(0,0,0,0.08)'
 };
 
 const StatCard = ({ icon, iconBg, title, value, subtitle, subtitleColor }) => (
-  <div className="bg-white rounded-xl p-6" style={sideBottomShadow}>
-    <div className="flex items-start justify-between mb-4">
-      <div className="text-sm text-[#64748B]">{title}</div>
-      <div className={`w-10 h-10 ${iconBg} rounded-xl flex items-center justify-center`}>
+  <div className="bg-white rounded-xl p-5" style={sideBottomShadow}>
+    <div className="flex items-start justify-between mb-6">
+      <YummyText className="text-sm text-[#4A5565] mt-2">{title}</YummyText>
+      <div className={`w-9 h-9 ${iconBg} rounded-lg flex items-center justify-center`}>
         {icon}
       </div>
     </div>
-    <div className="text-3xl font-normal text-[#0F172A] mb-1">{value}</div>
-    <div className={`text-xs ${subtitleColor || 'text-[#64748B]'}`}>{subtitle}</div>
+    <YummyText className="text-3xl font-normal text-[#0A0A0A] mb-1">{value}</YummyText>
+    <YummyText className={`text-xs ${subtitleColor || 'text-[#6A7282]'}`}>{subtitle}</YummyText>
   </div>
 );
 
 const DeliveryItem = ({ packageId, status, statusColor, statusBg, from, to, eta, etaTime, progress }) => (
   <div className="mb-6 last:mb-0">
     <div className="flex items-start justify-between mb-2">
-      <div className="flex items-center gap-3">
-        <div className="text-base font-medium text-[#00D68F]">{packageId}</div>
+      <div className="flex items-center gap-2">
+        <div className="text-base font-medium text-[#00B75A]">{packageId}</div>
         <span className={`px-3 py-1 rounded-full text-xs font-medium ${statusBg} ${statusColor}`}>
           {status}
         </span>
@@ -34,9 +36,13 @@ const DeliveryItem = ({ packageId, status, statusColor, statusBg, from, to, eta,
       </div>
     </div>
     
-    <div className="text-sm text-[#64748B] mb-3">
-      {from} → {to}
-    </div>
+    <YummyText>
+      <div className="text-medium font-[400] text-[#4A5565] mb-3 -mt-4 flex items-center gap-1">
+        <span>{from}</span>
+        <IonIcon icon={arrowForward} className="text-medium" />
+        <span>{to}</span>
+      </div>
+    </YummyText>
 
     {/* Progress Bar */}
     <div className="relative w-full h-2 bg-gray-200 rounded-full overflow-hidden">
@@ -75,7 +81,7 @@ const CustomerDashboard = () => {
     {
       id: 'PKG-2403',
       status: 'Out for Delivery',
-      statusColor: 'text-green-700',
+      statusColor: 'text-[#008236]',
       statusBg: 'bg-green-100',
       from: 'Seattle, WA',
       to: 'Boston, MA',
@@ -91,21 +97,19 @@ const CustomerDashboard = () => {
         <IonContent className="ion-padding">
           {/* Welcome Section */}
           <div className="mb-8">
-            <div className="text-3xl font-medium text-[#0F172A] mb-2">
+            <YummyText className="text-3xl font-medium text-[#0F172A] mb-2">
               Welcome back, Uduak!
-            </div>
-            <div className="text-[#4A5565] text-[15px] font-[400]">
+            </YummyText>
+            <YummyText className="text-[#4A5565] text-[15px] font-[400]">
               Here's what's happening with your deliveries today.
-            </div>
+            </YummyText>
           </div>
 
           {/* Stats Grid */}
           <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-8">
             <StatCard
               icon={
-                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                  <path d="M20 8h-3V4H3c-1.1 0-2 .9-2 2v11h2c0 1.66 1.34 3 3 3s3-1.34 3-3h6c0 1.66 1.34 3 3 3s3-1.34 3-3h2v-5l-3-4zM6 18c-.55 0-1-.45-1-1s.45-1 1-1 1 .45 1 1-.45 1-1 1zm13.5-9l1.96 2.5H17V9h2.5zm-1.5 9c-.55 0-1-.45-1-1s.45-1 1-1 1 .45 1 1-.45 1-1 1z" fill="#3B82F6"/>
-                </svg>
+                <img src="/blockicon.svg" alt="Active Deliveries" className="w-5 h-5" />
               }
               iconBg="bg-blue-50"
               title="Active Deliveries"
@@ -115,11 +119,9 @@ const CustomerDashboard = () => {
             />
             <StatCard
               icon={
-                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                  <path d="M11.99 2C6.47 2 2 6.48 2 12s4.47 10 9.99 10C17.52 22 22 17.52 22 12S17.52 2 11.99 2zM12 20c-4.42 0-8-3.58-8-8s3.58-8 8-8 8 3.58 8 8-3.58 8-8 8zm.5-13H11v6l5.25 3.15.75-1.23-4.5-2.67z" fill="#F59E0B"/>
-                </svg>
+                <img src="/clockicon.svg" alt="In Transit" className="w-5 h-5" />
               }
-              iconBg="bg-orange-50"
+              iconBg="bg-[#FFF7ED]"
               title="In Transit"
               value="8"
               subtitle="2 arriving today"
@@ -127,9 +129,7 @@ const CustomerDashboard = () => {
             />
             <StatCard
               icon={
-                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                  <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z" fill="#00D68F"/>
-                </svg>
+                <img src="/checkicon.svg" alt="Completed" className="w-5 h-5" />
               }
               iconBg="bg-green-50"
               title="Completed"
@@ -139,9 +139,7 @@ const CustomerDashboard = () => {
             />
             <StatCard
               icon={
-                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                  <path d="M16 6l2.29 2.29-4.88 4.88-4-4L2 16.59 3.41 18l6-6 4 4 6.3-6.29L22 12V6z" fill="#8B5CF6"/>
-                </svg>
+                <img src="/success-rate.svg" alt="Success Rate" className="w-5 h-5" />
               }
               iconBg="bg-purple-50"
               title="Success Rate"
@@ -154,12 +152,12 @@ const CustomerDashboard = () => {
           {/* Recent Deliveries */}
           <div className="bg-white rounded-2xl p-6" style={sideBottomShadow}>
             <div className="mb-6">
-              <div className="text-xl font-normal text-[#0F172A] mb-1">
+              <YummyText className="text-xl font-semibold text-[#0F172A] mb-1">
                 Recent Deliveries
-              </div>
-              <div className="text-sm text-[#64748B]">
+              </YummyText>
+              <YummyText className="text-xl font-[400] text-[#717182]">
                 Track your latest shipments
-              </div>
+              </YummyText>
             </div>
 
             <div>

@@ -16,10 +16,10 @@ const SidebarButton = ({ to, active, icon, label, count }) => {
     <button onClick={handleClick} className="w-full text-left">
       <div
         className={`flex items-center gap-3 px-4 py-3 rounded-xl transition-colors w-full ${
-          active ? 'bg-[#00B75A] text-white' : 'text-[#64748B] hover:bg-gray-50'
+          active ? 'bg-[#00B75A] text-white' : 'text-[#4B5563] hover:bg-gray-50'
         }`}
       >
-        <img src={icon} alt={label} className="w-5 h-5" style={{ filter: active ? 'brightness(0) invert(1)' : 'none' }} />
+        <img src={icon} alt={label} className="w-5 h-5" style={{ filter: active ? 'brightness(0) invert(1)' : 'brightness(0)' }} />
         <YummyText className="flex-1 text-left text-[15px]">{label}</YummyText>
         {count !== undefined && (
           <span className="bg-[#FF6B00] text-white text-xs font-medium px-2 py-0.5 rounded-full min-w-[24px] text-center">
