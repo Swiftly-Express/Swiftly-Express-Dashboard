@@ -1,6 +1,7 @@
 import React from 'react';
 import { IonPage, IonContent } from '@ionic/react';
 import RiderLayout from '../components/RiderLayout';
+import { YummyText } from '../../../components/YummyText';
 
 // Shadow only on left, right and bottom - no top shadow for seamless blend
 const sideBottomShadow = {
@@ -8,9 +9,9 @@ const sideBottomShadow = {
 };
 
 const StatCard = ({ icon, title, value, subtitle, iconBg }) => (
-  <div className="bg-white rounded-xl p-7 border-none" style={sideBottomShadow}>
+  <div className="bg-white rounded-xl p-5" style={sideBottomShadow}>
     <div className="flex items-start justify-between mb-10">
-      <div className="text-xs text-[#4A5565]">{title}</div>
+      <div className="text-xs text-[#4A5565] mt-2.5">{title}</div>
       <div className={`w-10 h-10 ${iconBg} rounded-xl flex items-center justify-center`}>
         {icon}
       </div>
@@ -21,8 +22,9 @@ const StatCard = ({ icon, title, value, subtitle, iconBg }) => (
 );
 
 const DeliveryCard = ({ packageId, status, from, to, customer, price, distance, time, statusColor }) => (
-  <div className="bg-gradient-to-br from-[#EFF6FF] to-[#EDFFF9] rounded-2xl p-6 mb-4">
-    <div className="flex items-start justify-between mb-4">
+  <div className="bg-gradient-to-br from-[#EFF6FF] to-[#EDFFF9] rounded-2xl p-6 mb-3">
+    <YummyText>
+    <div className="flex items-start justify-between -mb-4">
       <div className="flex items-center gap-3">
         <div className="text-base font-normal text-[#0F172A]">{packageId}</div>
         <span className={`px-3 py-1 rounded-full text-xs font-normal ${statusColor}`}>
@@ -30,45 +32,48 @@ const DeliveryCard = ({ packageId, status, from, to, customer, price, distance, 
         </span>
       </div>
       <div className="text-right">
-        <div className="text-xl font-normal text-[#00D68F]">{price}</div>
+        <div className="text-xl font-sm text-[#00A63E]">{price}</div>
         <div className="text-xs text-[#64748B]">{distance} · {time}</div>
       </div>
     </div>
     
     <div className="space-y-1 mb-4">
-      <div className="text-xs text-[#64748B]">From: <span className="text-[#0F172A]">{from}</span></div>
-      <div className="text-xs text-[#64748B]">To: <span className="text-[#0F172A]">{to}</span></div>
-      <div className="text-xs text-[#64748B]">Customer: <span className="text-[#0F172A]">{customer}</span></div>
+      <div className="text-xs text-[#0F172A]">From: <span className="text-[#0F172A]">{from}</span></div>
+      <div className="text-xs text-[#0F172A]">To: <span className="text-[#0F172A]">{to}</span></div>
+      <div className="text-xs text-[#0F172A]">Customer: <span className="text-[#0F172A]">{customer}</span></div>
     </div>
 
     <div className="flex gap-3">
-      <button className="flex-1 bg-[#00B75A] hover:bg-[#00B876] text-white py-2.5 rounded-xl transition-colors font-[300]">
+      <button className="flex-1 bg-[#00B75A] text-sm hover:bg-[#00B876] text-medium text-white py-2 rounded-xl transition-colors font-[400]">
         Navigate
       </button>
-      <button className="flex-1 py-2.5 bg-white border border-gray-200 hover:bg-gray-50 rounded-xl transition-colors text-[#0F172A] font-[300]">
+      <button className="flex-1 py-2 bg-white text-sm hover:bg-[#FFFFFF] rounded-xl transition-colors text-[#0A0A0A] font-[400]" style={{border: "1px solid #0000001A"}}>
         Contact Customer
       </button>
-      <button className="px-6 py-2.5 bg-white border border-gray-200 hover:bg-gray-50 rounded-xl transition-colors text-[#0F172A] font-[300]">
+      <button className="px-3 py-2 bg-white text-sm hover:bg-[#FFFFFF] rounded-xl transition-colors text-[#0A0A0A] font-[400]" style={{border: "1px solid #0000001A"}}>
         Update Status
       </button>
     </div>
+    </YummyText>
   </div>
 );
 
 const AvailableOrderCard = ({ packageId, location, distance, price }) => (
-  <div className="flex items-center justify-between p-5 bg-white border border-gray-200 rounded-xl mb-3">
+  <YummyText>
+  <div className="flex items-center justify-between p-4 bg-white border border-gray-200 rounded-xl mb-3">
     <div>
-      <div className="text-base font-normal text-[#0F172A] mb-1">{packageId}</div>
+      <div className="text-base font-normal text-[#0F172A]">{packageId}</div>
       <div className="text-sm text-[#64748B] mb-0.5">{location}</div>
       <div className="text-xs text-[#94A3B8]">{distance}</div>
     </div>
-    <div className="flex items-center gap-4">
-      <div className="text-xl font-normal text-[#00D68F]">{price}</div>
-      <button className="bg-[#00D68F] hover:bg-[#00B876] text-white px-6 py-2.5 rounded-xl transition-colors font-normal">
+    <div className="flex items-center gap-3">
+      <div className="text-lg font-normal text-[#00A63E]">{price}</div>
+      <button className="bg-[#00B75A] hover:bg-[#00B876] text-white text-sm px-4 py-2.5 rounded-lg transition-colors font-nmedium">
         Accept
       </button>
     </div>
   </div>
+  </YummyText>
 );
 
 const Dashboard = () => {
@@ -77,16 +82,19 @@ const Dashboard = () => {
       <RiderLayout>
         <IonContent className="ion-padding">
           {/* Welcome Section */}
-          <div className="mb-8 py-2">
-            <div className="text-3xl font-medium text-[#0F172A] mb-2">
-              Welcome back, Marcus!
+          <YummyText>
+            <div className="mb-8 py-2">
+              <div className="text-3xl font-medium text-[#0F172A] mb-2">
+                Welcome back, Marcus!
+              </div>
+              <div className="text-[#4A5565] text-[15px] font-[400]">
+                You're doing great today. Keep up the excellent work!
+              </div>
             </div>
-            <div className="text-[#4A5565] text-[15px] font-[400]">
-              You're doing great today. Keep up the excellent work!
-            </div>
-          </div>
+          </YummyText>
 
           {/* Stats Grid */}
+          <YummyText>
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
             <StatCard
               icon={<img width="24" height="24" src="/blockicon.svg" alt="Deliveries Icon"/>}
@@ -129,9 +137,11 @@ const Dashboard = () => {
               subtitle="Faster than 85% of riders"
             />
           </div>
+          </YummyText>
 
           {/* Active Deliveries */}
           <div className="mb-8 bg-white p-6 rounded-2xl" style={sideBottomShadow}>
+            <YummyText>
             <div className="mb-4">
               <div className="text-xl font-normal text-[#0F172A] mb-1">
                 Active Deliveries
@@ -140,6 +150,7 @@ const Dashboard = () => {
                 Deliveries currently in progress
               </div>
             </div>
+            </YummyText>
             
             <div className="max-h-[600px] overflow-y-auto pr-2">
               <DeliveryCard
@@ -182,19 +193,21 @@ const Dashboard = () => {
 
           {/* Available Orders Nearby */}
           <div className="mb-8 bg-white p-6 rounded-2xl" style={sideBottomShadow}>
+            <YummyText>
             <div className="flex items-center justify-between mb-4">
               <div>
-                <div className="text-xl font-normal text-[#0F172A] mb-1">
+                <div className="text-lg font-medium text-[#0F172A] -mb-1">
                   Available Orders Nearby
                 </div>
-                <div className="text-sm text-[#64748B]">
+                <div className="text-medium text-gray-500 font-[400]">
                   Orders you can accept right now
                 </div>
               </div>
-              <button className="text-[#00D68F] hover:underline font-normal">
+              <button className="text-[#007BFF] text-sm font-medium">
                 View All
               </button>
             </div>
+            </YummyText>
 
             {/* Make available orders list scrollable independently */}
             <div className="max-h-[360px] overflow-y-auto pr-2">
