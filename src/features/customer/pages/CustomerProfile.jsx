@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { IonPage, IonContent } from '@ionic/react';
 import CustomerLayout from '../components/CustomerLayout';
+import { YummyText } from '../../../components/YummyText';
 
 
 const sideBottomShadow = {
@@ -9,12 +10,13 @@ const sideBottomShadow = {
 
 const CustomerProfile = () => {
   const [activeTab, setActiveTab] = useState('personal');
+  const [profileImage, setProfileImage] = useState('/profileimage.svg');
   const [formData, setFormData] = useState({
-    firstName: 'John',
-    lastName: 'Doe',
-    email: 'john.doe@email.com',
-    phone: '+1 (555) 123-4567',
-    address: '123 Main Street, New York, NY 10001'
+    firstName: '',
+    lastName: '',
+    email: '',
+    phone: '',
+    address: ''
   });
   const [passwordData, setPasswordData] = useState({
     currentPassword: '',
@@ -50,6 +52,31 @@ const CustomerProfile = () => {
     });
   };
 
+  const handlePhotoChange = (e) => {
+    const file = e.target.files[0];
+    if (file) {
+      // Validate file type
+      const validTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/gif'];
+      if (!validTypes.includes(file.type)) {
+        alert('Please upload a JPG, PNG, or GIF image');
+        return;
+      }
+      
+      // Validate file size (max 2MB)
+      if (file.size > 2 * 1024 * 1024) {
+        alert('File size must be less than 2MB');
+        return;
+      }
+
+      // Create a preview URL
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        setProfileImage(reader.result);
+      };
+      reader.readAsDataURL(file);
+    }
+  };
+
   const handleSubmit = (e) => {
     e.preventDefault();
     console.log('Updating profile:', formData);
@@ -71,19 +98,22 @@ const CustomerProfile = () => {
         <IonContent className="ion-padding">
           {/* Header */}
           <div className="mb-8">
-            <div className="text-3xl font-medium text-[#0F172A] mb-2">
-              Profile Settings
-            </div>
-            <div className="text-[#4A5565] text-[15px] font-[400]">
-              Manage your account and preferences
-            </div>
+            <YummyText>
+              <div className="text-3xl font-medium text-[#0F172A] mb-2">
+                Profile Settings
+              </div>
+              <div className="text-[#4A5565] text-[15px] font-[400]">
+                Manage your account and preferences
+              </div>
+            </YummyText>
           </div>
 
           {/* Tab Navigation */}
-          <div className="flex items-center gap-2 mb-8 bg-gray-100 p-1 rounded-xl w-fit">
+          <div className="flex items-center gap-2 mb-8 bg-gray-100 p-1 rounded-full w-fit">
+            <YummyText>
             <button
               onClick={() => setActiveTab('personal')}
-              className={`px-6 py-2 rounded-lg text-sm font-normal transition-colors ${
+              className={`px-12 py-2 rounded-full text-sm font-normal transition-colors ${
                 activeTab === 'personal'
                   ? 'text-[#0F172A] bg-white shadow-sm'
                   : 'text-[#64748B]'
@@ -93,7 +123,7 @@ const CustomerProfile = () => {
             </button>
             <button
               onClick={() => setActiveTab('security')}
-              className={`px-6 py-2 rounded-lg text-sm font-normal transition-colors ${
+              className={`px-12 py-2 rounded-full text-sm font-normal transition-colors ${
                 activeTab === 'security'
                   ? 'text-[#0F172A] bg-white shadow-sm'
                   : 'text-[#64748B]'
@@ -103,7 +133,7 @@ const CustomerProfile = () => {
             </button>
             <button
               onClick={() => setActiveTab('notifications')}
-              className={`px-6 py-2 rounded-lg text-sm font-normal transition-colors ${
+              className={`px-12 py-2 rounded-full text-sm font-normal transition-colors ${
                 activeTab === 'notifications'
                   ? 'text-[#0F172A] bg-white shadow-sm'
                   : 'text-[#64748B]'
@@ -111,41 +141,58 @@ const CustomerProfile = () => {
             >
               Notifications
             </button>
+            </YummyText>
           </div>
 
           {/* Personal Tab */}
           {activeTab === 'personal' && (
-            <div className="bg-white rounded-2xl p-6 border border-gray-100" style={sideBottomShadow}>
+            <div className="bg-white rounded-2xl p-6" style={sideBottomShadow}>
               <div className="mb-6">
-                <div className="text-xl font-normal text-[#0F172A] mb-1">
+                <YummyText>
+                <div className="text-lg font-normal text-[#0F172A]">
                   Personal Information
                 </div>
-                <div className="text-sm text-[#64748B]">
+                <div className="text-medium text-[#717182]">
                   Update your personal details
                 </div>
+                </YummyText>
               </div>
 
               {/* Profile Photo */}
               <div className="mb-8">
                 <div className="flex items-center gap-4">
                   <img
-                    src="https://api.dicebear.com/7.x/avataaars/svg?seed=John"
+                    src={profileImage}
                     alt="Profile"
-                    className="w-20 h-20 rounded-full"
+                    className="w-20 h-20 rounded-full object-cover"
                   />
                   <div>
-                    <button className="flex items-center gap-2 text-sm text-[#0F172A] hover:text-[#00D68F] transition-colors mb-1">
-                      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                        <path d="M12 12.75c1.63 0 3.07.39 4.24.9 1.08.48 1.76 1.56 1.76 2.73V18H6v-1.61c0-1.18.68-2.26 1.76-2.73 1.17-.52 2.61-.91 4.24-.91zM4 13c1.1 0 2-.9 2-2s-.9-2-2-2-2 .9-2 2 .9 2 2 2zm1.13 1.1c-.37-.06-.74-.1-1.13-.1-.99 0-1.93.21-2.78.58C.48 14.9 0 15.62 0 16.43V18h4.5v-1.61c0-.83.23-1.61.63-2.29zM20 13c1.1 0 2-.9 2-2s-.9-2-2-2-2 .9-2 2 .9 2 2 2zm4 3.43c0-.81-.48-1.53-1.22-1.85-.85-.37-1.79-.58-2.78-.58-.39 0-.76.04-1.13.1.4.68.63 1.46.63 2.29V18H24v-1.57zM12 6c1.66 0 3 1.34 3 3s-1.34 3-3 3-3-1.34-3-3 1.34-3 3-3z" fill="currentColor"/>
-                      </svg>
-                      Change Photo
-                    </button>
-                    <div className="text-xs text-[#64748B]">JPG, PNG or GIF. Max 2MB</div>
+                    <YummyText>
+                      <input
+                        type="file"
+                        id="profilePhotoInput"
+                        accept="image/jpeg,image/jpg,image/png,image/gif"
+                        onChange={handlePhotoChange}
+                        className="hidden"
+                      />
+                      <label 
+                        htmlFor="profilePhotoInput"
+                        className="flex items-center gap-2 shadow-sm py-2 px-4 rounded-xl text-sm text-[#0F172A] hover:text-[#00D68F] transition-colors mb-1 cursor-pointer"
+                        style={{border: "1px solid #64748B"}}
+                      >
+                        <img src="/cameraicon.svg" alt="Change" className="w-4 h-4" />
+                        Change Photo
+                      </label>
+                      <div className="text-xs text-[#64748B]">
+                        JPG, PNG or GIF. Max 2MB
+                      </div>
+                    </YummyText>
                   </div>
                 </div>
               </div>
 
               <form onSubmit={handleSubmit}>
+                <YummyText>
                 <div className="space-y-6">
                   {/* First Name & Last Name */}
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -158,7 +205,8 @@ const CustomerProfile = () => {
                         name="firstName"
                         value={formData.firstName}
                         onChange={handleChange}
-                        className="w-full px-4 py-3 rounded-xl bg-[#F8F9FA] text-[#0F172A] focus:outline-none focus:ring-2 focus:ring-[#00D68F] border-none"
+                        placeholder='John'
+                        className="w-full placeholder:text-[#0A0A0A] px-4 py-3  rounded-xl bg-[#F8F9FA] text-[#0F172A] focus:outline-none focus:ring-2 focus:ring-[#00D68F] border-none"
                       />
                     </div>
                     <div>
@@ -170,7 +218,8 @@ const CustomerProfile = () => {
                         name="lastName"
                         value={formData.lastName}
                         onChange={handleChange}
-                        className="w-full px-4 py-3 rounded-xl bg-[#F8F9FA] text-[#0F172A] focus:outline-none focus:ring-2 focus:ring-[#00D68F] border-none"
+                        placeholder='Doe'
+                        className="w-full placeholder:text-[#0A0A0A] px-4 py-3 rounded-xl bg-[#F8F9FA] text-[#0F172A] focus:outline-none focus:ring-2 focus:ring-[#00D68F] border-none"
                       />
                     </div>
                   </div>
@@ -185,7 +234,8 @@ const CustomerProfile = () => {
                       name="email"
                       value={formData.email}
                       onChange={handleChange}
-                      className="w-full px-4 py-3 rounded-xl bg-[#F8F9FA] text-[#0F172A] focus:outline-none focus:ring-2 focus:ring-[#00D68F] border-none"
+                      placeholder='john.doe@gmail.com'
+                      className="w-full placeholder:text-[#0A0A0A] px-4 py-3 rounded-xl bg-[#F8F9FA] text-[#0F172A] focus:outline-none focus:ring-2 focus:ring-[#00D68F] border-none"
                     />
                   </div>
 
@@ -199,7 +249,8 @@ const CustomerProfile = () => {
                       name="phone"
                       value={formData.phone}
                       onChange={handleChange}
-                      className="w-full px-4 py-3 rounded-xl bg-[#F8F9FA] text-[#0F172A] focus:outline-none focus:ring-2 focus:ring-[#00D68F] border-none"
+                      placeholder='+1 (555) 123-4567'
+                      className="w-full placeholder:text-[#0A0A0A] px-4 py-3 rounded-xl bg-[#F8F9FA] text-[#0F172A] focus:outline-none focus:ring-2 focus:ring-[#00D68F] border-none"
                     />
                   </div>
 
@@ -213,19 +264,21 @@ const CustomerProfile = () => {
                       name="address"
                       value={formData.address}
                       onChange={handleChange}
-                      className="w-full px-4 py-3 rounded-xl bg-[#F8F9FA] text-[#0F172A] focus:outline-none focus:ring-2 focus:ring-[#00D68F] border-none"
+                      placeholder='123 Main Street, New York, NY 10001'
+                      className="w-full placeholder:text-[#0A0A0A] px-4 py-3 rounded-xl bg-[#F8F9FA] text-[#0F172A] focus:outline-none focus:ring-2 focus:ring-[#00D68F] border-none"
                     />
                   </div>
                 </div>
 
-                <div className="flex justify-end mt-6">
+                <div className="flex justify-start mt-6">
                   <button
                     type="submit"
-                    className="px-8 py-3 bg-[#00B75A] hover:bg-[#00B876] text-white rounded-xl transition-colors font-normal"
+                    className="px-7 py-2 bg-[#00B75A] hover:bg-[#00B876] text-white rounded-xl transition-colors font-normal"
                   >
                     Save Changes
                   </button>
                 </div>
+                </YummyText>
               </form>
             </div>
           )}
@@ -234,17 +287,20 @@ const CustomerProfile = () => {
           {activeTab === 'security' && (
             <div className="space-y-6">
               {/* Change Password */}
-              <div className="bg-white rounded-2xl p-6 border border-gray-100" style={sideBottomShadow}>
-                <div className="mb-6">
-                  <div className="text-xl font-normal text-[#0F172A] mb-1">
-                    Change Password
+              <div className="bg-white rounded-2xl p-6" style={sideBottomShadow}>
+                <YummyText>
+                  <div className="mb-6">
+                    <div className="text-xl font-normal text-[#0F172A] mb-1">
+                      Change Password
+                    </div>
+                    <div className="text-sm text-[#64748B]">
+                      Update your password regularly for security
+                    </div>
                   </div>
-                  <div className="text-sm text-[#64748B]">
-                    Update your password regularly for security
-                  </div>
-                </div>
+                </YummyText>
 
                 <form onSubmit={handlePasswordSubmit}>
+                  <YummyText>
                   <div className="space-y-4">
                     <div>
                       <label className="block text-sm font-medium text-[#0F172A] mb-2">
@@ -290,11 +346,13 @@ const CustomerProfile = () => {
                   >
                     Update Password
                   </button>
+                  </YummyText>
                 </form>
               </div>
 
               {/* Two-Factor Authentication */}
-              <div className="bg-white rounded-2xl p-6 border border-gray-100" style={sideBottomShadow}>
+              <div className="bg-white rounded-2xl p-6" style={sideBottomShadow}>
+                <YummyText>
                 <div className="mb-6">
                   <div className="text-xl font-normal text-[#0F172A] mb-1">
                     Two-Factor Authentication
@@ -303,11 +361,14 @@ const CustomerProfile = () => {
                     Add an extra layer of security to your account
                   </div>
                 </div>
+                </YummyText>
 
                 <div className="flex items-center justify-between py-4">
                   <div>
+                    <YummyText>
                     <div className="text-sm font-medium text-[#0F172A] mb-1">Enable 2FA</div>
                     <div className="text-xs text-[#64748B]">Receive a code on your phone for login</div>
+                    </YummyText>
                   </div>
                   <label className="relative inline-block w-12 h-6">
                     <input type="checkbox" className="sr-only peer" />
@@ -320,7 +381,8 @@ const CustomerProfile = () => {
 
           {/* Notifications Tab */}
           {activeTab === 'notifications' && (
-            <div className="bg-white rounded-2xl p-6 border border-gray-100" style={sideBottomShadow}>
+            <div className="bg-white rounded-2xl p-6" style={sideBottomShadow}>
+              <YummyText>
               <div className="mb-6">
                 <div className="text-xl font-normal text-[#0F172A] mb-1">
                   Notification Preferences
@@ -329,10 +391,12 @@ const CustomerProfile = () => {
                   Choose what updates you want to receive
                 </div>
               </div>
+              </YummyText>
 
               <form onSubmit={handleNotificationSubmit}>
                 <div className="space-y-6">
                   {/* Email Notifications */}
+                  <YummyText> 
                   <div className="flex items-center justify-between py-4 border-b border-gray-100">
                     <div>
                       <div className="text-sm font-medium text-[#0F172A] mb-1">Email Notifications</div>
@@ -345,7 +409,7 @@ const CustomerProfile = () => {
                         checked={notifications.emailNotifications}
                         onChange={() => handleNotificationToggle('emailNotifications')}
                       />
-                      <div className="w-12 h-6 bg-gray-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-[#0F172A]"></div>
+                      <div className="w-12 h-6 bg-gray-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full after:content-[''] after:absolute after:top-[2px] after:left-[6px] after:bg-white after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-[#0F172A]"></div>
                     </label>
                   </div>
 
@@ -362,7 +426,7 @@ const CustomerProfile = () => {
                         checked={notifications.smsNotifications}
                         onChange={() => handleNotificationToggle('smsNotifications')}
                       />
-                      <div className="w-12 h-6 bg-gray-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-[#0F172A]"></div>
+                      <div className="w-12 h-6 bg-gray-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full after:content-[''] after:absolute after:top-[2px] after:left-[6px] after:bg-white after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-[#0F172A]"></div>
                     </label>
                   </div>
 
@@ -379,7 +443,7 @@ const CustomerProfile = () => {
                         checked={notifications.pushNotifications}
                         onChange={() => handleNotificationToggle('pushNotifications')}
                       />
-                      <div className="w-12 h-6 bg-gray-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-[#0F172A]"></div>
+                      <div className="w-12 h-6 bg-gray-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full after:content-[''] after:absolute after:top-[2px] after:left-[6px] after:bg-white after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-[#0F172A]"></div>
                     </label>
                   </div>
 
@@ -396,7 +460,7 @@ const CustomerProfile = () => {
                         checked={notifications.marketingEmails}
                         onChange={() => handleNotificationToggle('marketingEmails')}
                       />
-                      <div className="w-12 h-6 bg-gray-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-gray-400"></div>
+                      <div className="w-12 h-6 bg-gray-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full after:content-[''] after:absolute after:top-[2px] after:left-[6px] after:bg-white after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-gray-400"></div>
                     </label>
                   </div>
 
@@ -413,17 +477,20 @@ const CustomerProfile = () => {
                         checked={notifications.newsletter}
                         onChange={() => handleNotificationToggle('newsletter')}
                       />
-                      <div className="w-12 h-6 bg-gray-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-gray-400"></div>
+                      <div className="w-12 h-6 bg-gray-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full after:content-[''] after:absolute after:top-[2px] after:left-[6px] after:bg-white after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-gray-400"></div>
                     </label>
                   </div>
+                  </YummyText>
                 </div>
 
+                <YummyText>
                 <button
                   type="submit"
                   className="mt-6 px-6 py-2.5 bg-[#00B75A] hover:bg-[#00B876] text-white rounded-xl transition-colors font-normal"
                 >
                   Save Preferences
                 </button>
+                </YummyText>
               </form>
             </div>
           )}

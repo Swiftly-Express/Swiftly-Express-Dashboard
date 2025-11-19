@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { IonPage, IonContent } from '@ionic/react';
 import CustomerLayout from '../components/CustomerLayout';
 import { YummyText } from '../../../components/YummyText';
+import './Book.css'; // Import custom CSS for dropdown styling
 
 const sideBottomShadow = {
   boxShadow: '2px 4px 4px rgba(0,0,0,0.06), -2px 4px 4px rgba(0,0,0,0.06), 0 4px 8px rgba(0,0,0,0.08)'
@@ -39,9 +40,46 @@ const Book = () => {
   };
 
   const calculateTotal = () => {
-    const baseRate = 25.00;
-    const insurance = 5.00;
+    let baseRate = 0;
+    
+    // Calculate base rate based on delivery type
+    switch(formData.deliveryType) {
+      case 'express':
+        baseRate = 2500;
+        break;
+      case 'standard':
+        baseRate = 1200;
+        break;
+      case 'economy':
+        baseRate = 800;
+        break;
+      default:
+        baseRate = 0;
+    }
+    
+    // Calculate insurance (1% of declared value, minimum ₦200)
+    const declaredValue = parseFloat(formData.declaredValue) || 0;
+    const insurance = declaredValue > 0 ? Math.max(declaredValue * 0.01, 200) : 0;
+    
     return baseRate + insurance;
+  };
+
+  const getBaseRate = () => {
+    switch(formData.deliveryType) {
+      case 'express':
+        return 2500;
+      case 'standard':
+        return 1200;
+      case 'economy':
+        return 800;
+      default:
+        return 0;
+    }
+  };
+
+  const getInsurance = () => {
+    const declaredValue = parseFloat(formData.declaredValue) || 0;
+    return declaredValue > 0 ? Math.max(declaredValue * 0.01, 200) : 0;
   };
 
   return (
@@ -80,18 +118,26 @@ const Book = () => {
                 <label className="block text-sm font-medium text-[#0F172A] mb-2">
                   Delivery Type
                 </label>
-                <select
-                  name="deliveryType"
-                  value={formData.deliveryType}
-                  onChange={handleChange}
-                  className="w-full px-4 py-3 rounded-xl bg-[#F8F9FA] text-[#64748B] focus:outline-none focus:ring-2 focus:ring-[#00D68F] border-none"
-                  required
-                >
-                  <option value="">Select delivery type</option>
-                  <option value="express">Express (Same day) - ₦2500</option>
-                  <option value="standard">Standard (1-2 days) - ₦1200</option>
-                  <option value="economy">Economy (3-5 days) - ₦800</option>
-                </select>
+                <div className="relative mt-3 custom-dropdown-container">
+                  <select
+                    name="deliveryType"
+                    value={formData.deliveryType}
+                    onChange={handleChange}
+                    className="custom-select w-full px-5 py-3 pr-12 rounded-xl bg-[#F8F9FA] text-[#0F172A] focus:outline-none focus:ring-2 focus:ring-[#00D68F] border-none"
+                    // style={{
+                    //   backgroundImage: `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='20' height='20' viewBox='0 0 20 20' fill='none'%3E%3Cpath d='M5 7.5L10 12.5L15 7.5' stroke='%230F172A' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E")`,
+                    //   backgroundRepeat: 'no-repeat',
+                    //   backgroundPosition: 'right 1rem center',
+                    //   backgroundSize: '20px 20px'
+                    // }}
+                    required
+                  >
+                    <option value="">Select delivery type</option>
+                    <option value="express">Express (Same day) - ₦2500</option>
+                    <option value="standard">Standard (1-2 days) - ₦1200</option>
+                    <option value="economy">Economy (3-5 days) - ₦800</option>
+                  </select>
+                </div>
               </div>
 
               {/* Pickup Details & Delivery Details */}
@@ -350,18 +396,18 @@ const Book = () => {
                 <div className="space-y-3">
                   <div className="flex justify-between items-center text-[#0F172A]">
                     <span className="text-[15px]">Base Rate</span>
-                    <span className="text-[15px]">${(25.00).toFixed(2)}</span>
+                    <span className="text-[15px]">₦{getBaseRate().toLocaleString('en-NG', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
                   </div>
                   <div className="flex justify-between items-center text-[#0F172A]">
-                    <span className="text-[15px]">Insurance</span>
-                    <span className="text-[15px]">${(5.00).toFixed(2)}</span>
+                    <span className="text-[15px]">Insurance (1% of declared value)</span>
+                    <span className="text-[15px]">₦{getInsurance().toLocaleString('en-NG', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
                   </div>
                   
                   {/* Divider for Total */}
                   <div className="border-t border-gray-300 pt-3 mt-3">
                     <div className="flex justify-between items-center">
                       <span className="text-lg font-medium text-[#0F172A]">Total</span>
-                      <span className="text-2xl font-medium text-[#00B75A]">${calculateTotal().toFixed(2)}</span>
+                      <span className="text-2xl font-medium text-[#00B75A]">₦{calculateTotal().toLocaleString('en-NG', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
                     </div>
                   </div>
                 </div>
