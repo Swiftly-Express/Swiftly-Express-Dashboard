@@ -219,28 +219,28 @@ const VerifyEmail = () => {
             <img 
               src="/zig-zag.svg" 
               alt="" 
-              className="absolute top-0 left-0 w-16 h-auto"
+              className="absolute top-0 left-0 w-24 h-auto"
             />
             
             {/* Flower decoration - top right */}
             <img 
               src="/flowers.svg" 
               alt="" 
-              className="absolute top-12 right-8 w-12 h-auto z-20"
+              className="absolute top-12 w-16 h-auto z-20"
             />
             
             {/* Main flying envelope - center */}
             <img 
               src="/bigenvelope.svg" 
               alt="Email Verification" 
-              className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-64 h-auto"
+              className="absolute top-60 mt-18 left-80 mr-12 -translate-x-1/2 -translate-y-1/2 w-80 h-auto"
             />
             
             {/* Small flying envelope - bottom right */}
             <img 
               src="/smallenvelope.svg" 
               alt="" 
-              className="absolute bottom-24 right-16 w-28 h-auto"
+              className="absolute top-80 mt-14 right-20  ml-80 w-44 h-auto"
             />
           </div>
         </div>
