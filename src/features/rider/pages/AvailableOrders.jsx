@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { IonPage, IonContent } from '@ionic/react';
 import RiderLayout from '../components/RiderLayout';
+import { YummyText } from '../../../components/YummyText';
 
 // Shadow only on left, right and bottom - no top shadow for seamless blend
 const sideBottomShadow = {
@@ -8,25 +9,28 @@ const sideBottomShadow = {
 };
 
 const StatCard = ({ icon, title, value, subtitle, color }) => (
-  <div className="bg-white rounded-xl p-5 py-3 border-none leading-none" style={sideBottomShadow}>
+  <div className="bg-white rounded-xl p-5 py-3 leading-none" style={sideBottomShadow}>
+    <YummyText>
     <div className={`text-2xl font-[300] ${color} mb-1`}>{value}</div>
     <div className="text-xs text-[#64748B] mb-2">{title}</div>
     <div className="text-[11px] text-[#64748B] leading-none">{subtitle}</div>
+    </YummyText>
   </div>
 );
 
 const OrderCard = ({ packageId, priority, size, pickupName, pickupAddress, deliveryName, deliveryAddress, distance, time, packageSize, price, tips }) => (
-  <div className="bg-white rounded-2xl p-6 mb-4 border border-gray-100" style={sideBottomShadow}>
+  <div className="bg-white rounded-2xl p-6 mb-4" style={sideBottomShadow}>
+    <YummyText>
     <div className="flex items-start justify-between mb-4">
       <div className="flex items-center gap-3">
         <div className="text-lg font-normal text-[#0F172A]">{packageId}</div>
         {priority && (
-          <span className="px-3 py-1 rounded-full text-xs font-normal bg-orange-100 text-orange-600">
+          <span className="px-3 py-1 rounded-lg text-xs font-normal bg-[#FF7A00] text-[#FFFFFF]">
             {priority}
           </span>
         )}
         {size && (
-          <span className="px-3 py-1 rounded-full text-xs font-normal bg-gray-100 text-gray-700">
+          <span className="px-3 py-1 rounded-lg text-xs font-normal border border-gray-400 text-gray-700">
             {size}
           </span>
         )}
@@ -36,42 +40,46 @@ const OrderCard = ({ packageId, priority, size, pickupName, pickupAddress, deliv
         <div className="text-xs text-[#64748B]">+ {tips} tips</div>
       </div>
     </div>
+    </YummyText>
 
     <div className="grid grid-cols-2 gap-6 mb-4">
+      <YummyText>
       {/* Pickup Location */}
-      <div>
-        <div className="flex items-center gap-2 mb-2">
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-            <path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5z" fill="#00D68F"/>
-          </svg>
-          <div className="text-xs font-medium text-[#64748B]">Pickup</div>
+      <div className="flex gap-3">
+        <div className="w-8 h-8 bg-[#E8F8F0] rounded-full flex items-center justify-center flex-shrink-0">
+          <img width="16" height="16" src="/locationicon.svg" alt="Pickup Icon"/>
         </div>
-        <div className="text-sm font-medium text-[#0F172A] mb-1">{pickupName}</div>
-        <div className="text-xs text-[#64748B]">{pickupAddress}</div>
+        <div>
+          <div className="text-xs font-medium text-[#64748B] mb-2">Pickup</div>
+          <div className="text-sm font-medium text-[#0F172A] mb-1">{pickupName}</div>
+          <div className="text-xs text-[#64748B]">{pickupAddress}</div>
+        </div>
       </div>
+      </YummyText>
 
+      <YummyText>
       {/* Delivery Location */}
-      <div>
-        <div className="flex items-center gap-2 mb-2">
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-            <path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5z" fill="#FF9500"/>
-          </svg>
-          <div className="text-xs font-medium text-[#64748B]">Delivery</div>
+      <div className="flex gap-3">
+        <div className="w-8 h-8 bg-[#FFF4E6] rounded-full flex items-center justify-center flex-shrink-0">
+          <img width="16" height="16" src="/location-orange.svg" alt="Delivery Icon"/>
         </div>
-        <div className="text-sm font-medium text-[#0F172A] mb-1">{deliveryName}</div>
-        <div className="text-xs text-[#64748B]">{deliveryAddress}</div>
+        <div>
+          <div className="text-xs font-medium text-[#64748B] mb-2">Delivery</div>
+          <div className="text-sm font-medium text-[#0F172A] mb-1">{deliveryName}</div>
+          <div className="text-xs text-[#64748B]">{deliveryAddress}</div>
+        </div>
       </div>
+      </YummyText>
     </div>
 
     {/* Divider separating addresses from order meta (distance/time/size) */}
     <div className="my-3 border-t border-gray-200"></div>
 
     {/* Order Details */}
+    <YummyText>
     <div className="flex items-center gap-4 mb-4 text-xs text-[#64748B]">
       <div className="flex items-center gap-1">
-        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-          <path d="M12 2L4.5 20.29l.71.71L12 18l6.79 3 .71-.71z" fill="currentColor"/>
-        </svg>
+        <img width="16" height="16" src="/paperplane-icon.svg" alt="Distance Icon"/>
         {distance}
       </div>
       <div className="flex items-center gap-1">
@@ -81,22 +89,23 @@ const OrderCard = ({ packageId, priority, size, pickupName, pickupAddress, deliv
         {time}
       </div>
       <div className="flex items-center gap-1">
-        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-          <path d="M20 6h-4V4c0-1.11-.89-2-2-2h-4c-1.11 0-2 .89-2 2v2H4c-1.11 0-1.99.89-1.99 2L2 19c0 1.11.89 2 2 2h16c1.11 0 2-.89 2-2V8c0-1.11-.89-2-2-2zm-6 0h-4V4h4v2z" fill="currentColor"/>
-        </svg>
+        <img width="16" height="16" src="/dollar-icon.svg" alt="Package Size Icon"/>
         {packageSize}
       </div>
     </div>
+    </YummyText>
 
     {/* Action Buttons */}
+    <YummyText>
     <div className="flex gap-3">
-      <button className="flex-1 bg-[#00B75A] hover:bg-[#00B876] text-white py-2.5 rounded-xl transition-colors font-[300]">
+      <button className="flex-1 bg-[#00B75A] hover:bg-[#00B876] text-white py-2 rounded-lg transition-colors font-[400]">
         Accept Order
       </button>
-      <button className="px-6 py-2.5 bg-white border border-gray-200 hover:bg-gray-50 rounded-xl transition-colors text-[#0F172A] font-[300]">
+      <button className="flex-1 bg-white border border-gray-200 hover:bg-gray-50 rounded-lg transition-colors text-[#0F172A] font-[400] py-2" style={{border: "1px solid #0000001A"}}>
         View Details
       </button>
     </div>
+    </YummyText>
   </div>
 );
 
@@ -177,97 +186,101 @@ const AvailableOrders = () => {
       <RiderLayout>
         <IonContent className="ion-padding">
           {/* Header */}
-          <div className="mb-8 py-2">
-        <div className="text-3xl font-medium text-[#0F172A] mb-2">
-          Available Orders
-        </div>
-        <div className="text-[#4A5565] text-[15px] font-[400]">
-          Accept orders in your area and start earning
-        </div>
-      </div>
+          <YummyText>
+            <div className="mb-8 py-2">
+              <div className="text-3xl font-medium text-[#0F172A] mb-2">
+                Available Orders
+              </div>
+              <div className="text-[#4A5565] text-[15px] font-[400]">
+                Accept orders in your area and start earning
+              </div>
+            </div>
+          </YummyText>
 
-      {/* Stats Grid */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-8">
-        <StatCard
-          title="Available Now"
-          value={orders.length}
-          subtitle=""
-          color="text-[#00A63E]"
-        />
-        <StatCard
-          title="Potential Earnings"
-          value="N8976.50"
-          subtitle=""
-          color="text-[#00A63E]"
-        />
-        <StatCard
-          title="Avg. Distance"
-          value="2.4 mi"
-          subtitle=""
-          color="text-[#FF7A00]"
-        />
-        <StatCard
-          title="Avg. Time"
-          value="17 min"
-          subtitle=""
-          color="text-[#9810FA]"
-        />
-      </div>
+          {/* Stats Grid */}
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-8">
+            <StatCard
+              title="Available Now"
+              value={orders.length}
+              subtitle=""
+              color="text-[#00A63E]"
+            />
+            <StatCard
+              title="Potential Earnings"
+              value="N8976.50"
+              subtitle=""
+              color="text-[#00A63E]"
+            />
+            <StatCard
+              title="Avg. Distance"
+              value="2.4 mi"
+              subtitle=""
+              color="text-[#FF7A00]"
+            />
+            <StatCard
+              title="Avg. Time"
+              value="17 min"
+              subtitle=""
+              color="text-[#9810FA]"
+            />
+          </div>
 
-      {/* Filter Tabs */}
-      <div className="flex items-center gap-2 mb-6 bg-gray-50 left-2 p-1 rounded-full w-fit">
-        <button
-          onClick={() => setActiveTab('all')}
-          className={`px-5 py-1 rounded-full text-sm font-normal transition-colors ${
-            activeTab === 'all'
-              ? 'text-[#00B75A] bg-white shadow-sm'
-              : 'text-[#64748B]'
-          }`}
-        >
-          All Orders ({orders.length})
-        </button>
-        <button
-          onClick={() => setActiveTab('express')}
-          className={`px-5 py-1 rounded-full text-sm font-normal transition-colors ${
-            activeTab === 'express'
-              ? 'text-[#00B75A] bg-white shadow-sm'
-              : 'text-[#64748B]'
-          }`}
-        >
-          Express ({expressCount})
-        </button>
-        <button
-          onClick={() => setActiveTab('nearby')}
-          className={`px-5 py-1 rounded-full text-sm font-normal transition-colors ${
-            activeTab === 'nearby'
-              ? 'text-[#00B75A] bg-white shadow-sm'
-              : 'text-[#64748B]'
-          }`}
-        >
-          Nearby ({nearbyCount})
-        </button>
-      </div>
+          {/* Filter Tabs */}
+          <div className="flex items-center gap-2 mb-6 bg-gray-50 left-2 p-1 rounded-full w-fit">
+            <YummyText>
+            <button
+              onClick={() => setActiveTab('all')}
+              className={`px-5 py-1 rounded-full text-sm font-normal transition-colors ${
+                activeTab === 'all'
+                  ? 'text-[#00B75A] bg-white shadow-sm'
+                  : 'text-[#64748B]'
+              }`}
+            >
+              All Orders ({orders.length})
+            </button>
+            <button
+              onClick={() => setActiveTab('express')}
+              className={`px-5 py-1 rounded-full text-sm font-normal transition-colors ${
+                activeTab === 'express'
+                  ? 'text-[#00B75A] bg-white shadow-sm'
+                  : 'text-[#64748B]'
+              }`}
+            >
+              Express ({expressCount})
+            </button>
+            <button
+              onClick={() => setActiveTab('nearby')}
+              className={`px-5 py-1 rounded-full text-sm font-normal transition-colors ${
+                activeTab === 'nearby'
+                  ? 'text-[#00B75A] bg-white shadow-sm'
+                  : 'text-[#64748B]'
+              }`}
+            >
+              Nearby ({nearbyCount})
+            </button>
+            </YummyText>
+          </div>
 
-      {/* Orders List */}
-      <div className="max-h-[800px] overflow-y-auto pr-2">
-        {filteredOrders.map((order) => (
-          <OrderCard
-            key={order.id}
-            packageId={order.id}
-            priority={order.priority}
-            size={order.size}
-            pickupName={order.pickupName}
-            pickupAddress={order.pickupAddress}
-            deliveryName={order.deliveryName}
-            deliveryAddress={order.deliveryAddress}
-            distance={order.distance}
-            time={order.time}
-            packageSize={order.packageSize}
-            price={order.price}
-            tips={order.tips}
-          />
-        ))}
-      </div>
+          {/* Orders List */}
+          <div className="max-h-[800px] overflow-y-auto pr-2">
+            {filteredOrders.map((order) => (
+              <OrderCard
+                key={order.id}
+                packageId={order.id}
+                priority={order.priority}
+                size={order.size}
+                pickupName={order.pickupName}
+                pickupAddress={order.pickupAddress}
+                deliveryName={order.deliveryName}
+                deliveryAddress={order.deliveryAddress}
+                distance={order.distance}
+                time={order.time}
+                packageSize={order.packageSize}
+                price={order.price}
+                tips={order.tips}
+              />
+            ))}
+          </div>
         </IonContent>
       </RiderLayout>
     </IonPage>

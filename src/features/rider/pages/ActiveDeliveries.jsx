@@ -1,6 +1,10 @@
 import React from 'react';
 import { IonContent, IonPage } from '@ionic/react';
 import RiderLayout from '../components/RiderLayout';
+import { YummyText } from '../../../components/YummyText';
+import TelephoneIcon from "../../../icons/Telephoneicon";
+import ChatIcon from "../../../icons/Chaticon";
+import './ActiveDeliveries.css';
 
 // Shadow only on left, right and bottom
 const sideBottomShadow = {
@@ -25,12 +29,13 @@ const DeliveryCard = ({
   notes,
   actionButtonText
 }) => (
-  <div className="bg-white rounded-2xl mb-6 border border-gray-100 overflow-hidden" style={sideBottomShadow}>
+  <div className="bg-white rounded-2xl mb-6 overflow-hidden ml-0.5" style={sideBottomShadow}>
     {/* Header Section with Background */}
-    <div className="bg-gradient-to-br from-[#F0F9FF] to-[#F0FDF4] p-6">
+    <YummyText>
+    <div className="bg-gradient-to-br from-[#EFF6FF] to-[#EDFFF9] p-6">
       {/* Package ID, Status, and Price */}
-      <div className="flex items-start justify-between mb-2">
-        <div className="flex items-center gap-3">
+      <div className="flex items-start justify-between mb-1">
+        <div className="flex items-center gap-2">
           <div className="text-lg font-normal text-[#0F172A]">{packageId}</div>
           <span className={`px-3 py-1 rounded-full text-xs font-normal ${statusColor}`}>
             {status}
@@ -40,30 +45,37 @@ const DeliveryCard = ({
       </div>
 
       {/* Distance and Time */}
-      <div className="text-xs text-[#64748B]">{distance} • Est. {time}</div>
+      <div className="text-base text-[#64748B] -mb-3">{distance} • Est. {time}</div>
     </div>
+    </YummyText>
 
     {/* Main Content */}
     <div className="p-6">
-      {/* Pickup and Delivery Locations */}
+      <YummyText>
       <div className="grid grid-cols-2 gap-4 mb-6">
         {/* Pickup Location */}
-        <div className={`p-4 rounded-xl border-2 ${pickupBorder} bg-[#F0FDF4]`}>
-          <div className="flex items-center gap-2 mb-3">
-            <div className="w-8 h-8 bg-[#00D68F] rounded-full flex items-center justify-center">
-              <img src="/icons/location.svg" alt="Pickup" className="w-4 h-4" style={{ filter: 'brightness(0) invert(1)' }} />
+        <div className={`p-4 rounded-xl border-2 ${pickupBorder} bg-[#F9FAFB]`}>
+          <div className="flex gap-3 mb-3">
+            <div className="location-icon-container location-icon-pickup w-8 h-8 bg-[#00D68F] rounded-full flex items-center justify-center flex-shrink-0">
+              <img src="/locationicon-white.svg" alt="Pickup" className="w-4 h-4" />
             </div>
-            <div className="text-xs text-[#64748B]">Pickup Location</div>
+            <div>
+              <div className="text-xs text-[#64748B] mb-1">Pickup Location</div>
+              <div className="text-sm font-[500] text-[#0A0A0A] mb-1">{pickupName}</div>
+              <div className="text-xs text-[#64748B]">{pickupAddress}</div>
+            </div>
           </div>
-          <div className="text-sm font-medium text-[#0F172A] mb-1">{pickupName}</div>
-          <div className="text-xs text-[#64748B] mb-3">{pickupAddress}</div>
           <div className="flex gap-2">
-            <button className="flex-1 flex items-center justify-center gap-1 py-2 bg-white border border-gray-200 rounded-lg text-xs hover:bg-gray-50 transition-colors">
-              <img src="/icons/phone.svg" alt="Call" className="w-4 h-4" />
+            <button className="flex-1 flex items-center justify-center gap-1 py-2 bg-white rounded-lg text-xs hover:bg-gray-50 transition-colors"
+              style={{border: "1px solid #E5E7EB"}}
+            >
+              <TelephoneIcon size={20} color="black" />
               Call
             </button>
-            <button className="flex-1 flex items-center justify-center gap-1 py-2 bg-white border border-gray-200 rounded-lg text-xs hover:bg-gray-50 transition-colors">
-              <img src="/icons/navigation.svg" alt="Navigate" className="w-4 h-4" />
+            <button className="flex-1 flex items-center justify-center gap-1 py-2 bg-white rounded-lg text-xs hover:bg-gray-50 transition-colors"
+              style={{border: "2px solid #E5E7EB"}}
+            >
+              <img src="/paperplane-icon.svg" alt="Navigate" className="w-4 h-4" />
               Navigate
             </button>
           </div>
@@ -71,28 +83,36 @@ const DeliveryCard = ({
 
         {/* Delivery Location */}
         <div className={`p-4 rounded-xl border-2 ${deliveryBorder} ${deliveryBorder === 'border-[#FF9500]' ? 'bg-[#FFF7ED]' : 'bg-gray-50'}`}>
-          <div className="flex items-center gap-2 mb-3">
-            <div className="w-8 h-8 bg-[#FF9500] rounded-full flex items-center justify-center">
-              <img src="/icons/location.svg" alt="Delivery" className="w-4 h-4" style={{ filter: 'brightness(0) invert(1)' }} />
+          <div className="flex gap-3 mb-3">
+            <div className="location-icon-container location-icon-delivery w-8 h-8 bg-[#FF9500] rounded-full flex items-center justify-center flex-shrink-0">
+              <img src="/location-orange.svg" alt="Delivery" className="w-4 h-4" style={{ filter: 'brightness(0) invert(1)' }} />
             </div>
-            <div className="text-xs text-[#64748B]">Delivery Location</div>
+            <div>
+              <div className="text-xs text-[#64748B] mb-1">Delivery Location</div>
+              <div className="text-sm font-[500] text-[#0A0A0A] mb-1">{deliveryName}</div>
+              <div className="text-xs text-[#64748B]">{deliveryAddress}</div>
+            </div>
           </div>
-          <div className="text-sm font-medium text-[#0F172A] mb-1">{deliveryName}</div>
-          <div className="text-xs text-[#64748B] mb-3">{deliveryAddress}</div>
           <div className="flex gap-2">
-            <button className="flex-1 flex items-center justify-center gap-1 py-2 bg-white border border-gray-200 rounded-lg text-xs hover:bg-gray-50 transition-colors">
-              <img src="/icons/phone.svg" alt="Call" className="w-4 h-4" />
+            <button className="flex-1 flex items-center justify-center gap-1 py-2 bg-white rounded-lg text-xs hover:bg-gray-50 transition-colors"
+              style={{border: "2px solid #E5E7EB"}}
+            >
+              <TelephoneIcon size={20} color="black" />
               Call
             </button>
-            <button className="flex-1 flex items-center justify-center gap-1 py-2 bg-white border border-gray-200 rounded-lg text-xs hover:bg-gray-50 transition-colors">
-              <img src="/icons/message.svg" alt="Message" className="w-4 h-4" />
+            <button className="flex-1 flex items-center justify-center gap-1 py-2 bg-white rounded-lg text-xs hover:bg-gray-50 transition-colors"
+              style={{border: "2px solid #E5E7EB"}}
+            >
+              <ChatIcon size={20} color="black" />
               Message
             </button>
           </div>
         </div>
       </div>
+      </YummyText>
 
       {/* Package Details with Background */}
+      <YummyText>
       <div className="bg-gray-50 rounded-xl p-4 mb-4">
         <div className="text-sm font-medium text-[#0F172A] mb-3">Package Details</div>
         <div className="grid grid-cols-3 gap-6">
@@ -110,6 +130,7 @@ const DeliveryCard = ({
           </div>
         </div>
       </div>
+      </YummyText>
 
       {/* Divider */}
       <div className="border-t border-gray-200 my-4"></div>
@@ -128,14 +149,18 @@ const DeliveryCard = ({
       <div className="border-t border-gray-200 my-4"></div>
 
       {/* Action Buttons */}
+      <YummyText>
       <div className="flex gap-3">
-        <button className="flex-1 bg-[#00B75A] hover:bg-[#00B876] text-white py-3 rounded-xl transition-colors font-[300]">
+        <button className="flex-1 bg-[#00B75A] hover:bg-[#00B876] text-white py-2 rounded-xl transition-colors font-[300]">
           {actionButtonText}
         </button>
-        <button className="px-6 py-3 bg-white border border-gray-200 hover:bg-gray-50 rounded-xl transition-colors text-[#0F172A] font-[300]">
+        <button className="px-6 py-2 bg-white hover:bg-gray-50 rounded-xl transition-colors text-[#0F172A] font-[300]"
+          style={{border: "1px solid #0000001A"}}
+        >
           Report Issue
         </button>
       </div>
+      </YummyText>
     </div>
   </div>
 );
@@ -151,7 +176,7 @@ const ActiveDeliveries = () => {
       price: '$24.50',
       pickupName: 'Central Mall',
       pickupAddress: '789 5th Avenue, NY 10001',
-      pickupBorder: 'border-[#00D68F]',
+      pickupBorder: 'border-[#E5E7EB]',
       deliveryName: 'Sarah Mitchell',
       deliveryAddress: '123 Oak Street, Apt 4B, NY 10002',
       deliveryBorder: 'border-[#FF9500]',
@@ -185,7 +210,8 @@ const ActiveDeliveries = () => {
       <RiderLayout>
         <IonContent className="ion-padding">
           {/* Header */}
-          <div className="mb-8 py-2">
+          <YummyText>
+          <div className="mb-4 py-2">
             <div className="text-3xl font-medium text-[#0F172A] mb-2">
               Active Deliveries
             </div>
@@ -193,6 +219,7 @@ const ActiveDeliveries = () => {
               Manage your ongoing deliveries
             </div>
           </div>
+          </YummyText>
 
           {/* Deliveries List */}
           <div className="max-h-[900px] overflow-y-auto pr-2">
