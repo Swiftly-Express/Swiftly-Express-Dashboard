@@ -98,6 +98,17 @@ const RiderProfile = () => {
     return Math.round((completed / totalFields) * 100);
   };
 
+  // Get completion color based on percentage
+  const getCompletionColor = (percentage) => {
+    if (percentage >= 0 && percentage <= 45) {
+      return { bar: 'bg-[#0F172A]', text: 'text-[#0F172A]' }; // Black
+    } else if (percentage >= 46 && percentage <= 75) {
+      return { bar: 'bg-orange-500', text: 'text-orange-600' }; // Orange
+    } else {
+      return { bar: 'bg-[#00D68F]', text: 'text-[#00D68F]' }; // Green
+    }
+  };
+
   // Get missing documents
   const getMissingDocuments = () => {
     const missing = [];
@@ -109,6 +120,7 @@ const RiderProfile = () => {
   };
 
   const completionPercentage = calculateCompletion();
+  const completionColors = getCompletionColor(completionPercentage);
   const missingDocs = getMissingDocuments();
 
   return (
@@ -573,13 +585,13 @@ const RiderProfile = () => {
                 <div>
                   <div className="flex items-center justify-between mb-3">
                     <div className="text-sm font-medium text-[#64748B]">Profile Strength</div>
-                    <div className={`text-sm font-medium ${completionPercentage === 100 ? 'text-[#00D68F]' : 'text-orange-600'}`}>
+                    <div className={`text-sm font-medium ${completionColors.text}`}>
                       {completionPercentage}%
                     </div>
                   </div>
                   <div className="w-full h-3 bg-gray-200 rounded-full overflow-hidden">
                     <div 
-                      className={`h-full rounded-full transition-all duration-500 ${completionPercentage === 100 ? 'bg-[#00D68F]' : 'bg-orange-500'}`}
+                      className={`h-full rounded-full transition-all duration-500 ${completionColors.bar}`}
                       style={{ width: `${completionPercentage}%` }}
                     ></div>
                   </div>
@@ -591,12 +603,18 @@ const RiderProfile = () => {
                   ) : (
                     <div className="mt-3">
                       <div className="text-xs font-medium text-[#0F172A] mb-2">
-                        Upload and verify these documents to reach 100%:
+                        {completionPercentage <= 45 ? (
+                          "Upload and verify these documents to improve your profile:"
+                        ) : completionPercentage <= 75 ? (
+                          "You're making progress! Complete these to reach 100%:"
+                        ) : (
+                          "Almost there! Just a few more documents:"
+                        )}
                       </div>
                       <ul className="space-y-1">
                         {missingDocs.map((doc, index) => (
                           <li key={index} className="text-xs text-[#64748B] flex items-center gap-2">
-                            <span className="w-1.5 h-1.5 bg-orange-500 rounded-full"></span>
+                            <span className={`w-1.5 h-1.5 rounded-full ${completionPercentage <= 45 ? 'bg-[#0F172A]' : completionPercentage <= 75 ? 'bg-orange-500' : 'bg-[#00D68F]'}`}></span>
                             {doc}
                           </li>
                         ))}

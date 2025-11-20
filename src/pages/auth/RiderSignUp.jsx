@@ -58,19 +58,19 @@ const RiderSignup = () => {
       // 3. Store the token in localStorage/sessionStorage
       // 4. Store user data in app state/context
 
-      // Simulate storing auth token
-      localStorage.setItem('auth_token', 'rider_token_123');
-      localStorage.setItem('user_type', 'rider');
-      localStorage.setItem('user_data', JSON.stringify({
-        id: '123',
+      // Store pending verification data
+      localStorage.setItem('pendingVerificationEmail', formData.email);
+      localStorage.setItem('pendingVerificationType', 'rider');
+      localStorage.setItem('pendingUserData', JSON.stringify({
+        fullName: formData.fullName,
         email: formData.email,
-        name: formData.fullName,
-        type: 'rider'
+        phone: formData.phone,
+        vehicleType: formData.vehicleType
       }));
 
-  // Redirect to rider dashboard
-  if (document && document.activeElement) document.activeElement.blur();
-  router.push('/rider/dashboard', 'forward', 'push');
+      // Redirect to email verification page
+      if (document && document.activeElement) document.activeElement.blur();
+      router.push('/auth/verify-email', 'forward', 'push');
     } catch (error) {
       setError('Registration failed. Please try again.');
     }

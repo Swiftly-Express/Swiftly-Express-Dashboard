@@ -54,20 +54,18 @@ const CustomerSignUp = () => {
       // Simulated API call
       // In a real app, you would make a POST request to your registration endpoint
       
-      // Store auth data
-      localStorage.setItem('auth_token', 'customer_token_123');
-      localStorage.setItem('user_type', 'customer');
-      localStorage.setItem('user_data', JSON.stringify({
-        id: '123',
+      // Store pending verification data
+      localStorage.setItem('pendingVerificationEmail', formData.email);
+      localStorage.setItem('pendingVerificationType', 'customer');
+      localStorage.setItem('pendingUserData', JSON.stringify({
+        fullName: formData.fullName,
         email: formData.email,
-        name: formData.fullName,
-        phone: formData.phone,
-        type: 'customer'
+        phone: formData.phone
       }));
 
-  // Redirect to customer dashboard
-  if (document && document.activeElement) document.activeElement.blur();
-  router.push('/customer/dashboard', 'forward', 'push');
+      // Redirect to email verification page
+      if (document && document.activeElement) document.activeElement.blur();
+      router.push('/auth/verify-email', 'forward', 'push');
     } catch (error) {
       setError('Registration failed. Please try again.');
     }

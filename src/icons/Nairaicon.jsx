@@ -1,0 +1,21 @@
+import React from "react";
+
+const CheckMarkIcon = ({ size = 20, color = "#00C950", className = "" }) => {
+  return (
+    <svg
+      width={size}
+      height={size}
+      viewBox="0 0 20 20"
+      fill="none"
+      xmlns="http://www.w3.org/2000/svg"
+      className={className}
+    >
+      <path
+        d="M5.66 14.888V11.272H4.028V10.232H5.66V9.08H4.028V8.04H5.66V4.536H7.628L12.956 13.064H13.052L12.988 4.536H14.396V8.04H16.076V9.08H14.396V10.232H16.076V11.272H14.396V14.888H12.556L7.116 6.216H7.02L7.084 14.888H5.66Z"
+        fill={color}
+      />
+    </svg>
+  );
+};
+
+export default CheckMarkIcon;

@@ -42,6 +42,7 @@ import CustomerLogin from "./pages/auth/CustomerLogin";
 import CustomerSignUp from "./pages/auth/CustomerSignUp";
 import RiderLogin from "./pages/auth/RiderLogin";
 import RiderSignUp from "./pages/auth/RiderSignUp";
+import VerifyEmail from "./features/auth/pages/VerifyEmail";
 
 /* Customer Dashboard pages */
 import CustomerDashboard from "./features/customer/pages/Dashboard";
@@ -105,6 +106,11 @@ const App = () => (
         </Route>
         <Route exact path="/auth/rider/signup">
           <RiderSignUp />
+        </Route>
+
+        {/* Email Verification */}
+        <Route exact path="/auth/verify-email">
+          <VerifyEmail />
         </Route>
 
         {/* Protected Dashboard Routes - Customer */}

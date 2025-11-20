@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { IonContent, IonPage } from '@ionic/react';
 import RiderLayout from '../components/RiderLayout';
 import { ChevronDown } from 'lucide-react';
+import { YummyText } from '../../../components/YummyText';
 
 const sideBottomShadow = {
   boxShadow: '2px 4px 4px rgba(0,0,0,0.06), -2px 4px 4px rgba(0,0,0,0.06), 0 4px 8px rgba(0,0,0,0.08)'
@@ -9,17 +10,19 @@ const sideBottomShadow = {
 
 const SupportCard = ({ icon, iconBg, title, subtitle, action, actionText }) => (
   <div className="bg-white rounded-2xl p-6 text-center" style={sideBottomShadow}>
-    <div className={`w-16 h-16 ${iconBg} rounded-2xl flex items-center justify-center mx-auto mb-4`}>
+    <YummyText>
+    <div className={`w-16 h-16 ${iconBg} rounded-full flex items-center justify-center mx-auto mb-4`}>
       {icon}
     </div>
     <div className="text-base font-medium text-[#0F172A] mb-2">{title}</div>
-    <div className="text-sm text-[#64748B] mb-4">{subtitle}</div>
+    <div className="text-sm text-[#64748B] mb-2">{subtitle}</div>
     <button
       onClick={action}
-      className="text-[#00D68F] font-medium text-sm hover:text-[#00B876] transition-colors"
+      className="text-[#007BFF] font-medium text-sm hover:text-[#00B876] transition-colors"
     >
       {actionText}
     </button>
+    </YummyText>
   </div>
 );
 
@@ -99,24 +102,24 @@ const Support = () => {
       <RiderLayout>
         <IonContent className="ion-padding">
           {/* Header */}
-          <div className="mb-8 py-2">
+          <div className="mb-8">
+            <YummyText>
             <div className="text-3xl font-medium text-[#0F172A] mb-2">
               Support Center
             </div>
             <div className="text-[#4A5565] text-[15px] font-[400]">
               We're here to help you with any questions
             </div>
+            </YummyText>
           </div>
 
           {/* Support Options */}
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
             <SupportCard
               icon={
-                <svg width="32" height="32" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                  <path d="M20.01 15.38c-1.23 0-2.42-.2-3.53-.56-.35-.12-.74-.03-1.01.24l-1.57 1.97c-2.83-1.35-5.48-3.9-6.89-6.83l1.95-1.66c.27-.28.35-.67.24-1.02-.37-1.11-.56-2.3-.56-3.53 0-.54-.45-.99-.99-.99H4.19C3.65 3 3 3.24 3 3.99 3 13.28 10.73 21 20.01 21c.71 0 .99-.63.99-1.18v-3.45c0-.54-.45-.99-.99-.99z" fill="#00D68F"/>
-                </svg>
+                <img src="/telephoneicon.svg" alt="Phone Support" width="32" height="32" />
               }
-              iconBg="bg-green-50"
+              iconBg="bg-[#EFF6FF]"
               title="Phone Support"
               subtitle="Available 24/7"
               action={handlePhoneSupport}
@@ -125,9 +128,7 @@ const Support = () => {
 
             <SupportCard
               icon={
-                <svg width="32" height="32" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                  <path d="M20 4H4c-1.1 0-1.99.9-1.99 2L2 18c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V6c0-1.1-.9-2-2-2zm0 4l-8 5-8-5V6l8 5 8-5v2z" fill="#F59E0B"/>
-                </svg>
+                <img src="/envelope.svg" alt="Email Support" width="32" height="32" />
               }
               iconBg="bg-orange-50"
               title="Email Support"
@@ -138,11 +139,9 @@ const Support = () => {
 
             <SupportCard
               icon={
-                <svg width="32" height="32" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                  <path d="M20 2H4c-1.1 0-2 .9-2 2v18l4-4h14c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2zm-7 9h-2V5h2v6zm0 4h-2v-2h2v2z" fill="#00D68F"/>
-                </svg>
+                <img src="/chaticon.svg" alt="Live Chat" width="32" height="32" />
               }
-              iconBg="bg-green-50"
+              iconBg="bg-[#F0FDF4]"
               title="Live Chat"
               subtitle="Instant assistance"
               action={handleLiveChat}
@@ -153,16 +152,19 @@ const Support = () => {
           {/* Contact Form */}
           <div className="bg-white rounded-2xl p-6 mb-8 border border-gray-100" style={sideBottomShadow}>
             <div className="mb-6">
+              <YummyText>
               <div className="text-xl font-normal text-[#0F172A] mb-1">
                 Send us a Message
               </div>
               <div className="text-sm text-[#64748B]">
                 Fill out the form below and we'll get back to you soon
               </div>
+              </YummyText>
             </div>
 
             <form onSubmit={handleSubmit}>
-              <div className="space-y-6">
+              <YummyText>
+              <div className="space-y-6"> 
                 {/* Name & Email */}
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div>
@@ -227,33 +229,38 @@ const Support = () => {
                   Send Message
                 </button>
               </div>
+              </YummyText>
             </form>
           </div>
 
           {/* FAQ Section */}
-          <div className="bg-white rounded-2xl p-6 border border-gray-100" style={sideBottomShadow}>
-            <div className="flex items-center gap-3 mb-6">
-              <div className="w-10 h-10 bg-green-50 rounded-full flex items-center justify-center">
-                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                  <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 17h-2v-2h2v2zm2.07-7.75l-.9.92C13.45 12.9 13 13.5 13 15h-2v-.5c0-1.1.45-2.1 1.17-2.83l1.24-1.26c.37-.36.59-.86.59-1.41 0-1.1-.9-2-2-2s-2 .9-2 2H8c0-2.21 1.79-4 4-4s4 1.79 4 4c0 .88-.36 1.68-.93 2.25z" fill="#00D68F"/>
-                </svg>
-              </div>
-              <div>
-                <div className="text-xl font-normal text-[#0F172A]">
-                  Frequently Asked Questions
+          <div className="bg-white rounded-2xl p-6 mb-12" style={sideBottomShadow}>
+            <div className="mb-6">
+              <div className="flex items-center mb-0">
+                <div className="w-10 h-10 rounded-full flex items-center justify-start">
+                  <img src="/questionmark-outline.svg" alt="FAQ Icon" width="24" height="24" />
                 </div>
-                <div className="text-sm text-[#64748B]">
+                <YummyText>
+                  <div className="text-lg font-normal text-[#0F172A]">
+                    Frequently Asked Questions
+                  </div>
+                </YummyText>
+              </div>
+              <YummyText>
+                <div className="text-lg font-sm text-[#0F172A]">
                   Quick answers to common questions
                 </div>
-              </div>
+              </YummyText>
             </div>
 
+            
             <div className="space-y-3">
               {faqs.map((faq, index) => (
+                
                 <div
-                  key={index}
                   className="border border-gray-200 rounded-xl overflow-hidden"
                 >
+                  <YummyText>
                   <button
                     onClick={() => setOpenIndex(openIndex === index ? null : index)}
                     className="w-full flex justify-between items-center px-5 py-4 text-left hover:bg-gray-50 transition-colors"
@@ -273,6 +280,7 @@ const Support = () => {
                       </p>
                     </div>
                   )}
+                  </YummyText>
                 </div>
               ))}
             </div>

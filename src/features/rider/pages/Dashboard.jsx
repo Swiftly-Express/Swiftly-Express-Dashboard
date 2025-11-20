@@ -2,6 +2,9 @@ import React from 'react';
 import { IonPage, IonContent } from '@ionic/react';
 import RiderLayout from '../components/RiderLayout';
 import { YummyText } from '../../../components/YummyText';
+import BlockIcon from "../../../icons/Blockicon";
+import NairaIcon from "../../../icons/Nairaicon";
+import AnalyticsIcon from "../../../icons/Analyticsicon";
 
 // Shadow only on left, right and bottom - no top shadow for seamless blend
 const sideBottomShadow = {
@@ -97,29 +100,21 @@ const Dashboard = () => {
           <YummyText>
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
             <StatCard
-              icon={<img width="24" height="24" src="/blockicon.svg" alt="Deliveries Icon"/>}
+              icon={<BlockIcon width={24} height={24} stroke="#007BFF" />}
               iconBg="bg-[#EFF6FF]"
               title="Today's Deliveries"
               value="8"
               subtitle="3 completed, 5 pending"
             />
             <StatCard
-              icon={
-                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                  <path d="M11.8 10.9c-2.27-.59-3-1.2-3-2.15 0-1.09 1.01-1.85 2.7-1.85 1.78 0 2.44.85 2.5 2.1h2.21c-.07-1.72-1.12-3.3-3.21-3.81V3h-3v2.16c-1.94.42-3.5 1.68-3.5 3.61 0 2.31 1.91 3.46 4.7 4.13 2.5.6 3 1.48 3 2.41 0 .69-.49 1.79-2.7 1.79-2.06 0-2.87-.92-2.98-2.1h-2.2c.12 2.19 1.76 3.42 3.68 3.83V21h3v-2.15c1.95-.37 3.5-1.5 3.5-3.55 0-2.84-2.43-3.81-4.7-4.4z" fill="#00D68F"/>
-                </svg>
-              }
+              icon={<NairaIcon size={24} color="#00C950" />}
               iconBg="bg-green-50"
               title="Today's Earnings"
               value="N12400.50"
               subtitle="+N2500.50 from yesterday"
             />
             <StatCard
-              icon={
-                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                  <path d="M16 11c1.66 0 2.99-1.34 2.99-3S17.66 5 16 5c-1.66 0-3 1.34-3 3s1.34 3 3 3zm-8 0c1.66 0 2.99-1.34 2.99-3S9.66 5 8 5C6.34 5 5 6.34 5 8s1.34 3 3 3zm0 2c-2.33 0-7 1.17-7 3.5V19h14v-2.5c0-2.33-4.67-3.5-7-3.5zm8 0c-.29 0-.62.02-.97.05 1.16.84 1.97 1.97 1.97 3.45V19h6v-2.5c0-2.33-4.67-3.5-7-3.5z" fill="#F59E0B"/>
-                </svg>
-              }
+              icon={<AnalyticsIcon width={24} height={24} stroke="#FF8C00" />}
               iconBg="bg-orange-50"
               title="This Week"
               value="N75948.25"
