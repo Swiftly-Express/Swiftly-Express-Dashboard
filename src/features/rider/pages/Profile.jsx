@@ -1,20 +1,123 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { IonContent, IonPage } from '@ionic/react';
 import RiderLayout from '../components/RiderLayout';
+import { YummyText } from '../../../components/YummyText';
+import DocumentIcon from "../../../icons/Documenticon";
+import UploadIcon from "../../../icons/Uploadicon";
 
 const sideBottomShadow = {
   boxShadow: '2px 4px 4px rgba(0,0,0,0.06), -2px 4px 4px rgba(0,0,0,0.06), 0 4px 8px rgba(0,0,0,0.08)'
 };
 
 const RiderProfile = () => {
-  const [activeTab, setActiveTab] = useState('personal');
+  // Get initial tab from sessionStorage or default to 'personal'
+  const [activeTab, setActiveTab] = useState(() => {
+    return sessionStorage.getItem('riderProfileTab') || 'personal';
+  });
+
+  const [profileImage, setProfileImage] = useState('/profileimage.svg');
+  const [documents, setDocuments] = useState({
+    driversLicense: { uploaded: true, verified: true, expires: 'Dec 15, 2026' },
+    vehicleRegistration: { uploaded: true, verified: true, expires: 'Aug 20, 2025' },
+    insuranceCertificate: { uploaded: true, verified: true, expires: 'Nov 30, 2025' },
+    backgroundCheck: { uploaded: true, verified: false, lastUpdated: '6 months ago' }
+  });
+
+  // File input refs
+  const profileImageInputRef = useRef(null);
+  const driversLicenseInputRef = useRef(null);
+  const vehicleRegistrationInputRef = useRef(null);
+  const insuranceCertificateInputRef = useRef(null);
+  const backgroundCheckInputRef = useRef(null);
+
+  // Save active tab to sessionStorage whenever it changes
+  useEffect(() => {
+    sessionStorage.setItem('riderProfileTab', activeTab);
+  }, [activeTab]);
+
+  // Handle profile image upload
+  const handleProfileImageUpload = (e) => {
+    const file = e.target.files[0];
+    if (file) {
+      const validTypes = ['image/jpeg', 'image/png', 'image/gif', 'image/webp'];
+      if (!validTypes.includes(file.type)) {
+        alert('Please upload a valid image file (JPG, PNG, GIF, or WebP)');
+        return;
+      }
+      if (file.size > 5 * 1024 * 1024) {
+        alert('Image size should be less than 5MB');
+        return;
+      }
+
+      const reader = new FileReader();
+      reader.onload = (event) => {
+        setProfileImage(event.target.result);
+      };
+      reader.readAsDataURL(file);
+    }
+  };
+
+  // Handle document upload
+  const handleDocumentUpload = (documentType, e) => {
+    const file = e.target.files[0];
+    if (file) {
+      const validTypes = ['application/pdf', 'image/jpeg', 'image/png'];
+      if (!validTypes.includes(file.type)) {
+        alert('Please upload a PDF or image file');
+        return;
+      }
+      if (file.size > 10 * 1024 * 1024) {
+        alert('File size should be less than 10MB');
+        return;
+      }
+
+      // Update document status
+      setDocuments(prev => ({
+        ...prev,
+        [documentType]: {
+          ...prev[documentType],
+          uploaded: true,
+          verified: false,
+          fileName: file.name
+        }
+      }));
+
+      alert(`${file.name} uploaded successfully! It will be reviewed shortly.`);
+    }
+  };
+
+  // Calculate profile completion percentage
+  const calculateCompletion = () => {
+    const totalFields = 4; // 4 required documents
+    let completed = 0;
+    
+    Object.values(documents).forEach(doc => {
+      if (doc.uploaded && doc.verified) completed++;
+    });
+
+    return Math.round((completed / totalFields) * 100);
+  };
+
+  // Get missing documents
+  const getMissingDocuments = () => {
+    const missing = [];
+    if (!documents.driversLicense.verified) missing.push("Driver's License");
+    if (!documents.vehicleRegistration.verified) missing.push("Vehicle Registration");
+    if (!documents.insuranceCertificate.verified) missing.push("Insurance Certificate");
+    if (!documents.backgroundCheck.verified) missing.push("Background Check");
+    return missing;
+  };
+
+  const completionPercentage = calculateCompletion();
+  const missingDocs = getMissingDocuments();
 
   return (
     <IonPage>
       <RiderLayout>
         <IonContent className="ion-padding">
           {/* Header */}
-          <div className="mb-8 py-2">
+          <YummyText>
+          <div className="mb-4 py-2">
             <div className="text-3xl font-medium text-[#0F172A] mb-2">
               Rider Profile
             </div>
@@ -24,19 +127,30 @@ const RiderProfile = () => {
           </div>
 
           {/* Profile Card */}
-          <div className="bg-gradient-to-br from-[#EFF6FF] to-[#EDFFF9] rounded-2xl p-6 mb-8 border border-gray-100" style={sideBottomShadow}>
+          <div className="bg-gradient-to-br from-[#EFF6FF] to-[#EDFFF9] rounded-2xl p-6 mb-8" style={sideBottomShadow}>
             <div className="flex items-start justify-between">
               {/* Left: Profile Info */}
               <div className="flex items-start gap-4">
                 {/* Avatar with Edit Button */}
                 <div className="relative">
                   <img
-                    src="https://api.dicebear.com/7.x/avataaars/svg?seed=Marcus"
+                    src={profileImage}
                     alt="Marcus Johnson"
-                    className="w-24 h-24 rounded-full bg-gray-200 object-cover"
+                    className="w-24 h-24 rounded-full border-4 border-white shadow-md bg-gray-200 object-cover"
                   />
-                  <button className="absolute bottom-0 right-0 w-8 h-8 bg-[#00D68F] rounded-full flex items-center justify-center hover:bg-[#00B876] transition-colors">
-                    <img src="/icons/camera.svg" alt="Edit" className="w-4 h-4" style={{ filter: 'brightness(0) invert(1)' }} />
+                  <input
+                    ref={profileImageInputRef}
+                    type="file"
+                    accept="image/*"
+                    onChange={handleProfileImageUpload}
+                    className="hidden"
+                  />
+                  <button 
+                    onClick={() => profileImageInputRef.current?.click()}
+                    className="absolute bottom-0 right-0 w-8 h-8 bg-[#00B75A] rounded-full flex items-center justify-center hover:bg-[#00B876] transition-colors" 
+                    style={{border: "0.5px solid #FFFF"}}
+                  >
+                    <img src="/cameraicon.svg" alt="Edit" className="w-4 h-4" style={{ filter: 'brightness(0) invert(1)' }} />
                   </button>
                 </div>
 
@@ -60,11 +174,19 @@ const RiderProfile = () => {
 
                   {/* Rating */}
                   <div className="flex items-center gap-2 mb-2">
-                    <div className="flex items-center gap-1">
+                    <div className="flex items-center gap-">
                       {[1, 2, 3, 4, 5].map((star) => (
-                        <svg key={star} width="16" height="16" viewBox="0 0 24 24" fill="#00D68F" xmlns="http://www.w3.org/2000/svg">
-                          <path d="M12 17.27L18.18 21l-1.64-7.03L22 9.24l-7.19-.61L12 2 9.19 8.63 2 9.24l5.46 4.73L5.82 21z"/>
+                        <svg 
+                          key={star} 
+                          width="22" 
+                          height="22" 
+                          viewBox="0 0 24 24" 
+                          fill="#00D68F" 
+                          xmlns="http://www.w3.org/2000/svg"
+                        >
+                          <path d="M12 2.75c.28 0 .53.16.65.41l2.12 4.3c.1.21.3.35.53.38l4.75.69c.69.1.97.95.47 1.43l-3.44 3.35c-.17.16-.25.39-.21.62l.81 4.72c.12.69-.61 1.22-1.23.89l-4.24-2.23a.75.75 0 0 0-.7 0l-4.24 2.23c-.62.33-1.35-.2-1.23-.89l.81-4.72c.04-.23-.04-.46-.21-.62L2.48 10c-.5-.48-.22-1.33.47-1.43l4.75-.69c.23-.03.43-.17.53-.38l2.12-4.3A.74.74 0 0 1 12 2.75Z"/>
                         </svg>
+
                       ))}
                     </div>
                     <span className="text-sm text-[#0F172A] font-medium">4.95 (238 ratings)</span>
@@ -76,23 +198,25 @@ const RiderProfile = () => {
 
               {/* Right: Stats */}
               <div className="flex gap-4">
-                <div className="bg-white rounded-xl p-4 text-center min-w-[120px]">
+                <div className="bg-white rounded-xl p-4 text-center min-w-[120px] shadow-md" style={sideBottomShadow}>
                   <div className="text-2xl font-medium text-[#3B82F6] mb-1">542</div>
                   <div className="text-xs text-[#64748B]">Total Deliveries</div>
                 </div>
-                <div className="bg-white rounded-xl p-4 text-center min-w-[120px]">
+                <div className="bg-white rounded-xl p-4 text-center min-w-[120px] shadow-md" style={sideBottomShadow}>
                   <div className="text-2xl font-medium text-[#00D68F] mb-1">98%</div>
                   <div className="text-xs text-[#64748B]">Success Rate</div>
                 </div>
               </div>
             </div>
           </div>
+          </YummyText>
 
           {/* Tab Navigation */}
-          <div className="flex items-center gap-2 mb-8 bg-gray-100 p-1 rounded-xl w-fit">
+          <YummyText>
+          <div className="flex items-center gap-2 mb-8 bg-gray-100 p-1 py-1 rounded-full w-fit">
             <button
               onClick={() => setActiveTab('personal')}
-              className={`px-6 py-2 rounded-lg text-sm font-normal transition-colors ${
+              className={`px-7 py-1 rounded-full text-sm font-normal transition-colors ${
                 activeTab === 'personal'
                   ? 'text-[#0F172A] bg-white shadow-sm'
                   : 'text-[#64748B]'
@@ -102,7 +226,7 @@ const RiderProfile = () => {
             </button>
             <button
               onClick={() => setActiveTab('vehicle')}
-              className={`px-6 py-2 rounded-lg text-sm font-normal transition-colors ${
+              className={`px-7 py-1 rounded-full text-sm font-normal transition-colors ${
                 activeTab === 'vehicle'
                   ? 'text-[#0F172A] bg-white shadow-sm'
                   : 'text-[#64748B]'
@@ -112,7 +236,7 @@ const RiderProfile = () => {
             </button>
             <button
               onClick={() => setActiveTab('documents')}
-              className={`px-6 py-2 rounded-lg text-sm font-normal transition-colors ${
+              className={`px-7 py-1 rounded-full text-sm font-normal transition-colors ${
                 activeTab === 'documents'
                   ? 'text-[#0F172A] bg-white shadow-sm'
                   : 'text-[#64748B]'
@@ -126,7 +250,7 @@ const RiderProfile = () => {
           {activeTab === 'personal' && (
             <div className="bg-white rounded-2xl p-6 border border-gray-100" style={sideBottomShadow}>
               <div className="mb-6">
-                <div className="text-xl font-normal text-[#0F172A] mb-1">
+                <div className="text-xl font-normal text-[#0A0A0A] mb-1">
                   Personal Information
                 </div>
                 <div className="text-sm text-[#64748B]">
@@ -138,72 +262,75 @@ const RiderProfile = () => {
                 {/* First Name & Last Name */}
                 <div className="grid grid-cols-2 gap-4">
                   <div>
-                    <label className="block text-sm text-[#64748B] mb-2">First Name</label>
+                    <label className="block text-sm font-medium text-[#0A0A0A] mb-2">First Name</label>
                     <input
                       type="text"
-                      defaultValue="Marcus"
-                      className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl text-[#0F172A] focus:outline-none focus:border-[#00D68F]"
+                      placeholder="Marcus"
+                      className="w-full px-4 py-3 bg-gray-50 border border-gray-200 placeholder:text-[#717182] rounded-xl text-[#0F172A] focus:outline-none focus:border-[#00D68F]"
                     />
                   </div>
                   <div>
-                    <label className="block text-sm text-[#64748B] mb-2">Last Name</label>
+                    <label className="block text-sm font-medium text-[#0A0A0A] mb-2">Last Name</label>
                     <input
                       type="text"
-                      defaultValue="Johnson"
-                      className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl text-[#0F172A] focus:outline-none focus:border-[#00D68F]"
+                      placeholder="Johnson"
+                      className="w-full px-4 py-3 bg-gray-50 border border-gray-200 placeholder:text-[#717182] rounded-xl text-[#0F172A] focus:outline-none focus:border-[#00D68F]"
                     />
                   </div>
                 </div>
 
                 {/* Email Address */}
                 <div>
-                  <label className="block text-sm text-[#64748B] mb-2">Email Address</label>
+                  <label className="block text-sm font-medium text-[#0A0A0A] mb-2">Email Address</label>
                   <input
                     type="email"
-                    defaultValue="marcus.j@email.com"
-                    className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl text-[#0F172A] focus:outline-none focus:border-[#00D68F]"
+                    placeholder="marcus.j@email.com"
+                    className="w-full px-4 py-3 bg-gray-50 border border-gray-200 placeholder:text-[#717182] rounded-xl text-[#0F172A] focus:outline-none focus:border-[#00D68F]"
                   />
                 </div>
 
                 {/* Phone Number */}
                 <div>
-                  <label className="block text-sm text-[#64748B] mb-2">Phone Number</label>
+                  <label className="block text-sm font-medium text-[#0A0A0A] mb-2">Phone Number</label>
                   <input
                     type="tel"
-                    defaultValue="+1 (555) 234-5678"
-                    className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl text-[#0F172A] focus:outline-none focus:border-[#00D68F]"
+                    placeholder="+1 (555) 234-5678"
+                    className="w-full px-4 py-3 bg-gray-50 border border-gray-200 placeholder:text-[#717182] rounded-xl text-[#0F172A] focus:outline-none focus:border-[#00D68F]"
                   />
                 </div>
 
                 {/* Address */}
                 <div>
-                  <label className="block text-sm text-[#64748B] mb-2">Address</label>
+                  <label className="block text-sm font-medium text-[#0A0A0A] mb-2">Address</label>
                   <input
                     type="text"
-                    defaultValue="456 Rider Street, New York, NY 10001"
-                    className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl text-[#0F172A] focus:outline-none focus:border-[#00D68F]"
+                    placeholder="456 Rider Street, New York, NY 10001"
+                    className="w-full px-4 py-3 bg-gray-50 border border-gray-200 placeholder:text-[#717182] rounded-xl text-[#0F172A] focus:outline-none focus:border-[#00D68F]"
                   />
                 </div>
 
                 {/* Emergency Contact */}
                 <div>
-                  <label className="block text-sm text-[#64748B] mb-2">Emergency Contact</label>
+                  <label className="block text-sm font-medium text-[#0A0A0A] mb-2">Emergency Contact</label>
                   <input
                     type="text"
                     placeholder="Name and phone number"
-                    className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl text-[#64748B] focus:outline-none focus:border-[#00D68F]"
+                    className="w-full px-4 py-3 bg-gray-50 placeholder:text-[#717182] border border-gray-200 rounded-xl text-[#64748B] focus:outline-none focus:border-[#00D68F]"
                   />
                 </div>
 
                 {/* Save Button */}
-                <button className="bg-[#00B75A] hover:bg-[#00B876] text-white px-6 py-3 rounded-xl transition-colors font-[300]">
+                <button className="bg-[#00B75A] hover:bg-[#00B876] font-[400] text-white px-6 py-3 rounded-xl transition-colors font-[300]">
                   Save Changes
                 </button>
               </div>
             </div>
+  
           )}
+          </YummyText>
 
           {/* Vehicle Tab */}
+          <YummyText>
           {activeTab === 'vehicle' && (
             <div className="bg-white rounded-2xl p-6 border border-gray-100" style={sideBottomShadow}>
               <div className="mb-6">
@@ -219,19 +346,19 @@ const RiderProfile = () => {
                 {/* Vehicle Type & Make/Model */}
                 <div className="grid grid-cols-2 gap-4">
                   <div>
-                    <label className="block text-sm text-[#64748B] mb-2">Vehicle Type</label>
+                    <label className="block text-sm font-medium text-[#0A0A0A] mb-2">Vehicle Type</label>
                     <input
                       type="text"
-                      defaultValue="Motorcycle"
-                      className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl text-[#0F172A] focus:outline-none focus:border-[#00D68F]"
+                      placeholder="Motorcycle"
+                      className="w-full px-4 py-3 bg-gray-50 placeholder:text-[#717182] border border-gray-200 rounded-xl text-[#0F172A] focus:outline-none focus:border-[#00D68F]"
                     />
                   </div>
                   <div>
-                    <label className="block text-sm text-[#64748B] mb-2">Make & Model</label>
+                    <label className="block text-sm font-medium text-[#0A0A0A] mb-2">Make & Model</label>
                     <input
                       type="text"
-                      defaultValue="Honda CBR 250R"
-                      className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl text-[#0F172A] focus:outline-none focus:border-[#00D68F]"
+                      placeholder="Honda CBR 250R"
+                      className="w-full px-4 py-3 bg-gray-50 placeholder:text-[#717182] border border-gray-200 rounded-xl text-[#0F172A] focus:outline-none focus:border-[#00D68F]"
                     />
                   </div>
                 </div>
@@ -239,45 +366,45 @@ const RiderProfile = () => {
                 {/* Year & Color */}
                 <div className="grid grid-cols-2 gap-4">
                   <div>
-                    <label className="block text-sm text-[#64748B] mb-2">Year</label>
+                    <label className="block text-sm font-medium text-[#0A0A0A] mb-2">Year</label>
                     <input
                       type="text"
-                      defaultValue="2022"
-                      className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl text-[#0F172A] focus:outline-none focus:border-[#00D68F]"
+                      placeholder="2022"
+                      className="w-full px-4 py-3 bg-gray-50 placeholder:text-[#717182] border border-gray-200 rounded-xl text-[#0F172A] focus:outline-none focus:border-[#00D68F]"
                     />
                   </div>
                   <div>
-                    <label className="block text-sm text-[#64748B] mb-2">Color</label>
+                    <label className="block text-sm font-medium text-[#0A0A0A] mb-2">Color</label>
                     <input
                       type="text"
-                      defaultValue="Red"
-                      className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl text-[#0F172A] focus:outline-none focus:border-[#00D68F]"
+                      placeholder="Red"
+                      className="w-full px-4 py-3 bg-gray-50 placeholder:text-[#717182] border border-gray-200 rounded-xl text-[#0F172A] focus:outline-none focus:border-[#00D68F]"
                     />
                   </div>
                 </div>
 
                 {/* License Plate */}
                 <div>
-                  <label className="block text-sm text-[#64748B] mb-2">License Plate</label>
+                  <label className="block text-sm font-medium text-[#0A0A0A] mb-2">License Plate</label>
                   <input
                     type="text"
-                    defaultValue="ABC-1234"
-                    className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl text-[#0F172A] focus:outline-none focus:border-[#00D68F]"
+                    placeholder="ABC-1234"
+                    className="w-full px-4 py-3 bg-gray-50 placeholder:text-[#717182] border border-gray-200 rounded-xl text-[#0F172A] focus:outline-none focus:border-[#00D68F]"
                   />
                 </div>
 
                 {/* Insurance Policy Number */}
                 <div>
-                  <label className="block text-sm text-[#64748B] mb-2">Insurance Policy Number</label>
+                  <label className="block text-sm font-medium text-[#0A0A0A] mb-2">Insurance Policy Number</label>
                   <input
                     type="text"
-                    defaultValue="INS-9876543210"
-                    className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl text-[#0F172A] focus:outline-none focus:border-[#00D68F]"
+                    placeholder="INS-9876543210"
+                    className="w-full px-4 py-3 bg-gray-50 placeholder:text-[#717182] border border-gray-200 rounded-xl text-[#0F172A] focus:outline-none focus:border-[#00D68F]"
                   />
                 </div>
 
                 {/* Save Button */}
-                <button className="bg-[#00B75A] hover:bg-[#00B876] text-white px-6 py-3 rounded-xl transition-colors font-[300]">
+                <button className="bg-[#00B75A] hover:bg-[#00B876] text-white px-6 py-3 rounded-xl transition-colors font-[400]">
                   Update Vehicle Info
                 </button>
               </div>
@@ -300,86 +427,130 @@ const RiderProfile = () => {
                 <div className="space-y-4">
                   {/* Driver's License */}
                   <div className="flex items-start justify-between p-4 border border-gray-200 rounded-xl">
-                    <div className="flex items-start gap-4 flex-1">
-                      <div className="w-10 h-10 bg-green-50 rounded-lg flex items-center justify-center flex-shrink-0">
-                        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                          <path d="M14 2H6c-1.1 0-1.99.9-1.99 2L4 20c0 1.1.89 2 1.99 2H18c1.1 0 2-.9 2-2V8l-6-6zm2 16H8v-2h8v2zm0-4H8v-2h8v2zm-3-5V3.5L18.5 9H13z" fill="#00D68F"/>
-                        </svg>
+                    <div className="flex flex-col gap-3 flex-1">
+                      <div className="flex items-start gap-4">
+                        <div className="w-10 h-10 bg-green-50 rounded-lg flex items-center justify-center flex-shrink-0">
+                          <DocumentIcon width={20} height={20} stroke="#00A63E" />
+                        </div>
+                        <div className="flex-1">
+                          <div className="text-sm font-medium text-[#0F172A] mb-1">Driver's License</div>
+                          <div className="text-xs text-[#64748B]">Expires: {documents.driversLicense.expires}</div>
+                        </div>
                       </div>
-                      <div className="flex-1">
-                        <div className="text-sm font-medium text-[#0F172A] mb-1">Driver's License</div>
-                        <div className="text-xs text-[#64748B] mb-3">Expires: Dec 15, 2026</div>
-                        <button className="flex items-center gap-2 text-sm text-[#0F172A] hover:text-[#00D68F] transition-colors">
-                          <img src="/icons/upload.svg" alt="Upload" className="w-4 h-4" />
-                          Update Document
-                        </button>
-                      </div>
+                      <input
+                        ref={driversLicenseInputRef}
+                        type="file"
+                        accept=".pdf,image/*"
+                        onChange={(e) => handleDocumentUpload('driversLicense', e)}
+                        className="hidden"
+                      />
+                      <button 
+                        onClick={() => driversLicenseInputRef.current?.click()}
+                        className="flex items-center gap-2 text-sm py-1.5 px-4 rounded-lg text-[#0F172A] hover:text-[#00D68F] transition-colors w-fit" 
+                        style={{border: "1px solid #0000001A"}}
+                      >
+                        <UploadIcon size={18} stroke="black" />
+                        Update Document
+                      </button>
                     </div>
-                    <span className="px-3 py-1 bg-green-100 text-green-700 rounded-full text-xs font-medium">
-                      Verified
+                    <span className={`px-3 py-1 ${documents.driversLicense.verified ? 'bg-green-100 text-green-700' : 'bg-yellow-100 text-yellow-700'} rounded-full text-xs font-medium`}>
+                      {documents.driversLicense.verified ? 'Verified' : 'Pending'}
                     </span>
                   </div>
 
                   {/* Vehicle Registration */}
                   <div className="flex items-start justify-between p-4 border border-gray-200 rounded-xl">
-                    <div className="flex items-start gap-4 flex-1">
-                      <div className="w-10 h-10 bg-green-50 rounded-lg flex items-center justify-center flex-shrink-0">
-                        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                          <path d="M14 2H6c-1.1 0-1.99.9-1.99 2L4 20c0 1.1.89 2 1.99 2H18c1.1 0 2-.9 2-2V8l-6-6zm2 16H8v-2h8v2zm0-4H8v-2h8v2zm-3-5V3.5L18.5 9H13z" fill="#00D68F"/>
-                        </svg>
+                    <div className="flex flex-col gap-3 flex-1">
+                      <div className="flex items-start gap-4">
+                        <div className="w-10 h-10 bg-green-50 rounded-lg flex items-center justify-center flex-shrink-0">
+                          <DocumentIcon width={20} height={20} stroke="#00A63E" />
+                        </div>
+                        <div className="flex-1">
+                          <div className="text-sm font-medium text-[#0F172A] mb-1">Vehicle Registration</div>
+                          <div className="text-xs text-[#64748B]">Expires: {documents.vehicleRegistration.expires}</div>
+                        </div>
                       </div>
-                      <div className="flex-1">
-                        <div className="text-sm font-medium text-[#0F172A] mb-1">Vehicle Registration</div>
-                        <div className="text-xs text-[#64748B] mb-3">Expires: Aug 20, 2025</div>
-                        <button className="flex items-center gap-2 text-sm text-[#0F172A] hover:text-[#00D68F] transition-colors">
-                          <img src="/icons/upload.svg" alt="Upload" className="w-4 h-4" />
-                          Update Document
-                        </button>
-                      </div>
+                      <input
+                        ref={vehicleRegistrationInputRef}
+                        type="file"
+                        accept=".pdf,image/*"
+                        onChange={(e) => handleDocumentUpload('vehicleRegistration', e)}
+                        className="hidden"
+                      />
+                      <button 
+                        onClick={() => vehicleRegistrationInputRef.current?.click()}
+                        className="flex items-center py-1.5 px-4 rounded-lg gap-2 text-sm text-[#0F172A] hover:text-[#00D68F] transition-colors w-fit" 
+                        style={{border: "1px solid #0000001A"}}
+                      >
+                        <UploadIcon size={18} stroke="black" />
+                        Update Document
+                      </button>
                     </div>
-                    <span className="px-3 py-1 bg-green-100 text-green-700 rounded-full text-xs font-medium">
-                      Verified
+                    <span className={`px-3 py-1 ${documents.vehicleRegistration.verified ? 'bg-green-100 text-green-700' : 'bg-yellow-100 text-yellow-700'} rounded-full text-xs font-medium`}>
+                      {documents.vehicleRegistration.verified ? 'Verified' : 'Pending'}
                     </span>
                   </div>
 
                   {/* Insurance Certificate */}
                   <div className="flex items-start justify-between p-4 border border-gray-200 rounded-xl">
-                    <div className="flex items-start gap-4 flex-1">
-                      <div className="w-10 h-10 bg-green-50 rounded-lg flex items-center justify-center flex-shrink-0">
-                        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                          <path d="M14 2H6c-1.1 0-1.99.9-1.99 2L4 20c0 1.1.89 2 1.99 2H18c1.1 0 2-.9 2-2V8l-6-6zm2 16H8v-2h8v2zm0-4H8v-2h8v2zm-3-5V3.5L18.5 9H13z" fill="#00D68F"/>
-                        </svg>
+                    <div className="flex flex-col gap-3 flex-1">
+                      <div className="flex items-start gap-4">
+                        <div className="w-10 h-10 bg-green-50 rounded-lg flex items-center justify-center flex-shrink-0">
+                          <DocumentIcon width={20} height={20} stroke="#00A63E" />
+                        </div>
+                        <div className="flex-1">
+                          <div className="text-sm font-medium text-[#0F172A] mb-1">Insurance Certificate</div>
+                          <div className="text-xs text-[#64748B]">Expires: {documents.insuranceCertificate.expires}</div>
+                        </div>
                       </div>
-                      <div className="flex-1">
-                        <div className="text-sm font-medium text-[#0F172A] mb-1">Insurance Certificate</div>
-                        <div className="text-xs text-[#64748B] mb-3">Expires: Nov 30, 2025</div>
-                        <button className="flex items-center gap-2 text-sm text-[#0F172A] hover:text-[#00D68F] transition-colors">
-                          <img src="/icons/upload.svg" alt="Upload" className="w-4 h-4" />
-                          Update Document
-                        </button>
-                      </div>
+                      <input
+                        ref={insuranceCertificateInputRef}
+                        type="file"
+                        accept=".pdf,image/*"
+                        onChange={(e) => handleDocumentUpload('insuranceCertificate', e)}
+                        className="hidden"
+                      />
+                      <button 
+                        onClick={() => insuranceCertificateInputRef.current?.click()}
+                        className="flex items-center py-1.5 px-4 rounded-lg gap-2 text-sm text-[#0F172A] hover:text-[#00D68F] transition-colors w-fit" 
+                        style={{border: "1px solid #0000001A"}}
+                      >
+                        <UploadIcon size={18} stroke="black" /> 
+                        Update Document
+                      </button>
                     </div>
-                    <span className="px-3 py-1 bg-green-100 text-green-700 rounded-full text-xs font-medium">
-                      Verified
+                    <span className={`px-3 py-1 ${documents.insuranceCertificate.verified ? 'bg-green-100 text-green-700' : 'bg-yellow-100 text-yellow-700'} rounded-full text-xs font-medium`}>
+                      {documents.insuranceCertificate.verified ? 'Verified' : 'Pending'}
                     </span>
                   </div>
 
                   {/* Background Check */}
                   <div className="flex items-start justify-between p-4 border border-gray-200 rounded-xl">
-                    <div className="flex items-start gap-4 flex-1">
-                      <div className="w-10 h-10 bg-orange-50 rounded-lg flex items-center justify-center flex-shrink-0">
-                        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                          <path d="M14 2H6c-1.1 0-1.99.9-1.99 2L4 20c0 1.1.89 2 1.99 2H18c1.1 0 2-.9 2-2V8l-6-6zm2 16H8v-2h8v2zm0-4H8v-2h8v2zm-3-5V3.5L18.5 9H13z" fill="#F59E0B"/>
-                        </svg>
+                    <div className="flex flex-col gap-3 flex-1">
+                      <div className="flex items-start gap-4">
+                        <div className="w-10 h-10 bg-orange-50 rounded-lg flex items-center justify-center flex-shrink-0">
+                          <DocumentIcon width={20} height={20} stroke="#D08700" />
+                        </div>
+                        <div className="flex-1">
+                          <div className="text-sm font-medium text-[#0F172A] mb-1">Background Check</div>
+                          <div className="text-xs text-[#64748B]">Last updated: {documents.backgroundCheck.lastUpdated}</div>
+                        </div>
                       </div>
-                      <div className="flex-1">
-                        <div className="text-sm font-medium text-[#0F172A] mb-1">Background Check</div>
-                        <div className="text-xs text-[#64748B] mb-3">Last updated: 6 months ago</div>
-                        <button className="flex items-center gap-2 px-4 py-2 border-2 border-orange-500 text-orange-700 rounded-lg text-sm hover:bg-orange-50 transition-colors">
-                          <img src="/icons/upload.svg" alt="Renew" className="w-4 h-4" />
-                          Renew Now
-                        </button>
-                      </div>
+                      <input
+                        ref={backgroundCheckInputRef}
+                        type="file"
+                        accept=".pdf,image/*"
+                        onChange={(e) => handleDocumentUpload('backgroundCheck', e)}
+                        className="hidden"
+                      />
+                      <button 
+                        onClick={() => backgroundCheckInputRef.current?.click()}
+                        className="flex items-center gap-2 py-1.5 px-4 text-[#D08700] rounded-lg text-sm hover:bg-orange-50 transition-colors w-fit" 
+                        style={{border: "1px solid #D08700"}}
+                      >
+                        <UploadIcon size={18} stroke="#D08700" />
+                        Renew Now
+                      </button>
                     </div>
                     <span className="px-3 py-1 bg-orange-100 text-orange-700 rounded-full text-xs font-medium">
                       Renewal Due
@@ -402,18 +573,41 @@ const RiderProfile = () => {
                 <div>
                   <div className="flex items-center justify-between mb-3">
                     <div className="text-sm font-medium text-[#64748B]">Profile Strength</div>
-                    <div className="text-sm font-medium text-[#00D68F]">85%</div>
+                    <div className={`text-sm font-medium ${completionPercentage === 100 ? 'text-[#00D68F]' : 'text-orange-600'}`}>
+                      {completionPercentage}%
+                    </div>
                   </div>
                   <div className="w-full h-3 bg-gray-200 rounded-full overflow-hidden">
-                    <div className="h-full bg-[#0F172A] rounded-full" style={{ width: '85%' }}></div>
+                    <div 
+                      className={`h-full rounded-full transition-all duration-500 ${completionPercentage === 100 ? 'bg-[#00D68F]' : 'bg-orange-500'}`}
+                      style={{ width: `${completionPercentage}%` }}
+                    ></div>
                   </div>
-                  <div className="text-xs text-[#64748B] mt-3">
-                    Complete your emergency contact to reach 100%
-                  </div>
+                  {completionPercentage === 100 ? (
+                    <div className="text-xs text-[#00D68F] mt-3 flex items-center gap-1">
+                      <span>✓</span>
+                      <span>Profile complete! All documents verified.</span>
+                    </div>
+                  ) : (
+                    <div className="mt-3">
+                      <div className="text-xs font-medium text-[#0F172A] mb-2">
+                        Upload and verify these documents to reach 100%:
+                      </div>
+                      <ul className="space-y-1">
+                        {missingDocs.map((doc, index) => (
+                          <li key={index} className="text-xs text-[#64748B] flex items-center gap-2">
+                            <span className="w-1.5 h-1.5 bg-orange-500 rounded-full"></span>
+                            {doc}
+                          </li>
+                        ))}
+                      </ul>
+                    </div>
+                  )}
                 </div>
               </div>
             </>
           )}
+          </YummyText>
         </IonContent>
       </RiderLayout>
     </IonPage>

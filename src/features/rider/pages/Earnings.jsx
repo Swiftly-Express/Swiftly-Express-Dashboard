@@ -1,21 +1,25 @@
 import React, { useState } from 'react';
-import { IonContent, IonPage } from '@ionic/react';
+import { IonContent, IonPage, IonIcon } from '@ionic/react';
+import { arrowForward } from 'ionicons/icons';
 import RiderLayout from '../components/RiderLayout';
+import { YummyText } from '../../../components/YummyText';
 
 const sideBottomShadow = {
   boxShadow: '0.5px 1.5px 2px rgba(0, 0, 0, 0.05), -0.5px 1.5px 2px rgba(0, 0, 0, 0.05), 0 1.5px 3px rgba(0, 0, 0, 0.07)'
 };
 
 const StatCard = ({ icon, iconBg, title, value, subtitle }) => (
-  <div className="bg-white rounded-xl p-6" style={sideBottomShadow}>
+  <div className="bg-white rounded-xl p-5" style={sideBottomShadow}>
+    <YummyText>
     <div className="flex items-start justify-between mb-4">
-      <div className="text-sm text-[#64748B]">{title}</div>
+      <div className="text-sm text-[#64748B] mt-3">{title}</div>
       <div className={`w-10 h-10 ${iconBg} rounded-xl flex items-center justify-center`}>
         {icon}
       </div>
     </div>
     <div className="text-3xl font-normal text-[#0F172A] mb-1">{value}</div>
     <div className="text-xs text-[#64748B]">{subtitle}</div>
+    </YummyText>
   </div>
 );
 
@@ -26,7 +30,8 @@ const Earnings = () => {
     {
       orderId: 'PKG-2401',
       time: '08:30 AM',
-      route: 'Downtown → Riverside',
+      from: 'Downtown',
+      to: 'Riverside',
       distance: '3.2 mi',
       basePay: '$24.50',
       tips: '+$3.50',
@@ -35,7 +40,8 @@ const Earnings = () => {
     {
       orderId: 'PKG-2402',
       time: '09:15 AM',
-      route: 'Mall → Suburbs',
+      from: 'Mall',
+      to: 'Suburbs',
       distance: '5.1 mi',
       basePay: '$28.00',
       tips: '+$5.00',
@@ -44,7 +50,8 @@ const Earnings = () => {
     {
       orderId: 'PKG-2403',
       time: '10:45 AM',
-      route: 'Market → Campus',
+      from: 'Market',
+      to: 'Campus',
       distance: '2.3 mi',
       basePay: '$18.00',
       tips: '+$2.00',
@@ -53,7 +60,8 @@ const Earnings = () => {
     {
       orderId: 'PKG-2404',
       time: '12:20 PM',
-      route: 'Plaza → Heights',
+      from: 'Plaza',
+      to: 'Heights',
       distance: '4.5 mi',
       basePay: '$26.00',
       tips: '+$4.00',
@@ -62,7 +70,8 @@ const Earnings = () => {
     {
       orderId: 'PKG-2405',
       time: '02:00 PM',
-      route: 'Station → Parkside',
+      from: 'Station',
+      to: 'Parkside',
       distance: '1.8 mi',
       basePay: '$16.00',
       tips: '+$2.00',
@@ -71,7 +80,18 @@ const Earnings = () => {
     {
       orderId: 'PKG-2406',
       time: '03:30 PM',
-      route: 'Center → Lakeside',
+      from: 'Center',
+      to: 'Lakeside',
+      distance: '2.9 mi',
+      basePay: '$22.00',
+      tips: '+$3.00',
+      total: '$25.00'
+    },
+    {
+      orderId: 'PKG-2406',
+      time: '03:30 PM',
+      from: 'Center',
+      to: 'Lakeside',
       distance: '2.9 mi',
       basePay: '$22.00',
       tips: '+$3.00',
@@ -98,6 +118,7 @@ const Earnings = () => {
       <RiderLayout>
         <IonContent className="ion-padding">
           {/* Header */}
+          <YummyText>
           <div className="flex items-center justify-between mb-8 py-2">
             <div>
               <div className="text-3xl font-medium text-[#0F172A] mb-2">
@@ -107,10 +128,11 @@ const Earnings = () => {
                 Track your income and performance
               </div>
             </div>
-            <button className="bg-[#00B75A] hover:bg-[#00B876] text-white px-6 py-3 rounded-xl transition-colors font-[300]">
+            <button className="bg-[#00B75A] hover:bg-[#00B876]  text-sm text-white px-3 py-2 rounded-xl transition-colors font-[400]">
               Request Payout
             </button>
           </div>
+          </YummyText>
 
           {/* Stats Grid */}
           <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-8">
@@ -162,6 +184,7 @@ const Earnings = () => {
 
           {/* Weekly Earnings Trend Chart */}
           <div className="bg-white rounded-2xl p-6 mb-8" style={sideBottomShadow}>
+            <YummyText>
             <div className="mb-6">
               <div className="text-xl font-normal text-[#0F172A] mb-1">
                 Weekly Earnings Trend
@@ -170,6 +193,7 @@ const Earnings = () => {
                 Your earnings over the past 7 days
               </div>
             </div>
+            </YummyText>
 
             {/* Simple Bar Chart */}
             <div className="h-64 flex items-end justify-between gap-4 px-4">
@@ -179,6 +203,7 @@ const Earnings = () => {
                 const height = (earnings / maxEarnings) * 100;
                 
                 return (
+                  <YummyText>
                   <div key={index} className="flex-1 flex flex-col items-center">
                     <div className="w-full bg-gray-100 rounded-t-lg relative" style={{ height: '100%' }}>
                       <div 
@@ -188,16 +213,18 @@ const Earnings = () => {
                     </div>
                     <div className="text-xs text-[#64748B] mt-3">{day.day.slice(0, 3)}</div>
                   </div>
+                  </YummyText>
                 );
               })}
             </div>
           </div>
 
           {/* Tab Navigation */}
-          <div className="flex items-center gap-2 mb-6 bg-gray-100 p-1 rounded-xl w-fit">
+          <YummyText>
+          <div className="flex items-center gap-2 mb-6 bg-gray-100 p-1 py-1 rounded-full w-fit">
             <button
               onClick={() => setActiveTab('today')}
-              className={`px-6 py-2 rounded-lg text-sm font-normal transition-colors ${
+              className={`px-16 py-1 rounded-full text-sm font-normal transition-colors ${
                 activeTab === 'today'
                   ? 'text-[#0F172A] bg-white shadow-sm'
                   : 'text-[#64748B]'
@@ -207,7 +234,7 @@ const Earnings = () => {
             </button>
             <button
               onClick={() => setActiveTab('week')}
-              className={`px-6 py-2 rounded-lg text-sm font-normal transition-colors ${
+              className={`px-16 py-1 rounded-full text-sm font-normal transition-colors ${
                 activeTab === 'week'
                   ? 'text-[#0F172A] bg-white shadow-sm'
                   : 'text-[#64748B]'
@@ -216,9 +243,11 @@ const Earnings = () => {
               This Week
             </button>
           </div>
+          </YummyText>
 
           {/* Today's Deliveries Table */}
           {activeTab === 'today' && (
+            <YummyText> 
             <div className="bg-white rounded-2xl p-6 mb-8 border border-gray-100" style={sideBottomShadow}>
               <div className="mb-6">
                 <div className="text-xl font-normal text-[#0F172A] mb-1">
@@ -231,72 +260,106 @@ const Earnings = () => {
 
               {/* Table */}
               <div className="overflow-x-auto">
-                <table className="w-full">
-                  <thead>
-                    <tr className="border-b border-gray-200">
-                      <th className="text-left py-3 px-4 text-sm font-medium text-[#64748B]">Order ID</th>
-                      <th className="text-left py-3 px-4 text-sm font-medium text-[#64748B]">Time</th>
-                      <th className="text-left py-3 px-4 text-sm font-medium text-[#64748B]">Route</th>
-                      <th className="text-left py-3 px-4 text-sm font-medium text-[#64748B]">Distance</th>
-                      <th className="text-left py-3 px-4 text-sm font-medium text-[#64748B]">Base Pay</th>
-                      <th className="text-left py-3 px-4 text-sm font-medium text-[#64748B]">Tips</th>
-                      <th className="text-right py-3 px-4 text-sm font-medium text-[#64748B]">Total</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {todayDeliveries.map((delivery, index) => (
-                      <tr key={index} className="border-b border-gray-100 hover:bg-gray-50">
-                        <td className="py-4 px-4 text-sm text-[#0F172A]">{delivery.orderId}</td>
-                        <td className="py-4 px-4 text-sm text-[#64748B]">{delivery.time}</td>
-                        <td className="py-4 px-4 text-sm text-[#0F172A]">{delivery.route}</td>
-                        <td className="py-4 px-4 text-sm text-[#64748B]">{delivery.distance}</td>
-                        <td className="py-4 px-4 text-sm text-[#0F172A]">{delivery.basePay}</td>
-                        <td className="py-4 px-4 text-sm text-[#00D68F] font-medium">{delivery.tips}</td>
-                        <td className="py-4 px-4 text-sm text-[#0F172A] font-medium text-right">{delivery.total}</td>
+                <div className="max-h-[400px] overflow-y-auto">
+                  <table className="w-full">
+                    <thead className="sticky top-0 bg-white z-10">
+                      <tr className="border-b border-gray-200">
+                        <th className="text-left py-3 px-4 text-sm font-medium text-[#64748B] bg-white">Order ID</th>
+                        <th className="text-left py-3 px-4 text-sm font-medium text-[#64748B] bg-white">Time</th>
+                        <th className="text-left py-3 px-4 text-sm font-medium text-[#64748B] bg-white">Route</th>
+                        <th className="text-left py-3 px-4 text-sm font-medium text-[#64748B] bg-white">Distance</th>
+                        <th className="text-left py-3 px-4 text-sm font-medium text-[#64748B] bg-white">Base Pay</th>
+                        <th className="text-left py-3 px-4 text-sm font-medium text-[#64748B] bg-white">Tips</th>
+                        <th className="text-right py-3 px-4 text-sm font-medium text-[#64748B] bg-white">Total</th>
                       </tr>
-                    ))}
-                    <tr className="bg-gray-50">
-                      <td colSpan="6" className="py-4 px-4 text-sm font-medium text-[#0F172A]">
-                        Total Today
-                      </td>
-                      <td className="py-4 px-4 text-xl font-medium text-[#00D68F] text-right">
-                        ${totalToday.toFixed(2)}
-                      </td>
-                    </tr>
-                  </tbody>
-                </table>
+                    </thead>
+                    <tbody>
+                      {todayDeliveries.map((delivery, index) => (
+                        <tr key={index} className="border-b border-gray-100 hover:bg-gray-50">
+                          <td className="py-4 px-4 text-sm text-[#0F172A]">{delivery.orderId}</td>
+                          <td className="py-4 px-4 text-sm text-[#64748B]">{delivery.time}</td>
+                          <td className="py-4 px-4 text-sm text-[#0F172A]">
+                            <div className="flex items-center gap-2">
+                              <span>{delivery.from}</span>
+                              <IonIcon icon={arrowForward} className="text-[#64748B]" style={{ fontSize: '14px' }} />
+                              <span>{delivery.to}</span>
+                            </div>
+                          </td>
+                          <td className="py-4 px-4 text-sm text-[#64748B]">{delivery.distance}</td>
+                          <td className="py-4 px-4 text-sm text-[#0F172A]">{delivery.basePay}</td>
+                          <td className="py-4 px-4 text-sm text-[#00D68F] font-medium">{delivery.tips}</td>
+                          <td className="py-4 px-4 text-sm text-[#0F172A] font-medium text-right">{delivery.total}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+                <div className="border-t border-gray-200 bg-gray-50 px-4 py-4 flex items-center justify-between">
+                  <span className="text-sm font-medium text-[#0F172A]">Total Today</span>
+                  <span className="text-xl font-medium text-[#00D68F]">${totalToday.toFixed(2)}</span>
+                </div>
               </div>
             </div>
+            </YummyText>
           )}
 
           {/* This Week's Summary */}
           {activeTab === 'week' && (
-            <div className="bg-white rounded-2xl p-6 mb-8 border border-gray-100" style={sideBottomShadow}>
+            <YummyText> 
+            <div className="bg-white rounded-2xl p-6 mb-8" style={sideBottomShadow}>
               <div className="mb-6">
                 <div className="text-xl font-normal text-[#0F172A] mb-1">
-                  This Week's Summary
+                  Weekly Summary
                 </div>
                 <div className="text-sm text-[#64748B]">
-                  Daily breakdown of your weekly earnings
+                  Your performance this week
                 </div>
               </div>
 
-              <div className="space-y-4">
-                {weekDeliveries.map((day, index) => (
-                  <div key={index} className="flex items-center justify-between p-4 bg-gray-50 rounded-xl hover:bg-gray-100 transition-colors">
-                    <div>
-                      <div className="text-sm font-medium text-[#0F172A]">{day.day}</div>
-                      <div className="text-xs text-[#64748B]">{day.deliveries} deliveries</div>
-                    </div>
-                    <div className="text-xl font-medium text-[#00D68F]">{day.earnings}</div>
-                  </div>
-                ))}
+              {/* Table */}
+              <div className="overflow-x-auto">
+                <div className="max-h-[400px] overflow-y-auto">
+                  <table className="w-full">
+                    <thead className="sticky top-0 bg-white z-10">
+                      <tr className="border-b border-gray-200">
+                        <th className="text-left py-3 px-4 text-sm font-medium text-[#64748B] bg-white">Day</th>
+                        <th className="text-left py-3 px-4 text-sm font-medium text-[#64748B] bg-white">Deliveries</th>
+                        <th className="text-left py-3 px-4 text-sm font-medium text-[#64748B] bg-white">Base Earnings</th>
+                        <th className="text-left py-3 px-4 text-sm font-medium text-[#64748B] bg-white">Tips</th>
+                        <th className="text-right py-3 px-4 text-sm font-medium text-[#64748B] bg-white">Total</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {weekDeliveries.map((day, index) => {
+                        const totalEarnings = parseFloat(day.earnings.replace('$', ''));
+                        const basePay = totalEarnings * 0.85; // Assuming ~85% is base pay
+                        const tips = totalEarnings * 0.15; // Assuming ~15% is tips
+                        
+                        return (
+                          <tr key={index} className="border-b border-gray-100 hover:bg-gray-50">
+                            <td className="py-4 px-4 text-sm text-[#0F172A]">{day.day}</td>
+                            <td className="py-4 px-4 text-sm text-[#64748B]">{day.deliveries}</td>
+                            <td className="py-4 px-4 text-sm text-[#0F172A]">${basePay.toFixed(2)}</td>
+                            <td className="py-4 px-4 text-sm text-[#00D68F] font-medium">+${tips.toFixed(2)}</td>
+                            <td className="py-4 px-4 text-sm text-[#0F172A] font-medium text-right">{day.earnings}</td>
+                          </tr>
+                        );
+                      })}
+                    </tbody>
+                  </table>
+                </div>
+                <div className="border-t border-gray-200 bg-gray-50 px-4 py-4 flex items-center justify-between">
+                  <span className="text-sm font-medium text-[#0F172A]">Total This Week</span>
+                  <span className="text-xl font-medium text-[#00D68F]">$687.25</span>
+                </div>
               </div>
             </div>
+            </YummyText>
           )}
 
           {/* Next Payout Card */}
-          <div className="bg-gradient-to-br from-[#FFF7ED] to-[#FFFBEB] rounded-2xl p-6 border border-orange-100" style={sideBottomShadow}>
+          <div className="bg-gradient-to-br from-[#EFF6FF] to-[#EDFFF9] rounded-2xl p-6" style={sideBottomShadow}>
+            <YummyText>
             <div className="mb-4">
               <div className="text-xl font-normal text-[#0F172A] mb-1">
                 Next Payout
@@ -308,14 +371,15 @@ const Earnings = () => {
 
             <div className="flex items-end justify-between">
               <div>
-                <div className="text-xs text-[#64748B] mb-2">Available Balance</div>
-                <div className="text-4xl font-normal text-[#00D68F]">$687.25</div>
+                <div className="text-xs text-[#64748B] mb-1">Available Balance</div>
+                <div className="text-4xl font-normal text-[#00A63E]">$687.25</div>
               </div>
               <div className="text-right">
-                <div className="text-xs text-[#64748B] mb-2">Next Payout Date</div>
+                <div className="text-xs text-[#64748B] mb-1">Next Payout Date</div>
                 <div className="text-base font-medium text-[#0F172A]">Friday, Oct 27, 2025</div>
               </div>
             </div>
+            </YummyText>
           </div>
         </IonContent>
       </RiderLayout>

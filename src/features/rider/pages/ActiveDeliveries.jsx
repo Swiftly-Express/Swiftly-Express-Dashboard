@@ -4,6 +4,8 @@ import RiderLayout from '../components/RiderLayout';
 import { YummyText } from '../../../components/YummyText';
 import TelephoneIcon from "../../../icons/Telephoneicon";
 import ChatIcon from "../../../icons/Chaticon";
+import MapboxMap from '../../../components/MapboxMap';
+import { useDelivery } from '../../../contexts/DeliveryContext';
 import './ActiveDeliveries.css';
 
 // Shadow only on left, right and bottom
@@ -20,9 +22,11 @@ const DeliveryCard = ({
   price,
   pickupName,
   pickupAddress,
+  pickupCoords,
   pickupBorder,
   deliveryName,
   deliveryAddress,
+  deliveryCoords,
   deliveryBorder,
   size,
   weight,
@@ -132,21 +136,15 @@ const DeliveryCard = ({
       </div>
       </YummyText>
 
-      {/* Divider */}
-      <div className="border-t border-gray-200 my-4"></div>
-
       {/* Map Section */}
-      <div className="bg-gray-100 rounded-xl h-48 mb-4 flex items-center justify-center text-sm text-[#64748B]">
-        {/* Google Maps will be integrated here */}
-        <div className="text-center">
-          <div className="mb-2">🗺️</div>
-          <div>Map View</div>
-          <div className="text-xs mt-1">(Google Maps Integration)</div>
-        </div>
+      <div className="mb-4 w-full">
+        <MapboxMap 
+          pickupCoords={pickupCoords}
+          deliveryCoords={deliveryCoords}
+          height="300px"
+          showRoute={true}
+        />
       </div>
-
-      {/* Divider */}
-      <div className="border-t border-gray-200 my-4"></div>
 
       {/* Action Buttons */}
       <YummyText>
@@ -166,44 +164,14 @@ const DeliveryCard = ({
 );
 
 const ActiveDeliveries = () => {
-  const deliveries = [
-    {
-      id: 'PKG-2401',
-      status: 'Package Picked Up',
-      statusColor: 'bg-purple-100 text-purple-600',
-      distance: '3.2 mi',
-      time: '15 min',
-      price: '$24.50',
-      pickupName: 'Central Mall',
-      pickupAddress: '789 5th Avenue, NY 10001',
-      pickupBorder: 'border-[#E5E7EB]',
-      deliveryName: 'Sarah Mitchell',
-      deliveryAddress: '123 Oak Street, Apt 4B, NY 10002',
-      deliveryBorder: 'border-[#FF9500]',
-      size: 'Medium',
-      weight: '2.5 kg',
-      notes: 'Electronics - Handle with care',
-      actionButtonText: 'Started Delivery'
-    },
-    {
-      id: 'PKG-2403',
-      status: 'En Route to Pickup',
-      statusColor: 'bg-blue-100 text-blue-600',
-      distance: '1.8 mi',
-      time: '8 min',
-      price: '$18.00',
-      pickupName: 'Tech Store',
-      pickupAddress: '555 Main Street, NY 10003',
-      pickupBorder: 'border-[#00D68F]',
-      deliveryName: 'Mike Johnson',
-      deliveryAddress: '456 Elm Avenue, NY 10004',
-      deliveryBorder: 'border-gray-200',
-      size: 'Small',
-      weight: '1.2 kg',
-      notes: 'Documents',
-      actionButtonText: 'Arrived at Pickup'
-    }
-  ];
+  const { activeDeliveries, updateDeliveryStatus } = useDelivery();
+
+  // Use context data instead of hardcoded deliveries
+  const deliveries = activeDeliveries;
+
+  const handleStatusUpdate = (orderId, newStatus, statusColor) => {
+    updateDeliveryStatus(orderId, newStatus, statusColor);
+  };
 
   return (
     <IonPage>
@@ -223,27 +191,37 @@ const ActiveDeliveries = () => {
 
           {/* Deliveries List */}
           <div className="max-h-[900px] overflow-y-auto pr-2">
-            {deliveries.map((delivery) => (
-              <DeliveryCard
-                key={delivery.id}
-                packageId={delivery.id}
-                status={delivery.status}
-                statusColor={delivery.statusColor}
-                distance={delivery.distance}
-                time={delivery.time}
-                price={delivery.price}
-                pickupName={delivery.pickupName}
-                pickupAddress={delivery.pickupAddress}
-                pickupBorder={delivery.pickupBorder}
-                deliveryName={delivery.deliveryName}
-                deliveryAddress={delivery.deliveryAddress}
-                deliveryBorder={delivery.deliveryBorder}
-                size={delivery.size}
-                weight={delivery.weight}
-                notes={delivery.notes}
-                actionButtonText={delivery.actionButtonText}
-              />
-            ))}
+            {deliveries.length > 0 ? (
+              deliveries.map((delivery) => (
+                <DeliveryCard
+                  key={delivery.id}
+                  packageId={delivery.id}
+                  status={delivery.status}
+                  statusColor={delivery.statusColor}
+                  distance={delivery.distance}
+                  time={delivery.time}
+                  price={delivery.price}
+                  pickupName={delivery.pickupName}
+                  pickupAddress={delivery.pickupAddress}
+                  pickupCoords={delivery.pickupCoords}
+                  pickupBorder={delivery.status === 'Package Picked Up' ? 'border-[#E5E7EB]' : 'border-[#00D68F]'}
+                  deliveryName={delivery.deliveryName}
+                  deliveryAddress={delivery.deliveryAddress}
+                  deliveryCoords={delivery.deliveryCoords}
+                  deliveryBorder={delivery.status === 'Package Picked Up' ? 'border-[#FF9500]' : 'border-gray-200'}
+                  size={delivery.size}
+                  weight={delivery.weight}
+                  notes={delivery.notes || delivery.packageDescription}
+                  actionButtonText={delivery.status === 'En Route to Pickup' ? 'Arrived at Pickup' : 'Started Delivery'}
+                />
+              ))
+            ) : (
+              <div className="text-center py-12">
+                <div className="text-gray-400 text-5xl mb-4">📦</div>
+                <div className="text-lg text-gray-500">No active deliveries</div>
+                <div className="text-sm text-gray-400 mt-2">Accept orders from the Available Orders page</div>
+              </div>
+            )}
           </div>
         </IonContent>
       </RiderLayout>

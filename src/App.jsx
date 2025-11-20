@@ -17,6 +17,7 @@ import "@ionic/react/css/flex-utils.css";
 import "@ionic/react/css/display.css";
 import "./theme/variable.css";
 import ErrorBoundary from "./components/ErrorBoundary";
+import { DeliveryProvider } from "./contexts/DeliveryContext";
 
 /* App pages */
 import Home from "./pages/Home";
@@ -64,10 +65,11 @@ import AdminDashboard from "./features/admin/pages/Dashboard";
 setupIonicReact();
 
 const App = () => (
-  <IonApp>
-    <IonReactRouter>
-      <ErrorBoundary>
-        <IonRouterOutlet>
+  <DeliveryProvider>
+    <IonApp>
+      <IonReactRouter>
+        <ErrorBoundary>
+          <IonRouterOutlet>
           <Route exact path="/home">
             <Home />
           </Route>
@@ -183,6 +185,7 @@ const App = () => (
       </ErrorBoundary>
     </IonReactRouter>
   </IonApp>
+  </DeliveryProvider>
 );
 
 export default App;
