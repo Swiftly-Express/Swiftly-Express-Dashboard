@@ -1,10 +1,12 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { IonPage, IonContent } from '@ionic/react';
 import RiderLayout from '../components/RiderLayout';
 import { YummyText } from '../../../components/YummyText';
 import BlockIcon from "../../../icons/Blockicon";
 import NairaIcon from "../../../icons/Nairaicon";
 import AnalyticsIcon from "../../../icons/Analyticsicon";
+import VerificationPromptModal from '../components/VerificationPromptModal';
+import { initializeVerificationNotifications } from '../../../utils/verificationNotifications';
 
 // Shadow only on left, right and bottom - no top shadow for seamless blend
 const sideBottomShadow = {
@@ -80,6 +82,63 @@ const AvailableOrderCard = ({ packageId, location, distance, price }) => (
 );
 
 const Dashboard = () => {
+  const [showVerificationModal, setShowVerificationModal] = useState(false);
+
+  useEffect(() => {
+    // For testing: Force show modal after 3 seconds
+    const timer = setTimeout(() => {
+      setShowVerificationModal(true);
+    }, 3000);
+
+    return () => clearTimeout(timer);
+
+    // Check if rider account is verified
+    // const isVerified = localStorage.getItem('riderAccountVerified') === 'true';
+    
+    // if (!isVerified) {
+    //   // Initialize verification notification system
+    //   initializeVerificationNotifications();
+      
+    //   // Check if modal was dismissed and when
+    //   const dismissedAt = localStorage.getItem('verificationPromptDismissedAt');
+    //   const lastLogin = localStorage.getItem('riderLastLogin');
+      
+    //   // Set current login time
+    //   localStorage.setItem('riderLastLogin', new Date().toISOString());
+      
+    //   let shouldShow = false;
+
+    //   if (!dismissedAt) {
+    //     // Never dismissed before - show after 7 seconds
+    //     shouldShow = true;
+    //   } else {
+    //     // Calculate time since last dismissal
+    //     const dismissedTime = new Date(dismissedAt).getTime();
+    //     const now = new Date().getTime();
+    //     const hoursSinceDismissal = (now - dismissedTime) / (1000 * 60 * 60);
+        
+    //     // Show again if it's been more than 3 hours since dismissal
+    //     // OR if this is a new login session
+    //     if (hoursSinceDismissal >= 3 || !lastLogin) {
+    //       shouldShow = true;
+    //     }
+    //   }
+
+    //   if (shouldShow) {
+    //     // Show modal after 7 seconds
+    //     const timer = setTimeout(() => {
+    //       setShowVerificationModal(true);
+    //     }, 7000);
+
+    //     return () => clearTimeout(timer);
+    //   }
+    // }
+  }, []);
+
+  const handleCloseModal = () => {
+    setShowVerificationModal(false);
+  };
+
   return (
     <IonPage>
       <RiderLayout>
@@ -222,6 +281,12 @@ const Dashboard = () => {
           </div>
         </IonContent>
       </RiderLayout>
+
+      {/* Verification Prompt Modal */}
+      <VerificationPromptModal 
+        isOpen={showVerificationModal} 
+        onClose={handleCloseModal} 
+      />
     </IonPage>
   );
 };

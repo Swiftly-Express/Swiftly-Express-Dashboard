@@ -59,6 +59,7 @@ import ActiveDeliveries from "./features/rider/pages/ActiveDeliveries";
 import Earnings from "./features/rider/pages/Earnings";
 import Profile from "./features/rider/pages/Profile";
 import Support from "./features/rider/pages/Support";
+import VerifyAccount from "./features/rider/pages/VerifyAccount";
 
 /* Admin Dashboard pages */
 import AdminDashboard from "./features/admin/pages/Dashboard";
@@ -136,6 +137,9 @@ const App = () => (
         {/* Protected Dashboard Routes - Rider */}
         <Route exact path="/rider/dashboard">
           <RiderDashboard />
+        </Route>
+        <Route exact path="/rider/verify-account">
+          <VerifyAccount />
         </Route>
         <Route exact path="/rider/available">
           <AvailableOrders />

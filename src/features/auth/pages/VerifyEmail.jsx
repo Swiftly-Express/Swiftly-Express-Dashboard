@@ -81,6 +81,12 @@ const VerifyEmail = () => {
       localStorage.removeItem('pendingVerificationEmail');
       localStorage.removeItem('pendingVerificationType');
 
+      // For riders, mark email as verified but account verification still pending
+      if (userType === 'rider') {
+        localStorage.setItem('riderEmailVerified', 'true');
+        localStorage.setItem('riderAccountVerified', 'false'); // Still need to upload documents
+      }
+
       // Redirect based on user type
       if (userType === 'rider') {
         router.push('/rider/dashboard', 'root', 'replace');
