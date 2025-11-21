@@ -1,6 +1,7 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { IonContent, IonPage } from '@ionic/react';
+import { IonContent, IonPage, IonIcon } from '@ionic/react';
 import { useIonRouter } from '@ionic/react';
+import { alertCircleOutline } from 'ionicons/icons';
 import { YummyText } from '../../../components/YummyText';
 
 const VerifyEmail = () => {
@@ -109,10 +110,10 @@ const VerifyEmail = () => {
 
   return (
     <IonPage>
-      <IonContent className="ion-no-padding">
-        <div className="h-screen grid grid-cols-1 lg:grid-cols-2 overflow-hidden">
+      <IonContent className="ion-no-padding !fullscreen">
+        <div className="!h-full grid grid-cols-1 lg:grid-cols-2 overflow-hidden">
           {/* Left Side - Verification Form */}
-          <div className="bg-white flex items-center justify-center p-12 lg:p-8 h-screen overflow-y-auto">
+          <div className="bg-white flex items-center justify-start !p-12 !lg:p-2 !h-full overflow-y-auto">
             <div className="w-full max-w-md">
               {/* Back Button */}
               <button
@@ -128,29 +129,21 @@ const VerifyEmail = () => {
               </button>
 
               <YummyText>
-                {/* Icon */}
-                <div className="w-12 h-12 bg-[#EFF6FF] rounded-full flex items-center justify-center mx-auto mb-5">
-                  <svg width="28" height="28" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                    <path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z" stroke="#00D68F" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-                    <path d="M22 6l-10 7L2 6" stroke="#00D68F" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-                  </svg>
-                </div>
-
                 {/* Heading */}
-                <div className="text-center mb-6">
-                  <h1 className="text-2xl font-medium text-[#0F172A] mb-2">
-                    Verify Your Email
+                <div className="items-center justify-center mb-6">
+                  <h1 className="text-2xl font-medium text-[#00B75A] mb-2">
+                    Email Verification
                   </h1>
-                  <p className="text-sm text-[#64748B]">
-                    We've sent a 6-digit code to
+                  <p className="text-sm text-[#0A0A0A]">
+                    We’ve sent a One-Time Password (OTP) to your email. Please enter the code to complete your account verification.
                   </p>
-                  <p className="text-sm font-medium text-[#0F172A] mt-1">
+                  {/* <p className="text-sm font-medium text-[#0F172A] mt-1">
                     {email}
-                  </p>
+                  </p> */}
                 </div>
 
                 {/* OTP Input */}
-                <div className="flex gap-2 justify-center mb-5">
+                <div className="flex gap-2 mb-5">
                   {otp.map((digit, index) => (
                     <input
                       key={index}
@@ -162,7 +155,7 @@ const VerifyEmail = () => {
                       onChange={(e) => handleChange(index, e.target.value)}
                       onKeyDown={(e) => handleKeyDown(index, e)}
                       onPaste={handlePaste}
-                      className="w-11 h-12 text-center text-xl font-medium border-2 border-gray-200 rounded-xl focus:border-[#00D68F] focus:outline-none transition-colors"
+                      className="w-20 h-20 text-center text-xl font-medium border-2 border-[#F3F4F6] rounded-xl focus:border-[#00D68F] focus:outline-none transition-colors"
                       autoFocus={index === 0}
                     />
                   ))}
@@ -172,41 +165,43 @@ const VerifyEmail = () => {
                 <button
                   onClick={handleVerify}
                   disabled={isVerifying || otp.join('').length !== 6}
-                  className={`w-full py-3 rounded-xl font-medium transition-colors mb-4 ${
+                  className={`py-3 rounded-xl font-medium transition-colors mb-4 ${
                     isVerifying || otp.join('').length !== 6
-                      ? 'bg-gray-300 text-gray-500 cursor-not-allowed'
+                      ? 'bg-[#00B75A] text-[#FFFFFF] opacity-[50%] cursor-not-allowed'
                       : 'bg-[#00B75A] hover:bg-[#00B876] text-white'
                   }`}
+                  style={{ width: `${otp.length * 80 + (otp.length - 1) * 8}px` }}
                 >
                   {isVerifying ? 'Verifying...' : 'Verify Email'}
                 </button>
 
                 {/* Resend Code */}
                 <div className="text-center">
-                  <p className="text-sm text-[#64748B] mb-2">
-                    Didn't receive the code?
+                  <p className="text-sm text-[#64748B] inline">
+                    Didn't receive the code?{' '}
+                    <button
+                      onClick={handleResend}
+                      disabled={countdown > 0 || isResending}
+                      className={`font-medium transition-colors ${
+                        countdown > 0 || isResending
+                          ? 'text-[#00B75A] cursor-not-allowed'
+                          : 'text-[#00D68F] hover:text-[#00B876]'
+                      }`}
+                    >
+                      {isResending
+                        ? 'Sending...'
+                        : countdown > 0
+                        ? `Resend OTP (${countdown}s)`
+                        : 'Resend OTP'}
+                    </button>
                   </p>
-                  <button
-                    onClick={handleResend}
-                    disabled={countdown > 0 || isResending}
-                    className={`text-sm font-medium transition-colors ${
-                      countdown > 0 || isResending
-                        ? 'text-gray-400 cursor-not-allowed'
-                        : 'text-[#00D68F] hover:text-[#00B876]'
-                    }`}
-                  >
-                    {isResending
-                      ? 'Sending...'
-                      : countdown > 0
-                      ? `Resend Code (${countdown}s)`
-                      : 'Resend Code'}
-                  </button>
                 </div>
 
                 {/* Help Text */}
-                <div className="mt-6 p-3 bg-blue-50 rounded-xl">
-                  <p className="text-xs text-[#64748B] text-center">
-                    💡 Check your spam folder if you don't see the email in your inbox
+                <div className="mt-6 p-3 bg-blue-50 rounded-xl flex gap-2">
+                  <IonIcon icon={alertCircleOutline} className="text-[#193CB8] text-lg flex-shrink-0" />
+                  <p className="text-xs text-[#193CB8]">
+                    Check your inbox (and spam folder) for your verification code. <br /> Enter it below to activate your account and start sending deliveries.
                   </p>
                 </div>
               </YummyText>
@@ -214,7 +209,7 @@ const VerifyEmail = () => {
           </div>
 
           {/* Right Side - Image */}
-          <div className="hidden lg:flex h-screen bg-[#1E1E1E] relative overflow-hidden">
+          <div className="hidden lg:flex h-full bg-[#1E1E1E] relative overflow-hidden">
             {/* Zigzag decoration - top left */}
             <img 
               src="/zig-zag.svg" 
@@ -226,21 +221,21 @@ const VerifyEmail = () => {
             <img 
               src="/flowers.svg" 
               alt="" 
-              className="absolute top-12 w-16 h-auto z-20"
+              className="absolute top-20 left-80 ml-60 w-20 h-auto z-20"
             />
             
             {/* Main flying envelope - center */}
             <img 
               src="/bigenvelope.svg" 
               alt="Email Verification" 
-              className="absolute top-60 mt-18 left-80 mr-12 -translate-x-1/2 -translate-y-1/2 w-80 h-auto"
+              className="absolute top-60 mt-20 left-80 mr-12 -translate-x-1/2 -translate-y-1/2 w-80 h-auto"
             />
             
             {/* Small flying envelope - bottom right */}
             <img 
               src="/smallenvelope.svg" 
               alt="" 
-              className="absolute top-80 mt-14 right-20  ml-80 w-44 h-auto"
+              className="absolute top-80 mt-40 right-20  ml-80 w-44 h-auto"
             />
           </div>
         </div>
