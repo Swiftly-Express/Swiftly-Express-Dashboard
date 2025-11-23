@@ -1,5 +1,6 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { IonIcon } from '@ionic/react';
+import confetti from 'canvas-confetti';
 import { 
   closeOutline, 
   shieldCheckmarkOutline,
@@ -47,6 +48,48 @@ const VerificationPromptModal = ({ isOpen, onClose }) => {
     // Agreement
     agreeBackgroundCheck: false
   });
+
+  // Trigger confetti when success modal shows
+  useEffect(() => {
+    if (showSuccessModal) {
+      // Fire confetti burst
+      const duration = 3000;
+      const end = Date.now() + duration;
+
+      const colors = ['#00B876', '#00D68F', '#DCFCE7', '#FFD700', '#FF6B9D'];
+
+      (function frame() {
+        confetti({
+          particleCount: 3,
+          angle: 60,
+          spread: 55,
+          origin: { x: 0 },
+          colors: colors
+        });
+        confetti({
+          particleCount: 3,
+          angle: 120,
+          spread: 55,
+          origin: { x: 1 },
+          colors: colors
+        });
+
+        if (Date.now() < end) {
+          requestAnimationFrame(frame);
+        }
+      }());
+
+      // Big center burst
+      setTimeout(() => {
+        confetti({
+          particleCount: 100,
+          spread: 70,
+          origin: { y: 0.6 },
+          colors: colors
+        });
+      }, 200);
+    }
+  }, [showSuccessModal]);
 
   const steps = [
     { id: 1, name: 'Contact', active: true },
