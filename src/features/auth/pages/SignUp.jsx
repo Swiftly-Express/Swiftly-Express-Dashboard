@@ -1,22 +1,24 @@
 import { IonPage, IonContent } from '@ionic/react';
 import React, { useState } from 'react';
-import { YummyText } from '../../components/YummyText';
-import Button from '../../components/Button';
+import { YummyText } from '../../../components/YummyText';
+import Button from '../../../components/Button';
 import { Link } from 'react-router-dom';
 
-const Login = () => {
+const SignUp = () => {
   const [formData, setFormData] = useState({
+    fullName: '',
     email: '',
+    phone: '',
     password: '',
+    confirmPassword: '',
     role: 'customer' // Default role
   });
 
   const handleSubmit = (e) => {
     e.preventDefault();
     console.log('Form submitted:', formData);
-    // Handle login logic here
+    // Handle signup logic here
     // Redirect to appropriate dashboard based on role
-    // Example: if(role === 'rider') navigate('/rider/dashboard')
   };
 
   const handleChange = (e) => {
@@ -29,7 +31,7 @@ const Login = () => {
   return (
     <IonPage>
       <IonContent className="bg-[#f5f5f5] ion-no-padding">
-        <div className="min-h-screen flex items-center justify-center">
+        <div className="min-h-screen flex items-center justify-center py-12">
           <div className="bg-white rounded-2xl p-10 w-full max-w-md">
             {/* Logo */}
             <div className="text-center mb-8">
@@ -37,7 +39,7 @@ const Login = () => {
                 Swiftly
               </YummyText>
               <YummyText className="text-sm text-gray-600 mt-2">
-                Welcome back! Please login to continue.
+                Create an account to get started.
               </YummyText>
             </div>
 
@@ -45,7 +47,7 @@ const Login = () => {
               {/* Role Selection */}
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Login As
+                  Register As
                 </label>
                 <select
                   name="role"
@@ -55,8 +57,23 @@ const Login = () => {
                 >
                   <option value="customer">Customer</option>
                   <option value="rider">Rider</option>
-                  <option value="admin">Admin</option>
                 </select>
+              </div>
+
+              {/* Full Name */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Full Name
+                </label>
+                <input
+                  type="text"
+                  name="fullName"
+                  value={formData.fullName}
+                  onChange={handleChange}
+                  placeholder="Enter your full name"
+                  className="w-full px-3 py-3 rounded-xl bg-[#F3F3F5] focus:outline-none focus:ring-2 focus:ring-green-500"
+                  required
+                />
               </div>
 
               {/* Email */}
@@ -75,6 +92,22 @@ const Login = () => {
                 />
               </div>
 
+              {/* Phone */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Phone Number
+                </label>
+                <input
+                  type="tel"
+                  name="phone"
+                  value={formData.phone}
+                  onChange={handleChange}
+                  placeholder="Enter your phone number"
+                  className="w-full px-3 py-3 rounded-xl bg-[#F3F3F5] focus:outline-none focus:ring-2 focus:ring-green-500"
+                  required
+                />
+              </div>
+
               {/* Password */}
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">
@@ -85,17 +118,26 @@ const Login = () => {
                   name="password"
                   value={formData.password}
                   onChange={handleChange}
-                  placeholder="Enter your password"
+                  placeholder="Create a password"
                   className="w-full px-3 py-3 rounded-xl bg-[#F3F3F5] focus:outline-none focus:ring-2 focus:ring-green-500"
                   required
                 />
               </div>
 
-              {/* Forgot Password */}
-              <div className="text-right">
-                <Link to="/forgot-password" className="text-sm text-[#00D68F] hover:underline">
-                  Forgot Password?
-                </Link>
+              {/* Confirm Password */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Confirm Password
+                </label>
+                <input
+                  type="password"
+                  name="confirmPassword"
+                  value={formData.confirmPassword}
+                  onChange={handleChange}
+                  placeholder="Confirm your password"
+                  className="w-full px-3 py-3 rounded-xl bg-[#F3F3F5] focus:outline-none focus:ring-2 focus:ring-green-500"
+                  required
+                />
               </div>
 
               {/* Submit Button */}
@@ -104,15 +146,15 @@ const Login = () => {
                 variant="primary"
                 className="!w-full !py-3 !bg-[#00D68F] hover:!bg-[#00B876] !text-white rounded-xl transition-all duration-300"
               >
-                <YummyText>Login</YummyText>
+                <YummyText>Create Account</YummyText>
               </Button>
 
-              {/* Sign Up Link */}
+              {/* Login Link */}
               <div className="text-center mt-6">
                 <YummyText className="text-sm text-gray-600">
-                  Don't have an account?{' '}
-                  <Link to="/signup" className="text-[#00D68F] hover:underline">
-                    Sign Up
+                  Already have an account?{' '}
+                  <Link to="/login" className="text-[#00D68F] hover:underline">
+                    Login
                   </Link>
                 </YummyText>
               </div>
@@ -124,4 +166,4 @@ const Login = () => {
   );
 };
 
-export default Login;
+export default SignUp;

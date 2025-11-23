@@ -1,7 +1,7 @@
 import { IonPage, IonContent, useIonRouter } from '@ionic/react';
 import React from 'react';
-import Button from '../../components/Button';
-import { YummyText } from '../../components/YummyText';
+import Button from '../../../components/Button';
+import { YummyText } from '../../../components/YummyText';
 
 const RoleSelect = () => {
   const router = useIonRouter();

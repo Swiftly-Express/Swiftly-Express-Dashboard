@@ -1,24 +1,22 @@
 import { IonPage, IonContent } from '@ionic/react';
 import React, { useState } from 'react';
-import { YummyText } from '../../components/YummyText';
-import Button from '../../components/Button';
+import { YummyText } from '../../../components/YummyText';
+import Button from '../../../components/Button';
 import { Link } from 'react-router-dom';
 
-const SignUp = () => {
+const Login = () => {
   const [formData, setFormData] = useState({
-    fullName: '',
     email: '',
-    phone: '',
     password: '',
-    confirmPassword: '',
     role: 'customer' // Default role
   });
 
   const handleSubmit = (e) => {
     e.preventDefault();
     console.log('Form submitted:', formData);
-    // Handle signup logic here
+    // Handle login logic here
     // Redirect to appropriate dashboard based on role
+    // Example: if(role === 'rider') navigate('/rider/dashboard')
   };
 
   const handleChange = (e) => {
@@ -31,7 +29,7 @@ const SignUp = () => {
   return (
     <IonPage>
       <IonContent className="bg-[#f5f5f5] ion-no-padding">
-        <div className="min-h-screen flex items-center justify-center py-12">
+        <div className="min-h-screen flex items-center justify-center">
           <div className="bg-white rounded-2xl p-10 w-full max-w-md">
             {/* Logo */}
             <div className="text-center mb-8">
@@ -39,7 +37,7 @@ const SignUp = () => {
                 Swiftly
               </YummyText>
               <YummyText className="text-sm text-gray-600 mt-2">
-                Create an account to get started.
+                Welcome back! Please login to continue.
               </YummyText>
             </div>
 
@@ -47,7 +45,7 @@ const SignUp = () => {
               {/* Role Selection */}
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Register As
+                  Login As
                 </label>
                 <select
                   name="role"
@@ -57,23 +55,8 @@ const SignUp = () => {
                 >
                   <option value="customer">Customer</option>
                   <option value="rider">Rider</option>
+                  <option value="admin">Admin</option>
                 </select>
-              </div>
-
-              {/* Full Name */}
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Full Name
-                </label>
-                <input
-                  type="text"
-                  name="fullName"
-                  value={formData.fullName}
-                  onChange={handleChange}
-                  placeholder="Enter your full name"
-                  className="w-full px-3 py-3 rounded-xl bg-[#F3F3F5] focus:outline-none focus:ring-2 focus:ring-green-500"
-                  required
-                />
               </div>
 
               {/* Email */}
@@ -92,22 +75,6 @@ const SignUp = () => {
                 />
               </div>
 
-              {/* Phone */}
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Phone Number
-                </label>
-                <input
-                  type="tel"
-                  name="phone"
-                  value={formData.phone}
-                  onChange={handleChange}
-                  placeholder="Enter your phone number"
-                  className="w-full px-3 py-3 rounded-xl bg-[#F3F3F5] focus:outline-none focus:ring-2 focus:ring-green-500"
-                  required
-                />
-              </div>
-
               {/* Password */}
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">
@@ -118,26 +85,17 @@ const SignUp = () => {
                   name="password"
                   value={formData.password}
                   onChange={handleChange}
-                  placeholder="Create a password"
+                  placeholder="Enter your password"
                   className="w-full px-3 py-3 rounded-xl bg-[#F3F3F5] focus:outline-none focus:ring-2 focus:ring-green-500"
                   required
                 />
               </div>
 
-              {/* Confirm Password */}
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Confirm Password
-                </label>
-                <input
-                  type="password"
-                  name="confirmPassword"
-                  value={formData.confirmPassword}
-                  onChange={handleChange}
-                  placeholder="Confirm your password"
-                  className="w-full px-3 py-3 rounded-xl bg-[#F3F3F5] focus:outline-none focus:ring-2 focus:ring-green-500"
-                  required
-                />
+              {/* Forgot Password */}
+              <div className="text-right">
+                <Link to="/forgot-password" className="text-sm text-[#00D68F] hover:underline">
+                  Forgot Password?
+                </Link>
               </div>
 
               {/* Submit Button */}
@@ -146,15 +104,15 @@ const SignUp = () => {
                 variant="primary"
                 className="!w-full !py-3 !bg-[#00D68F] hover:!bg-[#00B876] !text-white rounded-xl transition-all duration-300"
               >
-                <YummyText>Create Account</YummyText>
+                <YummyText>Login</YummyText>
               </Button>
 
-              {/* Login Link */}
+              {/* Sign Up Link */}
               <div className="text-center mt-6">
                 <YummyText className="text-sm text-gray-600">
-                  Already have an account?{' '}
-                  <Link to="/login" className="text-[#00D68F] hover:underline">
-                    Login
+                  Don't have an account?{' '}
+                  <Link to="/signup" className="text-[#00D68F] hover:underline">
+                    Sign Up
                   </Link>
                 </YummyText>
               </div>
@@ -166,4 +124,4 @@ const SignUp = () => {
   );
 };
 
-export default SignUp;
+export default Login;

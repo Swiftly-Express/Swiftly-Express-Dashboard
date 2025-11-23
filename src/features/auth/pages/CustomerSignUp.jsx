@@ -1,26 +1,25 @@
 import { IonPage, IonContent, useIonRouter } from '@ionic/react';
 import React, { useState } from 'react';
-import { YummyText } from '../../components/YummyText';
-import Button from '../../components/Button';
+import { YummyText } from '../../../components/YummyText';
+import Button from '../../../components/Button';
 
-const RiderSignup = () => {
+const CustomerSignUp = () => {
   const router = useIonRouter();
   const [formData, setFormData] = useState({
     fullName: '',
     email: '',
+    phone: '',
     password: '',
-    confirmPassword: '',
-    agreeToTerms: false
+    confirmPassword: ''
   });
-
   const [error, setError] = useState('');
 
-  const handleSubmit = () => {
-    // Reset error
+  const handleSubmit = (e) => {
+    e.preventDefault();
     setError('');
 
     // Basic validation
-    if (!formData.fullName || !formData.email || !formData.password || !formData.confirmPassword) {
+    if (!formData.fullName || !formData.email || !formData.phone || !formData.password || !formData.confirmPassword) {
       setError('Please fill in all fields');
       return;
     }
@@ -29,6 +28,13 @@ const RiderSignup = () => {
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
     if (!emailRegex.test(formData.email)) {
       setError('Please enter a valid email address');
+      return;
+    }
+
+    // Phone validation
+    const phoneRegex = /^\+?[1-9]\d{9,14}$/;
+    if (!phoneRegex.test(formData.phone.replace(/[^\d+]/g, ''))) {
+      setError('Please enter a valid phone number');
       return;
     }
 
@@ -44,28 +50,17 @@ const RiderSignup = () => {
       return;
     }
 
-    // Terms agreement validation
-    if (!formData.agreeToTerms) {
-      setError('Please agree to the Terms of Service and Privacy Policy');
-      return;
-    }
-
     try {
-      // Simulated API call for signup
-      // In a real app, you would:
-      // 1. Make a POST request to your registration endpoint
-      // 2. Get back a token and user data
-      // 3. Store the token in localStorage/sessionStorage
-      // 4. Store user data in app state/context
-
+      // Simulated API call
+      // In a real app, you would make a POST request to your registration endpoint
+      
       // Store pending verification data
       localStorage.setItem('pendingVerificationEmail', formData.email);
-      localStorage.setItem('pendingVerificationType', 'rider');
+      localStorage.setItem('pendingVerificationType', 'customer');
       localStorage.setItem('pendingUserData', JSON.stringify({
         fullName: formData.fullName,
         email: formData.email,
-        phone: formData.phone,
-        vehicleType: formData.vehicleType
+        phone: formData.phone
       }));
 
       // Redirect to email verification page
@@ -77,7 +72,7 @@ const RiderSignup = () => {
   };
 
   const handleChange = (field, value) => {
-    setError(''); // Clear error when user makes changes
+    setError('');
     setFormData({
       ...formData,
       [field]: value
@@ -85,8 +80,7 @@ const RiderSignup = () => {
   };
 
   const handleSignIn = () => {
-    if (document && document.activeElement) document.activeElement.blur();
-    router.push('/auth/rider/login', 'forward', 'push');
+    router.push('/auth/customer/login', 'back', 'pop');
   };
 
   return (
@@ -108,6 +102,7 @@ const RiderSignup = () => {
 
               {/* Form */}
               <div className="space-y-4">
+                <YummyText>
                 {/* Full Name */}
                 <div>
                   <label className="block text-sm font-medium text-[#0A0A0A] mb-2">
@@ -124,7 +119,7 @@ const RiderSignup = () => {
 
                 {/* Email Address */}
                 <div>
-                  <label className="block text-sm font-medium text-[#0A0A0A] mb-2">
+                  <label className="block text-sm font-medium text-[#0A0A0A] mb-2 mt-3">
                     Email Address
                   </label>
                   <input
@@ -138,7 +133,7 @@ const RiderSignup = () => {
 
                 {/* Password */}
                 <div>
-                  <label className="block text-sm font-medium text-[#0A0A0A] mb-2">
+                  <label className="block text-sm font-medium text-[#0A0A0A] mb-2 mt-3">
                     Password
                   </label>
                   <input
@@ -152,7 +147,7 @@ const RiderSignup = () => {
 
                 {/* Confirm Password */}
                 <div>
-                  <label className="block text-sm font-medium text-[#0A0A0A] mb-2">
+                  <label className="block text-sm font-medium text-[#0A0A0A] mb-2 mt-3">
                     Confirm Password
                   </label>
                   <input
@@ -165,7 +160,7 @@ const RiderSignup = () => {
                 </div>
 
                 {/* Terms Checkbox */}
-                <div className="flex items-start gap-2">
+                <div className="flex items-start gap-2 mt-3 ">
                   <input
                     type="checkbox"
                     checked={formData.agreeToTerms}
@@ -177,6 +172,7 @@ const RiderSignup = () => {
                     I agree to the <span className="text-[#00D68F] cursor-pointer hover:underline">Terms of Service</span> and <span className="text-[#00D68F] cursor-pointer hover:underline">Privacy Policy</span>
                   </label>
                 </div>
+                </YummyText>
 
                 {/* Create Account Button */}
                 {error && (
@@ -194,6 +190,7 @@ const RiderSignup = () => {
                 </Button>
 
                 {/* Divider */}
+                <YummyText>
                 <div className="relative my-6">
                   <div className="absolute inset-0 flex items-center">
                     <div className="w-full border-t border-gray-300"></div>
@@ -202,6 +199,7 @@ const RiderSignup = () => {
                     <span className="px-4 bg-white text-gray-500">Or sign up with email</span>
                   </div>
                 </div>
+                </YummyText>
 
                 {/* Google Button */}
                 <div className="border border-gray-300 rounded-lg [&>button]:border-0">
@@ -239,28 +237,24 @@ const RiderSignup = () => {
           </div>
 
           {/* Right Side - Image */}
-          <div className="hidden lg:flex bg-[#1E1E1E] rounded-[50px] relative ml-2 mr-8 overflow-hidden items-end justify-center p-12">
-            <div className="relative w-full h-full flex flex-col justify-end">
-              {/* Rider Illustration */}
-              <div className="absolute top-1 left-1/2 transform -translate-x-1/2 w-[80%]">
-                <img
-                  src="/despatch-man.svg"
-                  alt="Become a Rider"
-                  className="w-full h-auto object-contain"
-                />
-              </div>
+          <div className="relative bg-[#00B75A] rounded-[32px] p-12 flex flex-col justify-between overflow-hidden">
+            {/* Text Content at Top */}
+            <div className="relative z-10 mt-2">
+              <YummyText className="text-lg text-white mb-4 opacity-90 leading-[1.3] font-[400]">
+                Need fast delivery? Sign up on Swiftly to send parcels <br /> safely, reliably, and in minutes.
+              </YummyText>
+              <YummyText className="text-[45px] font-[300] leading-none break text-white mb-6">
+                Send Packages<br />with <span className="text-[#1E1E1E] font-semibold">Ease</span>
+              </YummyText>
+            </div>
 
-              {/* Text Content at Bottom */}
-              <div className="relative z-10 text-white">
-                <YummyText className="text-4xl font-[300] leading-tight mb-4">
-                  Become a<br />Swiftly <span className="text-[#00D68F] font-semibold">Rider</span>
-                </YummyText>
-                <YummyText className="text-base opacity-90 leading-relaxed">
-                  Earn more while delivering faster. Join Swiftly's<br />
-                  growing network of professional riders and start<br />
-                  receiving delivery requests instantly.
-                </YummyText>
-              </div>
+            {/* Rider Illustration at Bottom */}
+            <div className="absolute right-0 bottom-0 w-[85%]">
+              <img 
+                src="/lady-package.svg" 
+                alt="Customer with Packages"
+                className="w-[85%] h-auto object-contain"
+              />
             </div>
           </div>
         </div>
@@ -269,4 +263,4 @@ const RiderSignup = () => {
   );
 };
 
-export default RiderSignup;
+export default CustomerSignUp;

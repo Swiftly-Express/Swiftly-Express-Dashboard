@@ -1,6 +1,6 @@
 import { IonPage, IonContent } from '@ionic/react';
 import React from 'react';
-import { YummyText } from '../../components/YummyText';
+import { YummyText } from '../../../components/YummyText';
 
 const ForgotPassword = () => {
   return (

@@ -1,7 +1,7 @@
 import { IonPage, IonContent} from '@ionic/react';
 import React, { useState } from 'react';
-import { YummyText } from '../../components/YummyText';
-import Button from '../../components/Button';
+import { YummyText } from '../../../components/YummyText';
+import Button from '../../../components/Button';
 import { useHistory } from 'react-router-dom';
 
 const RiderSignIn = () => {

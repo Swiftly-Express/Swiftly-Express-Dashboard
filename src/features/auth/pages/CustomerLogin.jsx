@@ -1,7 +1,7 @@
 import { IonPage, IonContent, useIonRouter } from '@ionic/react';
 import React, { useState } from 'react';
-import { YummyText } from '../../components/YummyText';
-import Button from '../../components/Button';
+import { YummyText } from '../../../components/YummyText';
+import Button from '../../../components/Button';
 
 const CustomerLogin = () => {
   const router = useIonRouter();
@@ -146,14 +146,20 @@ const CustomerLogin = () => {
             </div>
           </div>
 
-          {/* Right Side - Image */}
-          <div className="hidden lg:block bg-[#00D68F] relative overflow-hidden">
-            <div className="absolute inset-0 flex items-center justify-center">
-              <img
-                src="/customer-illustration.svg"
-                alt="Send Packages with Ease"
-                className="w-3/4 h-auto"
-              />
+          {/* Right Side - Illustration (image top, text below) */}
+          <div className="hidden lg:flex bg-[#00D68F] relative overflow-hidden p-12">
+            <div className="w-full h-full flex flex-col items-center">
+              <div className="mt-6 flex justify-center">
+                <img
+                  src="/customer-illustration.svg"
+                  alt="Send Packages with Ease"
+                  className="w-3/4 h-auto"
+                />
+              </div>
+              <div className="mt-6 text-center text-white max-w-md">
+                <YummyText className="text-2xl font-[300]">Send Packages with <span className="text-[#1E1E1E] font-semibold">Ease</span></YummyText>
+                <YummyText className="text-sm opacity-90 mt-2">Fast, reliable delivery in minutes.</YummyText>
+              </div>
             </div>
           </div>
         </div>

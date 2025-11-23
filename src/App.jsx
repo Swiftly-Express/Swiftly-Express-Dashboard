@@ -34,15 +34,15 @@ import TrackPackage from "./pages/TrackPackage";
 import PrivacyPolicy from "./pages/PrivacyPolicy";
 import TermsOfService from "./pages/TermsOfService";
 import CookiePolicy from "./pages/CookiePolicy";
-import ForgotPassword from "./pages/auth/ForgotPassword";
 
 /* Auth pages */
-import RoleSelect from "./pages/auth/RoleSelect";
-import CustomerLogin from "./pages/auth/CustomerLogin";
-import CustomerSignUp from "./pages/auth/CustomerSignUp";
-import RiderLogin from "./pages/auth/RiderLogin";
-import RiderSignUp from "./pages/auth/RiderSignUp";
+import RoleSelect from "./features/auth/pages/RoleSelect";
+import CustomerLogin from "./features/auth/pages/CustomerLogin";
+import CustomerSignUp from "./features/auth/pages/CustomerSignUp";
+import RiderLogin from "./features/auth/pages/RiderLogin";
+import RiderSignUp from "./features/auth/pages/RiderSignUp";
 import VerifyEmail from "./features/auth/pages/VerifyEmail";
+import ForgotPassword from "./features/auth/pages/ForgotPassword";
 
 /* Customer Dashboard pages */
 import CustomerDashboard from "./features/customer/pages/Dashboard";
