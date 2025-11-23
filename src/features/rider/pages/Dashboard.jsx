@@ -85,54 +85,20 @@ const Dashboard = () => {
   const [showVerificationModal, setShowVerificationModal] = useState(false);
 
   useEffect(() => {
-    // For testing: Force show modal after 3 seconds
+    // Check if verification has been completed (submitted successfully)
+    const verificationCompleted = localStorage.getItem('verificationCompleted') === 't';
+    
+    // Don't show modal if verification has been completed
+    if (verificationCompleted) {
+      return;
+    }
+    
+    // Show modal after 3 seconds
     const timer = setTimeout(() => {
       setShowVerificationModal(true);
     }, 3000);
 
     return () => clearTimeout(timer);
-
-    // Check if rider account is verified
-    // const isVerified = localStorage.getItem('riderAccountVerified') === 'true';
-    
-    // if (!isVerified) {
-    //   // Initialize verification notification system
-    //   initializeVerificationNotifications();
-      
-    //   // Check if modal was dismissed and when
-    //   const dismissedAt = localStorage.getItem('verificationPromptDismissedAt');
-    //   const lastLogin = localStorage.getItem('riderLastLogin');
-      
-    //   // Set current login time
-    //   localStorage.setItem('riderLastLogin', new Date().toISOString());
-      
-    //   let shouldShow = false;
-
-    //   if (!dismissedAt) {
-    //     // Never dismissed before - show after 7 seconds
-    //     shouldShow = true;
-    //   } else {
-    //     // Calculate time since last dismissal
-    //     const dismissedTime = new Date(dismissedAt).getTime();
-    //     const now = new Date().getTime();
-    //     const hoursSinceDismissal = (now - dismissedTime) / (1000 * 60 * 60);
-        
-    //     // Show again if it's been more than 3 hours since dismissal
-    //     // OR if this is a new login session
-    //     if (hoursSinceDismissal >= 3 || !lastLogin) {
-    //       shouldShow = true;
-    //     }
-    //   }
-
-    //   if (shouldShow) {
-    //     // Show modal after 7 seconds
-    //     const timer = setTimeout(() => {
-    //       setShowVerificationModal(true);
-    //     }, 7000);
-
-    //     return () => clearTimeout(timer);
-    //   }
-    // }
   }, []);
 
   const handleCloseModal = () => {

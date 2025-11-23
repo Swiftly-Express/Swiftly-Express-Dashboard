@@ -7,10 +7,14 @@ import {
   documentTextOutline,
   carOutline,
   cardOutline,
-  arrowBackOutline,
   informationCircleOutline,
   cloudUploadOutline
 } from 'ionicons/icons';
+import ForwardIcon from "../../../icons/Forwardicon";
+import BackIcon from "../../../icons/Backicon";
+import ShieldCheckIcon from '../../../icons/Shieldcheck';
+import CheckCircleIcon from '../../../icons/Circlecheck';
+import UploadIcon from "../../../icons/Uploadicon";
 import { useIonRouter } from '@ionic/react';
 import { YummyText } from '../../../components/YummyText';
 import { removeVerificationNotification } from '../../../utils/verificationNotifications';
@@ -101,9 +105,10 @@ const VerificationPromptModal = ({ isOpen, onClose }) => {
       // Simulate API call
       await new Promise(resolve => setTimeout(resolve, 2000));
 
-      // Mark account as verified
+      // Mark account as verified - this prevents modal from showing again
       localStorage.setItem('riderAccountVerified', 'true');
       localStorage.setItem('accountVerifiedAt', new Date().toISOString());
+      localStorage.setItem('verificationCompleted', 'true');
       
       // Remove verification notifications
       removeVerificationNotification();
@@ -161,6 +166,40 @@ const VerificationPromptModal = ({ isOpen, onClose }) => {
     return `${((currentStep - 1) / 3) * 100}%`;
   };
 
+  // Validation functions for each step
+  const isStep1Valid = () => {
+    return formData.phoneNumber.trim() !== '' &&
+           formData.streetAddress.trim() !== '' &&
+           formData.city.trim() !== '' &&
+           formData.state.trim() !== '' &&
+           formData.zipCode.trim() !== '';
+  };
+
+  const isStep2Valid = () => {
+    return formData.idType !== '' &&
+           formData.idNumber.trim() !== '' &&
+           formData.idDocument !== null &&
+           formData.profilePhoto !== null;
+  };
+
+  const isStep3Valid = () => {
+    return formData.vehicleType !== '' &&
+           formData.makeModel.trim() !== '' &&
+           formData.year.trim() !== '' &&
+           formData.licensePlate.trim() !== '' &&
+           formData.driversLicense !== null;
+  };
+
+  const isCurrentStepValid = () => {
+    switch(currentStep) {
+      case 1: return isStep1Valid();
+      case 2: return isStep2Valid();
+      case 3: return isStep3Valid();
+      case 4: return formData.agreeBackgroundCheck;
+      default: return false;
+    }
+  };
+
   return (
     <div 
       className="fixed inset-0 z-50 flex items-center justify-center p-4"
@@ -188,18 +227,18 @@ const VerificationPromptModal = ({ isOpen, onClose }) => {
           <div className="p-8 pb-6">
             <div className="text-center mb-6">
               <YummyText>
-                <h1 className="text-2xl font-semibold text-[#00D68F] mb-2">Swiftly</h1>
-                <h2 className="text-2xl font-semibold text-[#0F172A] mb-1">Verify Your Account</h2>
-                <p className="text-[#64748B] text-sm">Complete your rider profile to start delivering</p>
+                <h1 className="text-3xl font-bold text-[#00B75A] mb-2">Swiftly</h1>
+                <h2 className="text-3xl font-sm text-[#0A0A0A] mb-0">Verify Your Account</h2>
+                <p className="text-[#717182] text-xs font-[400]">Complete your rider profile to start delivering</p>
               </YummyText>
             </div>
 
             {/* Progress Steps */}
-            <div className="flex items-center justify-center gap-2 mb-4">
+            <div className="flex items-center justify-center gap-1 mb-4">
               {steps.map((step, index) => (
                 <React.Fragment key={step.id}>
                   <YummyText>
-                    <span className={`text-sm font-medium ${getStepColor(step.id)}`}>
+                    <span className={`text-xs font-[300] ${getStepColor(step.id)}`}>
                       {step.name}
                     </span>
                   </YummyText>
@@ -211,7 +250,7 @@ const VerificationPromptModal = ({ isOpen, onClose }) => {
             </div>
 
             {/* Progress Bar */}
-            <div className="relative h-1 bg-gray-200 rounded-full overflow-hidden">
+            <div className="relative h-1.5 bg-gray-200 rounded-full overflow-hidden">
               <div 
                 className="absolute top-0 left-0 h-full bg-[#00D68F] transition-all duration-300"
                 style={{ width: getProgressWidth() }}
@@ -220,72 +259,72 @@ const VerificationPromptModal = ({ isOpen, onClose }) => {
           </div>
 
           {/* Form Content */}
-          <div className="px-8 pb-8">
+          <div className="px-6 pb-8">
             {/* Step 1: Contact Information */}
             {currentStep === 1 && (
               <div className="space-y-6">
                 <YummyText>
                   <div>
-                    <h3 className="text-lg font-semibold text-[#0F172A] mb-1">Contact Information</h3>
-                    <p className="text-sm text-[#64748B] mb-4">We need your contact details to reach you and verify your location.</p>
+                    <h3 className="text-medium font-[400] text-[#0F172A] mb-1">Contact Information</h3>
+                    <p className="text-xs text-[#4A5565] mb-4">We need your contact details to reach you and verify your location.</p>
                   </div>
 
-                  <div className="bg-[#EFF6FF] border border-[#BFDBFE] rounded-xl p-3 flex gap-2">
-                    <IonIcon icon={informationCircleOutline} className="text-[#3B82F6] text-xl flex-shrink-0 mt-0.5" />
+                  <div className="bg-[#EFF6FF] border border-[#BFDBFE] rounded-lg p-2 flex gap-2">
+                    <IonIcon icon={informationCircleOutline} className="text-[#1E40AF] text-lg flex-shrink-0 mt-0.5" />
                     <p className="text-sm text-[#1E40AF]">All information is encrypted and securely stored.</p>
                   </div>
 
-                  <div>
-                    <label className="block text-sm font-medium text-[#0F172A] mb-2">Phone Number *</label>
+                  <div> 
+                    <label className="block text-sm font-medium text-[#0F172A] mb-2 mt-5">Phone Number *</label>
                     <input
                       type="tel"
                       placeholder="+234 908 767 4240"
                       value={formData.phoneNumber}
                       onChange={(e) => handleInputChange('phoneNumber', e.target.value)}
-                      className="w-full px-4 py-3 bg-[#F8F9FA] border-none rounded-xl focus:ring-2 focus:ring-[#00D68F] outline-none"
+                      className="w-full px-4 py-3 bg-[#F3F3F5] placeholder:text-[#717182] border-none rounded-lg focus:ring-2 focus:ring-[#00D68F] outline-none"
                     />
                   </div>
 
                   <div>
-                    <label className="block text-sm font-medium text-[#0F172A] mb-2">Street Address *</label>
+                    <label className="block text-sm font-medium text-[#0F172A] mb-2 mt-3">Street Address *</label>
                     <input
                       type="text"
                       placeholder="123 Main Street"
                       value={formData.streetAddress}
                       onChange={(e) => handleInputChange('streetAddress', e.target.value)}
-                      className="w-full px-4 py-3 bg-[#F8F9FA] border-none rounded-xl focus:ring-2 focus:ring-[#00D68F] outline-none"
+                      className="w-full px-4 py-3 bg-[#F3F3F5] border-none placeholder:text-[#717182] rounded-lg focus:ring-2 focus:ring-[#00D68F] outline-none"
                     />
                   </div>
 
-                  <div className="grid grid-cols-3 gap-3">
+                  <div className="grid grid-cols-3 gap-2">
                     <div>
-                      <label className="block text-sm font-medium text-[#0F172A] mb-2">City *</label>
+                      <label className="block text-sm font-medium text-[#0F172A] mb-2 mt-3">City *</label>
                       <input
                         type="text"
                         placeholder="Uyo"
                         value={formData.city}
                         onChange={(e) => handleInputChange('city', e.target.value)}
-                        className="w-full px-4 py-3 bg-[#F8F9FA] border-none rounded-xl focus:ring-2 focus:ring-[#00D68F] outline-none"
+                        className="w-full px-4 py-3 bg-[#F3F3F5] placeholder:text-[#717182] border-none rounded-lg focus:ring-2 focus:ring-[#00D68F] outline-none"
                       />
                     </div>
                     <div>
-                      <label className="block text-sm font-medium text-[#0F172A] mb-2">State *</label>
+                      <label className="block text-sm font-medium text-[#0F172A] mb-2 mt-3">State *</label>
                       <input
                         type="text"
                         placeholder="Akwa Ibom"
                         value={formData.state}
                         onChange={(e) => handleInputChange('state', e.target.value)}
-                        className="w-full px-4 py-3 bg-[#F8F9FA] border-none rounded-xl focus:ring-2 focus:ring-[#00D68F] outline-none"
+                        className="w-full px-4 py-3 bg-[#F3F3F5] placeholder:text-[#717182] border-none rounded-lg focus:ring-2 focus:ring-[#00D68F] outline-none"
                       />
                     </div>
                     <div>
-                      <label className="block text-sm font-medium text-[#0F172A] mb-2">ZIP Code *</label>
+                      <label className="block text-sm font-medium text-[#0F172A] mb-2 mt-3">ZIP Code *</label>
                       <input
                         type="text"
                         placeholder="10001"
                         value={formData.zipCode}
                         onChange={(e) => handleInputChange('zipCode', e.target.value)}
-                        className="w-full px-4 py-3 bg-[#F8F9FA] border-none rounded-xl focus:ring-2 focus:ring-[#00D68F] outline-none"
+                        className="w-full px-4 py-3 bg-[#F3F3F5] placeholder:text-[#717182] border-none rounded-lg focus:ring-2 focus:ring-[#00D68F] outline-none"
                       />
                     </div>
                   </div>
@@ -308,11 +347,12 @@ const VerificationPromptModal = ({ isOpen, onClose }) => {
                   </div>
 
                   <div>
-                    <label className="block text-sm font-medium text-[#0F172A] mb-2">ID Type *</label>
+                    <label className="block text-sm font-medium text-[#0F172A] mb-2 mt-5">ID Type *</label>
                     <select
                       value={formData.idType}
+                      placeholder="Select ID type"
                       onChange={(e) => handleInputChange('idType', e.target.value)}
-                      className="w-full px-4 py-3 bg-[#F8F9FA] border-none rounded-xl focus:ring-2 focus:ring-[#00D68F] outline-none appearance-none"
+                      className="w-full px-4 py-3 bg-[#F3F3F5] placeholder:text-[#717182] border-none rounded-lg focus:ring-2 focus:ring-[#00D68F] outline-none appearance-none"
                     >
                       <option value="">Select ID type</option>
                       <option value="drivers-license">Driver's License</option>
@@ -323,24 +363,24 @@ const VerificationPromptModal = ({ isOpen, onClose }) => {
                   </div>
 
                   <div>
-                    <label className="block text-sm font-medium text-[#0F172A] mb-2">ID Number *</label>
+                    <label className="block text-sm font-medium text-[#0F172A] mb-2 mt-3">ID Number *</label>
                     <input
                       type="text"
                       placeholder="Input ID number"
                       value={formData.idNumber}
                       onChange={(e) => handleInputChange('idNumber', e.target.value)}
-                      className="w-full px-4 py-3 bg-[#F8F9FA] border-none rounded-xl focus:ring-2 focus:ring-[#00D68F] outline-none"
+                      className="w-full px-4 py-3 bg-[#F3F3F5] placeholder:text-[#717182] border-none rounded-lg focus:ring-2 focus:ring-[#00D68F] outline-none"
                     />
                   </div>
 
                   <div className="grid grid-cols-2 gap-4">
                     <div>
-                      <label className="block text-sm font-medium text-[#0F172A] mb-2">Upload ID Document *</label>
-                      <label className="flex items-center justify-center gap-2 px-4 py-8 bg-[#F8F9FA] border-2 border-dashed border-gray-300 rounded-xl cursor-pointer hover:bg-gray-100 transition-colors">
-                        <IonIcon icon={cloudUploadOutline} className="text-gray-400 text-2xl" />
-                        <span className="text-sm text-gray-600">
+                      <label className="block text-sm font-medium text-[#0F172A] mb-2 mt-3">Upload ID Document *</label>
+                      <label className="flex items-center gap-2 px-4 py-3 bg-[#F3F3F5] border-none rounded-lg cursor-pointer hover:bg-gray-100 transition-colors">
+                        <span className="text-sm text-[#717182] flex-1">
                           {formData.idDocument ? formData.idDocument.name : 'Select a file'}
                         </span>
+                        <UploadIcon size={16} stroke="#717182" />
                         <input
                           type="file"
                           accept="image/*,.pdf"
@@ -351,12 +391,12 @@ const VerificationPromptModal = ({ isOpen, onClose }) => {
                     </div>
 
                     <div>
-                      <label className="block text-sm font-medium text-[#0F172A] mb-2">Profile Photo *</label>
-                      <label className="flex items-center justify-center gap-2 px-4 py-8 bg-[#F8F9FA] border-2 border-dashed border-gray-300 rounded-xl cursor-pointer hover:bg-gray-100 transition-colors">
-                        <IonIcon icon={cloudUploadOutline} className="text-gray-400 text-2xl" />
-                        <span className="text-sm text-gray-600">
+                      <label className="block text-sm font-medium text-[#0F172A] mb-2 mt-3">Profile Photo *</label>
+                      <label className="flex items-center gap-2 px-4 py-3 bg-[#F3F3F5] border-none rounded-lg cursor-pointer hover:bg-gray-100 transition-colors">
+                        <span className="text-sm text-[#717182] flex-1">
                           {formData.profilePhoto ? formData.profilePhoto.name : 'Select a file'}
                         </span>
+                        <UploadIcon size={16} stroke="#717182" />
                         <input
                           type="file"
                           accept="image/*"
@@ -385,11 +425,11 @@ const VerificationPromptModal = ({ isOpen, onClose }) => {
                   </div>
 
                   <div>
-                    <label className="block text-sm font-medium text-[#0F172A] mb-2">Vehicle Type *</label>
+                    <label className="block text-sm font-medium text-[#0F172A] mb-2 mt-5">Vehicle Type *</label>
                     <select
                       value={formData.vehicleType}
                       onChange={(e) => handleInputChange('vehicleType', e.target.value)}
-                      className="w-full px-4 py-3 bg-[#F8F9FA] border-none rounded-xl focus:ring-2 focus:ring-[#00D68F] outline-none appearance-none"
+                      className="w-full px-4 py-3 placeholder:text-[#717182] bg-[#F8F9FA] border-none rounded-lg focus:ring-2 focus:ring-[#00D68F] outline-none appearance-none"
                     >
                       <option value="">Select vehicle type</option>
                       <option value="motorcycle">Motorcycle</option>
@@ -402,17 +442,17 @@ const VerificationPromptModal = ({ isOpen, onClose }) => {
 
                   <div className="grid grid-cols-2 gap-4">
                     <div>
-                      <label className="block text-sm font-medium text-[#0F172A] mb-2">Make/Model *</label>
+                      <label className="block text-sm font-medium text-[#0F172A] mb-2 mt-3">Make/Model *</label>
                       <input
                         type="text"
                         placeholder="Honda Civic"
                         value={formData.makeModel}
                         onChange={(e) => handleInputChange('makeModel', e.target.value)}
-                        className="w-full px-4 py-3 bg-[#F8F9FA] border-none rounded-xl focus:ring-2 focus:ring-[#00D68F] outline-none"
+                        className="w-full px-4 py-3 bg-[#F8F9FA] placeholder:text-[#717182] border-none rounded-lg focus:ring-2 focus:ring-[#00D68F] outline-none"
                       />
                     </div>
                     <div>
-                      <label className="block text-sm font-medium text-[#0F172A] mb-2">Year *</label>
+                      <label className="block text-sm font-medium text-[#0F172A] mb-2 mt-3">Year *</label>
                       <input
                         type="text"
                         placeholder="2020"
@@ -424,24 +464,24 @@ const VerificationPromptModal = ({ isOpen, onClose }) => {
                   </div>
 
                   <div>
-                    <label className="block text-sm font-medium text-[#0F172A] mb-2">License Plate *</label>
+                    <label className="block text-sm font-medium text-[#0F172A] mb-2 mt-3">License Plate *</label>
                     <input
                       type="text"
                       placeholder="ABC-1234"
                       value={formData.licensePlate}
                       onChange={(e) => handleInputChange('licensePlate', e.target.value)}
-                      className="w-full px-4 py-3 bg-[#F8F9FA] border-none rounded-xl focus:ring-2 focus:ring-[#00D68F] outline-none"
+                      className="w-full px-4 py-3 bg-[#F8F9FA] placeholder:text-[#717182] border-none rounded-lg focus:ring-2 focus:ring-[#00D68F] outline-none"
                     />
                   </div>
 
                   <div className="grid grid-cols-2 gap-4">
                     <div>
-                      <label className="block text-sm font-medium text-[#0F172A] mb-2">Driver's License *</label>
-                      <label className="flex items-center justify-center gap-2 px-4 py-8 bg-[#F8F9FA] border-2 border-dashed border-gray-300 rounded-xl cursor-pointer hover:bg-gray-100 transition-colors">
-                        <IonIcon icon={cloudUploadOutline} className="text-gray-400 text-2xl" />
-                        <span className="text-sm text-gray-600">
-                          {formData.driversLicense ? formData.driversLicense.name : 'Select a file'}
+                      <label className="block text-sm font-medium text-[#0F172A] mb-2 mt-3">Driver's License *</label>
+                      <label className="flex items-center gap-2 px-4 py-3 bg-[#F8F9FA] border-none rounded-xl cursor-pointer hover:bg-gray-100 transition-colors">
+                        <span className="text-sm text-[#717182] flex-1">
+                          {formData.driversLicense ? formData.driversLicense.name : "Select a file"}
                         </span>
+                        <UploadIcon size={16} stroke="#717182" />
                         <input
                           type="file"
                           accept="image/*,.pdf"
@@ -452,12 +492,12 @@ const VerificationPromptModal = ({ isOpen, onClose }) => {
                     </div>
 
                     <div>
-                      <label className="block text-sm font-medium text-[#0F172A] mb-2">Insurance (Optional)</label>
-                      <label className="flex items-center justify-center gap-2 px-4 py-8 bg-[#F8F9FA] border-2 border-dashed border-gray-300 rounded-xl cursor-pointer hover:bg-gray-100 transition-colors">
-                        <IonIcon icon={cloudUploadOutline} className="text-gray-400 text-2xl" />
-                        <span className="text-sm text-gray-600">
+                      <label className="block text-sm font-medium text-[#0F172A] mb-2 mt-3">Insurance (Optional)</label>
+                      <label className="flex items-center gap-2 px-4 py-3 bg-[#F8F9FA] border-none rounded-lg cursor-pointer hover:bg-gray-100 transition-colors">
+                        <span className="text-sm text-[#717182] flex-1">
                           {formData.insurance ? formData.insurance.name : 'Select a file'}
                         </span>
+                        <UploadIcon size={16} stroke="#717182" />
                         <input
                           type="file"
                           accept="image/*,.pdf"
@@ -480,52 +520,55 @@ const VerificationPromptModal = ({ isOpen, onClose }) => {
                     <p className="text-sm text-[#64748B] mb-4">Please review your information and accept the background check authorization.</p>
                   </div>
 
-                  {/* Contact Summary */}
-                  <div className="bg-[#F8F9FA] rounded-xl p-4">
-                    <div className="flex items-center justify-between mb-2">
-                      <h4 className="text-sm font-semibold text-[#0F172A]">Contact</h4>
-                      <button onClick={() => setCurrentStep(1)} className="text-sm text-[#00D68F] hover:text-[#00B876] font-medium">Edit</button>
+                  {/* Combined Summary Card */}
+                  <div className="bg-[#F8F9FA] rounded-xl p-4 divide-y divide-gray-300">
+                    {/* Contact Summary */}
+                    <div className="pb-4">
+                      <div className="flex items-center justify-between mb-2">
+                        <h4 className="text-sm font-semibold text-[#0F172A]">Contact</h4>
+                        <button onClick={() => setCurrentStep(1)} className="text-sm text-[#00D68F] hover:text-[#00B876] font-medium">Edit</button>
+                      </div>
+                      <p className="text-sm text-[#64748B]">{formData.phoneNumber || 'Not provided'}</p>
+                      <p className="text-sm text-[#64748B]">{formData.streetAddress || 'Not provided'}, {formData.city || 'Not provided'}, {formData.state || 'Not provided'}</p>
                     </div>
-                    <p className="text-sm text-[#64748B]">{formData.phoneNumber || 'Not provided'}</p>
-                    <p className="text-sm text-[#64748B]">{formData.streetAddress || 'Not provided'}, {formData.city || 'Not provided'}, {formData.state || 'Not provided'}</p>
-                  </div>
 
-                  {/* Identity Summary */}
-                  <div className="bg-[#F8F9FA] rounded-xl p-4">
-                    <div className="flex items-center justify-between mb-2">
-                      <h4 className="text-sm font-semibold text-[#0F172A]">Identity</h4>
-                      <button onClick={() => setCurrentStep(2)} className="text-sm text-[#00D68F] hover:text-[#00B876] font-medium">Edit</button>
+                    {/* Identity Summary */}
+                    <div className="py-4">
+                      <div className="flex items-center justify-between mb-2">
+                        <h4 className="text-sm font-semibold text-[#0F172A]">Identity</h4>
+                        <button onClick={() => setCurrentStep(2)} className="text-sm text-[#00D68F] hover:text-[#00B876] font-medium">Edit</button>
+                      </div>
+                      <p className="text-sm text-[#64748B]">{formData.idType || 'Not provided'}</p>
+                      <p className="text-sm text-[#64748B]">ID: {formData.idNumber || 'Not provided'}</p>
                     </div>
-                    <p className="text-sm text-[#64748B]">{formData.idType || 'Not provided'}</p>
-                    <p className="text-sm text-[#64748B]">ID: {formData.idNumber || 'Not provided'}</p>
-                  </div>
 
-                  {/* Vehicle Summary */}
-                  <div className="bg-[#F8F9FA] rounded-xl p-4">
-                    <div className="flex items-center justify-between mb-2">
-                      <h4 className="text-sm font-semibold text-[#0F172A]">Vehicle</h4>
-                      <button onClick={() => setCurrentStep(3)} className="text-sm text-[#00D68F] hover:text-[#00B876] font-medium">Edit</button>
+                    {/* Vehicle Summary */}
+                    <div className="pt-4">
+                      <div className="flex items-center justify-between mb-2">
+                        <h4 className="text-sm font-semibold text-[#0F172A]">Vehicle</h4>
+                        <button onClick={() => setCurrentStep(3)} className="text-sm text-[#00D68F] hover:text-[#00B876] font-medium">Edit</button>
+                      </div>
+                      <p className="text-sm text-[#64748B]">{formData.vehicleType || 'Not provided'} - {formData.makeModel || 'Not provided'} ({formData.year || 'Not provided'})</p>
+                      <p className="text-sm text-[#64748B]">Plate: {formData.licensePlate || 'Not provided'}</p>
                     </div>
-                    <p className="text-sm text-[#64748B]">{formData.vehicleType || 'Not provided'} - {formData.makeModel || 'Not provided'} ({formData.year || 'Not provided'})</p>
-                    <p className="text-sm text-[#64748B]">Plate: {formData.licensePlate || 'Not provided'}</p>
                   </div>
 
                   {/* Background Check Notice */}
-                  <div className="bg-[#ECFDF5] border border-[#A7F3D0] rounded-xl p-3 flex gap-2">
-                    <IonIcon icon={checkmarkCircle} className="text-[#00D68F] text-xl flex-shrink-0 mt-0.5" />
-                    <p className="text-sm text-[#065F46]">By submitting this application, you authorize Swiftly Express to conduct background checks and verify your information.</p>
+                  <div className="bg-[#EDFFEE] border border-[#A7FFB3] rounded-lg p-3 mb-2 mt-4 flex gap-2">
+                    <ShieldCheckIcon width={20} height={20} color="#059F00" />
+                    <p className="text-xs text-[#059F00]">By submitting this application, you authorize Swiftly Express to conduct background checks and verify your information.</p>
                   </div>
 
                   {/* Agreement Checkbox */}
-                  <label className="flex items-start gap-3 cursor-pointer">
+                  <label className="flex items-start gap-2 p-3 rounded-lg bg-[#EFF6FF] cursor-pointer">
                     <input
                       type="checkbox"
                       checked={formData.agreeBackgroundCheck}
                       onChange={(e) => handleInputChange('agreeBackgroundCheck', e.target.checked)}
-                      className="mt-1 w-4 h-4 text-[#00D68F] border-gray-300 rounded focus:ring-[#00D68F]"
+                      className="mt-1 w-3 h-3 text-[#00D68F] border border-[#BEDBFF] rounded focus:ring-[#00D68F]"
                     />
-                    <span className="text-sm text-[#64748B]">
-                      I authorize Swiftly Express to conduct a background check and verify my driving record. I understand this is required for platform safety and I certify that all information provided is accurate. *
+                    <span className="text-xs text-[#64748B]">
+                      I authorize Swiftly Express to conduct a background check and verify my driving record. I understand this is required for platform safety and I certify that all information provided is accurate.
                     </span>
                   </label>
                 </YummyText>
@@ -538,15 +581,17 @@ const VerificationPromptModal = ({ isOpen, onClose }) => {
                 {currentStep > 1 ? (
                   <button
                     onClick={prevStep}
-                    className="flex items-center gap-2 px-6 py-3 bg-white border border-gray-200 rounded-xl hover:bg-gray-50 transition-colors"
+                    className="flex-1 flex items-center justify-center gap-2 px-6 py-3 bg-white rounded-xl hover:bg-gray-50 transition-colors"
+                    style={{border: "1px solid #0000001A"}}
                   >
-                    <IonIcon icon={arrowBackOutline} className="text-gray-600" />
-                    <span className="font-medium text-[#64748B]">Back</span>
+                    <BackIcon size={18} color="#0A0A0A" />
+                    <span className="font-medium text-[#0A0A0A]">Back</span>
                   </button>
                 ) : (
                   <button
                     onClick={handleDismiss}
-                    className="px-6 py-3 bg-white border border-gray-200 rounded-xl hover:bg-gray-50 transition-colors font-medium text-[#64748B]"
+                    className="flex-1 px-6 py-3 bg-white border border-gray-200 rounded-xl hover:bg-gray-50 transition-colors font-medium text-[#0A0A0A]" style={{border: "1px solid #0000001A"}}
+
                   >
                     Cancel
                   </button>
@@ -555,12 +600,13 @@ const VerificationPromptModal = ({ isOpen, onClose }) => {
                 {currentStep < 4 ? (
                   <button
                     onClick={nextStep}
-                    className="flex-1 flex items-center justify-center gap-2 px-6 py-3 bg-[#00D68F] hover:bg-[#00B876] text-white rounded-xl transition-colors font-medium"
+                    disabled={!isCurrentStepValid()}
+                    className={`flex-1 flex items-center justify-center gap-2 px-6 py-3 bg-[#00D68F] text-white rounded-xl transition-colors font-medium ${
+                      isCurrentStepValid() ? 'hover:bg-[#00B876] opacity-100' : 'opacity-50 cursor-not-allowed'
+                    }`}
                   >
                     <span>Continue</span>
-                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                      <path d="M9 18l6-6-6-6" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-                    </svg>
+                    <ForwardIcon size={18} color="#FFFFFF" />
                   </button>
                 ) : (
                   <button
@@ -586,17 +632,21 @@ const VerificationPromptModal = ({ isOpen, onClose }) => {
         <div className="fixed inset-0 bg-black/40 backdrop-blur-sm flex items-center justify-center p-4 z-[60]">
           <div className="bg-white rounded-3xl shadow-2xl max-w-md w-full p-8 text-center animate-scale-in">
             <YummyText>
-              <div className="w-16 h-16 bg-[#ECFDF5] rounded-full flex items-center justify-center mx-auto mb-4">
-                <IonIcon icon={checkmarkCircle} className="text-[#00D68F] text-5xl" />
+              <div className="w-16 h-16 bg-[#DCFCE7] rounded-full flex items-center justify-center mx-auto mb-4">
+                <CheckCircleIcon width={32} height={32} color="#00B876" />
               </div>
-              <h2 className="text-2xl font-semibold text-[#0F172A] mb-3">Application Submitted!</h2>
+              <h2 className="text-2xl font-semibold text-[#0A0A0A] mb-3">Application Submitted!</h2>
               <div className="bg-[#EFF6FF] rounded-xl p-4 mb-4">
-                <p className="text-sm text-[#64748B] mb-3">
+                <p className="text-sm flex text-justify leading-relaxed text-[#64748B] mb-3">
+                  <IonIcon icon={informationCircleOutline} className="text-[#3B82F6] text-lg flex-shrink-0 mt-0.5 mr-2" />
                   Your application is under review. Our team will verify your documents and conduct necessary background checks.
                 </p>
-                <p className="text-sm font-medium text-[#3B82F6]">Expected review time: 2-5 business days</p>
+                <p className="text-sm font-[700] text-[#1447E6]">
+                  <img src="/clockicon.svg" alt="Clock Icon" className="inline-block w-4 h-4 mr-3" />
+                  <span className="text-sm font-[300] text-[#1447E6]">Expected review time:</span> 2-5 business days
+                </p>
               </div>
-              <p className="text-sm text-[#64748B] mb-6">
+              <p className="text-xs text-[#4A5565] mb-6">
                 We'll notify you via email once your account has been approved. You can then start accepting deliveries and earning!
               </p>
               <button
@@ -605,11 +655,11 @@ const VerificationPromptModal = ({ isOpen, onClose }) => {
                   onClose();
                   window.location.reload();
                 }}
-                className="w-full py-3 bg-[#00D68F] hover:bg-[#00B876] text-white rounded-xl transition-colors font-medium"
+                className="w-full py-3 bg-[#00B75A] hover:bg-[#00B876] text-white text-sm rounded-xl transition-colors font-medium"
               >
                 Go to Dashboard
               </button>
-              <p className="text-xs text-[#94A3B8] mt-3">You'll receive an email confirmation shortly</p>
+              <p className="text-xs text-[#6A7282] mt-3">You'll receive an email confirmation shortly</p>
             </YummyText>
           </div>
         </div>
