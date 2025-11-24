@@ -320,7 +320,7 @@ const SwiftlyLanding = () => {
         </section>
 
         {/* No Hassle Section */}
-        <section className="px-4 mt-10 mb-14">
+        <section className="px-4 mt-6 md:mt-10 mb-8 md:mb-14">
           <PageWrapper className="max-w-7xl">
             <div className="relative rounded-3xl overflow-hidden  h-[430px] flex items-center">
               {/* Background Image */}
@@ -361,11 +361,11 @@ const SwiftlyLanding = () => {
         </section>
 
         {/* How It Works button */}
-        <section className="-mt-10">
+        <section className="-mt-6 md:-mt-10">
           <PageWrapper className="max-w-6xl mx-auto text-center">
             {/* Header */}
-            <div className="flex flex-col items-center mb-14">
-              <div className="flex justify-center mt-10">
+            <div className="flex flex-col items-center mb-8 md:mb-14">
+              <div className="flex justify-center mt-6 md:mt-10">
                 <YummyText className="px-6 py-1.5 bg-[#A7F3D0] text-[#00B75A] rounded-full text-xs font-[400]">
                   How It Works
                 </YummyText>
@@ -376,7 +376,7 @@ const SwiftlyLanding = () => {
             </div>
 
             {/* Steps */}
-            <div className="grid grid-cols-1 md:grid-cols-3 ml-3.5 -mt-11 mb-8 px-3 mx-2 gap-4">
+            <div className="grid grid-cols-1 md:grid-cols-3 ml-3.5 -mt-8 md:-mt-11 mb-6 md:mb-8 px-3 mx-2 gap-4">
               {steps.map((step, index) => (
                 <div
                   key={index}
