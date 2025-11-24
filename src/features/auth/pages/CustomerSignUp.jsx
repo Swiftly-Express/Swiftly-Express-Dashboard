@@ -91,7 +91,7 @@ const CustomerSignUp = () => {
   return (
     <IonPage>
       <IonContent className="ion-no-padding">
-        <div className="bg-white grid grid-cols-1 lg:grid-cols-2 mx-auto py-8 lg:py-12 px-6 gap-6">
+        <div className="bg-white min-h-screen justify-between grid grid-cols-1 lg:grid-cols-2 mx-auto py-8 lg:py-12 px-6 gap-6">
           {/* Left Side - Form */}
           <div className="flex items-center justify-center lg:pr-2 lg:pl-8">
             <div className="w-full max-w-xl">
