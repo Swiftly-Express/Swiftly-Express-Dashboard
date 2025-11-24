@@ -69,7 +69,7 @@ const HowItWorks = () => {
         </div>
         
         {/* Hero Section */}
-        <div className="relative w-full bg-[#006837] py-8 md:py-12 lg:py-8 overflow-hidden">
+        <div className="relative w-full bg-[#006837] py-6 md:py-10 lg:py-6 overflow-hidden">
           <div className="absolute inset-0">
             <img
               src="/riderman.svg"
@@ -79,7 +79,7 @@ const HowItWorks = () => {
           </div>
 
           <PageWrapper>
-            <div className="relative py-12 md:py-16 lg:py-12 text-center text-white">
+            <div className="relative py-8 md:py-12 lg:py-8 text-center text-white">
               <YummyText className="text-5xl font-medium mb-4">
                 How Swiftly Works
               </YummyText>
@@ -93,7 +93,7 @@ const HowItWorks = () => {
         <PageWrapper>
           {/* Process Section */}
           <section className="py-0">
-            <div className="text-center -mb-1 mt-4 md:mt-6 lg:mt-4 space-y-1">
+            <div className="text-center -mb-1 mt-3 md:mt-4 lg:mt-3 space-y-1">
               <YummyText className="text-4xl font-[300] text-[#111827]">
                 The Complete Process
               </YummyText>
@@ -146,7 +146,7 @@ const HowItWorks = () => {
 
         {/* Process Cards */}
         <PageWrapper>
-          <section className="py-6 md:py-8 lg:py-6 grid grid-cols-1 md:grid-cols-3 gap-4 px-3">
+          <section className="py-4 md:py-6 lg:py-4 grid grid-cols-1 md:grid-cols-3 gap-4 px-3">
             {/* 01 Create Your Account */}
             <div className="bg-[#00D68F] rounded-2xl p-8 h-[410px] text-white">
               <div className="flex flex-col">

@@ -320,7 +320,7 @@ const SwiftlyLanding = () => {
         </section>
 
         {/* No Hassle Section */}
-        <section className="px-4 mt-6 md:mt-8 lg:mt-6 mb-8 md:mb-10 lg:mb-8">
+        <section className="px-4 mt-4 md:mt-6 lg:mt-4 mb-6 md:mb-8 lg:mb-6">
           <PageWrapper className="max-w-7xl">
             <div className="relative rounded-3xl overflow-hidden  h-[430px] flex items-center">
               {/* Background Image */}
@@ -361,11 +361,11 @@ const SwiftlyLanding = () => {
         </section>
 
         {/* How It Works button */}
-        <section className="-mt-6 md:-mt-8 lg:-mt-6">
+        <section className="-mt-4 md:-mt-6 lg:-mt-4">
           <PageWrapper className="max-w-6xl mx-auto text-center">
             {/* Header */}
-            <div className="flex flex-col items-center mb-8 md:mb-10 lg:mb-8">g:mb-8">
-              <div className="flex justify-center mt-6 md:mt-8 lg:mt-6">
+            <div className="flex flex-col items-center mb-6 md:mb-8 lg:mb-6">g:mb-8">
+              <div className="flex justify-center mt-4 md:mt-6 lg:mt-4">
                 <YummyText className="px-6 py-1.5 bg-[#A7F3D0] text-[#00B75A] rounded-full text-xs font-[400]">
                   How It Works
                 </YummyText>
@@ -376,7 +376,7 @@ const SwiftlyLanding = () => {
             </div>
 
             {/* Steps */}
-            <div className="grid grid-cols-1 md:grid-cols-3 ml-3.5 -mt-8 md:-mt-9 lg:-mt-8 mb-6 md:mb-7 lg:mb-6 px-3 mx-2 gap-4">
+            <div className="grid grid-cols-1 md:grid-cols-3 ml-3.5 -mt-6 md:-mt-7 lg:-mt-6 mb-4 md:mb-5 lg:mb-4 px-3 mx-2 gap-4">
               {steps.map((step, index) => (
                 <div
                   key={index}
@@ -414,7 +414,7 @@ const SwiftlyLanding = () => {
         </section>
 
         {/* Testimonials Section */}
-        <section className="relative py-14 overflow-hidden">
+        <section className="relative py-8 md:py-12 lg:py-8 overflow-hidden">
           {/* Carton Box - Left */}
           <div className="absolute left-8 top-80 mt-3 -translate-y-1/2 w-60 h-60 pointer-events-none">
             <img

@@ -200,7 +200,7 @@ const Services = () => {
 
 
           {/* Services Section */}
-          <section className="py-12 md:py-16 lg:py-12 px-16 bg-[#FFFFFF] rounded-3xl">
+          <section className="py-8 md:py-12 lg:py-8 px-16 bg-[#FFFFFF] rounded-3xl">
             <div className="text-center mb-6">
               <YummyText className="text-3xl font-sm text-[#111827] mb-4">
                 Our Services
@@ -225,7 +225,7 @@ const Services = () => {
           </section>
 
           {/* Why Choose Swiftly */}
-          <section className="bg-[#1E1E1E] text-white rounded-2xl mt-6 md:mt-8 lg:mt-6 mx-3 py-8 md:py-10 lg:py-8">
+          <section className="bg-[#1E1E1E] text-white rounded-2xl mt-4 md:mt-6 lg:mt-4 mx-3 py-6 md:py-8 lg:py-6">
             <div className="flex justify-center items-center">
               <YummyText className="text-[45px] font-[300] tracking-tight">
                 Why Choose Swiftly?
