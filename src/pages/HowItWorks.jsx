@@ -37,18 +37,14 @@ const HowItWorks = () => {
   return (
     <IonPage>
       <IonContent className="bg-[#f5f5f5] ion-no-padding">
-        {/* Navbar - moved inside IonContent */}
         <div className="sticky top-0 z-50 bg-white border-b border-gray-100">
           <PageWrapper className="py-3 flex items-center justify-between">
-            {/* Logo */}
             <YummyText className="text-3xl px-3 font-sm text-black">
               Swiftly
             </YummyText>
 
-            {/* Navbar */}
             <Navbar />
 
-            {/* Buttons */}
             <div className="flex items-center px-4 gap-3">
               <Button 
               variant="primary" 
@@ -68,7 +64,6 @@ const HowItWorks = () => {
           </PageWrapper>
         </div>
         
-        {/* Hero Section */}
         <div className="relative w-full bg-[#006837] py-6 md:py-10 lg:py-6 overflow-hidden">
           <div className="absolute inset-0">
             <img
@@ -91,7 +86,6 @@ const HowItWorks = () => {
         </div>
 
         <PageWrapper>
-          {/* Process Section */}
           <section className="py-0">
             <div className="text-center -mb-1 mt-3 md:mt-4 lg:mt-3 space-y-1">
               <YummyText className="text-4xl font-[300] text-[#111827]">
@@ -103,9 +97,7 @@ const HowItWorks = () => {
               </YummyText>
             </div>
 
-            {/* Process Steps */}
             <div className="relative min-h-[500px]">
-              {/* Spiral Connection Line */}
                <div className="absolute inset-0 -left-36 -right-36 h-[430px]">
                 <img 
                   src="/spiralicon.svg" 
@@ -114,9 +106,7 @@ const HowItWorks = () => {
                 />
               </div>
               
-              {/* Steps Positioned */}
               <div className="relative z-10">
-                {/* Row 1 */}
                 <div className="absolute top-20 mt-20 left-[2%]">
                   <ProcessStep {...steps[0]} />
                 </div>
@@ -127,7 +117,6 @@ const HowItWorks = () => {
                   <ProcessStep {...steps[3]} />
                 </div>
 
-                {/* Row 2 */}
                 <div className="absolute top-[350px] left-[26%]">
                   <ProcessStep {...steps[2]} />
                 </div>
@@ -135,7 +124,6 @@ const HowItWorks = () => {
                   <ProcessStep {...steps[4]} />
                 </div>
 
-                {/* Row 3 */}
                 <div className="absolute top-[130px] right-[0%]">
                   <ProcessStep {...steps[5]} />
                 </div>
@@ -144,10 +132,8 @@ const HowItWorks = () => {
           </section>
         </PageWrapper>
 
-        {/* Process Cards */}
         <PageWrapper>
           <section className="py-4 md:py-6 lg:py-4 grid grid-cols-1 md:grid-cols-3 gap-4 px-3">
-            {/* 01 Create Your Account */}
             <div className="bg-[#00D68F] rounded-2xl p-8 h-[410px] text-white">
               <div className="flex flex-col">
                 <div className="flex items-center gap-3 mb-4">
@@ -171,7 +157,6 @@ const HowItWorks = () => {
               </div>
             </div>
 
-            {/* 02 Enter Package Details */}
             <div className="bg-violet-500 rounded-2xl p-8 h-[410px] text-white">
               <div className="flex flex-col">
                 <div className="flex items-center gap-3 mb-4">
@@ -195,7 +180,6 @@ const HowItWorks = () => {
               </div>
             </div>
 
-            {/* 03 Choose Pickup/Delivery */}
             <div className="bg-blue-500 rounded-2xl p-8 h-[410px] text-white">
               <div className="flex flex-col">
                 <div className="flex items-center gap-3 mb-4">
@@ -219,7 +203,6 @@ const HowItWorks = () => {
               </div>
             </div>
 
-            {/* 04 Secure Payment */}
             <div className="bg-[#FF4D00] rounded-2xl p-8 h-[410px] text-white">
               <div className="flex flex-col">
                 <div className="flex items-center gap-3 mb-4">
@@ -243,7 +226,6 @@ const HowItWorks = () => {
               </div>
             </div>
 
-            {/* 05 Real-Time Tracking */}
             <div className="bg-red-500 rounded-2xl p-8 h-[410px] text-white">
               <div className="flex flex-col">
                 <div className="flex items-center gap-3 mb-4">
@@ -267,7 +249,6 @@ const HowItWorks = () => {
               </div>
             </div>
 
-            {/* 06 Delivery Confirmation */}
             <div className="bg-[#00D68F] rounded-2xl p-8 h-[410px] text-white">
               <div className="flex flex-col">
                 <div className="flex items-center gap-3 mb-4">
@@ -293,11 +274,9 @@ const HowItWorks = () => {
           </section>
         </PageWrapper>
 
-        {/* ✅ LIVE GPS TRACKING (Perfect Match — Two Images, Right-Aligned) */}
         <section className="w-full flex justify-center mt-2 px-12">
           <div className="relative w-full max-w-5xl bg-[#1A1A1A] rounded-[40px] py-12 mb-8 px-14 flex items-center justify-between overflow-hidden">
 
-            {/* LEFT TEXT */}
             <div className="max-w-lg z-10">
               <YummyText className="text-3xl mb-3 text-[#F9FAFB] flex">Live GPS Tracking</YummyText>
               <YummyText className="text-sm opacity-90 leading-relaxed mb-7 text-[#F9FAFB]">
@@ -314,22 +293,13 @@ const HowItWorks = () => {
               </Button>
             </div>
 
-            {/* RIGHT IMAGES (Two images layered exactly like your screenshot) */}
             <div className="relative  w-[30%] flex items-center justify-center">
 
-              {/* FLOATING PACKAGE (TOP IMAGE) */}
               <img
                 src="/phonemap-flyingbox.svg"
                 alt="Flying Package"
                 className="absolute right-10 w-85 h-auto object-contain z-20"
               />
-
-              {/* PHONE GPS IMAGE (BOTTOM IMAGE) */}
-              {/* <img
-                src="/phonemap.svg"
-                alt="GPS Phone UI"
-                className="relative w-72 h-auto object-contain z-10 mt-10"
-              /> */}
             </div>
 
           </div>
