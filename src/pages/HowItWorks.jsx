@@ -36,8 +36,9 @@ const HowItWorks = () => {
 
   return (
     <IonPage>
-      <IonHeader className="ion-no-border">
-        <IonToolbar className="bg-white px-3">
+      <IonContent className="bg-[#f5f5f5] ion-no-padding">
+        {/* Navbar - moved inside IonContent */}
+        <div className="sticky top-0 z-50 bg-white border-b border-gray-100">
           <PageWrapper className="py-3 flex items-center justify-between">
             {/* Logo */}
             <YummyText className="text-3xl px-3 font-sm text-black">
@@ -65,10 +66,8 @@ const HowItWorks = () => {
               </Button>
             </div>
           </PageWrapper>
-        </IonToolbar>
-      </IonHeader>
-
-      <IonContent className="bg-[#f5f5f5] ion-no-padding">
+        </div>
+        
         {/* Hero Section */}
         <div className="relative w-full bg-[#006837] py-12 overflow-hidden">
           <div className="absolute inset-0">

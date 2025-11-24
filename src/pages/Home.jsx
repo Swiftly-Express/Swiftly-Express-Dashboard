@@ -96,11 +96,12 @@ const SwiftlyLanding = () => {
 
   return (
     <IonPage>
-      <IonHeader className="ion-no-border mb-6">
-        <IonToolbar className="bg-white gap-10 px-3 -mb-6">
+      <IonContent className="bg-[#f5f5f5] !fullscreen">
+        {/* Navbar - moved inside IonContent */}
+        <div className="sticky top-0 z-50 bg-white border-b border-gray-100">
           <PageWrapper className="py-3 flex items-center justify-between">
             {/* Logo */}
-            <YummyText className="text-3xl  px-3 font-sm text-black">
+            <YummyText className="text-3xl px-3 font-sm text-black">
               Swiftly
             </YummyText>
 
@@ -133,16 +134,15 @@ const SwiftlyLanding = () => {
               </Button>
             </div>
           </PageWrapper>
-        </IonToolbar>
-      </IonHeader>
-
-      <IonContent className="bg-[#f5f5f5] !fullscreen">
+        </div>
+        
+        {/* Hero Section */}
         <div className="relative flex flex-col items-center justify-center h-full px-4 text-center">
           {/* Background Image with Gradient Overlay */}
           <div className="absolute inset-0 h-full pointer-events-none -z-10">
             <div className="relative w-full h-full">
               {/* White gradient overlay */}
-              <div className="absolute inset-0 bottom-auto h-[calc(55%+2.5rem)] z-[1] bg-gradient-to-b from-white via-white/100 to-transparent" />
+              <div className="absolute inset-0 bottom-auto h-[calc(60%+2.5rem)] z-[1] bg-gradient-to-b from-white via-white/100 to-transparent" />
               <img
                 src="/bike.svg"
                 alt="bike"

@@ -1,7 +1,9 @@
 import { IonPage, IonContent, useIonRouter } from '@ionic/react';
 import React, { useState } from 'react';
+import { IonIcon } from '@ionic/react';
 import { YummyText } from '../../../components/YummyText';
 import Button from '../../../components/Button';
+import { eyeOutline, eyeOffOutline } from 'ionicons/icons';
 
 const CustomerSignUp = () => {
   const router = useIonRouter();
@@ -83,6 +85,9 @@ const CustomerSignUp = () => {
     router.push('/auth/customer/login', 'back', 'pop');
   };
 
+  const [showPassword, setShowPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+
   return (
     <IonPage>
       <IonContent className="ion-no-padding">
@@ -132,31 +137,49 @@ const CustomerSignUp = () => {
                 </div>
 
                 {/* Password */}
-                <div>
-                  <label className="block text-sm font-medium text-[#0A0A0A] mb-2 mt-3">
+                <div className="relative">
+                  <label className="block text-sm font-medium text-[#0A0A0A] mb-2">
                     Password
                   </label>
                   <input
-                    type="password"
+                    name="password"
+                    type={showPassword ? 'text' : 'password'}
                     value={formData.password}
                     onChange={(e) => handleChange('password', e.target.value)}
                     placeholder="••••••••"
                     className="w-full px-4 py-3 bg-[#F3F4F6] rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-green-500 placeholder-[#717182]"
                   />
+                  <button
+                    type="button"
+                    onClick={() => setShowPassword(!showPassword)}
+                    className="absolute right-3 top-10 text-gray-500"
+                    aria-label={showPassword ? 'Hide password' : 'Show password'}
+                  >
+                    <IonIcon icon={showPassword ? eyeOffOutline : eyeOutline} className="w-6 h-6 text-[#1E1E1E]" />
+                  </button>
                 </div>
 
                 {/* Confirm Password */}
-                <div>
-                  <label className="block text-sm font-medium text-[#0A0A0A] mb-2 mt-3">
+                <div className="relative">
+                  <label className="block text-sm font-medium text-[#0A0A0A] mb-2">
                     Confirm Password
                   </label>
                   <input
-                    type="password"
+                    name="confirmPassword"
+                    type={showConfirmPassword ? 'text' : 'password'}
                     value={formData.confirmPassword}
                     onChange={(e) => handleChange('confirmPassword', e.target.value)}
                     placeholder="••••••••"
                     className="w-full px-4 py-3 bg-[#F3F4F6] rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-green-500 placeholder-[#717182]"
                   />
+                  <button
+                    type="button"
+                    onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                    className="absolute right-3 top-10 text-gray-500"
+                    aria-label={showConfirmPassword ? 'Hide password' : 'Show password'}
+                  >
+                    <IonIcon icon={showConfirmPassword ? eyeOffOutline : eyeOutline} className="w-6 h-6 text-[#1E1E1E]" />
+                  </button>
                 </div>
 
                 {/* Terms Checkbox */}

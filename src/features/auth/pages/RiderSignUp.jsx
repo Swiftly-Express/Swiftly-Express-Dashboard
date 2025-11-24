@@ -1,5 +1,6 @@
-import { IonPage, IonContent, useIonRouter } from '@ionic/react';
+import { IonPage, IonContent, useIonRouter, IonIcon } from '@ionic/react';
 import React, { useState } from 'react';
+import { eyeOutline, eyeOffOutline } from 'ionicons/icons';
 import { YummyText } from '../../../components/YummyText';
 import Button from '../../../components/Button';
 
@@ -14,6 +15,8 @@ const RiderSignup = () => {
   });
 
   const [error, setError] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
 
   const handleSubmit = () => {
     // Reset error
@@ -137,31 +140,49 @@ const RiderSignup = () => {
                 </div>
 
                 {/* Password */}
-                <div>
+                <div className="relative">
                   <label className="block text-sm font-medium text-[#0A0A0A] mb-2">
                     Password
                   </label>
                   <input
-                    type="password"
+                    name="password"
+                    type={showPassword ? 'text' : 'password'}
                     value={formData.password}
                     onChange={(e) => handleChange('password', e.target.value)}
                     placeholder="••••••••"
                     className="w-full px-4 py-3 bg-[#F3F4F6] rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-green-500 placeholder-[#717182]"
                   />
+                  <button
+                    type="button"
+                    onClick={() => setShowPassword(!showPassword)}
+                    className="absolute right-3 top-10 text-gray-500"
+                    aria-label={showPassword ? 'Hide password' : 'Show password'}
+                  >
+                    <IonIcon icon={showPassword ? eyeOffOutline : eyeOutline} className="w-6 h-6 text-[#1E1E1E]" />
+                  </button>
                 </div>
 
                 {/* Confirm Password */}
-                <div>
+                <div className="relative">
                   <label className="block text-sm font-medium text-[#0A0A0A] mb-2">
                     Confirm Password
                   </label>
                   <input
-                    type="password"
+                    name="confirmPassword"
+                    type={showConfirmPassword ? 'text' : 'password'}
                     value={formData.confirmPassword}
                     onChange={(e) => handleChange('confirmPassword', e.target.value)}
                     placeholder="••••••••"
                     className="w-full px-4 py-3 bg-[#F3F4F6] rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-green-500 placeholder-[#717182]"
                   />
+                  <button
+                    type="button"
+                    onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                    className="absolute right-3 top-10 text-gray-500"
+                    aria-label={showConfirmPassword ? 'Hide password' : 'Show password'}
+                  >
+                    <IonIcon icon={showConfirmPassword ? eyeOffOutline : eyeOutline} className="w-6 h-6 text-[#1E1E1E]" />
+                  </button>
                 </div>
 
                 {/* Terms Checkbox */}
@@ -242,7 +263,7 @@ const RiderSignup = () => {
           <div className="hidden lg:flex bg-[#1E1E1E] rounded-[50px] relative ml-2 mr-8 overflow-hidden items-end justify-center p-12">
             <div className="relative w-full h-full flex flex-col justify-end">
               {/* Rider Illustration */}
-              <div className="absolute top-1 left-1/2 transform -translate-x-1/2 w-[80%]">
+              <div className="absolute top-1 transform -translate-x-1/2 w-full">
                 <img
                   src="/despatch-man.svg"
                   alt="Become a Rider"

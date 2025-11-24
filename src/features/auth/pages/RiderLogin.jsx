@@ -1,5 +1,6 @@
-import { IonPage, IonContent} from '@ionic/react';
+import { IonPage, IonContent, IonIcon } from '@ionic/react';
 import React, { useState } from 'react';
+import { eyeOutline, eyeOffOutline } from 'ionicons/icons';
 import { YummyText } from '../../../components/YummyText';
 import Button from '../../../components/Button';
 import { useHistory } from 'react-router-dom';
@@ -13,6 +14,7 @@ const RiderSignIn = () => {
   });
 
   const [error, setError] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
 
   const handleSubmit = () => {
     // Reset error
@@ -114,18 +116,27 @@ const RiderSignIn = () => {
                 </div>
 
                 {/* Password */}
-                <div>
+                <div className="relative">
                   <YummyText className="block text-sm font-medium text-gray-700 mb-2">
                     Password
                   </YummyText>
                   <input
-                    type="password"
+                    name="password"
+                    type={showPassword ? 'text' : 'password'}
                     value={formData.password}
                     onChange={(e) => handleChange('password', e.target.value)}
                     placeholder="***********"
                     className="w-full px-4 py-3 bg-[#F3F4F6] rounded-lg focus:outline-none focus:ring focus:ring-green-500 placeholder-[#9CA3AF]"
                     style={{ fontFamily: 'inherit' }}
                   />
+                  <button
+                    type="button"
+                    onClick={() => setShowPassword(!showPassword)}
+                    className="absolute right-3 top-10 text-gray-500"
+                    aria-label={showPassword ? 'Hide password' : 'Show password'}
+                  >
+                    <IonIcon icon={showPassword ? eyeOffOutline : eyeOutline} className="w-6 h-6 text-[#1E1E1E]"/>
+                  </button>
                 </div>
 
                 {/* Remember Me & Forgot Password */}

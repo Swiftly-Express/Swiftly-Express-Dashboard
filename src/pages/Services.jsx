@@ -128,8 +128,9 @@ const Services = () => {
 
   return (
     <IonPage>
-      <IonHeader className="ion-no-border">
-        <IonToolbar className="bg-white px-3">
+      <IonContent className="bg-[#f5f5f5]">
+        {/* Navbar - moved inside IonContent */}
+        <div className="sticky top-0 z-50 bg-white border-b border-gray-100">
           <PageWrapper className="py-3 flex items-center justify-between">
             {/* Logo */}
             <YummyText className="text-3xl px-3 font-sm text-black">
@@ -157,10 +158,8 @@ const Services = () => {
               </Button>
             </div>
           </PageWrapper>
-        </IonToolbar>
-      </IonHeader>
-
-      <IonContent className="bg-[#f5f5f5]">
+        </div>
+        
         <PageWrapper>
           {/* Hero Section */}
           <section className="relative min-h-[calc(75vh-55px)] flex items-center justify-center left-16 gap-14 px-6 lg:px-20">
