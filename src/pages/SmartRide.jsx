@@ -146,7 +146,7 @@ const SmartRide = () => {
         </div>
         
         {/* Hero Section */}
-        <div className="relative w-full bg-[#00B75A] py-28 overflow-hidden">
+        <div className="relative w-full bg-[#00B75A] py-16 md:py-24 lg:py-16 overflow-hidden">
           <div className="absolute inset-0">
             <div className="absolute opacity-20">
               <img src="/despatch-rider.svg" alt="Background Pattern" className="w-full h-full object-contain" />
@@ -154,7 +154,7 @@ const SmartRide = () => {
           </div>
 
           <PageWrapper>
-            <div className="relative text-center text-white py-12">
+            <div className="relative text-center text-white py-8 md:py-10 lg:py-8">
               <div className="flex items-center justify-center gap-3 mb-3">
                 <img src="/toybike.svg" alt="Motorcycle Icon" className="w-10 h-10" />
                 <YummyText className="text-medium font-[300] uppercase tracking-wider">
@@ -176,8 +176,8 @@ const SmartRide = () => {
 
         {/* Why Smart Rides Section */}
         <PageWrapper>
-          <section className="py-20">
-            <div className="text-center mb-16">
+          <section className="py-12 md:py-16 lg:py-12">
+            <div className="text-center mb-8 md:mb-12 lg:mb-8">
               <YummyText className="text-4xl font-[400] text-[#111827] mb-4">
                 Why Smart Rides?
               </YummyText>
@@ -199,8 +199,8 @@ const SmartRide = () => {
           </section>
 
           {/* How It Works Section */}
-          <section className="py-6 bg-[#F9FAFB] rounded-3xl mx-18">
-            <div className="text-center mb-14">
+          <section className="py-4 md:py-6 lg:py-4 bg-[#F9FAFB] rounded-3xl mx-18">
+            <div className="text-center mb-8 md:mb-12 lg:mb-8">
               <YummyText className="text-5xl font-[300] text-[#111827]">
                 How It Works
               </YummyText>

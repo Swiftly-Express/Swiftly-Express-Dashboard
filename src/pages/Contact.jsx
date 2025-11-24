@@ -261,13 +261,13 @@ const Contact = () => {
               </div>
 
               {/* Right - Map Placeholder */}
-              <div className="bg-[#00D68F] rounded-2xl overflow-hidden mt-8 !h-[92%] flex items-center justify-center">
+              <div className="bg-[#00D68F] rounded-2xl overflow-hidden mt-4 md:mt-6 lg:mt-4 !h-[92%] flex items-center justify-center">
               </div>
             </div>
           </section>
 
           {/* Contact Info Cards */}
-          <section className="py-10 px-6">
+          <section className="py-6 md:py-8 lg:py-6 px-6">
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
               {contactInfo.map((info, index) => (
                 <ContactInfoCard
@@ -282,7 +282,7 @@ const Contact = () => {
           </section>
 
           {/* FAQ Section */}
-          <section className="py-4 px-32 bg-[#F9FAFB]">
+          <section className="py-4 md:py-6 lg:py-4 px-32 bg-[#F9FAFB]">
             <div className="text-center mb-8">
               <YummyText className="text-4xl font-[300] text-[#111827] mb-4">
                 Frequently Asked Questions
