@@ -95,7 +95,7 @@ const RiderSignup = () => {
   return (
     <IonPage>
       <IonContent className="ion-no-padding">
-        <div className="bg-white grid grid-cols-1 lg:grid-cols-2 mx-auto py-8 lg:py-12 px-6 gap-6">
+        <div className="bg-white grid grid-cols-1 lg:grid-cols-2 min-h-screen justify-between mx-auto py-8 lg:py-12 px-6 gap-6">
           {/* Left Side - Form */}
           <div className="flex items-center justify-center lg:pr-2 lg:pl-8">
             <div className="w-full max-w-xl">
@@ -112,6 +112,7 @@ const RiderSignup = () => {
               {/* Form */}
               <div className="space-y-4">
                 {/* Full Name */}
+                <YummyText>
                 <div>
                   <label className="block text-sm font-medium text-[#0A0A0A] mb-2">
                     Full Name
@@ -127,7 +128,7 @@ const RiderSignup = () => {
 
                 {/* Email Address */}
                 <div>
-                  <label className="block text-sm font-medium text-[#0A0A0A] mb-2">
+                  <label className="block text-sm font-medium text-[#0A0A0A] mb-2 mt-3">
                     Email Address
                   </label>
                   <input
@@ -141,7 +142,7 @@ const RiderSignup = () => {
 
                 {/* Password */}
                 <div className="relative">
-                  <label className="block text-sm font-medium text-[#0A0A0A] mb-2">
+                  <label className="block text-sm font-medium text-[#0A0A0A] mb-2 mt-3">
                     Password
                   </label>
                   <input
@@ -164,7 +165,7 @@ const RiderSignup = () => {
 
                 {/* Confirm Password */}
                 <div className="relative">
-                  <label className="block text-sm font-medium text-[#0A0A0A] mb-2">
+                  <label className="block text-sm font-medium text-[#0A0A0A] mb-2 mt-3">
                     Confirm Password
                   </label>
                   <input
@@ -186,7 +187,7 @@ const RiderSignup = () => {
                 </div>
 
                 {/* Terms Checkbox */}
-                <div className="flex items-start gap-2">
+                <div className="flex items-start gap-2 mt-3">
                   <input
                     type="checkbox"
                     checked={formData.agreeToTerms}
@@ -198,6 +199,7 @@ const RiderSignup = () => {
                     I agree to the <span className="text-[#00D68F] cursor-pointer hover:underline">Terms of Service</span> and <span className="text-[#00D68F] cursor-pointer hover:underline">Privacy Policy</span>
                   </label>
                 </div>
+                </YummyText>
 
                 {/* Create Account Button */}
                 {error && (
@@ -219,9 +221,11 @@ const RiderSignup = () => {
                   <div className="absolute inset-0 flex items-center">
                     <div className="w-full border-t border-gray-300"></div>
                   </div>
+                  <YummyText>
                   <div className="relative flex justify-center text-sm">
                     <span className="px-4 bg-white text-gray-500">Or sign up with email</span>
                   </div>
+                  </YummyText>
                 </div>
 
                 {/* Google Button */}
@@ -263,7 +267,7 @@ const RiderSignup = () => {
           <div className="hidden lg:flex bg-[#1E1E1E] rounded-[50px] relative ml-2 mr-8 overflow-hidden items-end justify-center p-12">
             <div className="relative w-full h-full flex flex-col justify-end">
               {/* Rider Illustration */}
-              <div className="absolute top-1 transform -translate-x-1/2 w-full">
+              <div className="absolute top-1 left-1/2 transform -translate-x-1/2 w-[90%]">
                 <img
                   src="/despatch-man.svg"
                   alt="Become a Rider"

@@ -80,7 +80,7 @@ const CustomerLogin = () => {
   return (
     <IonPage>
       <IonContent className="ion-no-padding">
-        <div className="bg-white grid grid-cols-1 lg:grid-cols-2 mx-auto py-8 lg:py-12 px-6 gap-6">
+        <div className="bg-white grid grid-cols-1 lg:grid-cols-2 min-h-screen justify-between mx-auto py-8 lg:py-12 px-6 gap-6">
           {/* Left Side - Form */}
           <div className="flex items-center justify-center lg:pr-2 lg:pl-8">
             <div className="w-full max-w-xl">
@@ -217,20 +217,20 @@ const CustomerLogin = () => {
           </div>
 
           {/* Right Side - Image */}
-          <div className="hidden lg:flex bg-[#00B75A] rounded-[50px] relative ml-2 mr-8 overflow-hidden items-end justify-center p-12">
-            <div className="relative w-full h-full flex flex-col justify-end">
-              {/* Delivery Illustration - stretch full width */}
-              <div className="absolute top-1 left-0 right-0 w-full">
+          <div className="hidden lg:flex bg-[#00B75A] rounded-[50px] relative ml-2 mr-8 overflow-hidden items-end justify-center">
+            <div className="relative w-full h-full flex flex-col">
+              {/* Delivery Illustration - centered and reduced size */}
+              <div className="absolute top-5 left-0 right-0 w-full">
                 <img
                   src="/signin-image.svg"
                   alt="Hero on Wheels"
-                  className="w-full h-auto object-cover"
+                  className="w-full h-auto object-contain"
                 />
               </div>
 
               {/* Text Content at Bottom */}
-              <div className="relative z-10 text-white mb-6">
-                <YummyText className="text-4xl font-[300]">
+              <div className="relative z-10 text-white leading-none break ml-8 mb-8 mt-auto">
+                <YummyText className="text-3xl font-[400]">
                   Welcome Back,<br />Manage all your others <br /> with <span className="text-[#1E1E1E] font-semibold">Ease</span>
                 </YummyText>
               </div>

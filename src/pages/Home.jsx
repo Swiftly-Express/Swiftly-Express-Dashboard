@@ -96,7 +96,7 @@ const SwiftlyLanding = () => {
 
   return (
     <IonPage>
-      <IonContent className="bg-[#f5f5f5] !fullscreen">
+      <IonContent className="bg-[#f5f5f5] !fullscreen min-h-screen">
         {/* Navbar - moved inside IonContent */}
         <div className="sticky top-0 z-50 bg-white border-b border-gray-100">
           <PageWrapper className="py-3 flex items-center justify-between">
@@ -364,7 +364,7 @@ const SwiftlyLanding = () => {
         <section className="-mt-4 md:-mt-6 lg:-mt-4">
           <PageWrapper className="max-w-6xl mx-auto text-center">
             {/* Header */}
-            <div className="flex flex-col items-center mb-6 md:mb-8 lg:mb-6">g:mb-8">
+            <div className="flex flex-col items-center mb-6 md:mb-8 lg:mb-6">
               <div className="flex justify-center mt-4 md:mt-6 lg:mt-4">
                 <YummyText className="px-6 py-1.5 bg-[#A7F3D0] text-[#00B75A] rounded-full text-xs font-[400]">
                   How It Works

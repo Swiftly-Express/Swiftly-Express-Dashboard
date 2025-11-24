@@ -276,7 +276,7 @@ const CustomerSignUp = () => {
               <img 
                 src="/lady-package.svg" 
                 alt="Customer with Packages"
-                className="w-[85%] h-auto object-contain"
+                className="w-[80%] h-auto object-contain"
               />
             </div>
           </div>
