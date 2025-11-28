@@ -19,21 +19,7 @@ import "./theme/variable.css";
 import ErrorBoundary from "./components/ErrorBoundary";
 import { DeliveryProvider } from "./contexts/DeliveryContext";
 
-/* App pages */
-import Home from "./pages/Home";
-import Services from "./pages/Services";
-import Contact from "./pages/Contact";
-import HowItWorks from "./pages/HowItWorks";
-import SmartRide from "./pages/SmartRide";
-
-/* Additional pages */
-import About from "./pages/About";
-import Blog from "./pages/Blog";
-import Careers from "./pages/Careers";
-import TrackPackage from "./pages/TrackPackage";
-import PrivacyPolicy from "./pages/PrivacyPolicy";
-import TermsOfService from "./pages/TermsOfService";
-import CookiePolicy from "./pages/CookiePolicy";
+/* Public pages have been archived and removed from active routes */
 
 /* Auth pages */
 import RoleSelect from "./features/auth/pages/RoleSelect";
@@ -72,21 +58,6 @@ const App = () => (
       <IonReactRouter>
         <ErrorBoundary>
           <IonRouterOutlet>
-          <Route exact path="/home">
-            <Home />
-          </Route>
-        <Route exact path="/services">
-          <Services />
-        </Route>
-        <Route exact path="/how-it-works">
-          <HowItWorks />
-        </Route>
-        <Route exact path="/smart-ride">
-          <SmartRide />
-        </Route>
-        <Route exact path="/contact">
-          <Contact />
-        </Route>
 
         {/* Auth Routes */}
         <Route exact path="/auth/role-select">
@@ -162,34 +133,13 @@ const App = () => (
           <AdminDashboard />
         </Route>
 
-        {/* Additional Routes */}
-        <Route exact path="/about">
-          <About />
-        </Route>
-        <Route exact path="/blog">
-          <Blog />
-        </Route>
-        <Route exact path="/careers">
-          <Careers />
-        </Route>
-        <Route exact path="/track-package">
-          <TrackPackage />
-        </Route>
-        <Route exact path="/privacy-policy">
-          <PrivacyPolicy />
-        </Route>
-        <Route exact path="/terms-of-service">
-          <TermsOfService />
-        </Route>
-        <Route exact path="/cookie-policy">
-          <CookiePolicy />
-        </Route>
+        {/* Public page routes removed — archived */}
         <Route exact path="/forgot-password">
           <ForgotPassword />
         </Route>
 
         <Route exact path="/">
-          <Redirect to="/home" />
+          <Redirect to="/customer/dashboard" />
         </Route>
         </IonRouterOutlet>
       </ErrorBoundary>
