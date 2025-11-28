@@ -139,7 +139,7 @@ const App = () => (
         </Route>
 
         <Route exact path="/">
-          <Redirect to="/customer/dashboard" />
+          <Redirect to="/auth/role-select" />
         </Route>
         </IonRouterOutlet>
       </ErrorBoundary>
