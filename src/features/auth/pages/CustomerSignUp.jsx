@@ -3,6 +3,7 @@ import React, { useState } from 'react';
 import { IonIcon } from '@ionic/react';
 import { YummyText } from '../../../components/YummyText';
 import Button from '../../../components/Button';
+import { registerCustomer } from '../../../utils/authApi';
 import { eyeOutline, eyeOffOutline } from 'ionicons/icons';
 
 const CustomerSignUp = () => {
@@ -16,60 +17,92 @@ const CustomerSignUp = () => {
   });
   const [error, setError] = useState('');
 
-  const handleSubmit = (e) => {
+  const [loading, setLoading] = useState(false);
+
+  const handleSubmit = async (e) => {
     e.preventDefault();
     setError('');
 
-    // Basic validation
-    if (!formData.fullName || !formData.email || !formData.phone || !formData.password || !formData.confirmPassword) {
-      setError('Please fill in all fields');
+    // Trim and normalize inputs
+    const fullName = (formData.fullName || '').toString().trim();
+    const emailVal = (formData.email || '').toString().trim();
+    const phoneVal = (formData.phone || '').toString().trim();
+    const passwordVal = (formData.password || '').toString();
+    const confirmVal = (formData.confirmPassword || '').toString();
+
+    if (!fullName) {
+      setError('Please enter your full name');
+      return;
+    }
+    if (!emailVal) {
+      setError('Please enter your email address');
+      return;
+    }
+    if (!phoneVal) {
+      setError('Please enter your phone number');
+      return;
+    }
+    if (!passwordVal) {
+      setError('Please enter a password');
+      return;
+    }
+    if (!confirmVal) {
+      setError('Please confirm your password');
       return;
     }
 
-    // Email validation
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    if (!emailRegex.test(formData.email)) {
+    if (!emailRegex.test(emailVal)) {
       setError('Please enter a valid email address');
       return;
     }
 
-    // Phone validation
+    // Phone validation: normalize then test
+    const normalizedPhone = phoneVal.replace(/[^\d+]/g, '');
     const phoneRegex = /^\+?[1-9]\d{9,14}$/;
-    if (!phoneRegex.test(formData.phone.replace(/[^\d+]/g, ''))) {
-      setError('Please enter a valid phone number');
+    if (!phoneRegex.test(normalizedPhone)) {
+      setError('Please enter a valid phone number (include country code)');
       return;
     }
 
-    // Password validation
-    if (formData.password.length < 8) {
+    if (passwordVal.length < 8) {
       setError('Password must be at least 8 characters long');
       return;
     }
 
-    // Password match validation
-    if (formData.password !== formData.confirmPassword) {
+    if (passwordVal !== confirmVal) {
       setError('Passwords do not match');
       return;
     }
 
     try {
-      // Simulated API call
-      // In a real app, you would make a POST request to your registration endpoint
-      
+      setLoading(true);
+
+      const payload = {
+        fullName,
+        email: emailVal,
+        phone: normalizedPhone,
+        password: passwordVal
+      };
+
+      await registerCustomer(payload);
+
       // Store pending verification data
-      localStorage.setItem('pendingVerificationEmail', formData.email);
+      localStorage.setItem('pendingVerificationEmail', emailVal);
       localStorage.setItem('pendingVerificationType', 'customer');
       localStorage.setItem('pendingUserData', JSON.stringify({
-        fullName: formData.fullName,
-        email: formData.email,
-        phone: formData.phone
+        fullName,
+        email: emailVal,
+        phone: normalizedPhone
       }));
 
-      // Redirect to email verification page
       if (document && document.activeElement) document.activeElement.blur();
       router.push('/auth/verify-email', 'forward', 'push');
-    } catch (error) {
-      setError('Registration failed. Please try again.');
+    } catch (err) {
+      console.error('Customer registration failed', err);
+      setError(err?.message || 'Registration failed. Please try again.');
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -136,9 +169,23 @@ const CustomerSignUp = () => {
                   />
                 </div>
 
+                {/* Phone Number */}
+                <div>
+                  <label className="block text-sm font-medium text-[#0A0A0A] mb-2 mt-3">
+                    Phone Number
+                  </label>
+                  <input
+                    type="tel"
+                    value={formData.phone}
+                    onChange={(e) => handleChange('phone', e.target.value)}
+                    placeholder="+2348012345678"
+                    className="w-full px-4 py-3 bg-[#F3F4F6] rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-green-500 placeholder-[#717182]"
+                  />
+                </div>
+
                 {/* Password */}
                 <div className="relative">
-                  <label className="block text-sm font-medium text-[#0A0A0A] mb-2">
+                  <label className="block text-sm font-medium text-[#0A0A0A] mb-2 mt-3">
                     Password
                   </label>
                   <input

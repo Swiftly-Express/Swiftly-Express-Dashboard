@@ -3,6 +3,7 @@ import React, { useState } from 'react';
 import { eyeOutline, eyeOffOutline } from 'ionicons/icons';
 import { YummyText } from '../../../components/YummyText';
 import Button from '../../../components/Button';
+import { registerRider } from '../../../utils/authApi';
 
 const RiderSignup = () => {
   const router = useIonRouter();
@@ -18,8 +19,9 @@ const RiderSignup = () => {
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
 
-  const handleSubmit = () => {
-    // Reset error
+  const [loading, setLoading] = useState(false);
+
+  const handleSubmit = async () => {
     setError('');
 
     // Basic validation
@@ -54,12 +56,15 @@ const RiderSignup = () => {
     }
 
     try {
-      // Simulated API call for signup
-      // In a real app, you would:
-      // 1. Make a POST request to your registration endpoint
-      // 2. Get back a token and user data
-      // 3. Store the token in localStorage/sessionStorage
-      // 4. Store user data in app state/context
+      setLoading(true);
+
+      const payload = {
+        fullName: formData.fullName,
+        email: formData.email,
+        password: formData.password
+      };
+
+      await registerRider(payload);
 
       // Store pending verification data
       localStorage.setItem('pendingVerificationEmail', formData.email);
@@ -71,11 +76,13 @@ const RiderSignup = () => {
         vehicleType: formData.vehicleType
       }));
 
-      // Redirect to email verification page
       if (document && document.activeElement) document.activeElement.blur();
       router.push('/auth/verify-email', 'forward', 'push');
-    } catch (error) {
-      setError('Registration failed. Please try again.');
+    } catch (err) {
+      console.error('Rider registration failed', err);
+      setError(err?.message || 'Registration failed. Please try again.');
+    } finally {
+      setLoading(false);
     }
   };
 

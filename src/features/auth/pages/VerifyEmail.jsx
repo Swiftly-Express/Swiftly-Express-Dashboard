@@ -3,6 +3,7 @@ import { IonContent, IonPage, IonIcon } from '@ionic/react';
 import { useIonRouter } from '@ionic/react';
 import { alertCircleOutline } from 'ionicons/icons';
 import { YummyText } from '../../../components/YummyText';
+import { verifyEmail, resendVerification } from '../../../utils/authApi';
 
 const VerifyEmail = () => {
   const router = useIonRouter();
@@ -72,11 +73,9 @@ const VerifyEmail = () => {
     }
 
     setIsVerifying(true);
+    try {
+      await verifyEmail({ email, code: otpCode });
 
-    // Simulate API call
-    setTimeout(() => {
-      setIsVerifying(false);
-      
       // Clear pending verification data
       localStorage.removeItem('pendingVerificationEmail');
       localStorage.removeItem('pendingVerificationType');
@@ -95,7 +94,12 @@ const VerifyEmail = () => {
       }
 
       alert('Email verified successfully!');
-    }, 2000);
+    } catch (err) {
+      console.error('Verification failed', err);
+      alert(err?.message || 'Verification failed. Please try again.');
+    } finally {
+      setIsVerifying(false);
+    }
   };
 
   // Handle resend OTP
@@ -103,15 +107,18 @@ const VerifyEmail = () => {
     if (countdown > 0) return;
 
     setIsResending(true);
-
-    // Simulate API call
-    setTimeout(() => {
-      setIsResending(false);
+    try {
+      await resendVerification({ email });
       setCountdown(60);
       setOtp(['', '', '', '', '', '']);
       inputRefs.current[0]?.focus();
       alert('A new verification code has been sent to your email');
-    }, 1500);
+    } catch (err) {
+      console.error('Resend failed', err);
+      alert(err?.message || 'Failed to resend verification code.');
+    } finally {
+      setIsResending(false);
+    }
   };
 
   return (
