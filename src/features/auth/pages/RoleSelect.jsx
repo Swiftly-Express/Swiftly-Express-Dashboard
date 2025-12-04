@@ -11,6 +11,7 @@ const RoleSelect = () => {
     if (document && document.activeElement) document.activeElement.blur();
     router.push('/auth/rider/signup', 'forward', 'push');
   };
+  
 
   const handleCustomerSignup = () => {
     if (document && document.activeElement) document.activeElement.blur();
