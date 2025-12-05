@@ -1,7 +1,10 @@
 // Reusable auth API helpers
 
-const BASE_URL = 'https://api.swiftlyxpress.com';
-const DASHBOARD_REGISTER = 'https://api.swiftlyxpress.com/api/auth/register';
+// In development use relative paths so the Vite dev proxy handles CORS.
+// In production use the full API host.
+const BASE_URL = (typeof import.meta !== 'undefined' && import.meta.env && import.meta.env.DEV)
+  ? ''
+  : 'https://api.swiftlyxpress.com';
 
 async function handleResponse(res) {
   const contentType = res.headers.get('content-type') || '';
