@@ -1,4 +1,5 @@
 import React from 'react';
+import { logout as apiLogout } from '../../../utils/authApi';
 import { useLocation } from 'react-router-dom';
 import { useIonRouter } from '@ionic/react';
 
@@ -32,10 +33,20 @@ const AdminSidebar = () => {
   const router = useIonRouter();
 
   const handleLogout = () => {
-    localStorage.removeItem('auth_token');
-    localStorage.removeItem('user_type');
-    localStorage.removeItem('user_data');
-    router.push('/auth/role-select', 'back', 'pop');
+    (async () => {
+      try {
+        const refreshToken = localStorage.getItem('refresh_token') || '';
+        if (refreshToken) await apiLogout({ refreshToken });
+      } catch (err) {
+        console.error('Logout API failed', err);
+      } finally {
+        localStorage.removeItem('auth_token');
+        localStorage.removeItem('refresh_token');
+        localStorage.removeItem('user_type');
+        localStorage.removeItem('user_data');
+        router.push('/auth/admin/login', 'back', 'pop');
+      }
+    })();
   };
 
   const menuItems = [

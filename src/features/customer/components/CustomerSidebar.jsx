@@ -1,6 +1,7 @@
 import { useLocation } from 'react-router-dom';
 import { useIonRouter } from '@ionic/react';
 import { YummyText } from '../../../components/YummyText';
+import { logout as apiLogout } from '../../../utils/authApi';
 import React from 'react';
 
 const SidebarButton = ({ to, active, icon, label, count }) => {
@@ -35,11 +36,21 @@ const CustomerSidebar = () => {
   const router = useIonRouter();
 
   const handleLogout = () => {
-    localStorage.removeItem('auth_token');
-    localStorage.removeItem('user_type');
-    localStorage.removeItem('user_data');
-    if (document && document.activeElement) document.activeElement.blur();
-    router.push('/auth/role-select', 'back', 'pop');
+    (async () => {
+      try {
+        const refreshToken = localStorage.getItem('refresh_token') || '';
+        if (refreshToken) await apiLogout({ refreshToken });
+      } catch (err) {
+        console.error('Logout API failed', err);
+      } finally {
+        localStorage.removeItem('auth_token');
+        localStorage.removeItem('refresh_token');
+        localStorage.removeItem('user_type');
+        localStorage.removeItem('user_data');
+        if (document && document.activeElement) document.activeElement.blur();
+        router.push('/auth/customer/login', 'back', 'pop');
+      }
+    })();
   };
 
   const menuItems = [

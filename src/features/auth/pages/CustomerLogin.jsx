@@ -36,11 +36,13 @@ const CustomerLogin = () => {
       // Call backend login
       const res = await login({ email: formData.email.trim(), password: formData.password });
 
-      // Backend may return token in different shapes; handle common cases
+      // Backend may return token and refresh token in different shapes; handle common cases
       const token = res?.token || res?.data?.token || res?.accessToken || res?.data?.accessToken;
+      const refresh = res?.refreshToken || res?.data?.refreshToken || res?.refresh_token || res?.data?.refresh_token;
       const user = res?.user || res?.data?.user || res?.data || null;
 
       if (token) localStorage.setItem('auth_token', token);
+      if (refresh) localStorage.setItem('refresh_token', refresh);
       if (user) localStorage.setItem('user_data', JSON.stringify(user));
       localStorage.setItem('user_type', 'customer');
 

@@ -111,9 +111,98 @@ export async function login(payload) {
   return handleResponse(res);
 }
 
+/**
+ * Refresh access token using a refresh token
+ * Expects payload: { refreshToken: string }
+ */
+export async function refreshToken(payload) {
+  const url = `${BASE_URL}/api/auth/refresh`;
+  const res = await fetch(url, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      Accept: 'application/json'
+    },
+    body: JSON.stringify(payload)
+  });
+  return handleResponse(res);
+}
+
+/**
+ * Get current authenticated user (requires Authorization header)
+ * If `token` is omitted the helper will try to read `auth_token` from localStorage.
+ */
+export async function getCurrentUser(token) {
+  const url = `${BASE_URL}/api/auth/me`;
+  const headers = { Accept: 'application/json' };
+  const t = token || (typeof window !== 'undefined' && localStorage.getItem('auth_token'));
+  if (t) headers.Authorization = `Bearer ${t}`;
+
+  const res = await fetch(url, { method: 'GET', headers });
+  return handleResponse(res);
+}
+
+/**
+ * Logout by revoking refresh token on the server
+ * Expects payload: { refreshToken }
+ */
+export async function logout(payload) {
+  const url = `${BASE_URL}/api/auth/logout`;
+  const res = await fetch(url, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      Accept: 'application/json'
+    },
+    body: JSON.stringify(payload)
+  });
+  return handleResponse(res);
+}
+
+/**
+ * Request a password reset code/email
+ * Expects payload: { email }
+ */
+export async function forgotPassword(payload) {
+  const url = `${BASE_URL}/api/auth/forgot-password`;
+  const res = await fetch(url, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      Accept: 'application/json'
+    },
+    body: JSON.stringify(payload)
+  });
+  return handleResponse(res);
+}
+
+/**
+ * Reset password using token from email
+ * Expects payload: { token, password, confirmPassword }
+ */
+export async function resetPassword(payload) {
+  const url = `${BASE_URL}/api/auth/reset-password`;
+  const res = await fetch(url, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      Accept: 'application/json'
+    },
+    body: JSON.stringify(payload)
+  });
+  return handleResponse(res);
+}
+
 export default {
   registerRider,
   registerCustomer,
   verifyEmail,
-  resendVerification
+  resendVerification,
+  login,
+  refreshToken
+  ,
+  forgotPassword,
+  resetPassword,
+  getCurrentUser,
+  logout
 };

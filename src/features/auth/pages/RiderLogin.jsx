@@ -38,9 +38,11 @@ const RiderSignIn = () => {
       const res = await login({ email: formData.email.trim(), password: formData.password });
 
       const token = res?.token || res?.data?.token || res?.accessToken || res?.data?.accessToken;
+      const refresh = res?.refreshToken || res?.data?.refreshToken || res?.refresh_token || res?.data?.refresh_token;
       const user = res?.user || res?.data?.user || res?.data || null;
 
       if (token) localStorage.setItem('auth_token', token);
+      if (refresh) localStorage.setItem('refresh_token', refresh);
       if (user) localStorage.setItem('user_data', JSON.stringify(user));
       // app expects 'rider' in other places
       localStorage.setItem('user_type', 'rider');
