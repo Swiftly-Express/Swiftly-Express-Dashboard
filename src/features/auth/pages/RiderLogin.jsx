@@ -4,6 +4,7 @@ import { eyeOutline, eyeOffOutline } from 'ionicons/icons';
 import { YummyText } from '../../../components/YummyText';
 import Button from '../../../components/Button';
 import { useHistory } from 'react-router-dom';
+import { login } from '../../../utils/authApi';
 
 const RiderSignIn = () => {
   const history = useHistory();
@@ -16,7 +17,7 @@ const RiderSignIn = () => {
   const [error, setError] = useState('');
   const [showPassword, setShowPassword] = useState(false);
 
-  const handleSubmit = () => {
+  const handleSubmit = async () => {
     // Reset error
     setError('');
 
@@ -33,30 +34,22 @@ const RiderSignIn = () => {
       return;
     }
 
-    // Here you would typically make an API call to authenticate the user
-    // For now, we'll simulate a successful login
     try {
-      // Simulated API call
-      // In a real app, you would:
-      // 1. Make a POST request to your auth endpoint
-      // 2. Get back a token and user data
-      // 3. Store the token in localStorage/sessionStorage
-      // 4. Store user data in app state/context
-      
-      // Simulate storing auth token
-      localStorage.setItem('auth_token', 'rider_token_123');
-      localStorage.setItem('user_type', 'rider');
-      localStorage.setItem('user_data', JSON.stringify({
-        id: '123',
-        email: formData.email,
-        type: 'rider'
-      }));
+      const res = await login({ email: formData.email.trim(), password: formData.password });
 
-  // Redirect to rider dashboard
-  if (document && document.activeElement) document.activeElement.blur();
-  history.push('/rider/dashboard');
-    } catch (error) {
-      setError('Login failed. Please try again.');
+      const token = res?.token || res?.data?.token || res?.accessToken || res?.data?.accessToken;
+      const user = res?.user || res?.data?.user || res?.data || null;
+
+      if (token) localStorage.setItem('auth_token', token);
+      if (user) localStorage.setItem('user_data', JSON.stringify(user));
+      // app expects 'rider' in other places
+      localStorage.setItem('user_type', 'rider');
+
+      if (document && document.activeElement) document.activeElement.blur();
+      history.push('/rider/dashboard');
+    } catch (err) {
+      console.error('Rider login failed', err);
+      setError(err?.message || 'Login failed. Please try again.');
     }
   };
 

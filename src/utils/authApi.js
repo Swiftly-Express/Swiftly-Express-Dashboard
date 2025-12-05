@@ -28,7 +28,9 @@ async function handleResponse(res) {
  * @param {{fullName:string, email:string, password:string, role?:string}} payload
  */
 export async function registerRider(payload) {
-  const url = `${BASE_URL}/api/auth/rider/register`;
+
+  // Use the main register endpoint for both customers and riders/drivers
+  const url = `${BASE_URL}/api/auth/register`;
 
   const res = await fetch(url, {
     method: 'POST',
@@ -36,7 +38,7 @@ export async function registerRider(payload) {
       'Content-Type': 'application/json',
       Accept: 'application/json'
     },
-    body: JSON.stringify({ ...payload, role: payload.role || 'rider' })
+    body: JSON.stringify({ ...payload, role: payload.role || 'driver' })
   });
 
   return handleResponse(res);
@@ -65,7 +67,8 @@ export async function registerCustomer(payload) {
  * Verify email (expects { email, code } or { token })
  */
 export async function verifyEmail(payload) {
-  const url = `${BASE_URL}/api/auth/verify-email`;
+  // Backend expects POST to /api/auth/verify-email/ with body { code: '123456' }
+  const url = `${BASE_URL}/api/auth/verify-email/`;
   const res = await fetch(url, {
     method: 'POST',
     headers: {
@@ -79,6 +82,24 @@ export async function verifyEmail(payload) {
 
 export async function resendVerification(payload) {
   const url = `${BASE_URL}/api/auth/resend-verification/`;
+  const res = await fetch(url, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      Accept: 'application/json'
+    },
+    body: JSON.stringify(payload)
+  });
+  return handleResponse(res);
+}
+
+/**
+ * Login (customer or driver)
+ * Expects payload: { email, password }
+ * Returns whatever the backend returns (commonly a token + user data)
+ */
+export async function login(payload) {
+  const url = `${BASE_URL}/api/auth/login`;
   const res = await fetch(url, {
     method: 'POST',
     headers: {

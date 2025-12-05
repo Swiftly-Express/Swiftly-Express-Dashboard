@@ -3,6 +3,7 @@ import React, { useState } from 'react';
 import { eyeOutline, eyeOffOutline } from 'ionicons/icons';
 import { YummyText } from '../../../components/YummyText';
 import Button from '../../../components/Button';
+import { login } from '../../../utils/authApi';
 
 const CustomerLogin = () => {
   const router = useIonRouter();
@@ -13,7 +14,7 @@ const CustomerLogin = () => {
   const [error, setError] = useState('');
   const [showPassword, setShowPassword] = useState(false);
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
     setError('');
 
@@ -31,23 +32,24 @@ const CustomerLogin = () => {
     }
 
     try {
-      // Simulated API call
-      // In a real app, you would make a POST request to your auth endpoint
-      
-      // Store auth data
-      localStorage.setItem('auth_token', 'customer_token_123');
-      localStorage.setItem('user_type', 'customer');
-      localStorage.setItem('user_data', JSON.stringify({
-        id: '123',
-        email: formData.email,
-        type: 'customer'
-      }));
+      setError('');
+      // Call backend login
+      const res = await login({ email: formData.email.trim(), password: formData.password });
 
-  // Redirect to customer dashboard
-  if (document && document.activeElement) document.activeElement.blur();
-  router.push('/customer/dashboard', 'forward', 'push');
-    } catch (error) {
-      setError('Login failed. Please try again.');
+      // Backend may return token in different shapes; handle common cases
+      const token = res?.token || res?.data?.token || res?.accessToken || res?.data?.accessToken;
+      const user = res?.user || res?.data?.user || res?.data || null;
+
+      if (token) localStorage.setItem('auth_token', token);
+      if (user) localStorage.setItem('user_data', JSON.stringify(user));
+      localStorage.setItem('user_type', 'customer');
+
+      // Redirect to customer dashboard
+      if (document && document.activeElement) document.activeElement.blur();
+      router.push('/customer/dashboard', 'forward', 'push');
+    } catch (err) {
+      console.error('Login error', err);
+      setError(err?.message || 'Login failed. Please try again.');
     }
   };
 

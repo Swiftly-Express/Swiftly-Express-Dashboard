@@ -74,7 +74,8 @@ const VerifyEmail = () => {
 
     setIsVerifying(true);
     try {
-      await verifyEmail({ email, code: otpCode });
+      // Backend expects payload: { code: '123456' }
+      await verifyEmail({ code: otpCode });
 
       // Clear pending verification data
       localStorage.removeItem('pendingVerificationEmail');
