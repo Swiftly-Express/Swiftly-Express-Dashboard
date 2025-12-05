@@ -5,21 +5,8 @@ import react from '@vitejs/plugin-react'
 export default defineConfig({
   plugins: [react()],
   server: {
-    // match Ionic's default dev origin (localhost:8100) so requests originate
-    // from the same origin while developing. Adjust if you run a different port.
-    port: 8100,
-    open: true,
-    // Dev proxy to avoid CORS when calling the production API during local development.
-    // Requests starting with /api will be forwarded to the production API host.
-    proxy: {
-      '/api': {
-        target: 'https://api.swiftlyxpress.com',
-        changeOrigin: true,
-        secure: true,
-        // keep the path as-is; adjust rewrite if your backend expects a different base
-        rewrite: (path) => path
-      }
-    }
+    port: 3000,
+    open: true
   },
   build: {
     outDir: 'dist',
