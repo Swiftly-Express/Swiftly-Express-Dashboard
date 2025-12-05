@@ -208,7 +208,7 @@ const CustomerSignUp = () => {
 
                 {/* Confirm Password */}
                 <div className="relative">
-                  <label className="block text-sm font-medium text-[#0A0A0A] mb-2">
+                  <label className="block text-sm font-medium text-[#0A0A0A] mb-2 mt-3">
                     Confirm Password
                   </label>
                   <input
