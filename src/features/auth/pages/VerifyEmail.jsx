@@ -16,6 +16,7 @@ const VerifyEmail = () => {
   // Get email and user type from navigation state or localStorage
   const email = localStorage.getItem('pendingVerificationEmail') || 'user@email.com';
   const userType = localStorage.getItem('pendingVerificationType') || 'customer';
+  const pendingVerificationUserId = localStorage.getItem('pendingVerificationUserId') || null;
 
   // Countdown timer for resend button
   useEffect(() => {
@@ -50,8 +51,8 @@ const VerifyEmail = () => {
   // Handle paste
   const handlePaste = (e) => {
     e.preventDefault();
-    const pastedData = e.clipboardData.getData('text').slice(0, 6);
-    if (!/^\d+$/.test(pastedData)) return;
+    const pastedData = e.clipboardData.getData('text').replace(/\D/g, '').slice(0, 6);
+    if (!pastedData) return;
 
     const newOtp = [...otp];
     pastedData.split('').forEach((char, index) => {
@@ -59,7 +60,7 @@ const VerifyEmail = () => {
     });
     setOtp(newOtp);
 
-    // Focus the next empty input or the last input
+    // Focus the last filled input or the next empty one
     const nextIndex = Math.min(pastedData.length, 5);
     inputRefs.current[nextIndex]?.focus();
   };
@@ -75,11 +76,13 @@ const VerifyEmail = () => {
     setIsVerifying(true);
     try {
       // Backend expects payload: { code: '123456' }
-      await verifyEmail({ code: otpCode });
+      // Pass pendingVerificationUserId when available so backend can identify the user
+      await verifyEmail({ code: otpCode, userId: pendingVerificationUserId });
 
       // Clear pending verification data
       localStorage.removeItem('pendingVerificationEmail');
       localStorage.removeItem('pendingVerificationType');
+      localStorage.removeItem('pendingVerificationUserId');
 
       // For riders, mark email as verified but account verification still pending
       if (userType === 'rider') {
@@ -88,10 +91,10 @@ const VerifyEmail = () => {
       }
 
       // Redirect based on user type
-      if (userType === 'rider') {
+      if (userType === 'rider' || userType === 'driver') {
         router.push('/rider/dashboard', 'root', 'replace');
       } else {
-        router.push('/customer/home', 'root', 'replace');
+        router.push('/customer/dashboard', 'root', 'replace');
       }
 
       alert('Email verified successfully!');
@@ -109,7 +112,8 @@ const VerifyEmail = () => {
 
     setIsResending(true);
     try {
-      await resendVerification({ email });
+      // Include userId if available to support backend routes that expect it
+      await resendVerification({ email, userId: pendingVerificationUserId });
       setCountdown(60);
       setOtp(['', '', '', '', '', '']);
       inputRefs.current[0]?.focus();

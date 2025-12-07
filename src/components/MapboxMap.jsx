@@ -1,4 +1,5 @@
 import React, { useRef, useEffect } from 'react';
+import axios from 'axios';
 import mapboxgl from 'mapbox-gl';
 import 'mapbox-gl/dist/mapbox-gl.css';
 
@@ -123,8 +124,8 @@ const MapboxMap = ({
     const url = `https://api.mapbox.com/directions/v5/mapbox/driving/${start[0]},${start[1]};${end[0]},${end[1]}?geometries=geojson&access_token=${MAPBOX_TOKEN}`;
 
     try {
-      const res = await fetch(url);
-      const data = await res.json();
+      const res = await axios.get(url);
+      const data = res.data;
 
       if (data.routes && data.routes.length > 0) {
         const route = data.routes[0].geometry.coordinates;

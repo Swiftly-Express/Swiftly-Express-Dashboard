@@ -26,7 +26,6 @@ const CustomerSignUp = () => {
     // Trim and normalize inputs
     const fullName = (formData.fullName || '').toString().trim();
     const emailVal = (formData.email || '').toString().trim();
-    const phoneVal = (formData.phone || '').toString().trim();
     const passwordVal = (formData.password || '').toString();
     const confirmVal = (formData.confirmPassword || '').toString();
 
@@ -36,10 +35,6 @@ const CustomerSignUp = () => {
     }
     if (!emailVal) {
       setError('Please enter your email address');
-      return;
-    }
-    if (!phoneVal) {
-      setError('Please enter your phone number');
       return;
     }
     if (!passwordVal) {
@@ -54,14 +49,6 @@ const CustomerSignUp = () => {
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
     if (!emailRegex.test(emailVal)) {
       setError('Please enter a valid email address');
-      return;
-    }
-
-    // Phone validation: normalize then test
-    const normalizedPhone = phoneVal.replace(/[^\d+]/g, '');
-    const phoneRegex = /^\+?[1-9]\d{9,14}$/;
-    if (!phoneRegex.test(normalizedPhone)) {
-      setError('Please enter a valid phone number (include country code)');
       return;
     }
 
@@ -81,20 +68,28 @@ const CustomerSignUp = () => {
       const payload = {
         fullName,
         email: emailVal,
-        phone: normalizedPhone,
-        password: passwordVal
+        password: passwordVal,
+        confirmPassword: confirmVal,
+        role: 'customer'
       };
 
-      await registerCustomer(payload);
+      const res = await registerCustomer(payload);
 
       // Store pending verification data
       localStorage.setItem('pendingVerificationEmail', emailVal);
       localStorage.setItem('pendingVerificationType', 'customer');
       localStorage.setItem('pendingUserData', JSON.stringify({
         fullName,
-        email: emailVal,
-        phone: normalizedPhone
+        email: emailVal
       }));
+
+      // If backend returned a user id, store it for verify/resend endpoints
+      try {
+        const returnedId = res?.data?.userId || res?.data?.id || res?.data?._id || res?.user?.id || res?.userId || res?.id;
+        if (returnedId) localStorage.setItem('pendingVerificationUserId', returnedId);
+      } catch (e) {
+        // ignore
+      }
 
       if (document && document.activeElement) document.activeElement.blur();
       router.push('/auth/verify-email', 'forward', 'push');
@@ -165,20 +160,6 @@ const CustomerSignUp = () => {
                     value={formData.email}
                     onChange={(e) => handleChange('email', e.target.value)}
                     placeholder="you@example.com"
-                    className="w-full px-4 py-3 bg-[#F3F4F6] rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-green-500 placeholder-[#717182]"
-                  />
-                </div>
-
-                {/* Phone Number */}
-                <div>
-                  <label className="block text-sm font-medium text-[#0A0A0A] mb-2 mt-3">
-                    Phone Number
-                  </label>
-                  <input
-                    type="tel"
-                    value={formData.phone}
-                    onChange={(e) => handleChange('phone', e.target.value)}
-                    placeholder="+2348012345678"
                     className="w-full px-4 py-3 bg-[#F3F4F6] rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-green-500 placeholder-[#717182]"
                   />
                 </div>

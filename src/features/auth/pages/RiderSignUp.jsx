@@ -61,10 +61,11 @@ const RiderSignup = () => {
       const payload = {
         fullName: formData.fullName,
         email: formData.email,
-        password: formData.password
+        password: formData.password,
+        confirmPassword: formData.confirmPassword
       };
 
-      await registerRider(payload);
+      const res = await registerRider(payload);
 
       // Store pending verification data
       localStorage.setItem('pendingVerificationEmail', formData.email);
@@ -75,6 +76,14 @@ const RiderSignup = () => {
         phone: formData.phone,
         vehicleType: formData.vehicleType
       }));
+
+      // If backend returned a user id, store it for verify/resend endpoints
+      try {
+        const returnedId = res?.data?.userId || res?.data?.id || res?.data?._id || res?.user?.id || res?.userId || res?.id;
+        if (returnedId) localStorage.setItem('pendingVerificationUserId', returnedId);
+      } catch (e) {
+        // ignore
+      }
 
       if (document && document.activeElement) document.activeElement.blur();
       router.push('/auth/verify-email', 'forward', 'push');

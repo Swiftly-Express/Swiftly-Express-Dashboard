@@ -1,95 +1,77 @@
-// Reusable auth API helpers
+// Reusable auth API helpers using Axios
+import axios from 'axios';
 
 const BASE_URL = 'https://api.swiftlyxpress.com';
 
-async function handleResponse(res) {
-  const contentType = res.headers.get('content-type') || '';
-  let data;
-  if (contentType.includes('application/json')) {
-    data = await res.json();
-  } else {
-    data = await res.text();
+// Create an axios instance with default config
+const apiClient = axios.create({
+  baseURL: BASE_URL,
+  headers: {
+    'Content-Type': 'application/json',
+    Accept: 'application/json'
   }
+});
 
-  if (!res.ok) {
-    const message = (data && data.message) || data || res.statusText || 'Request failed';
-    const error = new Error(message);
-    error.status = res.status;
-    error.data = data;
-    throw error;
+// Response interceptor to handle errors uniformly
+apiClient.interceptors.response.use(
+  (response) => response.data,
+  (error) => {
+    const message =
+      error.response?.data?.message ||
+      error.response?.data ||
+      error.message ||
+      'Request failed';
+    
+    const customError = new Error(message);
+    customError.status = error.response?.status;
+    customError.data = error.response?.data;
+    
+    throw customError;
   }
-
-  return data;
-}
+);
 
 /**
  * Register a rider
  * @param {{fullName:string, email:string, password:string, role?:string}} payload
  */
 export async function registerRider(payload) {
-
-  // Use the main register endpoint for both customers and riders/drivers
-  const url = `${BASE_URL}/api/auth/register`;
-
-  const res = await fetch(url, {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      Accept: 'application/json'
-    },
-    body: JSON.stringify({ ...payload, role: payload.role || 'driver' })
+  return apiClient.post('/api/auth/register', {
+    ...payload,
+    role: payload.role || 'driver'
   });
-
-  return handleResponse(res);
 }
 
 /**
- * Register a customer (dashboard subdomain endpoint)
+ * Register a customer
  * @param {{fullName:string,email:string,phone:string,password:string,role?:string}} payload
  */
 export async function registerCustomer(payload) {
-  // Use the production API register endpoint. (Previously used localhost for testing.)
-  const REGISTER_URL = `${BASE_URL}/api/auth/register`;
-
-  const res = await fetch(REGISTER_URL, {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      Accept: 'application/json'
-    },
-    body: JSON.stringify({ ...payload, role: payload.role || 'customer' })
+  return apiClient.post('/api/auth/register', {
+    ...payload,
+    role: payload.role || 'customer'
   });
-  return handleResponse(res);
 }
 
 /**
- * Verify email (expects { email, code } or { token })
+ * Verify email (expects { userId, code })
  */
 export async function verifyEmail(payload) {
-  // Backend expects POST to /api/auth/verify-email/ with body { code: '123456' }
-  const url = `${BASE_URL}/api/auth/verify-email/`;
-  const res = await fetch(url, {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      Accept: 'application/json'
-    },
-    body: JSON.stringify(payload)
-  });
-  return handleResponse(res);
+  const { userId, ...body } = payload;
+  if (!userId) {
+    throw new Error('userId is required for email verification');
+  }
+  return apiClient.post(`/api/auth/verify-email/${userId}`, body);
 }
 
+/**
+ * Resend verification code (expects { userId })
+ */
 export async function resendVerification(payload) {
-  const url = `${BASE_URL}/api/auth/resend-verification/`;
-  const res = await fetch(url, {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      Accept: 'application/json'
-    },
-    body: JSON.stringify(payload)
-  });
-  return handleResponse(res);
+  const { userId, ...body } = payload;
+  if (!userId) {
+    throw new Error('userId is required for resend verification');
+  }
+  return apiClient.post(`/api/auth/resend-verification/${userId}`, body);
 }
 
 /**
@@ -98,16 +80,7 @@ export async function resendVerification(payload) {
  * Returns whatever the backend returns (commonly a token + user data)
  */
 export async function login(payload) {
-  const url = `${BASE_URL}/api/auth/login`;
-  const res = await fetch(url, {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      Accept: 'application/json'
-    },
-    body: JSON.stringify(payload)
-  });
-  return handleResponse(res);
+  return apiClient.post('/api/auth/login', payload);
 }
 
 /**
@@ -115,16 +88,7 @@ export async function login(payload) {
  * Expects payload: { refreshToken: string }
  */
 export async function refreshToken(payload) {
-  const url = `${BASE_URL}/api/auth/refresh`;
-  const res = await fetch(url, {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      Accept: 'application/json'
-    },
-    body: JSON.stringify(payload)
-  });
-  return handleResponse(res);
+  return apiClient.post('/api/auth/refresh', payload);
 }
 
 /**
@@ -132,13 +96,11 @@ export async function refreshToken(payload) {
  * If `token` is omitted the helper will try to read `auth_token` from localStorage.
  */
 export async function getCurrentUser(token) {
-  const url = `${BASE_URL}/api/auth/me`;
-  const headers = { Accept: 'application/json' };
   const t = token || (typeof window !== 'undefined' && localStorage.getItem('auth_token'));
-  if (t) headers.Authorization = `Bearer ${t}`;
-
-  const res = await fetch(url, { method: 'GET', headers });
-  return handleResponse(res);
+  
+  return apiClient.get('/api/auth/me', {
+    headers: t ? { Authorization: `Bearer ${t}` } : {}
+  });
 }
 
 /**
@@ -146,16 +108,7 @@ export async function getCurrentUser(token) {
  * Expects payload: { refreshToken }
  */
 export async function logout(payload) {
-  const url = `${BASE_URL}/api/auth/logout`;
-  const res = await fetch(url, {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      Accept: 'application/json'
-    },
-    body: JSON.stringify(payload)
-  });
-  return handleResponse(res);
+  return apiClient.post('/api/auth/logout', payload);
 }
 
 /**
@@ -163,16 +116,7 @@ export async function logout(payload) {
  * Expects payload: { email }
  */
 export async function forgotPassword(payload) {
-  const url = `${BASE_URL}/api/auth/forgot-password`;
-  const res = await fetch(url, {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      Accept: 'application/json'
-    },
-    body: JSON.stringify(payload)
-  });
-  return handleResponse(res);
+  return apiClient.post('/api/auth/forgot-password', payload);
 }
 
 /**
@@ -180,16 +124,7 @@ export async function forgotPassword(payload) {
  * Expects payload: { token, password, confirmPassword }
  */
 export async function resetPassword(payload) {
-  const url = `${BASE_URL}/api/auth/reset-password`;
-  const res = await fetch(url, {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      Accept: 'application/json'
-    },
-    body: JSON.stringify(payload)
-  });
-  return handleResponse(res);
+  return apiClient.post('/api/auth/reset-password', payload);
 }
 
 export default {
@@ -198,8 +133,7 @@ export default {
   verifyEmail,
   resendVerification,
   login,
-  refreshToken
-  ,
+  refreshToken,
   forgotPassword,
   resetPassword,
   getCurrentUser,
