@@ -1,4 +1,4 @@
-import { IonPage, IonContent, useIonRouter, IonIcon } from '@ionic/react';
+import { IonPage, IonContent, useIonRouter, IonIcon, IonToast } from '@ionic/react';
 import React, { useState } from 'react';
 import { eyeOutline, eyeOffOutline } from 'ionicons/icons';
 import { YummyText } from '../../../components/YummyText';
@@ -13,6 +13,8 @@ const CustomerLogin = () => {
   });
   const [error, setError] = useState('');
   const [showPassword, setShowPassword] = useState(false);
+  const [toastMsg, setToastMsg] = useState('');
+  const [showToast, setShowToast] = useState(false);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -51,7 +53,10 @@ const CustomerLogin = () => {
       router.push('/customer/dashboard', 'forward', 'push');
     } catch (err) {
       console.error('Login error', err);
-      setError(err?.message || 'Login failed. Please try again.');
+      const message = err?.status === 401 ? 'Invalid email or password' : (err?.message || 'Login failed. Please try again.');
+      setError(message);
+      setToastMsg(message);
+      setShowToast(true);
     }
   };
 
@@ -84,6 +89,13 @@ const CustomerLogin = () => {
   return (
     <IonPage>
       <IonContent className="ion-no-padding">
+        <IonToast
+          isOpen={showToast}
+          onDidDismiss={() => setShowToast(false)}
+          message={toastMsg}
+          duration={3000}
+          position="top"
+        />
         <div className="bg-white grid grid-cols-1 lg:grid-cols-2 min-h-screen justify-between mx-auto py-8 lg:py-12 px-6 gap-6">
           {/* Left Side - Form */}
           <div className="flex items-center justify-center lg:pr-2 lg:pl-8">
