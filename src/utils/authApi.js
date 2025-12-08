@@ -9,57 +9,35 @@ const apiClient = axios.create({
   headers: {
     'Content-Type': 'application/json',
     Accept: 'application/json'
-  }
+  },
+  withCredentials: true // Send cookies with requests automatically
 });
 
-// Request interceptor to add auth token to requests
+// Cookie helpers (client-side)
+function setCookie(name, value, days = 7) {
+  if (typeof document === 'undefined') return;
+  const secure = typeof window !== 'undefined' && window.location && window.location.protocol === 'https:';
+  const expires = new Date(Date.now() + days * 864e5).toUTCString();
+  const cookie = `${name}=${encodeURIComponent(value)}; Expires=${expires}; Path=/; SameSite=Lax${secure ? '; Secure' : ''}`;
+  try { document.cookie = cookie; } catch (e) { /* ignore */ }
+}
+
+function getCookie(name) {
+  if (typeof document === 'undefined') return null;
+  const match = document.cookie.match(new RegExp('(?:^|; )' + name.replace(/([.$?*|{}()\[\]\\/+^])/g, '\\$1') + '=([^;]*)'));
+  return match ? decodeURIComponent(match[1]) : null;
+}
+
+function deleteCookie(name) {
+  if (typeof document === 'undefined') return;
+  document.cookie = `${name}=; Expires=${new Date(0).toUTCString()}; Path=/;`;
+}
+
+// Request interceptor - no manual token attachment needed
+// Browser automatically sends HttpOnly cookies when withCredentials:true
 apiClient.interceptors.request.use(
   (config) => {
-    let token;
-    let tokenKey;
-    if (typeof window !== 'undefined') {
-      const possibleKeys = ['auth_token', 'authToken', 'token', 'access_token', 'accessToken'];
-      for (const k of possibleKeys) {
-        const v = localStorage.getItem(k);
-        if (v) {
-          token = v;
-          tokenKey = k;
-          break;
-        }
-      }
-
-      // Try to extract token from user_data if available
-      if (!token) {
-        const ud = localStorage.getItem('user_data');
-        if (ud) {
-          try {
-            const udObj = JSON.parse(ud);
-            token = udObj?.token || udObj?.accessToken || udObj?.access_token || udObj?.auth_token;
-            if (token) tokenKey = 'user_data';
-          } catch (e) {
-            // ignore parse error
-          }
-        }
-      }
-
-      // If token is a JSON string, try parsing it to find nested token fields
-      if (token && typeof token === 'string' && token.trim().startsWith('{')) {
-        try {
-          const parsed = JSON.parse(token);
-          token = parsed?.token || parsed?.accessToken || parsed?.access_token || parsed?.auth_token || token;
-        } catch (e) {
-          // ignore
-        }
-      }
-
-      if (token) {
-        config.headers.Authorization = `Bearer ${token}`;
-        config.headers['x-access-token'] = token;
-        if (process.env.NODE_ENV !== 'production' && typeof console !== 'undefined') {
-          try { console.debug('[apiClient] Using auth token from', tokenKey || 'unknown'); } catch(e) {}
-        }
-      }
-    }
+    // No manual Authorization header - server reads auth from HttpOnly cookie
     return config;
   },
   (error) => Promise.reject(error)
@@ -82,6 +60,44 @@ apiClient.interceptors.response.use(
     throw customError;
   }
 );
+
+// ============ Auth Helper Functions ============
+
+/**
+ * Check if user is authenticated (has a valid token)
+ * @returns {boolean}
+ */
+export function isAuthenticated() {
+  if (typeof window === 'undefined') return false;
+  
+  // Check if server-set auth cookie exists
+  const cookieToken = getCookie('auth_token');
+  if (cookieToken) return true;
+
+  // Fallback: check if user_data exists (indicates logged-in state)
+  const userData = localStorage.getItem('user_data');
+  if (userData) return true;
+
+  return false;
+}
+
+/**
+ * Retrieve the stored authentication token
+ * @returns {string|null}
+ */
+export function getAuthToken() {
+  if (typeof window === 'undefined') return null;
+  
+  // Note: HttpOnly cookies cannot be read by JavaScript
+  // This function returns null (token is in HttpOnly cookie, inaccessible to JS)
+  // Backend reads the cookie from request headers automatically
+  
+  // Check if readable auth_token cookie exists (for diagnostic purposes)
+  const cookieToken = getCookie('auth_token');
+  if (cookieToken) return cookieToken;
+
+  return null; // HttpOnly cookie exists but is not readable by JS
+}
 
 /**
  * Register a rider
@@ -123,7 +139,22 @@ export async function resendVerification(payload) {
 }
 
 export async function login(payload) {
-  return apiClient.post('/api/auth/login', payload);
+  // Backend sets HttpOnly cookie in response headers (Set-Cookie)
+  // No client-side token storage needed
+  const response = await apiClient.post('/api/auth/login', payload);
+
+  // Optionally store user data (non-sensitive) in localStorage for UI display
+  if (typeof window !== 'undefined' && response) {
+    const user = response?.user || response?.data?.user || response?.data || null;
+    if (user) {
+      try {
+        localStorage.setItem('user_data', JSON.stringify(user));
+        localStorage.setItem('user_type', user?.role || 'customer');
+      } catch (e) { /* ignore */ }
+    }
+  }
+
+  return response;
 }
 
 export async function refreshToken(payload) {
@@ -152,26 +183,27 @@ export async function resetPassword(payload) {
   return apiClient.post('/api/auth/reset-password', payload);
 }
 
-/**
- * Create a customer delivery
- * Expects payload with delivery details
- */
+
 export async function createDelivery(payload) {
+  // Check if user appears to be authenticated (has user_data)
+  // Actual auth is validated by backend reading HttpOnly cookie
+  if (!isAuthenticated()) {
+    const err = new Error('Authentication required. Please log in to book a delivery.');
+    err.status = 401;
+    throw err;
+  }
+
+  // Browser automatically sends HttpOnly cookie; backend validates
   return apiClient.post('/api/customer/deliveries', payload);
 }
 
-/**
- * Get customer deliveries (paginated)
- * Accepts an options object: { page=1, limit=10, ...filters }
- */
+
 export async function getCustomerDeliveries(options = {}) {
   const { page = 1, limit = 10, ...filters } = options || {};
   return apiClient.get('/api/customer/deliveries', { params: { page, limit, ...filters } });
 }
 
-/**
- * Get a delivery by id
- */
+
 export async function getDeliveryById(deliveryId) {
   if (!deliveryId) throw new Error('deliveryId is required');
   return apiClient.get(`/api/customer/deliveries/${deliveryId}`);
@@ -187,9 +219,11 @@ export default {
   forgotPassword,
   resetPassword,
   getCurrentUser,
-  logout
-  ,
+  logout,
   createDelivery,
   getCustomerDeliveries,
   getDeliveryById
+  ,
+  isAuthenticated,
+  getAuthToken
 };

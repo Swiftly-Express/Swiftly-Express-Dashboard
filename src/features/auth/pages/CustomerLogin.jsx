@@ -35,25 +35,39 @@ const CustomerLogin = () => {
 
     try {
       setError('');
-      // Call backend login
-      const res = await login({ email: formData.email.trim(), password: formData.password });
+      // Call backend login - tokens are automatically stored by the login function
+      const res = await login({ 
+        email: formData.email.trim(), 
+        password: formData.password
+      });
 
-      // Backend may return token and refresh token in different shapes; handle common cases
-      const token = res?.token || res?.data?.token || res?.accessToken || res?.data?.accessToken;
-      const refresh = res?.refreshToken || res?.data?.refreshToken || res?.refresh_token || res?.data?.refresh_token;
-      const user = res?.user || res?.data?.user || res?.data || null;
-
-      if (token) localStorage.setItem('auth_token', token);
-      if (refresh) localStorage.setItem('refresh_token', refresh);
-      if (user) localStorage.setItem('user_data', JSON.stringify(user));
+      // Login function in authApi.js already stores tokens
+      // Just set user type and redirect
       localStorage.setItem('user_type', 'customer');
+
+      console.log('Login successful:', res);
 
       // Redirect to customer dashboard
       if (document && document.activeElement) document.activeElement.blur();
       router.push('/customer/dashboard', 'forward', 'push');
     } catch (err) {
-      console.error('Login error', err);
-      const message = err?.status === 401 ? 'Invalid email or password' : (err?.message || 'Login failed. Please try again.');
+      console.error('Login error:', err);
+      console.error('Error details:', {
+        message: err?.message,
+        status: err?.status,
+        data: err?.data
+      });
+      
+      let message = 'Login failed. Please try again.';
+      
+      if (err?.status === 401) {
+        message = 'Invalid email or password';
+      } else if (err?.status === 500 && err?.message?.includes('secretOrPrivateKey')) {
+        message = 'Server configuration error. Please contact support or check backend JWT_SECRET is set.';
+      } else if (err?.message) {
+        message = err.message;
+      }
+      
       setError(message);
       setToastMsg(message);
       setShowToast(true);

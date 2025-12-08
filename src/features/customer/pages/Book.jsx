@@ -1,9 +1,9 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { IonPage, IonContent, IonToast, useIonRouter } from '@ionic/react';
 import CustomerLayout from '../components/CustomerLayout';
 import { YummyText } from '../../../components/YummyText';
 import './Book.css'; // Import custom CSS for dropdown styling
-import { createDelivery } from '../../../utils/authApi';
+import { createDelivery, isAuthenticated } from '../../../utils/authApi';
 
 const sideBottomShadow = {
   boxShadow: '2px 4px 4px rgba(0,0,0,0.06), -2px 4px 4px rgba(0,0,0,0.06), 0 4px 8px rgba(0,0,0,0.08)'
@@ -44,6 +44,17 @@ const Book = () => {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [toastMsg, setToastMsg] = useState('');
   const [showToast, setShowToast] = useState(false);
+
+  // Check authentication on component mount
+  useEffect(() => {
+    if (!isAuthenticated()) {
+      setToastMsg('Please log in to book a delivery');
+      setShowToast(true);
+      setTimeout(() => {
+        router.push('/auth/customer/login', 'root', 'replace');
+      }, 2000);
+    }
+  }, [router]);
 
   const handleSubmitAsync = async (e) => {
     e.preventDefault();
