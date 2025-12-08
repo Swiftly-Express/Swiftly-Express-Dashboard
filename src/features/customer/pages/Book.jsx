@@ -1,8 +1,9 @@
 import React, { useState } from 'react';
-import { IonPage, IonContent } from '@ionic/react';
+import { IonPage, IonContent, IonToast, useIonRouter } from '@ionic/react';
 import CustomerLayout from '../components/CustomerLayout';
 import { YummyText } from '../../../components/YummyText';
 import './Book.css'; // Import custom CSS for dropdown styling
+import { createDelivery } from '../../../utils/authApi';
 
 const sideBottomShadow = {
   boxShadow: '2px 4px 4px rgba(0,0,0,0.06), -2px 4px 4px rgba(0,0,0,0.06), 0 4px 8px rgba(0,0,0,0.08)'
@@ -37,6 +38,59 @@ const Book = () => {
     e.preventDefault();
     console.log('Booking delivery:', formData);
     // Add booking logic here
+  };
+
+  const router = useIonRouter();
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [toastMsg, setToastMsg] = useState('');
+  const [showToast, setShowToast] = useState(false);
+
+  const handleSubmitAsync = async (e) => {
+    e.preventDefault();
+    setIsSubmitting(true);
+    try {
+      // Send formData to createDelivery; backend may expect specific fields
+      const payload = { ...formData };
+      await createDelivery(payload);
+      setToastMsg('Delivery booked successfully');
+      setShowToast(true);
+      // Redirect to deliveries list after brief delay
+      setTimeout(() => {
+        router.push('/customer/deliveries', 'root', 'replace');
+      }, 1000);
+    } catch (err) {
+      console.error('Create delivery failed', err);
+      setToastMsg(err?.message || 'Failed to book delivery');
+      setShowToast(true);
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  const saveDraftAsync = async () => {
+    setIsSubmitting(true);
+    try {
+      const payload = { ...formData, draft: true };
+      await createDelivery(payload);
+      setToastMsg('Draft saved successfully');
+      setShowToast(true);
+    } catch (err) {
+      console.error('Save draft failed', err);
+      // fallback: save locally if server fails
+      try {
+        const draftsRaw = localStorage.getItem('delivery_drafts');
+        const drafts = draftsRaw ? JSON.parse(draftsRaw) : [];
+        drafts.push({ id: `draft-${Date.now()}`, data: formData, createdAt: new Date().toISOString() });
+        localStorage.setItem('delivery_drafts', JSON.stringify(drafts));
+        setToastMsg('Saved draft locally');
+        setShowToast(true);
+      } catch (e) {
+        setToastMsg(err?.message || 'Failed to save draft');
+        setShowToast(true);
+      }
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   const calculateTotal = () => {
@@ -98,7 +152,14 @@ const Book = () => {
             </div>
           </YummyText>
 
-          <form onSubmit={handleSubmit}>
+          <form onSubmit={handleSubmitAsync}>
+            <IonToast
+              isOpen={showToast}
+              onDidDismiss={() => setShowToast(false)}
+              message={toastMsg}
+              duration={3000}
+              position="top"
+            />
             {/* Single Combined Section */}
             <div className="bg-white rounded-2xl p-6 mb-6" style={sideBottomShadow}>
               <YummyText>
@@ -416,17 +477,20 @@ const Book = () => {
               <div className="flex gap-4">
                 <button
                   type="submit"
-                  className="flex-1 flex items-center justify-center gap-2 px-8 py-3 bg-[#00B75A] hover:bg-[#00B876] text-white rounded-xl transition-colors font-medium text-[15px]"
+                  disabled={isSubmitting}
+                  className={`flex-1 flex items-center justify-center gap-2 px-8 py-3 bg-[#00B75A] ${isSubmitting ? 'opacity-50 cursor-not-allowed' : 'hover:bg-[#00B876]'} text-white rounded-xl transition-colors font-medium text-[15px]`}
                 >
                   <img src="/blockicon-white.svg" alt="Book" className="w-5 h-5" />
-                  Book Delivery
+                  {isSubmitting ? 'Booking...' : 'Book Delivery'}
                 </button>
                 <button
                   type="button"
-                  className="px-3 py-3 bg-white border border-gray-200 hover:bg-gray-50 rounded-xl transition-colors text-[#0F172A] font-medium text-[15px]"
+                  onClick={saveDraftAsync}
+                  disabled={isSubmitting}
+                  className={`px-3 py-3 bg-white border border-gray-200 ${isSubmitting ? 'opacity-50 cursor-not-allowed' : 'hover:bg-gray-50'} rounded-xl transition-colors text-[#0F172A] font-medium text-[15px]`}
                   style={{ border: "1px solid #E5E7EB" }}
                 >
-                  Save as Draft
+                  {isSubmitting ? 'Saving...' : 'Save as Draft'}
                 </button>
               </div>
               </YummyText>

@@ -98,7 +98,16 @@ const CustomerDashboard = () => {
           {/* Welcome Section */}
           <div className="mb-8">
             <YummyText className="text-3xl font-medium text-[#0F172A] mb-2">
-              Welcome back, Uduak!
+              {(() => {
+                try {
+                  const raw = typeof window !== 'undefined' && localStorage.getItem('user_data');
+                  const user = raw ? JSON.parse(raw) : null;
+                  const name = user?.fullName || user?.full_name || user?.name || user?.firstName || user?.first_name || (user?.user && (user.user.fullName || user.user.name));
+                  return `Welcome back ${name || ''}!`;
+                } catch (e) {
+                  return 'Welcome back!';
+                }
+              })()}
             </YummyText>
             <YummyText className="text-[#4A5565] text-[15px] font-[400]">
               Here's what's happening with your deliveries today.

@@ -1,8 +1,9 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { IonContent, IonPage, IonIcon } from '@ionic/react';
 import { eye, eyeOff, arrowForward } from 'ionicons/icons';
 import CustomerLayout from '../components/CustomerLayout';
 import { YummyText } from '../../../components/YummyText';
+import { getCustomerDeliveries } from '../../../utils/authApi';
 
 const sideBottomShadow = {
   boxShadow: '2px 4px 4px rgba(0,0,0,0.06), -2px 4px 4px rgba(0,0,0,0.06), 0 4px 8px rgba(0,0,0,0.08)'
@@ -110,66 +111,34 @@ const CompletedDeliveryRow = ({ delivery }) => {
 
 const MyDeliveries = () => {
   const [activeTab, setActiveTab] = useState('active');
+  const [activeDeliveries, setActiveDeliveries] = useState([]);
+  const [completedDeliveries, setCompletedDeliveries] = useState([]);
+  const [loading, setLoading] = useState(false);
+  const [page, setPage] = useState(1);
+  const [limit] = useState(10);
 
-  const activeDeliveries = [
-    {
-      id: 'PKG-2401',
-      status: 'In Transit',
-      statusColor: 'text-blue-700',
-      statusBg: 'bg-blue-100',
-      from: 'New York, NY',
-      to: 'Los Angeles, CA',
-      bookedDate: 'Oct 22, 2025',
-      progress: 65
-    },
-    {
-      id: 'PKG-2402',
-      status: 'Processing',
-      statusColor: 'text-orange-700',
-      statusBg: 'bg-orange-100',
-      from: 'Chicago, IL',
-      to: 'Miami, FL',
-      bookedDate: 'Oct 23, 2025',
-      progress: 25
-    },
-    {
-      id: 'PKG-2403',
-      status: 'Out for Delivery',
-      statusColor: 'text-green-700',
-      statusBg: 'bg-green-100',
-      from: 'Seattle, WA',
-      to: 'Boston, MA',
-      bookedDate: 'Oct 24, 2025',
-      progress: 90
-    }
-  ];
+  useEffect(() => {
+    fetchDeliveries();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [page]);
 
-  const completedDeliveries = [
-    {
-      id: 'PKG-2398',
-      from: 'San Francisco, CA',
-      to: 'Portland, OR',
-      bookedDate: 'Oct 18, 2025',
-      deliveredDate: 'Oct 20, 2025',
-      status: 'Delivered'
-    },
-    {
-      id: 'PKG-2395',
-      from: 'Austin, TX',
-      to: 'Denver, CO',
-      bookedDate: 'Oct 15, 2025',
-      deliveredDate: 'Oct 17, 2025',
-      status: 'Delivered'
-    },
-    {
-      id: 'PKG-2390',
-      from: 'Atlanta, GA',
-      to: 'Nashville, TN',
-      bookedDate: 'Oct 12, 2025',
-      deliveredDate: 'Oct 13, 2025',
-      status: 'Delivered'
+  async function fetchDeliveries() {
+    setLoading(true);
+    try {
+      const res = await getCustomerDeliveries({ page, limit });
+      // res might be an array or an object with `data` field
+      const items = Array.isArray(res) ? res : (res?.data || res?.items || res?.results || []);
+      // split by status
+      const active = items.filter((d) => !d.status || d.status.toLowerCase() !== 'delivered');
+      const completed = items.filter((d) => d.status && d.status.toLowerCase() === 'delivered');
+      setActiveDeliveries(active);
+      setCompletedDeliveries(completed);
+    } catch (err) {
+      console.error('Failed to load deliveries', err);
+    } finally {
+      setLoading(false);
     }
-  ];
+  }
 
   return (
     <IonPage>
