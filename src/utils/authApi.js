@@ -1,6 +1,7 @@
 import axios from 'axios';
 const BASE_URL = import.meta.env.VITE_API_BASE_URL || 'https://api.swiftlyxpress.com';
 
+console.log('[authApi] Using API Base URL:', BASE_URL);
 
 const apiClient = axios.create({
   baseURL: BASE_URL,
@@ -8,7 +9,8 @@ const apiClient = axios.create({
     'Content-Type': 'application/json',
     Accept: 'application/json'
   },
-  withCredentials: true 
+  // Temporarily disable withCredentials if backend doesn't support it yet
+  withCredentials: false 
 });
 
 // Cookie helper to read cookies 
@@ -20,6 +22,13 @@ function getCookie(name) {
 
 apiClient.interceptors.request.use(
   (config) => {
+    // Read token from localStorage and attach to requests
+    if (typeof window !== 'undefined') {
+      const token = localStorage.getItem('auth_token');
+      if (token) {
+        config.headers.Authorization = `Bearer ${token}`;
+      }
+    }
     return config;
   },
   (error) => Promise.reject(error)
@@ -29,6 +38,16 @@ apiClient.interceptors.request.use(
 apiClient.interceptors.response.use(
   (response) => response.data,
   (error) => {
+    console.error('[authApi] Request failed:', {
+      url: error.config?.url,
+      method: error.config?.method,
+      status: error.response?.status,
+      statusText: error.response?.statusText,
+      data: error.response?.data,
+      message: error.message,
+      code: error.code
+    });
+
     const message =
       error.response?.data?.message ||
       error.response?.data ||
@@ -51,10 +70,18 @@ apiClient.interceptors.response.use(
  */
 export function isAuthenticated() {
   if (typeof window === 'undefined') return false;
-  const cookieToken = getCookie('auth_token');
-  if (cookieToken) return true;
+  
+  // Check localStorage for token
+  const token = localStorage.getItem('auth_token');
+  if (token) return true;
+  
+  // Check for user_data as fallback
   const userData = localStorage.getItem('user_data');
   if (userData) return true;
+  
+  // Check cookie (for when backend sets HttpOnly cookie)
+  const cookieToken = getCookie('auth_token');
+  if (cookieToken) return true;
 
   return false;
 }
@@ -65,6 +92,12 @@ export function isAuthenticated() {
  */
 export function getAuthToken() {
   if (typeof window === 'undefined') return null;
+  
+  // Prefer localStorage token
+  const token = localStorage.getItem('auth_token');
+  if (token) return token;
+  
+  // Fallback to cookie
   const cookieToken = getCookie('auth_token');
   if (cookieToken) return cookieToken;
 
@@ -111,14 +144,36 @@ export async function resendVerification(payload) {
 }
 
 export async function login(payload) {
+  console.log('[authApi] Attempting login with:', { email: payload.email });
+  
   const response = await apiClient.post('/api/auth/login', payload);
+  
+  console.log('[authApi] Login response:', response);
+  
   if (typeof window !== 'undefined' && response) {
+    const token = response?.token || response?.data?.token || response?.accessToken || response?.data?.accessToken;
     const user = response?.user || response?.data?.user || response?.data || null;
+    
+    console.log('[authApi] Extracted from response:', { hasToken: !!token, hasUser: !!user });
+    
+    // Store token in localStorage as fallback (until backend sets HttpOnly cookie)
+    if (token) {
+      try {
+        localStorage.setItem('auth_token', token);
+        console.log('[authApi] Token stored in localStorage');
+      } catch (e) {
+        console.error('[authApi] Failed to store token:', e);
+      }
+    }
+    
     if (user) {
       try {
         localStorage.setItem('user_data', JSON.stringify(user));
         localStorage.setItem('user_type', user?.role || 'customer');
-      } catch (e) { /* ignore */ }
+        console.log('[authApi] User data stored');
+      } catch (e) {
+        console.error('[authApi] Failed to store user data:', e);
+      }
     }
   }
 
