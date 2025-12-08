@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { IonContent, IonPage, IonIcon } from '@ionic/react';
 import { arrowForward } from 'ionicons/icons';
 import CustomerLayout from '../components/CustomerLayout';
@@ -54,7 +54,76 @@ const DeliveryItem = ({ packageId, status, statusColor, statusBg, from, to, eta,
   </div>
 );
 
+// Helper function to extract user's first name from various possible data structures
+const getUserFirstName = () => {
+  try {
+    if (typeof window === 'undefined') return 'Customer';
+    
+    const userDataRaw = localStorage.getItem('user_data');
+    if (!userDataRaw) return 'Customer';
+    
+    const userData = JSON.parse(userDataRaw);
+    console.log('[Dashboard] User data:', userData);
+    
+    // Try multiple possible field names and structures
+    const fullName = 
+      userData?.fullName || 
+      userData?.full_name || 
+      userData?.name || 
+      userData?.user?.fullName || 
+      userData?.user?.full_name || 
+      userData?.user?.name ||
+      userData?.data?.fullName ||
+      userData?.data?.full_name ||
+      userData?.data?.name;
+    
+    const firstName = 
+      userData?.firstName || 
+      userData?.first_name || 
+      userData?.user?.firstName || 
+      userData?.user?.first_name ||
+      userData?.data?.firstName ||
+      userData?.data?.first_name;
+    
+    // If we have a first name field, use it
+    if (firstName) {
+      return firstName;
+    }
+    
+    // If we have a full name, extract the first name
+    if (fullName) {
+      const nameParts = fullName.trim().split(/\s+/);
+      return nameParts[0];
+    }
+    
+    // Fallback to email username if available
+    const email = 
+      userData?.email || 
+      userData?.user?.email ||
+      userData?.data?.email;
+    
+    if (email) {
+      const emailUsername = email.split('@')[0];
+      return emailUsername.charAt(0).toUpperCase() + emailUsername.slice(1);
+    }
+    
+    return 'Customer';
+  } catch (error) {
+    console.error('[Dashboard] Error extracting user name:', error);
+    return 'Customer';
+  }
+};
+
 const CustomerDashboard = () => {
+  const [userName, setUserName] = useState('Customer');
+
+  useEffect(() => {
+    // Get user name on component mount
+    const name = getUserFirstName();
+    setUserName(name);
+    console.log('[Dashboard] Extracted user name:', name);
+  }, []);
+
   const recentDeliveries = [
     {
       id: 'PKG-2401',
@@ -98,16 +167,7 @@ const CustomerDashboard = () => {
           {/* Welcome Section */}
           <div className="mb-8">
             <YummyText className="text-3xl font-medium text-[#0F172A] mb-2">
-              {(() => {
-                try {
-                  const raw = typeof window !== 'undefined' && localStorage.getItem('user_data');
-                  const user = raw ? JSON.parse(raw) : null;
-                  const name = user?.fullName || user?.full_name || user?.name || user?.firstName || user?.first_name || (user?.user && (user.user.fullName || user.user.name));
-                  return `Welcome back ${name || ''}!`;
-                } catch (e) {
-                  return 'Welcome back!';
-                }
-              })()}
+              Welcome back, {userName}
             </YummyText>
             <YummyText className="text-[#4A5565] text-[15px] font-[400]">
               Here's what's happening with your deliveries today.

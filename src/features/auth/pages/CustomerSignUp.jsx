@@ -82,6 +82,13 @@ const CustomerSignUp = () => {
         fullName,
         email: emailVal
       }));
+      
+      // Store user data for later display
+      localStorage.setItem('user_data', JSON.stringify({
+        fullName,
+        email: emailVal,
+        name: fullName
+      }));
 
       // If backend returned a user id, store it for verify/resend endpoints
       try {

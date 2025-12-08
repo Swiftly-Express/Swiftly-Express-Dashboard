@@ -3,7 +3,7 @@ import React, { useState } from 'react';
 import { eyeOutline, eyeOffOutline } from 'ionicons/icons';
 import { YummyText } from '../../../components/YummyText';
 import Button from '../../../components/Button';
-import { login } from '../../../utils/authApi';
+import { login, getCurrentUser } from '../../../utils/authApi';
 
 const CustomerLogin = () => {
   const router = useIonRouter();
@@ -41,9 +41,22 @@ const CustomerLogin = () => {
         password: formData.password
       });
 
-      // Login function in authApi.js already stores tokens
-      // Just set user type and redirect
-      localStorage.setItem('user_type', 'customer');
+      // Try to fetch fresh user data from the API in case login didn't return full user
+      try {
+        const me = await getCurrentUser();
+        if (me) {
+          localStorage.setItem('user_data', JSON.stringify(me));
+          localStorage.setItem('user_type', me?.role || 'customer');
+          console.log('[CustomerLogin] Fetched current user:', me);
+        } else {
+          // fallback to default
+          localStorage.setItem('user_type', 'customer');
+        }
+      } catch (e) {
+        console.warn('[CustomerLogin] Failed to fetch current user after login', e);
+        // still set a default user type so subsequent UX behaves
+        localStorage.setItem('user_type', 'customer');
+      }
 
       console.log('Login successful:', res);
 

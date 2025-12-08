@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { IonPage, IonContent, IonToast, useIonRouter } from '@ionic/react';
 import CustomerLayout from '../components/CustomerLayout';
 import { YummyText } from '../../../components/YummyText';
-import './Book.css'; // Import custom CSS for dropdown styling
+import './Book.css';
 import { createDelivery, isAuthenticated } from '../../../utils/authApi';
 
 const sideBottomShadow = {
@@ -34,18 +34,16 @@ const Book = () => {
     });
   };
 
-  const handleSubmit = (e) => {
-    e.preventDefault();
-    console.log('Booking delivery:', formData);
-    // Add booking logic here
-  };
+  // const handleSubmit = (e) => {
+  //   e.preventDefault();
+  //   console.log('Booking delivery:', formData);
+  // };
 
   const router = useIonRouter();
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [toastMsg, setToastMsg] = useState('');
   const [showToast, setShowToast] = useState(false);
 
-  // Check authentication on component mount
   useEffect(() => {
     if (!isAuthenticated()) {
       setToastMsg('Please log in to book a delivery');
@@ -60,12 +58,48 @@ const Book = () => {
     e.preventDefault();
     setIsSubmitting(true);
     try {
-      // Send formData to createDelivery; backend may expect specific fields
-      const payload = { ...formData };
+      const payload = {
+        deliveryType: formData.deliveryType,
+        sender: {
+          name: formData.senderName,
+          phone: formData.senderPhone
+        },
+        recipient: {
+          name: formData.recipientName,
+          phone: formData.recipientPhone,
+          email: formData.recipientEmail
+        },
+        pickupAddress: {
+          street: formData.pickupAddress,
+          city: '',
+          state: '',
+          country: '',
+          coordinates: { lat: 0, lng: 0 }
+        },
+        deliveryAddress: {
+          street: formData.deliveryAddress,
+          city: '',
+          state: '',
+          country: '',
+          coordinates: { lat: 0, lng: 0 }
+        },
+        pickupDate: formData.pickupDate,
+        package: {
+          description: formData.packageDescription,
+          weight: parseFloat(formData.weight) || 0,
+          dimensions: {
+            length: parseFloat(formData.length) || 0,
+            width: parseFloat(formData.width) || 0,
+            height: 0
+          },
+          declaredValue: parseFloat(formData.declaredValue) || 0
+        }
+      };
+      
+      console.log('[Book] Submitting payload:', payload);
       await createDelivery(payload);
       setToastMsg('Delivery booked successfully');
       setShowToast(true);
-      // Redirect to deliveries list after brief delay
       setTimeout(() => {
         router.push('/customer/deliveries', 'root', 'replace');
       }, 1000);
@@ -81,13 +115,49 @@ const Book = () => {
   const saveDraftAsync = async () => {
     setIsSubmitting(true);
     try {
-      const payload = { ...formData, draft: true };
+      const payload = {
+        deliveryType: formData.deliveryType,
+        sender: {
+          name: formData.senderName,
+          phone: formData.senderPhone
+        },
+        recipient: {
+          name: formData.recipientName,
+          phone: formData.recipientPhone,
+          email: formData.recipientEmail
+        },
+        pickupAddress: {
+          street: formData.pickupAddress,
+          city: '',
+          state: '',
+          country: '',
+          coordinates: { lat: 0, lng: 0 }
+        },
+        deliveryAddress: {
+          street: formData.deliveryAddress,
+          city: '',
+          state: '',
+          country: '',
+          coordinates: { lat: 0, lng: 0 }
+        },
+        pickupDate: formData.pickupDate,
+        package: {
+          description: formData.packageDescription,
+          weight: parseFloat(formData.weight) || 0,
+          dimensions: {
+            length: parseFloat(formData.length) || 0,
+            width: parseFloat(formData.width) || 0,
+            height: 0
+          },
+          declaredValue: parseFloat(formData.declaredValue) || 0
+        },
+        draft: true
+      };
       await createDelivery(payload);
       setToastMsg('Draft saved successfully');
       setShowToast(true);
     } catch (err) {
       console.error('Save draft failed', err);
-      // fallback: save locally if server fails
       try {
         const draftsRaw = localStorage.getItem('delivery_drafts');
         const drafts = draftsRaw ? JSON.parse(draftsRaw) : [];
@@ -106,8 +176,7 @@ const Book = () => {
 
   const calculateTotal = () => {
     let baseRate = 0;
-    
-    // Calculate base rate based on delivery type
+ 
     switch(formData.deliveryType) {
       case 'express':
         baseRate = 2500;
@@ -122,7 +191,6 @@ const Book = () => {
         baseRate = 0;
     }
     
-    // Calculate insurance (1% of declared value, minimum ₦200)
     const declaredValue = parseFloat(formData.declaredValue) || 0;
     const insurance = declaredValue > 0 ? Math.max(declaredValue * 0.01, 200) : 0;
     
