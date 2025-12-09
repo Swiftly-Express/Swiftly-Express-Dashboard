@@ -58,6 +58,7 @@ const Book = () => {
   const handleSubmitAsync = async (e) => {
     e.preventDefault();
     setIsSubmitting(true);
+    let createdDelivery = null;
     try {
       // Match the exact API structure based on validation errors
       const payload = {
@@ -83,27 +84,47 @@ const Book = () => {
       };
       
       console.log('[Book] Submitting payload:', payload);
-      const response = await createDelivery(payload);
-      console.log('[Book] Delivery created:', response);
-      
-      // create delivery and attempt to fetch canonical object
       const created = await createDelivery(payload);
-      let createdDelivery = created;
+      console.log('[Book] Delivery created:', created);
+      createdDelivery = created;
+
       const createdId = created?.id || created?._id || created?.data?.id || created?.deliveryId || null;
       if (createdId) {
         try {
           const fetched = await getDeliveryById(createdId);
           if (fetched) createdDelivery = fetched;
-        } catch (e) {
-          console.warn('[Book] Failed to fetch created delivery by id', e);
+        } catch (fetchErr) {
+          console.warn('[Book] Failed to fetch created delivery by id', fetchErr);
         }
       }
 
+      // Show success but do NOT navigate away — user stays on the Book page
       setToastMsg('Delivery booked successfully');
       setShowToast(true);
-      setTimeout(() => {
-        router.push('/customer/deliveries', 'root', 'replace');
-      }, 1500);
+
+      // Reset form to initial empty state so fields are cleared for the user
+      setFormData({
+        deliveryType: '',
+        senderName: '',
+        senderPhone: '',
+        pickupStreet: '',
+        pickupCity: '',
+        pickupState: '',
+        pickupZipCode: '',
+        pickupDate: '',
+        recipientName: '',
+        recipientPhone: '',
+        deliveryStreet: '',
+        deliveryCity: '',
+        deliveryState: '',
+        deliveryZipCode: '',
+        recipientEmail: '',
+        weight: '',
+        length: '',
+        width: '',
+        packageDescription: '',
+        declaredValue: ''
+      });
     } catch (err) {
       console.error('Create delivery failed', err);
       
