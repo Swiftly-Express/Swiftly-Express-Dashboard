@@ -3,7 +3,7 @@ import { IonPage, IonContent, IonToast, useIonRouter } from '@ionic/react';
 import CustomerLayout from '../components/CustomerLayout';
 import { YummyText } from '../../../components/YummyText';
 import './Book.css';
-import { createDelivery, isAuthenticated } from '../../../utils/authApi';
+import { createDelivery, isAuthenticated, getDeliveryById } from '../../../utils/authApi';
 
 const sideBottomShadow = {
   boxShadow: '2px 4px 4px rgba(0,0,0,0.06), -2px 4px 4px rgba(0,0,0,0.06), 0 4px 8px rgba(0,0,0,0.08)'
@@ -86,7 +86,20 @@ const Book = () => {
       const response = await createDelivery(payload);
       console.log('[Book] Delivery created:', response);
       
-      setToastMsg('Delivery booked successfully!');
+      // create delivery and attempt to fetch canonical object
+      const created = await createDelivery(payload);
+      let createdDelivery = created;
+      const createdId = created?.id || created?._id || created?.data?.id || created?.deliveryId || null;
+      if (createdId) {
+        try {
+          const fetched = await getDeliveryById(createdId);
+          if (fetched) createdDelivery = fetched;
+        } catch (e) {
+          console.warn('[Book] Failed to fetch created delivery by id', e);
+        }
+      }
+
+      setToastMsg('Delivery booked successfully');
       setShowToast(true);
       setTimeout(() => {
         router.push('/customer/deliveries', 'root', 'replace');
@@ -105,6 +118,14 @@ const Book = () => {
       setShowToast(true);
     } finally {
       setIsSubmitting(false);
+    }
+    // Signal MyDeliveries to refresh when user arrives and provide the created delivery for optimistic insert
+    try {
+      localStorage.setItem('deliveries_refresh', Date.now().toString());
+      window.dispatchEvent(new Event('deliveries:refresh'));
+      window.dispatchEvent(new CustomEvent('delivery:created', { detail: createdDelivery }));
+    } catch (e) {
+      // ignore
     }
   };
 
