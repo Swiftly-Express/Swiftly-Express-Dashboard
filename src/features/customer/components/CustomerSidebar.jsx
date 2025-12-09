@@ -1,8 +1,8 @@
 import { useLocation } from 'react-router-dom';
 import { useIonRouter } from '@ionic/react';
 import { YummyText } from '../../../components/YummyText';
-import { logout as apiLogout } from '../../../utils/authApi';
-import React from 'react';
+import { logout as apiLogout, getCustomerDeliveries } from '../../../utils/authApi';
+import React, { useState, useEffect } from 'react';
 
 const SidebarButton = ({ to, active, icon, label, count }) => {
   const router = useIonRouter();
@@ -70,8 +70,7 @@ const CustomerSidebar = () => {
       id: 'deliveries',
       to: '/customer/deliveries',
       icon: '/blockicon.svg',
-      label: 'My Deliveries',
-      count: 3,
+      label: 'My Deliveries'
     },
     {
       id: 'Book',
@@ -94,6 +93,73 @@ const CustomerSidebar = () => {
   ];
 
   const location = useLocation();
+
+  const [deliveriesCount, setDeliveriesCount] = useState(undefined);
+
+  useEffect(() => {
+    let mounted = true;
+
+    const fetchCount = async () => {
+      try {
+        // Request first page with limit=1 and try to read total/pagination info
+        const res = await getCustomerDeliveries({ page: 1, limit: 1 });
+        // Response can be array or object
+        const items = Array.isArray(res) ? res : (res?.data || res?.items || res?.results || []);
+        const total = res?.total || res?.meta?.total || res?.data?.total || res?.pagination?.total || (Array.isArray(res) ? items.length : (res?.length || items.length));
+        if (mounted) setDeliveriesCount(total || 0);
+      } catch (err) {
+        console.warn('Failed to fetch deliveries count', err);
+      }
+    };
+
+    fetchCount();
+
+    const onRefresh = () => fetchCount();
+    const onCreated = (e) => {
+      try {
+        const delivery = e?.detail;
+        // If we have a numeric count, increment; otherwise refetch
+        if (typeof deliveriesCount === 'number') {
+          setDeliveriesCount((c) => (c || 0) + 1);
+        } else {
+          fetchCount();
+        }
+      } catch (e) {
+        fetchCount();
+      }
+    };
+
+    const onUpdated = (e) => {
+      try {
+        const detail = e?.detail;
+        // If status moved to delivered, decrement the active count
+        if (detail && detail.previousStatus && detail.status) {
+          const prev = (detail.previousStatus || '').toLowerCase();
+          const curr = (detail.status || '').toLowerCase();
+          if (prev !== 'delivered' && curr === 'delivered') {
+            setDeliveriesCount((c) => Math.max((c || 1) - 1, 0));
+            return;
+          }
+        }
+        // fallback: refetch
+        fetchCount();
+      } catch (e) {
+        fetchCount();
+      }
+    };
+
+    window.addEventListener('deliveries:refresh', onRefresh);
+    window.addEventListener('delivery:created', onCreated);
+    window.addEventListener('delivery:updated', onUpdated);
+
+    return () => {
+      mounted = false;
+      window.removeEventListener('deliveries:refresh', onRefresh);
+      window.removeEventListener('delivery:created', onCreated);
+      window.removeEventListener('delivery:updated', onUpdated);
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   return (
     <div className="w-64 bg-white h-screen fixed left-0 top-0 border-r border-gray-300 shadow-sm flex flex-col pt-20">
