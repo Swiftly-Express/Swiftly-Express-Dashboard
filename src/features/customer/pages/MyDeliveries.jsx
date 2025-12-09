@@ -65,6 +65,26 @@ const DeliveryCard = ({ delivery }) => {
   const statusStyle = getStatusStyle(delivery.status);
   const progress = getProgress(delivery.status);
   
+  const handleToggleDetails = () => {
+    const newIsOpen = !isOpen;
+    setIsOpen(newIsOpen);
+    
+    // Mark as read when user opens the details
+    if (newIsOpen) {
+      const deliveryId = delivery._id || delivery.id || delivery.trackingId;
+      if (deliveryId) {
+        console.log('[DeliveryCard] Marking delivery as read:', deliveryId);
+        window.dispatchEvent(new CustomEvent('delivery:read', { 
+          detail: { 
+            id: deliveryId,
+            _id: delivery._id,
+            deliveryId: deliveryId
+          } 
+        }));
+      }
+    }
+  };
+  
   return (
     <div className="bg-white rounded-2xl p-6 mb-4" style={sideBottomShadow}>
       <div className="flex items-center justify-between">
@@ -115,7 +135,7 @@ const DeliveryCard = ({ delivery }) => {
 
         {/* View Details Button */}
         <button 
-          onClick={() => setIsOpen(!isOpen)}
+          onClick={handleToggleDetails}
           className="flex items-center gap-2 text-sm text-[#64748B] shadow-sm px-3 py-2 rounded-xl hover:text-[#0F172A] hover:border-gray-800 transition-colors"
           style={{ border: '1.5px solid #0000001A' }}
         >
@@ -163,6 +183,26 @@ const DeliveryCard = ({ delivery }) => {
 const CompletedDeliveryRow = ({ delivery }) => {
   const [isOpen, setIsOpen] = useState(false);
   
+  const handleToggleDetails = () => {
+    const newIsOpen = !isOpen;
+    setIsOpen(newIsOpen);
+    
+    // Mark as read when user opens the details
+    if (newIsOpen) {
+      const deliveryId = delivery._id || delivery.id || delivery.trackingId;
+      if (deliveryId) {
+        console.log('[CompletedDeliveryRow] Marking delivery as read:', deliveryId);
+        window.dispatchEvent(new CustomEvent('delivery:read', { 
+          detail: { 
+            id: deliveryId,
+            _id: delivery._id,
+            deliveryId: deliveryId
+          } 
+        }));
+      }
+    }
+  };
+  
   return (
     <>
       <tr className="border-b border-gray-100 hover:bg-gray-50">
@@ -190,7 +230,7 @@ const CompletedDeliveryRow = ({ delivery }) => {
         <td className="py-4 px-4">
           <div className="flex items-center justify-center gap-6">
             <button 
-              onClick={() => setIsOpen(!isOpen)}
+              onClick={handleToggleDetails}
               className="text-[#0A0A0A] hover:text-[#0F172A] transition-colors"
             >
               <IonIcon icon={isOpen ? eyeOff : eye} className="text-xl" />

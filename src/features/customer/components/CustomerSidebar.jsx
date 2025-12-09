@@ -22,7 +22,7 @@ const SidebarButton = ({ to, active, icon, label, count }) => {
       >
         <img src={icon} alt={label} className="w-5 h-5" style={{ filter: active ? 'brightness(0) invert(1)' : 'brightness(0)' }} />
         <YummyText className="flex-1 text-left text-[15px]">{label}</YummyText>
-        {count !== undefined && (
+        {count !== undefined && count > 0 && (
           <span className="bg-[#FF6B00] text-white text-xs font-medium px-2 py-0.5 rounded-full min-w-[24px] text-center">
             {count}
           </span>
@@ -34,6 +34,24 @@ const SidebarButton = ({ to, active, icon, label, count }) => {
 
 const CustomerSidebar = () => {
   const router = useIonRouter();
+  const location = useLocation();
+  const [deliveriesCount, setDeliveriesCount] = useState(0);
+  const [unreadDeliveryIds, setUnreadDeliveryIds] = useState(new Set());
+
+  useEffect(() => {
+    // Load unread delivery IDs from localStorage on mount
+    try {
+      const stored = localStorage.getItem('unread_delivery_ids');
+      if (stored) {
+        const ids = JSON.parse(stored);
+        setUnreadDeliveryIds(new Set(ids));
+        setDeliveriesCount(ids.length);
+        console.log('[CustomerSidebar] Loaded unread delivery IDs:', ids);
+      }
+    } catch (e) {
+      console.error('[CustomerSidebar] Failed to load unread delivery IDs:', e);
+    }
+  }, []);
 
   const handleLogout = () => {
     (async () => {
@@ -92,71 +110,105 @@ const CustomerSidebar = () => {
     },
   ];
 
-  const location = useLocation();
-
-  const [deliveriesCount, setDeliveriesCount] = useState(undefined);
-
   useEffect(() => {
     let mounted = true;
 
-    const fetchCount = async () => {
-      try {
-        // Request first page with limit=1 and try to read total/pagination info
-        const res = await getCustomerDeliveries({ page: 1, limit: 1 });
-        // Response can be array or object
-        const items = Array.isArray(res) ? res : (res?.data || res?.items || res?.results || []);
-        const total = res?.total || res?.meta?.total || res?.data?.total || res?.pagination?.total || (Array.isArray(res) ? items.length : (res?.length || items.length));
-        if (mounted) setDeliveriesCount(total || 0);
-      } catch (err) {
-        console.warn('Failed to fetch deliveries count', err);
-      }
-    };
-
-    fetchCount();
-
-    const onRefresh = () => fetchCount();
+    // Event listeners
     const onCreated = (e) => {
-      try {
-        const delivery = e?.detail;
-        // If we have a numeric count, increment; otherwise refetch
-        if (typeof deliveriesCount === 'number') {
-          setDeliveriesCount((c) => (c || 0) + 1);
-        } else {
-          fetchCount();
+      console.log('[CustomerSidebar] delivery:created event received:', e?.detail);
+      
+      const delivery = e?.detail;
+      if (delivery) {
+        const deliveryId = delivery._id || delivery.id || delivery.trackingId;
+        
+        if (deliveryId) {
+          setUnreadDeliveryIds((prevIds) => {
+            const newIds = new Set(prevIds);
+            newIds.add(deliveryId);
+            
+            // Save to localStorage
+            localStorage.setItem('unread_delivery_ids', JSON.stringify([...newIds]));
+            
+            console.log('[CustomerSidebar] Added unread delivery:', deliveryId);
+            return newIds;
+          });
+          
+          setDeliveriesCount((currentCount) => {
+            const newCount = currentCount + 1;
+            console.log('[CustomerSidebar] Incrementing count from', currentCount, 'to', newCount);
+            return newCount;
+          });
         }
-      } catch (e) {
-        fetchCount();
       }
     };
 
     const onUpdated = (e) => {
-      try {
-        const detail = e?.detail;
-        // If status moved to delivered, decrement the active count
-        if (detail && detail.previousStatus && detail.status) {
-          const prev = (detail.previousStatus || '').toLowerCase();
-          const curr = (detail.status || '').toLowerCase();
-          if (prev !== 'delivered' && curr === 'delivered') {
-            setDeliveriesCount((c) => Math.max((c || 1) - 1, 0));
-            return;
-          }
+      console.log('[CustomerSidebar] delivery:updated event received:', e?.detail);
+      
+      const detail = e?.detail;
+      if (detail) {
+        const deliveryId = detail._id || detail.id || detail.trackingId;
+        const prev = (detail.previousStatus || '').toLowerCase();
+        const curr = (detail.status || '').toLowerCase();
+        
+        // If status changed to delivered/completed, mark as unread
+        if (prev !== 'delivered' && prev !== 'completed' && 
+            (curr === 'delivered' || curr === 'completed') && deliveryId) {
+          
+          setUnreadDeliveryIds((prevIds) => {
+            const newIds = new Set(prevIds);
+            newIds.add(deliveryId);
+            
+            // Save to localStorage
+            localStorage.setItem('unread_delivery_ids', JSON.stringify([...newIds]));
+            
+            console.log('[CustomerSidebar] Added unread delivery (status change):', deliveryId);
+            return newIds;
+          });
+          
+          setDeliveriesCount((c) => {
+            const newCount = c + 1;
+            console.log('[CustomerSidebar] Incrementing count from', c, 'to', newCount);
+            return newCount;
+          });
         }
-        // fallback: refetch
-        fetchCount();
-      } catch (e) {
-        fetchCount();
       }
     };
 
-    window.addEventListener('deliveries:refresh', onRefresh);
+    const onRead = (e) => {
+      console.log('[CustomerSidebar] delivery:read event received:', e?.detail);
+      
+      const deliveryId = e?.detail?.id || e?.detail?._id || e?.detail?.deliveryId;
+      
+      if (deliveryId) {
+        setUnreadDeliveryIds((prevIds) => {
+          const newIds = new Set(prevIds);
+          newIds.delete(deliveryId);
+          
+          // Save to localStorage
+          localStorage.setItem('unread_delivery_ids', JSON.stringify([...newIds]));
+          
+          console.log('[CustomerSidebar] Removed unread delivery:', deliveryId);
+          return newIds;
+        });
+        
+        setDeliveriesCount((c) => {
+          const newCount = Math.max(c - 1, 0);
+          console.log('[CustomerSidebar] Decrementing count from', c, 'to', newCount);
+          return newCount;
+        });
+      }
+    };
+
     window.addEventListener('delivery:created', onCreated);
     window.addEventListener('delivery:updated', onUpdated);
+    window.addEventListener('delivery:read', onRead);
 
     return () => {
       mounted = false;
-      window.removeEventListener('deliveries:refresh', onRefresh);
       window.removeEventListener('delivery:created', onCreated);
       window.removeEventListener('delivery:updated', onUpdated);
+      window.removeEventListener('delivery:read', onRead);
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
@@ -172,7 +224,7 @@ const CustomerSidebar = () => {
             active={location.pathname === item.to}
             icon={item.icon}
             label={item.label}
-            count={item.count}
+            count={item.id === 'deliveries' ? deliveriesCount : item.count}
           />
         ))}
       </div>

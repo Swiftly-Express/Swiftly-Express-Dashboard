@@ -3,7 +3,7 @@ import { IonPage, IonContent, IonToast, useIonRouter } from '@ionic/react';
 import CustomerLayout from '../components/CustomerLayout';
 import { YummyText } from '../../../components/YummyText';
 import './Book.css';
-import { createDelivery, isAuthenticated, getDeliveryById } from '../../../utils/authApi';
+import { createDelivery, isAuthenticated } from '../../../utils/authApi';
 
 const sideBottomShadow = {
   boxShadow: '2px 4px 4px rgba(0,0,0,0.06), -2px 4px 4px rgba(0,0,0,0.06), 0 4px 8px rgba(0,0,0,0.08)'
@@ -58,7 +58,6 @@ const Book = () => {
   const handleSubmitAsync = async (e) => {
     e.preventDefault();
     setIsSubmitting(true);
-    let createdDelivery = null;
     try {
       // Match the exact API structure based on validation errors
       const payload = {
@@ -84,47 +83,14 @@ const Book = () => {
       };
       
       console.log('[Book] Submitting payload:', payload);
-      const created = await createDelivery(payload);
-      console.log('[Book] Delivery created:', created);
-      createdDelivery = created;
-
-      const createdId = created?.id || created?._id || created?.data?.id || created?.deliveryId || null;
-      if (createdId) {
-        try {
-          const fetched = await getDeliveryById(createdId);
-          if (fetched) createdDelivery = fetched;
-        } catch (fetchErr) {
-          console.warn('[Book] Failed to fetch created delivery by id', fetchErr);
-        }
-      }
-
-      // Show success but do NOT navigate away — user stays on the Book page
-      setToastMsg('Delivery booked successfully');
+      const response = await createDelivery(payload);
+      console.log('[Book] Delivery created:', response);
+      
+      setToastMsg('Delivery booked successfully!');
       setShowToast(true);
-
-      // Reset form to initial empty state so fields are cleared for the user
-      setFormData({
-        deliveryType: '',
-        senderName: '',
-        senderPhone: '',
-        pickupStreet: '',
-        pickupCity: '',
-        pickupState: '',
-        pickupZipCode: '',
-        pickupDate: '',
-        recipientName: '',
-        recipientPhone: '',
-        deliveryStreet: '',
-        deliveryCity: '',
-        deliveryState: '',
-        deliveryZipCode: '',
-        recipientEmail: '',
-        weight: '',
-        length: '',
-        width: '',
-        packageDescription: '',
-        declaredValue: ''
-      });
+      setTimeout(() => {
+        router.push('/customer/deliveries', 'root', 'replace');
+      }, 1500);
     } catch (err) {
       console.error('Create delivery failed', err);
       
@@ -139,14 +105,6 @@ const Book = () => {
       setShowToast(true);
     } finally {
       setIsSubmitting(false);
-    }
-    // Signal MyDeliveries to refresh when user arrives and provide the created delivery for optimistic insert
-    try {
-      localStorage.setItem('deliveries_refresh', Date.now().toString());
-      window.dispatchEvent(new Event('deliveries:refresh'));
-      window.dispatchEvent(new CustomEvent('delivery:created', { detail: createdDelivery }));
-    } catch (e) {
-      // ignore
     }
   };
 
