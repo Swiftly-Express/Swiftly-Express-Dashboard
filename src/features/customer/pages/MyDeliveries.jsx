@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import { IonContent, IonPage, IonIcon } from '@ionic/react';
-import { eye, eyeOff, arrowForward } from 'ionicons/icons';
+import { IonContent, IonPage, IonIcon, IonToast } from '@ionic/react';
+import { eye, eyeOff, arrowForward, copy } from 'ionicons/icons';
 import CustomerLayout from '../components/CustomerLayout';
 import { YummyText } from '../../../components/YummyText';
 import { getCustomerDeliveries } from '../../../utils/authApi';
@@ -62,6 +62,7 @@ const formatDate = (dateString) => {
 
 const DeliveryCard = ({ delivery }) => {
   const [isOpen, setIsOpen] = useState(false);
+  const [showCopyToast, setShowCopyToast] = useState(false);
   const statusStyle = getStatusStyle(delivery.status);
   const progress = getProgress(delivery.status);
   
@@ -85,6 +86,16 @@ const DeliveryCard = ({ delivery }) => {
     }
   };
   
+  const handleCopyPackageId = async () => {
+    const packageId = delivery.trackingId || delivery.id || delivery._id;
+    try {
+      await navigator.clipboard.writeText(packageId);
+      setShowCopyToast(true);
+    } catch (err) {
+      console.error('Failed to copy:', err);
+    }
+  };
+  
   return (
     <div className="bg-white rounded-2xl p-6 mb-4" style={sideBottomShadow}>
       <div className="flex items-center justify-between">
@@ -98,7 +109,7 @@ const DeliveryCard = ({ delivery }) => {
           <div className="flex-1">
             <div className="flex items-center gap-3 mb-2">
               <YummyText className="text-lg font-medium text-[#0F172A]">
-                {delivery.trackingId || delivery.id || delivery._id || 'N/A'}
+                {delivery.packageDetails?.description || 'Package'}
               </YummyText>
               <YummyText>
                 <span className={`px-3 py-1 rounded-full text-xs font-medium ${statusStyle.bg} ${statusStyle.color}`}>
@@ -149,6 +160,26 @@ const DeliveryCard = ({ delivery }) => {
         <div className="mt-4 pt-4 border-t border-gray-100">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
+              <div className="text-xs font-medium text-[#64748B] mb-1">Package ID</div>
+              <div className="text-sm text-[#0F172A] flex items-center gap-2">
+                <span>{delivery.trackingId || delivery.id || delivery._id || 'N/A'}</span>
+                <button 
+                  onClick={handleCopyPackageId}
+                  className="text-[#64748B] hover:text-[#0F172A] transition-colors"
+                  title="Copy Package ID"
+                >
+                  <IonIcon icon={copy} className="text-lg" />
+                </button>
+              </div>
+            </div>
+            <div>
+              <div className="text-xs font-medium text-[#64748B] mb-1">Package Details</div>
+              <div className="text-sm text-[#0F172A]">
+                Weight: {delivery.packageDetails?.weight || 'N/A'} kg<br />
+                Dimensions: {delivery.packageDetails?.dimensions || 'N/A'}
+              </div>
+            </div>
+            <div>
               <div className="text-xs font-medium text-[#64748B] mb-1">Pickup Address</div>
               <div className="text-sm text-[#0F172A]">
                 {delivery.pickupAddress?.street}, {delivery.pickupAddress?.city}, {delivery.pickupAddress?.state}
@@ -160,28 +191,23 @@ const DeliveryCard = ({ delivery }) => {
                 {delivery.deliveryAddress?.street}, {delivery.deliveryAddress?.city}, {delivery.deliveryAddress?.state}
               </div>
             </div>
-            <div>
-              <div className="text-xs font-medium text-[#64748B] mb-1">Package Details</div>
-              <div className="text-sm text-[#0F172A]">
-                Weight: {delivery.packageDetails?.weight || 'N/A'} kg<br />
-                Dimensions: {delivery.packageDetails?.dimensions || 'N/A'}
-              </div>
-            </div>
-            <div>
-              <div className="text-xs font-medium text-[#64748B] mb-1">Description</div>
-              <div className="text-sm text-[#0F172A]">
-                {delivery.packageDetails?.description || 'No description'}
-              </div>
-            </div>
           </div>
         </div>
       )}
+      <IonToast
+        isOpen={showCopyToast}
+        onDidDismiss={() => setShowCopyToast(false)}
+        message="Package ID copied to clipboard!"
+        duration={2000}
+        position="bottom"
+      />
     </div>
   );
 };
 
 const CompletedDeliveryRow = ({ delivery }) => {
   const [isOpen, setIsOpen] = useState(false);
+  const [showCopyToast, setShowCopyToast] = useState(false);
   
   const handleToggleDetails = () => {
     const newIsOpen = !isOpen;
@@ -203,11 +229,21 @@ const CompletedDeliveryRow = ({ delivery }) => {
     }
   };
   
+  const handleCopyPackageId = async () => {
+    const packageId = delivery.trackingId || delivery.id || delivery._id;
+    try {
+      await navigator.clipboard.writeText(packageId);
+      setShowCopyToast(true);
+    } catch (err) {
+      console.error('Failed to copy:', err);
+    }
+  };
+  
   return (
     <>
       <tr className="border-b border-gray-100 hover:bg-gray-50">
         <td className="py-4 px-4 text-sm font-medium text-[#0A0A0A]">
-          {delivery.trackingId || delivery.id || delivery._id || 'N/A'}
+          {delivery.packageDetails?.description || 'Package'}
         </td>
         <td className="py-4 px-4 text-sm text-[#0A0A0A]">
           <div className="flex items-center gap-1">
@@ -246,6 +282,26 @@ const CompletedDeliveryRow = ({ delivery }) => {
           <td colSpan="6" className="py-4 px-4">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
+                <div className="text-xs font-medium text-[#64748B] mb-1">Package ID</div>
+                <div className="text-sm text-[#0F172A] flex items-center gap-2">
+                  <span>{delivery.trackingId || delivery.id || delivery._id || 'N/A'}</span>
+                  <button 
+                    onClick={handleCopyPackageId}
+                    className="text-[#64748B] hover:text-[#0F172A] transition-colors"
+                    title="Copy Package ID"
+                  >
+                    <IonIcon icon={copy} className="text-lg" />
+                  </button>
+                </div>
+              </div>
+              <div>
+                <div className="text-xs font-medium text-[#64748B] mb-1">Package Details</div>
+                <div className="text-sm text-[#0F172A]">
+                  Weight: {delivery.packageDetails?.weight || 'N/A'} kg<br />
+                  Dimensions: {delivery.packageDetails?.dimensions || 'N/A'}
+                </div>
+              </div>
+              <div>
                 <div className="text-xs font-medium text-[#64748B] mb-1">Pickup Address</div>
                 <div className="text-sm text-[#0F172A]">
                   {delivery.pickupAddress?.street}, {delivery.pickupAddress?.city}, {delivery.pickupAddress?.state}
@@ -257,23 +313,17 @@ const CompletedDeliveryRow = ({ delivery }) => {
                   {delivery.deliveryAddress?.street}, {delivery.deliveryAddress?.city}, {delivery.deliveryAddress?.state}
                 </div>
               </div>
-              <div>
-                <div className="text-xs font-medium text-[#64748B] mb-1">Package Details</div>
-                <div className="text-sm text-[#0F172A]">
-                  Weight: {delivery.packageDetails?.weight || 'N/A'} kg<br />
-                  Dimensions: {delivery.packageDetails?.dimensions || 'N/A'}
-                </div>
-              </div>
-              <div>
-                <div className="text-xs font-medium text-[#64748B] mb-1">Description</div>
-                <div className="text-sm text-[#0F172A]">
-                  {delivery.packageDetails?.description || 'No description'}
-                </div>
-              </div>
             </div>
           </td>
         </tr>
       )}
+      <IonToast
+        isOpen={showCopyToast}
+        onDidDismiss={() => setShowCopyToast(false)}
+        message="Package ID copied to clipboard!"
+        duration={2000}
+        position="bottom"
+      />
     </>
   );
 };
