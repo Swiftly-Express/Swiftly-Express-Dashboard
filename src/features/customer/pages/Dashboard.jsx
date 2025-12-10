@@ -136,6 +136,34 @@ const CustomerDashboard = () => {
     fetchDashboardData();
   }, []);
 
+  useEffect(() => {
+    // Listen for delivery events to refresh the dashboard
+    const handleRefresh = () => {
+      console.log('[Dashboard] Received refresh event');
+      fetchDashboardData();
+    };
+    
+    const handleDeliveryCreated = (event) => {
+      console.log('[Dashboard] Delivery created:', event.detail);
+      fetchDashboardData();
+    };
+    
+    const handleDeliveryUpdated = (event) => {
+      console.log('[Dashboard] Delivery updated:', event.detail);
+      fetchDashboardData();
+    };
+
+    window.addEventListener('deliveries:refresh', handleRefresh);
+    window.addEventListener('delivery:created', handleDeliveryCreated);
+    window.addEventListener('delivery:updated', handleDeliveryUpdated);
+
+    return () => {
+      window.removeEventListener('deliveries:refresh', handleRefresh);
+      window.removeEventListener('delivery:created', handleDeliveryCreated);
+      window.removeEventListener('delivery:updated', handleDeliveryUpdated);
+    };
+  }, []);
+
   const fetchDashboardData = async () => {
     setLoading(true);
     try {
