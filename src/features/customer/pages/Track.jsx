@@ -1,6 +1,12 @@
 import React, { useState } from 'react';
-import { IonPage, IonContent } from '@ionic/react';
+import { IonPage, IonContent, IonToast } from '@ionic/react';
 import CustomerLayout from '../components/CustomerLayout';
+import { YummyText } from '../../../components/YummyText';
+import { getDeliveryById } from '../../../utils/authApi';
+import BlockIcon from '../../../icons/Blockicon';
+import CheckIcon from '../../../icons/Checkicon';
+import LocationIcon from '../../../icons/Locationicon';
+import VanIcon from '../../../icons/Vanicon';
 
 const sideBottomShadow = {
   boxShadow: '2px 2px 4px rgba(0,0,0,0.06), -2px 2px 4px rgba(0,0,0,0.06), 0 4px 8px rgba(0,0,0,0.08)'
@@ -8,92 +14,403 @@ const sideBottomShadow = {
 
 const Track = () => {
   const [trackingId, setTrackingId] = useState('');
+  const [deliveryData, setDeliveryData] = useState(null);
+  const [loading, setLoading] = useState(false);
+  const [toastMsg, setToastMsg] = useState('');
+  const [showToast, setShowToast] = useState(false);
+  const [useMockData, setUseMockData] = useState(false);
 
-  const handleTrack = (e) => {
-    e.preventDefault();
-    // Add tracking logic here
-    console.log('Tracking:', trackingId);
+  // Mock data for UI testing
+  const mockDeliveryData = {
+    _id: 'PKG-2401',
+    trackingId: 'PKG-2401',
+    status: 'In Transit',
+    pickupAddress: {
+      street: '123 Broadway',
+      city: 'New York',
+      state: 'NY',
+      zipCode: '10001'
+    },
+    deliveryAddress: {
+      street: '456 Sunset Blvd',
+      city: 'Los Angeles',
+      state: 'CA',
+      zipCode: '90001'
+    },
+    recipient: {
+      name: 'Sarah Mitchell',
+      phone: '(555) 123-4567',
+      email: 'sarah.m@email.com'
+    },
+    packageDetails: {
+      weight: 2.5,
+      description: 'Electronics',
+      dimensions: '30x20x15'
+    },
+    createdAt: '2025-10-22T09:30:00Z',
+    updatedAt: '2025-10-24T14:15:00Z',
+    estimatedDelivery: '2025-10-25T18:00:00Z'
   };
+
+  const handleTrack = async (e) => {
+    e.preventDefault();
+    
+    if (!trackingId.trim()) {
+      setToastMsg('Please enter a tracking number');
+      setShowToast(true);
+      return;
+    }
+
+    setLoading(true);
+    
+    try {
+      // Check if user wants to use mock data
+      if (trackingId.toLowerCase() === 'mock' || trackingId.toLowerCase() === 'pkg-2401') {
+        console.log('[Track] Using mock data');
+        setDeliveryData(mockDeliveryData);
+        setUseMockData(true);
+        setLoading(false);
+        return;
+      }
+
+      console.log('[Track] Fetching delivery:', trackingId);
+      const response = await getDeliveryById(trackingId);
+      console.log('[Track] Delivery data:', response);
+      
+      const data = response?.data || response;
+      setDeliveryData(data);
+      setUseMockData(false);
+      
+    } catch (err) {
+      console.error('[Track] Failed to fetch delivery:', err);
+      setToastMsg(err?.message || 'Tracking number not found. Try "PKG-2401" for demo.');
+      setShowToast(true);
+      setDeliveryData(null);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const getStatusColor = (status) => {
+    const statusLower = status?.toLowerCase() || '';
+    if (statusLower === 'delivered') return 'bg-green-500';
+    if (statusLower === 'in transit' || statusLower === 'in-transit') return 'bg-blue-500';
+    if (statusLower === 'out for delivery') return 'bg-orange-500';
+    return 'bg-gray-400';
+  };
+
+  const getStatusBadge = (status) => {
+    const statusLower = status?.toLowerCase() || '';
+    if (statusLower === 'delivered') return 'bg-green-100 text-green-700';
+    if (statusLower === 'in transit' || statusLower === 'in-transit') return 'bg-[#00B75A] text-[#FFFFFF]';
+    if (statusLower === 'out for delivery') return 'bg-orange-100 text-orange-700';
+    return 'bg-gray-100 text-gray-700';
+  };
+
+  const formatDate = (dateString) => {
+    if (!dateString) return 'N/A';
+    try {
+      const date = new Date(dateString);
+      return date.toLocaleDateString('en-US', { 
+        month: 'short', 
+        day: 'numeric', 
+        year: 'numeric' 
+      });
+    } catch (e) {
+      return dateString;
+    }
+  };
+
+  const formatTime = (dateString) => {
+    if (!dateString) return '';
+    try {
+      const date = new Date(dateString);
+      return date.toLocaleTimeString('en-US', { 
+        hour: '2-digit', 
+        minute: '2-digit' 
+      });
+    } catch (e) {
+      return '';
+    }
+  };
+
+  // Derive status flags to control timeline rendering
+  const statusLower = deliveryData?.status?.toLowerCase() || '';
+  const inTransitReached = statusLower === 'in transit' || statusLower === 'in-transit' || statusLower === 'out for delivery' || statusLower === 'out-for-delivery' || statusLower === 'out_for_delivery' || statusLower === 'delivered';
+  const outForReached = statusLower === 'out for delivery' || statusLower === 'out-for-delivery' || statusLower === 'out_for_delivery' || statusLower === 'delivered';
+  const deliveredReached = statusLower === 'delivered';
 
   return (
     <IonPage>
       <CustomerLayout>
         <IonContent className="ion-padding">
+          <IonToast
+            isOpen={showToast}
+            onDidDismiss={() => setShowToast(false)}
+            message={toastMsg}
+            duration={3000}
+            position="top"
+          />
+
           {/* Header */}
           <div className="mb-8">
-            <div className="text-3xl font-medium text-[#0F172A] mb-2">
-              Track Your Package
-            </div>
-            <div className="text-[#4A5565] text-[15px] font-[400]">
-              Enter your tracking number to get real-time updates on your delivery.
-            </div>
+            <YummyText>
+              <div className="text-3xl font-medium text-[#0F172A] mb-2">
+                Track Your Delivery
+              </div>
+              <div className="text-[#4A5565] text-[15px] font-[400]">
+                Enter your tracking number to see real-time updates
+              </div>
+            </YummyText>
           </div>
 
           {/* Tracking Input */}
-          <div className="bg-white p-8 rounded-2xl mb-8" style={sideBottomShadow}>
-            <form onSubmit={handleTrack} className="max-w-2xl">
-              <label className="block text-sm font-medium text-gray-700 mb-3">
-                Tracking Number
-              </label>
-              <div className="flex gap-3">
-                <input
-                  type="text"
-                  value={trackingId}
-                  onChange={(e) => setTrackingId(e.target.value)}
-                  placeholder="Enter tracking number (e.g., PKG-2401)"
-                  className="flex-1 px-4 py-3 rounded-xl bg-[#F3F3F5] focus:outline-none focus:ring-2 focus:ring-green-500 border-none"
-                  required
-                />
-                <button
-                  type="submit"
-                  className="px-8 py-3 bg-[#00D68F] hover:bg-[#00B876] text-white rounded-xl transition-colors font-normal"
-                >
-                  Track Package
-                </button>
-              </div>
+          <div className="bg-white p-4 rounded-full mb-8" style={sideBottomShadow}>
+            <form onSubmit={handleTrack} className="flex gap-3">
+              <input
+                type="text"
+                value={trackingId}
+                onChange={(e) => setTrackingId(e.target.value)}
+                placeholder="PKG-2401"
+                className="flex-1 px-5 py-3 rounded-full bg-[#F8F9FA] text-[#0F172A] placeholder:text-[#94A3B8] focus:outline-none focus:ring-2 focus:ring-[#00B75A] border-none"
+                required
+              />
+              <button
+                type="submit"
+                disabled={loading}
+                className={`px-8 py-3 bg-[#00B75A] ${loading ? 'opacity-50 cursor-not-allowed' : 'hover:bg-[#00a352]'} text-white rounded-full transition-colors font-normal flex items-center gap-2`}
+              >
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                  <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z" fill="currentColor"/>
+                  <circle cx="12" cy="10" r="3" fill="white"/>
+                </svg>
+                {loading ? 'Tracking...' : 'Track'}
+              </button>
             </form>
+            {/* <YummyText>
+              <div className="text-xs text-[#94A3B8] mt-3">
+                Tip: Enter "PKG-2401" to see demo tracking data
+              </div>
+            </YummyText> */}
           </div>
 
-          {/* Tracking Result (placeholder) */}
-          {trackingId && (
-            <div className="bg-gradient-to-br from-[#EFF6FF] to-[#EDFFF9] rounded-2xl p-8" style={sideBottomShadow}>
-              <div className="text-xl font-normal text-[#0F172A] mb-6">
-                Tracking Information
+          {/* Loading State */}
+          {loading && (
+            <div className="text-center py-12">
+              <div className="inline-block animate-spin rounded-full h-8 w-8 border-4 border-gray-300 border-t-[#00B75A]"></div>
+              <p className="mt-4 text-[#64748B]">Tracking package...</p>
+            </div>
+          )}
+
+          {/* Tracking Result */}
+          {!loading && deliveryData && (
+            <div className="space-y-6">
+              {/* Map Placeholder */}
+              <div className="bg-white rounded-2xl overflow-hidden" style={sideBottomShadow}>
+                <div className="h-64 bg-gradient-to-br from-[#E5F5E5] to-[#C8E6C9] relative flex items-center justify-center">
+                  <div className="text-center">
+                    <svg width="64" height="64" viewBox="0 0 24 24" fill="none" className="mx-auto mb-3 opacity-50">
+                      <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z" fill="#00B75A"/>
+                      <circle cx="12" cy="10" r="3" fill="white"/>
+                    </svg>
+                    <YummyText className="text-[#64748B] text-sm">
+                      Map view
+                    </YummyText>
+                  </div>
+                </div>
               </div>
-              
-              <div className="space-y-6">
-                {/* Timeline */}
-                <div className="flex items-start gap-4">
-                  <div className="flex flex-col items-center">
-                    <div className="w-4 h-4 bg-[#00D68F] rounded-full"></div>
-                    <div className="w-0.5 h-16 bg-[#00D68F]"></div>
-                  </div>
-                  <div className="flex-1">
-                    <div className="text-sm font-medium text-[#0F172A]">Package Picked Up</div>
-                    <div className="text-xs text-[#64748B]">Central Mall, 5th Ave</div>
-                    <div className="text-xs text-[#94A3B8] mt-1">Today, 10:30 AM</div>
-                  </div>
+
+              {/* Package Details and Recipient Information */}
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                {/* Package Details */}
+                <div className="bg-white rounded-2xl p-6" style={sideBottomShadow}>
+                  <YummyText>
+                    <div className="text-sm font-medium text-[#0F172A] -mb-1">
+                      Package Details
+                    </div>
+                    <div className="space-y-3">
+                      <div>
+                        <span className="text-sm text-[#64748B]">Tracking ID: </span>
+                        <span className="text-sm text-[#64748B] ">
+                          {deliveryData.trackingId || deliveryData.id || deliveryData._id}
+                        </span>
+                      </div>
+                      
+                      <div className="flex justify-between items-center">
+                        <span className="text-sm text-[#64748B]">Status</span>
+                        <span className={`px-3 py-1 rounded-full text-xs font-medium ${getStatusBadge(deliveryData.status)}`}>
+                          {deliveryData.status || 'Pending'}
+                        </span>
+                      </div>
+                      
+                      <div className="border-t border-gray-200 my-3"></div>
+                      
+                      <div className="flex justify-between items-center">
+                        <span className="text-sm text-[#64748B]">From</span>
+                        <span className="text-sm font-medium text-[#0F172A] text-right">
+                          {deliveryData.pickupAddress?.city}, {deliveryData.pickupAddress?.state}
+                        </span>
+                      </div>
+                      
+                      <div className="border-t border-gray-200 my-3"></div>
+                      
+                      <div className="flex justify-between items-center">
+                        <span className="text-sm text-[#64748B]">To</span>
+                        <span className="text-sm font-medium text-[#0F172A] text-right">
+                          {deliveryData.deliveryAddress?.city}, {deliveryData.deliveryAddress?.state}
+                        </span>
+                      </div>
+                      
+                      <div className="border-t border-gray-200 my-3"></div>
+                      
+                      <div className="flex justify-between items-center">
+                        <span className="text-sm text-[#64748B]">Weight</span>
+                        <span className="text-sm font-medium text-[#0F172A]">
+                          {deliveryData.packageDetails?.weight || 'N/A'} kg
+                        </span>
+                      </div>
+                      
+                      <div className="border-t border-gray-200 my-3"></div>
+                      
+                      <div className="flex justify-between items-center">
+                        <span className="text-sm text-[#64748B]">Est. Delivery</span>
+                        <span className="text-sm font-medium text-[#0F172A]">
+                          {formatDate(deliveryData.estimatedDelivery || deliveryData.createdAt)}
+                        </span>
+                      </div>
+                    </div>
+                  </YummyText>
                 </div>
 
-                <div className="flex items-start gap-4">
-                  <div className="flex flex-col items-center">
-                    <div className="w-4 h-4 bg-[#00D68F] rounded-full"></div>
-                    <div className="w-0.5 h-16 bg-gray-300"></div>
-                  </div>
-                  <div className="flex-1">
-                    <div className="text-sm font-medium text-[#0F172A]">In Transit</div>
-                    <div className="text-xs text-[#64748B]">On the way to destination</div>
-                    <div className="text-xs text-[#94A3B8] mt-1">Today, 11:00 AM</div>
-                  </div>
+                {/* Recipient Information */}
+                <div className="bg-white rounded-2xl p-6" style={sideBottomShadow}>
+                  <YummyText>
+                    <div className="text-sm font-medium text-[#0F172A] mb-4">
+                      Recipient Information
+                    </div>
+                    <div className="space-y-3">
+                      <div className="flex justify-between items-center">
+                        <span className="text-sm text-[#64748B]">Name</span>
+                        <span className="text-sm font-medium text-[#0F172A]">
+                          {deliveryData.recipient?.name || 'N/A'}
+                        </span>
+                      </div>
+                      
+                      <div className="border-t border-gray-200 my-3"></div>
+                      
+                      <div className="flex justify-between items-center">
+                        <span className="text-sm text-[#64748B]">Phone</span>
+                        <span className="text-sm font-medium text-[#0F172A]">
+                          {deliveryData.recipient?.phone || 'N/A'}
+                        </span>
+                      </div>
+                      
+                      <div className="border-t border-gray-200 my-3"></div>
+                      
+                      <div className="flex justify-between items-center">
+                        <span className="text-sm text-[#64748B]">Email</span>
+                        <span className="text-sm font-medium text-[#0F172A]">
+                          {deliveryData.recipient?.email || 'N/A'}
+                        </span>
+                      </div>
+                      
+                      <div className="border-t border-gray-200 my-3"></div>
+                      
+                      <div className="flex justify-between items-start">
+                        <span className="text-sm text-[#64748B]">Address</span>
+                        <span className="text-sm font-medium text-[#0F172A] text-right max-w-[60%]">
+                          {deliveryData.deliveryAddress?.street}, {deliveryData.deliveryAddress?.city}, {deliveryData.deliveryAddress?.state}
+                        </span>
+                      </div>
+                    </div>
+                  </YummyText>
                 </div>
+              </div>
 
-                <div className="flex items-start gap-4">
-                  <div className="flex flex-col items-center">
-                    <div className="w-4 h-4 bg-gray-300 rounded-full"></div>
+              {/* Tracking History */}
+              <div className="bg-white rounded-2xl p-6" style={sideBottomShadow}>
+                <YummyText>
+                  <div className="mb-2">
+                    <div className="text-lg font-medium text-[#0F172A]">
+                      Tracking History
+                    </div>
+                    <div className="text-sm text-[#64748B]">
+                      Complete journey of your package
+                    </div>
                   </div>
-                  <div className="flex-1 opacity-50">
-                    <div className="text-sm font-medium text-[#0F172A]">Out for Delivery</div>
-                    <div className="text-xs text-[#64748B]">Estimated arrival in 15 min</div>
+                </YummyText>
+
+                <div className="mt-6 space-y-6">
+                  {/** Always render the full 4-step timeline; highlight steps based on status */}
+                  {/* Package Received */}
+                  <div className="flex items-start gap-4">
+                    <div className="flex flex-col items-center">
+                      <div className={`w-10 h-10 bg-[#00B75A] rounded-full flex items-center justify-center flex-shrink-0`}>
+                        <BlockIcon width={24} height={24} stroke="#FFFFFF" />
+                      </div>
+                      <div className={`w-0.5 h-16 ${inTransitReached ? 'bg-[#00B75A]' : 'bg-gray-300'}`}></div>
+                    </div>
+                    <div className="flex-1 pt-2">
+                      <YummyText>
+                        <div className="text-sm font-medium text-[#0F172A] mb-1">Package Received</div>
+                        <div className="text-xs text-[#64748B] mb-1">{deliveryData.pickupAddress?.city} Distribution Center</div>
+                        <div className="text-xs text-[#94A3B8]">{formatDate(deliveryData.createdAt)} {formatTime(deliveryData.createdAt)}</div>
+                      </YummyText>
+                    </div>
+                    <div className="text-xs text-[#94A3B8] pt-2">{formatTime(deliveryData.createdAt)}</div>
+                  </div>
+
+                  {/* In Transit */}
+                  <div className="flex items-start gap-4">
+                    <div className="flex flex-col items-center">
+                      <div className={`w-10 h-10 ${inTransitReached ? 'bg-[#00B75A]' : 'bg-[#E5E7EB]'} rounded-full flex items-center justify-center flex-shrink-0`}>
+                        <VanIcon width={24} height={24} stroke="#FFFFFF" />
+                      </div>
+                      <div className={`w-0.5 h-16 ${outForReached ? 'bg-[#00B75A]' : 'bg-gray-300'}`}></div>
+                    </div>
+                    <div className="flex-1 pt-2">
+                      <YummyText>
+                        <div className="text-sm font-medium text-[#0F172A] mb-1">In Transit</div>
+                        <div className="text-xs text-[#64748B] mb-1">Currently on the way</div>
+                        <div className="text-xs text-[#94A3B8]">{formatDate(deliveryData.updatedAt)}</div>
+                      </YummyText>
+                    </div>
+                    <div className="text-xs text-[#94A3B8] pt-2">{formatTime(deliveryData.updatedAt)}</div>
+                  </div>
+
+                  {/* Out for Delivery */}
+                  <div className="flex items-start gap-4">
+                    <div className="flex flex-col items-center">
+                      <div className={`w-10 h-10 ${outForReached ? 'bg-[#00B75A]' : 'bg-[#E5E7EB]'} rounded-full flex items-center justify-center flex-shrink-0`}>
+                        <LocationIcon width={24} height={24} stroke="#FFFFFF" />
+                      </div>
+                      <div className={`w-0.5 h-16 ${deliveredReached ? 'bg-[#00B75A]' : 'bg-gray-300'}`}></div>
+                    </div>
+                    <div className="flex-1 pt-2">
+                      <YummyText>
+                        <div className="text-sm font-medium text-[#0F172A] mb-1">Out for Delivery</div>
+                        <div className="text-xs text-[#64748B] mb-1">{deliveryData.deliveryAddress?.city} Distribution Center</div>
+                        <div className="text-xs text-[#94A3B8]">{formatDate(deliveryData.updatedAt)}</div>
+                      </YummyText>
+                    </div>
+                    <div className="text-xs text-[#94A3B8] pt-2">{formatTime(deliveryData.updatedAt)}</div>
+                  </div>
+
+                  {/* Delivered */}
+                  <div className="flex items-start gap-4">
+                    <div className="flex flex-col items-center">
+                      <div className={`w-10 h-10 ${deliveredReached ? 'bg-[#00B75A]' : 'bg-[#E5E7EB]'} rounded-full flex items-center justify-center flex-shrink-0`}>
+                        <CheckIcon width={24} height={24} stroke="#FFFFFF" />
+                      </div>
+                    </div>
+                    <div className={`flex-1 pt-2 ${!deliveredReached ? 'opacity-50' : ''}`}>
+                      <YummyText>
+                        <div className="text-sm font-medium text-[#0F172A] mb-1">Delivered</div>
+                        <div className="text-xs text-[#64748B] mb-1">{deliveredReached ? 'Package delivered successfully' : 'Estimated delivery'}</div>
+                        <div className="text-xs text-[#94A3B8]">{deliveredReached ? formatDate(deliveryData.deliveredAt || deliveryData.updatedAt) : formatDate(deliveryData.estimatedDelivery)}</div>
+                      </YummyText>
+                    </div>
+                    <div className="text-xs text-[#94A3B8] pt-2">{deliveredReached ? formatTime(deliveryData.deliveredAt || deliveryData.updatedAt) : 'By 6:00 PM'}</div>
                   </div>
                 </div>
               </div>
