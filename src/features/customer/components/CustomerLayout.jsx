@@ -1,8 +1,52 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import CustomerSidebar from './CustomerSidebar';
 import { YummyText } from '../../../components/YummyText';
 
+const DEFAULT_AVATAR = 'https://api.dicebear.com/7.x/avataaars/svg?seed=User';
+
 const CustomerLayout = ({ children }) => {
+  const [avatarSrc, setAvatarSrc] = useState(DEFAULT_AVATAR);
+
+  const loadAvatar = () => {
+    try {
+      // 1. Check explicit cached profile image
+      const cached = localStorage.getItem('profile_image');
+      if (cached) {
+        setAvatarSrc(cached);
+        return;
+      }
+
+      // 2. Fallback to user_data object
+      const userRaw = localStorage.getItem('user_data');
+      if (userRaw) {
+        const user = JSON.parse(userRaw);
+        const img = user?.profileImage || user?.profile_image || user?.avatar || user?.avatarUrl || user?.data?.profileImage || user?.data?.profile_image || user?.user?.profileImage || null;
+        if (img) {
+          setAvatarSrc(img);
+          return;
+        }
+        // optionally use email/name seed for dicebear
+        const seed = (user?.fullName || user?.name || user?.email || 'User').split(' ')[0];
+        setAvatarSrc(`https://api.dicebear.com/7.x/avataaars/svg?seed=${encodeURIComponent(seed)}`);
+        return;
+      }
+
+      // Default
+      setAvatarSrc(DEFAULT_AVATAR);
+    } catch (e) {
+      console.warn('[CustomerLayout] Failed to load avatar from storage', e);
+      setAvatarSrc(DEFAULT_AVATAR);
+    }
+  };
+
+  useEffect(() => {
+    loadAvatar();
+    // Update when profile is updated elsewhere
+    window.addEventListener('profile:updated', loadAvatar);
+    return () => window.removeEventListener('profile:updated', loadAvatar);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
   return (
     <div className="flex h-screen bg-[#f5f5f5]">
       <CustomerSidebar />
@@ -29,8 +73,13 @@ const CustomerLayout = ({ children }) => {
                   </svg>
                   <span className="absolute top-1 right-2 w-2 h-2 bg-[#FF6B00] rounded-full"></span>
                 </button>
-                <button className="w-10 h-10 rounded-full bg-gradient-to-br from-[#00D68F] to-[#00B876] flex items-center justify-center overflow-hidden">
-                  <img src="https://api.dicebear.com/7.x/avataaars/svg?seed=John" alt="Profile" className="w-full h-full" />
+                <button
+                  onClick={() => (window.location.href = '/customer/profile')}
+                  title="View Profile"
+                  aria-label="View Profile"
+                  className="w-10 h-10 rounded-full bg-gradient-to-br from-[#00D68F] to-[#00B876] flex items-center justify-center overflow-hidden cursor-pointer"
+                >
+                  <img src={avatarSrc} alt="Profile" className="w-full h-full object-cover" />
                 </button>
               </div>
             </div>

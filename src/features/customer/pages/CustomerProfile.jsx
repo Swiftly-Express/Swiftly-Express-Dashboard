@@ -189,6 +189,13 @@ const CustomerProfile = () => {
         // Persist to localStorage
         localStorage.setItem('profile_image', imageUrl);
         console.log('[Profile] Saved profile image to localStorage:', imageUrl);
+        
+        // Dispatch event to notify other components (like CustomerLayout)
+        window.dispatchEvent(new CustomEvent('profile:updated', {
+          detail: { profileImage: imageUrl }
+        }));
+        console.log('[Profile] Dispatched profile:updated event for image');
+        
         setToastMsg('Profile photo updated successfully!');
       } else {
         // If no URL returned, create preview
@@ -198,6 +205,12 @@ const CustomerProfile = () => {
           // Persist to localStorage
           localStorage.setItem('profile_image', reader.result);
           console.log('[Profile] Saved preview image to localStorage');
+          
+          // Dispatch event to notify other components
+          window.dispatchEvent(new CustomEvent('profile:updated', {
+            detail: { profileImage: reader.result }
+          }));
+          console.log('[Profile] Dispatched profile:updated event for preview image');
         };
         reader.readAsDataURL(file);
         setToastMsg('Profile photo updated!');
