@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { IonPage, IonContent, IonToast } from '@ionic/react';
 import CustomerLayout from '../components/CustomerLayout';
 import { YummyText } from '../../../components/YummyText';
-import { getDeliveryById } from '../../../utils/authApi';
+import { getDeliveryByTracking } from '../../../utils/authApi';
 import BlockIcon from '../../../icons/Blockicon';
 import CheckIcon from '../../../icons/Checkicon';
 import LocationIcon from '../../../icons/Locationicon';
@@ -18,39 +18,6 @@ const Track = () => {
   const [loading, setLoading] = useState(false);
   const [toastMsg, setToastMsg] = useState('');
   const [showToast, setShowToast] = useState(false);
-  const [useMockData, setUseMockData] = useState(false);
-
-  // Mock data for UI testing
-  const mockDeliveryData = {
-    _id: 'PKG-2401',
-    trackingId: 'PKG-2401',
-    status: 'In Transit',
-    pickupAddress: {
-      street: '123 Broadway',
-      city: 'New York',
-      state: 'NY',
-      zipCode: '10001'
-    },
-    deliveryAddress: {
-      street: '456 Sunset Blvd',
-      city: 'Los Angeles',
-      state: 'CA',
-      zipCode: '90001'
-    },
-    recipient: {
-      name: 'Sarah Mitchell',
-      phone: '(555) 123-4567',
-      email: 'sarah.m@email.com'
-    },
-    packageDetails: {
-      weight: 2.5,
-      description: 'Electronics',
-      dimensions: '30x20x15'
-    },
-    createdAt: '2025-10-22T09:30:00Z',
-    updatedAt: '2025-10-24T14:15:00Z',
-    estimatedDelivery: '2025-10-25T18:00:00Z'
-  };
 
   const handleTrack = async (e) => {
     e.preventDefault();
@@ -64,26 +31,16 @@ const Track = () => {
     setLoading(true);
     
     try {
-      // Check if user wants to use mock data
-      if (trackingId.toLowerCase() === 'mock' || trackingId.toLowerCase() === 'pkg-2401') {
-        console.log('[Track] Using mock data');
-        setDeliveryData(mockDeliveryData);
-        setUseMockData(true);
-        setLoading(false);
-        return;
-      }
-
       console.log('[Track] Fetching delivery:', trackingId);
-      const response = await getDeliveryById(trackingId);
+      const response = await getDeliveryByTracking(trackingId);
       console.log('[Track] Delivery data:', response);
       
       const data = response?.data || response;
       setDeliveryData(data);
-      setUseMockData(false);
       
     } catch (err) {
       console.error('[Track] Failed to fetch delivery:', err);
-      setToastMsg(err?.message || 'Tracking number not found. Try "PKG-2401" for demo.');
+      setToastMsg(err?.message || 'Tracking number not found');
       setShowToast(true);
       setDeliveryData(null);
     } finally {

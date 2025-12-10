@@ -549,6 +549,15 @@ export async function uploadProfileImage(file) {
   });
 }
 
+/**
+ * Track delivery by tracking number (public endpoint)
+ * @param {string} trackingNumber - The tracking number
+ */
+export async function getDeliveryByTracking(trackingNumber) {
+  if (!trackingNumber) throw new Error('trackingNumber is required');
+  return apiClient.get(`/api/tracking/${trackingNumber}`);
+}
+
 export default {
   registerRider,
   registerCustomer,
@@ -563,6 +572,7 @@ export default {
   createDelivery,
   getCustomerDeliveries,
   getDeliveryById,
+  getDeliveryByTracking,
   rateDriver,
   cancelDelivery,
   getCustomerProfile,
