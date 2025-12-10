@@ -264,6 +264,12 @@ const CustomerProfile = () => {
         localStorage.setItem('user_data', JSON.stringify(updatedUserData));
         console.log('[Profile] Updated localStorage with fresh profile data:', updatedUserData);
         
+        // Dispatch event to notify other components (like Dashboard) of profile update
+        window.dispatchEvent(new CustomEvent('profile:updated', {
+          detail: updatedUserData
+        }));
+        console.log('[Profile] Dispatched profile:updated event');
+        
         // Update form with fresh data
         setFormData({
           fullName: data?.fullName || data?.full_name || data?.name || formData.fullName,
@@ -292,6 +298,11 @@ const CustomerProfile = () => {
           }
         };
         localStorage.setItem('user_data', JSON.stringify(updatedUserData));
+        
+        // Dispatch event to notify other components
+        window.dispatchEvent(new CustomEvent('profile:updated', {
+          detail: updatedUserData
+        }));
       }
       
       setToastMsg('Profile updated successfully!');

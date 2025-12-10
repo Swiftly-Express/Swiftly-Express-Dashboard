@@ -152,15 +152,25 @@ const CustomerDashboard = () => {
       console.log('[Dashboard] Delivery updated:', event.detail);
       fetchDashboardData();
     };
+    
+    const handleProfileUpdated = (event) => {
+      console.log('[Dashboard] Profile updated:', event.detail);
+      // Update user name immediately
+      const name = getUserFirstName();
+      setUserName(name);
+      console.log('[Dashboard] Updated user name to:', name);
+    };
 
     window.addEventListener('deliveries:refresh', handleRefresh);
     window.addEventListener('delivery:created', handleDeliveryCreated);
     window.addEventListener('delivery:updated', handleDeliveryUpdated);
+    window.addEventListener('profile:updated', handleProfileUpdated);
 
     return () => {
       window.removeEventListener('deliveries:refresh', handleRefresh);
       window.removeEventListener('delivery:created', handleDeliveryCreated);
       window.removeEventListener('delivery:updated', handleDeliveryUpdated);
+      window.removeEventListener('profile:updated', handleProfileUpdated);
     };
   }, []);
 
