@@ -4,6 +4,8 @@ import { arrowForward } from 'ionicons/icons';
 import CustomerLayout from '../components/CustomerLayout';
 import { YummyText } from '../../../components/YummyText';
 import { getCustomerDeliveries } from '../../../utils/authApi';
+import BlockIcon from '../../../icons/Blockicon';
+import CheckIcon from '../../../icons/Checkicon';
 
 const sideBottomShadow = {
   boxShadow: '2px 4px 4px rgba(0,0,0,0.06), -2px 4px 4px rgba(0,0,0,0.06), 0 4px 8px rgba(0,0,0,0.08)'
@@ -312,7 +314,7 @@ const CustomerDashboard = () => {
           <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-8">
             <StatCard
               icon={
-                <img src="/blockicon.svg" alt="Active Deliveries" className="w-5 h-5" />
+                <BlockIcon width={24} height={24} stroke="#007BFF" />
               }
               iconBg="bg-blue-50"
               title="Active Deliveries"
@@ -332,9 +334,9 @@ const CustomerDashboard = () => {
             />
             <StatCard
               icon={
-                <img src="/checkicon.svg" alt="Completed" className="w-5 h-5" />
+                <CheckIcon width={24} height={24} stroke="#00B75A" />
               }
-              iconBg="bg-green-50"
+              iconBg="bg-[#F0FDF4]"
               title="Completed"
               value={loading ? '...' : stats.completed}
               subtitle="Successfully delivered"
