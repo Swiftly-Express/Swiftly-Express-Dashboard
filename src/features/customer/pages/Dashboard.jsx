@@ -22,11 +22,11 @@ const StatCard = ({ icon, iconBg, title, value, subtitle, subtitleColor }) => (
   </div>
 );
 
-const DeliveryItem = ({ packageId, status, statusColor, statusBg, from, to, eta, etaTime, progress }) => (
+const DeliveryItem = ({ packageName, status, statusColor, statusBg, from, to, eta, etaTime, progress }) => (
   <div className="mb-6 last:mb-0">
     <div className="flex items-start justify-between mb-2">
       <div className="flex items-center gap-2">
-        <div className="text-base font-medium text-[#00B75A]">{packageId}</div>
+        <div className="text-base font-medium text-[#00B75A]">{packageName}</div>
         <span className={`px-3 py-1 rounded-full text-xs font-medium ${statusBg} ${statusColor}`}>
           {status}
         </span>
@@ -167,7 +167,7 @@ const CustomerDashboard = () => {
   const fetchDashboardData = async () => {
     setLoading(true);
     try {
-      // Fetch all deliveries to calculate accurate stats (not just limit to 3)
+      // Fetch all deliveries to calculate accurate stats (not just limit to 6)
       const response = await getCustomerDeliveries({ page: 1, limit: 50 });
       
       // Handle different possible response structures (same as MyDeliveries)
@@ -187,10 +187,28 @@ const CustomerDashboard = () => {
       
       console.log('[Dashboard] Fetched deliveries:', deliveries);
       
+      // Get current time for 24-hour check
+      const now = new Date();
+      const twentyFourHoursAgo = new Date(now.getTime() - 24 * 60 * 60 * 1000);
+      
       // Calculate stats from all deliveries
       const activeDeliveries = deliveries.filter(d => {
         const status = d?.status?.toLowerCase() || 'pending';
-        return status !== 'delivered' && status !== 'completed' && status !== 'cancelled';
+        const isActive = status !== 'delivered' && status !== 'completed' && status !== 'cancelled';
+        
+        // If it's active, include it
+        if (isActive) return true;
+        
+        // If it's completed, only include if completed within last 24 hours
+        if (status === 'delivered' || status === 'completed') {
+          const completedAt = d?.deliveredAt || d?.updatedAt || d?.completedAt;
+          if (completedAt) {
+            const completedDate = new Date(completedAt);
+            return completedDate > twentyFourHoursAgo;
+          }
+        }
+        
+        return false;
       });
       
       const inTransitDeliveries = deliveries.filter(d => {
@@ -212,12 +230,13 @@ const CustomerDashboard = () => {
         successRate: total > 0 ? Math.round((completedDeliveries.length / total) * 100) : 0
       });
       
-      // Show only the 3 most recent for display
-      const recentThree = activeDeliveries.slice(0, 3);
+      // Show only the 6 most recent for display
+      const recentSix = activeDeliveries.slice(0, 6);
       
       // Map backend data to UI format
-      const mappedDeliveries = recentThree.map((d) => ({
+      const mappedDeliveries = recentSix.map((d) => ({
         id: d.id || d._id || d.trackingId || 'N/A',
+        packageName: d.packageDetails?.description || 'Package',
         status: d.status || 'Unknown',
         statusColor: getStatusColor(d.status),
         statusBg: getStatusBg(d.status),
@@ -325,20 +344,28 @@ const CustomerDashboard = () => {
 
           {/* Recent Deliveries */}
           <div className="bg-white rounded-2xl p-6" style={sideBottomShadow}>
-            <div className="mb-6">
-              <YummyText className="text-xl font-semibold text-[#0F172A] mb-1">
-                Recent Deliveries
-              </YummyText>
-              <YummyText className="text-xl font-[400] text-[#717182]">
-                Track your latest shipments
-              </YummyText>
+            <div className="mb-6 flex items-start justify-between">
+              <div>
+                <YummyText className="text-xl font-semibold text-[#0F172A] mb-1">
+                  Recent Deliveries
+                </YummyText>
+                <YummyText className="text-xl font-[400] text-[#717182]">
+                  Track your latest shipments
+                </YummyText>
+              </div>
+              <button
+                onClick={() => window.location.href = '/customer/deliveries'}
+                className="px-4 py-2 text-sm font-medium text-[#00B75A] hover:text-[#009647] transition-colors border border-[#00B75A] hover:border-[#009647] rounded-lg"
+              >
+                View All
+              </button>
             </div>
 
             <div>
               {recentDeliveries.map((delivery, index) => (
                 <DeliveryItem
                   key={index}
-                  packageId={delivery.id}
+                  packageName={delivery.packageName}
                   status={delivery.status}
                   statusColor={delivery.statusColor}
                   statusBg={delivery.statusBg}
