@@ -77,12 +77,45 @@ const VerifyEmail = () => {
     try {
       // Backend expects payload: { code: '123456' }
       // Pass pendingVerificationUserId when available so backend can identify the user
-      await verifyEmail({ code: otpCode, userId: pendingVerificationUserId });
+      const response = await verifyEmail({ code: otpCode, userId: pendingVerificationUserId });
+      
+      console.log('[VerifyEmail] Verification response:', response);
+      
+      // Extract and store auth tokens from response
+      const token = response?.token || response?.data?.token || response?.accessToken || response?.data?.accessToken || response?.auth_token || response?.data?.auth_token;
+      const refreshToken = response?.refreshToken || response?.refresh_token || response?.data?.refreshToken || response?.data?.refresh_token;
+      const user = response?.user || response?.data?.user || response?.data;
+      
+      if (token) {
+        localStorage.setItem('auth_token', token);
+        console.log('[VerifyEmail] Auth token stored');
+      }
+      
+      if (refreshToken) {
+        localStorage.setItem('refresh_token', refreshToken);
+        console.log('[VerifyEmail] Refresh token stored');
+      }
+      
+      // Store or update user data
+      if (user) {
+        localStorage.setItem('user_data', JSON.stringify(user));
+        localStorage.setItem('user_type', user?.role || userType || 'customer');
+        console.log('[VerifyEmail] User data stored');
+      } else {
+        // If no user in response, try to get from pendingUserData
+        const pendingUserData = localStorage.getItem('pendingUserData');
+        if (pendingUserData) {
+          localStorage.setItem('user_data', pendingUserData);
+          localStorage.setItem('user_type', userType || 'customer');
+          console.log('[VerifyEmail] Stored pending user data');
+        }
+      }
 
       // Clear pending verification data
       localStorage.removeItem('pendingVerificationEmail');
       localStorage.removeItem('pendingVerificationType');
       localStorage.removeItem('pendingVerificationUserId');
+      localStorage.removeItem('pendingUserData');
 
       // For riders, mark email as verified but account verification still pending
       if (userType === 'rider') {
@@ -90,14 +123,15 @@ const VerifyEmail = () => {
         localStorage.setItem('riderAccountVerified', 'false'); // Still need to upload documents
       }
 
-      // Redirect based on user type
+      alert('Email verified successfully!');
+      
+      // Redirect based on user type - user is now authenticated
       if (userType === 'rider' || userType === 'driver') {
         router.push('/rider/dashboard', 'root', 'replace');
       } else {
         router.push('/customer/dashboard', 'root', 'replace');
       }
 
-      alert('Email verified successfully!');
     } catch (err) {
       console.error('Verification failed', err);
       alert(err?.message || 'Verification failed. Please try again.');

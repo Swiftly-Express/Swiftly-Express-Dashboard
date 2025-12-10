@@ -3,6 +3,7 @@ import { IonContent, IonPage, IonIcon } from '@ionic/react';
 import { arrowForward } from 'ionicons/icons';
 import CustomerLayout from '../components/CustomerLayout';
 import { YummyText } from '../../../components/YummyText';
+import { getCustomerDeliveries } from '../../../utils/authApi';
 
 const sideBottomShadow = {
   boxShadow: '2px 4px 4px rgba(0,0,0,0.06), -2px 4px 4px rgba(0,0,0,0.06), 0 4px 8px rgba(0,0,0,0.08)'
@@ -116,49 +117,125 @@ const getUserFirstName = () => {
 
 const CustomerDashboard = () => {
   const [userName, setUserName] = useState('Customer');
+  const [recentDeliveries, setRecentDeliveries] = useState([]);
+  const [stats, setStats] = useState({
+    active: 0,
+    inTransit: 0,
+    completed: 0,
+    successRate: 0
+  });
+  const [loading, setLoading] = useState(false);
 
   useEffect(() => {
     // Get user name on component mount
     const name = getUserFirstName();
     setUserName(name);
     console.log('[Dashboard] Extracted user name:', name);
+    
+    // Fetch real deliveries data
+    fetchDashboardData();
   }, []);
 
-  const recentDeliveries = [
-    {
-      id: 'PKG-2401',
-      status: 'In Transit',
-      statusColor: 'text-blue-700',
-      statusBg: 'bg-blue-100',
-      from: 'New York, NY',
-      to: 'Los Angeles, CA',
-      eta: 'ETA',
-      etaTime: '2 days',
-      progress: 65
-    },
-    {
-      id: 'PKG-2402',
-      status: 'Processing',
-      statusColor: 'text-orange-700',
-      statusBg: 'bg-orange-100',
-      from: 'Chicago, IL',
-      to: 'Miami, FL',
-      eta: 'ETA',
-      etaTime: '4 days',
-      progress: 25
-    },
-    {
-      id: 'PKG-2403',
-      status: 'Out for Delivery',
-      statusColor: 'text-[#008236]',
-      statusBg: 'bg-green-100',
-      from: 'Seattle, WA',
-      to: 'Boston, MA',
-      eta: 'ETA',
-      etaTime: 'Today',
-      progress: 90
+  const fetchDashboardData = async () => {
+    setLoading(true);
+    try {
+      // Fetch all deliveries to calculate accurate stats (not just limit to 3)
+      const response = await getCustomerDeliveries({ page: 1, limit: 50 });
+      
+      // Handle different possible response structures (same as MyDeliveries)
+      let deliveries = [];
+      
+      if (Array.isArray(response)) {
+        deliveries = response;
+      } else if (response?.data) {
+        deliveries = Array.isArray(response.data) ? response.data : (response.data.deliveries || response.data.items || []);
+      } else if (response?.deliveries) {
+        deliveries = response.deliveries;
+      } else if (response?.items) {
+        deliveries = response.items;
+      } else if (response?.results) {
+        deliveries = response.results;
+      }
+      
+      console.log('[Dashboard] Fetched deliveries:', deliveries);
+      
+      // Calculate stats from all deliveries
+      const activeDeliveries = deliveries.filter(d => {
+        const status = d?.status?.toLowerCase() || 'pending';
+        return status !== 'delivered' && status !== 'completed' && status !== 'cancelled';
+      });
+      
+      const inTransitDeliveries = deliveries.filter(d => {
+        const status = d?.status?.toLowerCase() || '';
+        return status === 'in-transit' || status === 'in_transit' || status === 'intransit';
+      });
+      
+      const completedDeliveries = deliveries.filter(d => {
+        const status = d?.status?.toLowerCase() || '';
+        return status === 'delivered' || status === 'completed';
+      });
+      
+      const total = response?.total || response?.meta?.total || deliveries.length;
+      
+      setStats({
+        active: activeDeliveries.length,
+        inTransit: inTransitDeliveries.length,
+        completed: completedDeliveries.length,
+        successRate: total > 0 ? Math.round((completedDeliveries.length / total) * 100) : 0
+      });
+      
+      // Show only the 3 most recent for display
+      const recentThree = activeDeliveries.slice(0, 3);
+      
+      // Map backend data to UI format
+      const mappedDeliveries = recentThree.map((d) => ({
+        id: d.id || d._id || d.trackingId || 'N/A',
+        status: d.status || 'Unknown',
+        statusColor: getStatusColor(d.status),
+        statusBg: getStatusBg(d.status),
+        from: d.pickupAddress?.city || d.pickupAddress?.street || 'Unknown',
+        to: d.deliveryAddress?.city || d.deliveryAddress?.street || 'Unknown',
+        eta: 'ETA',
+        etaTime: d.estimatedDelivery || 'TBD',
+        progress: getProgress(d.status)
+      }));
+      
+      setRecentDeliveries(mappedDeliveries);
+      
+    } catch (err) {
+      console.error('[Dashboard] Failed to fetch deliveries:', err);
+    } finally {
+      setLoading(false);
     }
-  ];
+  };
+
+  // Helper to get status color
+  const getStatusColor = (status) => {
+    const s = (status || '').toLowerCase();
+    if (s.includes('transit')) return 'text-blue-700';
+    if (s.includes('processing') || s.includes('pending')) return 'text-orange-700';
+    if (s.includes('delivered')) return 'text-green-700';
+    if (s.includes('delivery')) return 'text-[#008236]';
+    return 'text-gray-700';
+  };
+
+  const getStatusBg = (status) => {
+    const s = (status || '').toLowerCase();
+    if (s.includes('transit')) return 'bg-blue-100';
+    if (s.includes('processing') || s.includes('pending')) return 'bg-orange-100';
+    if (s.includes('delivered')) return 'bg-green-100';
+    if (s.includes('delivery')) return 'bg-green-100';
+    return 'bg-gray-100';
+  };
+
+  const getProgress = (status) => {
+    const s = (status || '').toLowerCase();
+    if (s.includes('delivered')) return 100;
+    if (s.includes('delivery')) return 90;
+    if (s.includes('transit')) return 65;
+    if (s.includes('processing') || s.includes('pending')) return 25;
+    return 10;
+  };
 
   return (
     <IonPage>
@@ -182,8 +259,8 @@ const CustomerDashboard = () => {
               }
               iconBg="bg-blue-50"
               title="Active Deliveries"
-              value="12"
-              subtitle="+3 from last week"
+              value={loading ? '...' : stats.active}
+              subtitle="Currently active"
               subtitleColor="text-[#64748B]"
             />
             <StatCard
@@ -192,8 +269,8 @@ const CustomerDashboard = () => {
               }
               iconBg="bg-[#FFF7ED]"
               title="In Transit"
-              value="8"
-              subtitle="2 arriving today"
+              value={loading ? '...' : stats.inTransit}
+              subtitle="On the way"
               subtitleColor="text-[#64748B]"
             />
             <StatCard
@@ -202,8 +279,8 @@ const CustomerDashboard = () => {
               }
               iconBg="bg-green-50"
               title="Completed"
-              value="142"
-              subtitle="+12 this month"
+              value={loading ? '...' : stats.completed}
+              subtitle="Successfully delivered"
               subtitleColor="text-[#64748B]"
             />
             <StatCard
@@ -212,8 +289,8 @@ const CustomerDashboard = () => {
               }
               iconBg="bg-purple-50"
               title="Success Rate"
-              value="99%"
-              subtitle="+2% improvement"
+              value={loading ? '...' : `${stats.successRate}%`}
+              subtitle="Delivery success"
               subtitleColor="text-[#64748B]"
             />
           </div>

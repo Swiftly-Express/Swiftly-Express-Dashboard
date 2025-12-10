@@ -497,6 +497,58 @@ export async function getDeliveryById(deliveryId) {
   return apiClient.get(`/api/customer/deliveries/${deliveryId}`);
 }
 
+/**
+ * Rate a driver for a delivery
+ * @param {string} deliveryId - The delivery ID
+ * @param {object} payload - Rating details (e.g., { rating: 5, comment: "Great service!" })
+ */
+export async function rateDriver(deliveryId, payload) {
+  if (!deliveryId) throw new Error('deliveryId is required');
+  return apiClient.post(`/api/customer/deliveries/${deliveryId}/rate`, payload);
+}
+
+/**
+ * Cancel a delivery
+ * @param {string} deliveryId - The delivery ID
+ * @param {object} payload - Optional cancellation reason (e.g., { reason: "Changed mind" })
+ */
+export async function cancelDelivery(deliveryId, payload = {}) {
+  if (!deliveryId) throw new Error('deliveryId is required');
+  return apiClient.post(`/api/customer/deliveries/${deliveryId}/cancel`, payload);
+}
+
+/**
+ * Get customer profile
+ */
+export async function getCustomerProfile() {
+  return apiClient.get('/api/customer/profile');
+}
+
+/**
+ * Update customer profile
+ * @param {object} payload - Profile fields to update (e.g., { fullName, phone, address })
+ */
+export async function updateCustomerProfile(payload) {
+  return apiClient.put('/api/customer/profile', payload);
+}
+
+/**
+ * Upload customer profile image
+ * @param {File|FormData} file - The image file or FormData containing the image
+ */
+export async function uploadProfileImage(file) {
+  const formData = file instanceof FormData ? file : new FormData();
+  if (!(file instanceof FormData)) {
+    formData.append('image', file);
+  }
+  
+  return apiClient.post('/api/customer/profile/upload-image', formData, {
+    headers: {
+      'Content-Type': 'multipart/form-data'
+    }
+  });
+}
+
 export default {
   registerRider,
   registerCustomer,
@@ -511,6 +563,11 @@ export default {
   createDelivery,
   getCustomerDeliveries,
   getDeliveryById,
+  rateDriver,
+  cancelDelivery,
+  getCustomerProfile,
+  updateCustomerProfile,
+  uploadProfileImage,
   isAuthenticated,
   getAuthToken,
   getPendingUserId,
