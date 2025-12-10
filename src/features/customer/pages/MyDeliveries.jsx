@@ -72,7 +72,7 @@ const DeliveryCard = ({ delivery }) => {
     
     // Mark as read when user opens the details
     if (newIsOpen) {
-      const deliveryId = delivery._id || delivery.id || delivery.trackingId;
+      const deliveryId = delivery._id || delivery.id || delivery.trackingNumber || delivery.trackingId;
       if (deliveryId) {
         console.log('[DeliveryCard] Marking delivery as read:', deliveryId);
         window.dispatchEvent(new CustomEvent('delivery:read', { 
@@ -87,7 +87,7 @@ const DeliveryCard = ({ delivery }) => {
   };
   
   const handleCopyPackageId = async () => {
-    const packageId = delivery.trackingId || delivery.id || delivery._id;
+    const packageId = delivery.trackingNumber || delivery.trackingId || delivery.id || delivery._id;
     try {
       await navigator.clipboard.writeText(packageId);
       setShowCopyToast(true);
@@ -162,7 +162,7 @@ const DeliveryCard = ({ delivery }) => {
             <div>
               <div className="text-xs font-medium text-[#64748B] mb-1">Package ID</div>
               <div className="text-sm text-[#0F172A] flex items-center gap-2">
-                <span>{delivery.trackingId || delivery.id || delivery._id || 'N/A'}</span>
+                <span>{delivery.trackingNumber || delivery.trackingId || delivery.id || delivery._id || 'N/A'}</span>
                 <button 
                   onClick={handleCopyPackageId}
                   className="text-[#64748B] hover:text-[#0F172A] transition-colors"
@@ -215,7 +215,7 @@ const CompletedDeliveryRow = ({ delivery }) => {
     
     // Mark as read when user opens the details
     if (newIsOpen) {
-      const deliveryId = delivery._id || delivery.id || delivery.trackingId;
+      const deliveryId = delivery._id || delivery.id || delivery.trackingNumber || delivery.trackingId;
       if (deliveryId) {
         console.log('[CompletedDeliveryRow] Marking delivery as read:', deliveryId);
         window.dispatchEvent(new CustomEvent('delivery:read', { 
@@ -230,7 +230,7 @@ const CompletedDeliveryRow = ({ delivery }) => {
   };
   
   const handleCopyPackageId = async () => {
-    const packageId = delivery.trackingId || delivery.id || delivery._id;
+    const packageId = delivery.trackingNumber || delivery.trackingId || delivery.id || delivery._id;
     try {
       await navigator.clipboard.writeText(packageId);
       setShowCopyToast(true);
@@ -284,7 +284,7 @@ const CompletedDeliveryRow = ({ delivery }) => {
               <div>
                 <div className="text-xs font-medium text-[#64748B] mb-1">Package ID</div>
                 <div className="text-sm text-[#0F172A] flex items-center gap-2">
-                  <span>{delivery.trackingId || delivery.id || delivery._id || 'N/A'}</span>
+                  <span>{delivery.trackingNumber || delivery.trackingId || delivery.id || delivery._id || 'N/A'}</span>
                   <button 
                     onClick={handleCopyPackageId}
                     className="text-[#64748B] hover:text-[#0F172A] transition-colors"

@@ -35,7 +35,8 @@ const Track = () => {
       const response = await getDeliveryByTracking(trackingId);
       console.log('[Track] Delivery data:', response);
       
-      const data = response?.data || response;
+      // Extract delivery from nested response structure
+      const data = response?.data?.delivery || response?.delivery || response?.data || response;
       setDeliveryData(data);
       
     } catch (err) {
@@ -122,14 +123,15 @@ const Track = () => {
           </div>
 
           {/* Tracking Input */}
+          <YummyText>
           <div className="bg-white p-4 rounded-full mb-8" style={sideBottomShadow}>
             <form onSubmit={handleTrack} className="flex gap-3">
               <input
                 type="text"
                 value={trackingId}
                 onChange={(e) => setTrackingId(e.target.value)}
-                placeholder="PKG-2401"
-                className="flex-1 px-5 py-3 rounded-full bg-[#F8F9FA] text-[#0F172A] placeholder:text-[#94A3B8] focus:outline-none focus:ring-2 focus:ring-[#00B75A] border-none"
+                placeholder="Enter your package Id"
+                className="flex-1 px-5 py-3 rounded-full bg-[#F3F3F5] text-[#0F172A] font-medium placeholder:text-[#717182] placeholder:font-[400] focus:outline-none focus:ring-2 focus:ring-[#00B75A] border-none"
                 required
               />
               <button
@@ -150,6 +152,7 @@ const Track = () => {
               </div>
             </YummyText> */}
           </div>
+          </YummyText>
 
           {/* Loading State */}
           {loading && (
@@ -189,7 +192,7 @@ const Track = () => {
                       <div>
                         <span className="text-sm text-[#64748B]">Tracking ID: </span>
                         <span className="text-sm text-[#64748B] ">
-                          {deliveryData.trackingId || deliveryData.id || deliveryData._id}
+                          {deliveryData.trackingNumber || deliveryData.trackingId || deliveryData.id || deliveryData._id}
                         </span>
                       </div>
                       
