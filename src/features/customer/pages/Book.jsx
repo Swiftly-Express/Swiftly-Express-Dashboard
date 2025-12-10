@@ -86,6 +86,12 @@ const Book = () => {
       const response = await createDelivery(payload);
       console.log('[Book] Delivery created:', response);
       
+      // Dispatch events to notify other components
+      window.dispatchEvent(new Event('deliveries:refresh'));
+      window.dispatchEvent(new CustomEvent('delivery:created', { 
+        detail: response?.data || response 
+      }));
+      
       setToastMsg('Delivery booked successfully!');
       setShowToast(true);
       setTimeout(() => {

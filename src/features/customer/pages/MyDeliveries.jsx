@@ -292,6 +292,34 @@ const MyDeliveries = () => {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [page]);
 
+  useEffect(() => {
+    // Listen for delivery events to refresh the list
+    const handleRefresh = () => {
+      console.log('[MyDeliveries] Received refresh event');
+      fetchDeliveries();
+    };
+    
+    const handleDeliveryCreated = (event) => {
+      console.log('[MyDeliveries] Delivery created:', event.detail);
+      fetchDeliveries();
+    };
+    
+    const handleDeliveryUpdated = (event) => {
+      console.log('[MyDeliveries] Delivery updated:', event.detail);
+      fetchDeliveries();
+    };
+
+    window.addEventListener('deliveries:refresh', handleRefresh);
+    window.addEventListener('delivery:created', handleDeliveryCreated);
+    window.addEventListener('delivery:updated', handleDeliveryUpdated);
+
+    return () => {
+      window.removeEventListener('deliveries:refresh', handleRefresh);
+      window.removeEventListener('delivery:created', handleDeliveryCreated);
+      window.removeEventListener('delivery:updated', handleDeliveryUpdated);
+    };
+  }, []);
+
   async function fetchDeliveries() {
     setLoading(true);
     setError('');
