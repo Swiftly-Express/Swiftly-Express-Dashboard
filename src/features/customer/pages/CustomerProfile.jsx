@@ -53,9 +53,39 @@ const CustomerProfile = () => {
   const fetchProfile = async () => {
     setLoading(true);
     try {
-      console.log('[Profile] Fetching customer profile...');
+      // First, load from localStorage for immediate display
+      const cachedUserData = localStorage.getItem('user_data');
+      const cachedProfileImage = localStorage.getItem('profile_image');
+      
+      if (cachedUserData) {
+        try {
+          const userData = JSON.parse(cachedUserData);
+          console.log('[Profile] Loading cached user data:', userData);
+          
+          setFormData({
+            fullName: userData?.fullName || userData?.name || '',
+            email: userData?.email || '',
+            phone: userData?.phone || userData?.phoneNumber || '',
+            street: userData?.address?.street || '',
+            city: userData?.address?.city || '',
+            state: userData?.address?.state || '',
+            zipCode: userData?.address?.zipCode || '',
+            country: userData?.address?.country || 'Nigeria'
+          });
+        } catch (e) {
+          console.warn('[Profile] Failed to parse cached user data:', e);
+        }
+      }
+      
+      if (cachedProfileImage) {
+        setProfileImage(cachedProfileImage);
+        console.log('[Profile] Loaded cached profile image');
+      }
+      
+      // Then fetch from server and update
+      console.log('[Profile] Fetching customer profile from server...');
       const profile = await getCustomerProfile();
-      console.log('[Profile] Profile data:', profile);
+      console.log('[Profile] Profile data from server:', profile);
       
       // Handle different response structures
       const data = profile?.data || profile;
@@ -71,9 +101,11 @@ const CustomerProfile = () => {
         country: data?.address?.country || 'Nigeria'
       });
       
-      // Set profile image if available
-      if (data?.profileImage || data?.profile_image || data?.avatar) {
-        setProfileImage(data.profileImage || data.profile_image || data.avatar);
+      // Set profile image if available from server, otherwise keep cached
+      const serverImage = data?.profileImage || data?.profile_image || data?.avatar;
+      if (serverImage) {
+        setProfileImage(serverImage);
+        localStorage.setItem('profile_image', serverImage);
       }
       
       // Set notification preferences if available
@@ -154,12 +186,18 @@ const CustomerProfile = () => {
       
       if (imageUrl) {
         setProfileImage(imageUrl);
+        // Persist to localStorage
+        localStorage.setItem('profile_image', imageUrl);
+        console.log('[Profile] Saved profile image to localStorage:', imageUrl);
         setToastMsg('Profile photo updated successfully!');
       } else {
         // If no URL returned, create preview
         const reader = new FileReader();
         reader.onloadend = () => {
           setProfileImage(reader.result);
+          // Persist to localStorage
+          localStorage.setItem('profile_image', reader.result);
+          console.log('[Profile] Saved preview image to localStorage');
         };
         reader.readAsDataURL(file);
         setToastMsg('Profile photo updated!');
