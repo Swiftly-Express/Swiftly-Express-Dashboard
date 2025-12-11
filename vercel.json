@@ -9,5 +9,9 @@
   "routes": [
     { "handle": "filesystem" },
     { "src": "/(.*)", "dest": "/index.html" }
-  ]
+  ],
+  
+  "env": {
+    "VITE_API_BASE_URL": "https://api.swiftlyxpress.com"
+  }
 }
