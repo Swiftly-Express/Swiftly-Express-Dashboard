@@ -1,8 +1,9 @@
-import React, { useState } from 'react';
-import { IonContent, IonPage, IonIcon } from '@ionic/react';
+import React, { useState, useEffect } from 'react';
+import { IonContent, IonPage, IonIcon, IonToast } from '@ionic/react';
 import { arrowForward } from 'ionicons/icons';
 import RiderLayout from '../components/RiderLayout';
 import { YummyText } from '../../../components/YummyText';
+import { getRiderEarnings } from '../../../utils/authApi';
 
 const sideBottomShadow = {
   boxShadow: '0.5px 1.5px 2px rgba(0, 0, 0, 0.05), -0.5px 1.5px 2px rgba(0, 0, 0, 0.05), 0 1.5px 3px rgba(0, 0, 0, 0.07)'
@@ -25,8 +26,34 @@ const StatCard = ({ icon, iconBg, title, value, subtitle }) => (
 
 const Earnings = () => {
   const [activeTab, setActiveTab] = useState('today');
+  const [earnings, setEarnings] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [toastMsg, setToastMsg] = useState('');
+  const [showToast, setShowToast] = useState(false);
 
-  const todayDeliveries = [
+  // Fetch earnings data on mount
+  useEffect(() => {
+    fetchEarnings();
+  }, []);
+
+  const fetchEarnings = async () => {
+    try {
+      setLoading(true);
+      const response = await getRiderEarnings();
+      const earningsData = response?.data?.earnings || response?.earnings;
+      setEarnings(earningsData);
+    } catch (error) {
+      console.error('Error fetching earnings:', error);
+      setToastMsg(error.message || 'Failed to load earnings data');
+      setShowToast(true);
+      // Fallback to mock data on error
+      setEarnings(null);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const todayDeliveries = earnings?.todayDeliveries || [
     {
       orderId: 'PKG-2401',
       time: '08:30 AM',
@@ -86,20 +113,10 @@ const Earnings = () => {
       basePay: '$22.00',
       tips: '+$3.00',
       total: '$25.00'
-    },
-    {
-      orderId: 'PKG-2406',
-      time: '03:30 PM',
-      from: 'Center',
-      to: 'Lakeside',
-      distance: '2.9 mi',
-      basePay: '$22.00',
-      tips: '+$3.00',
-      total: '$25.00'
     }
   ];
 
-  const weekDeliveries = [
+  const weekDeliveries = earnings?.weeklyTrend || [
     { day: 'Monday', deliveries: 8, earnings: '$124.50' },
     { day: 'Tuesday', deliveries: 12, earnings: '$189.75' },
     { day: 'Wednesday', deliveries: 10, earnings: '$156.25' },
@@ -109,9 +126,37 @@ const Earnings = () => {
     { day: 'Sunday', deliveries: 4, earnings: '$68.00' }
   ];
 
+  // Calculate totals from API or fallback to mock calculation
+  const todayEarnings = earnings?.todayTotal || '$124.50';
+  const weeklyEarnings = earnings?.weeklyTotal || '$687.25';
+  const monthlyEarnings = earnings?.monthlyTotal || '$2,845.00';
+  const totalDeliveries = earnings?.totalDeliveries || 42;
+  const avgPerDelivery = earnings?.avgPerDelivery || '$16.36';
+
   const totalToday = todayDeliveries.reduce((sum, delivery) => {
-    return sum + parseFloat(delivery.total.replace('$', ''));
+    const total = typeof delivery.total === 'string' 
+      ? parseFloat(delivery.total.replace('$', ''))
+      : delivery.total;
+    return sum + total;
   }, 0);
+
+  // Show loading state
+  if (loading) {
+    return (
+      <IonPage>
+        <RiderLayout>
+          <IonContent className="ion-padding">
+            <div className="flex items-center justify-center h-full">
+              <div className="text-center">
+                <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-[#00D68F] mx-auto mb-4"></div>
+                <p className="text-[#64748B]">Loading earnings...</p>
+              </div>
+            </div>
+          </IonContent>
+        </RiderLayout>
+      </IonPage>
+    );
+  }
 
   return (
     <IonPage>
@@ -144,8 +189,8 @@ const Earnings = () => {
               }
               iconBg="bg-green-50"
               title="Today's Earnings"
-              value="$124.50"
-              subtitle="+$32.50 from yesterday"
+              value={todayEarnings}
+              subtitle={earnings?.todayChange || "+$32.50 from yesterday"}
             />
             <StatCard
               icon={
@@ -155,8 +200,8 @@ const Earnings = () => {
               }
               iconBg="bg-blue-50"
               title="This Week"
-              value="$687.25"
-              subtitle="+15% from last week"
+              value={weeklyEarnings}
+              subtitle={earnings?.weeklyChange || "+15% from last week"}
             />
             <StatCard
               icon={
@@ -166,8 +211,8 @@ const Earnings = () => {
               }
               iconBg="bg-orange-50"
               title="Total Deliveries"
-              value="42"
-              subtitle="This week"
+              value={totalDeliveries}
+              subtitle={earnings?.deliveriesSubtitle || "This week"}
             />
             <StatCard
               icon={
@@ -177,8 +222,8 @@ const Earnings = () => {
               }
               iconBg="bg-purple-50"
               title="Avg. per Delivery"
-              value="$16.36"
-              subtitle="+$2.15 improvement"
+              value={avgPerDelivery}
+              subtitle={earnings?.avgChange || "+$2.15 improvement"}
             />
           </div>
 
@@ -199,8 +244,10 @@ const Earnings = () => {
             <div className="h-64 flex items-end justify-between gap-4 px-4">
               {weekDeliveries.map((day, index) => {
                 const maxEarnings = 250;
-                const earnings = parseFloat(day.earnings.replace('$', ''));
-                const height = (earnings / maxEarnings) * 100;
+                const earningsValue = typeof day.earnings === 'string' 
+                  ? parseFloat(day.earnings.replace('$', ''))
+                  : day.earnings;
+                const height = (earningsValue / maxEarnings) * 100;
                 
                 return (
                   <YummyText>
@@ -381,6 +428,16 @@ const Earnings = () => {
             </div>
             </YummyText>
           </div>
+
+          {/* Toast Notification */}
+          <IonToast
+            isOpen={showToast}
+            onDidDismiss={() => setShowToast(false)}
+            message={toastMsg}
+            duration={3000}
+            position="top"
+            color={toastMsg.includes('Failed') || toastMsg.includes('Error') ? 'danger' : 'success'}
+          />
         </IonContent>
       </RiderLayout>
     </IonPage>

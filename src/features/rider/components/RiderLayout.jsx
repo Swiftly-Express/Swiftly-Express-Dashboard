@@ -1,8 +1,82 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import RiderSidebar from './RiderSidebar';
 import { YummyText } from '../../../components/YummyText';
+import { getRiderProfile } from '../../../utils/authApi';
 
 const RiderLayout = ({ children }) => {
+  const [profileImage, setProfileImage] = useState('https://api.dicebear.com/7.x/avataaars/svg?seed=Marcus');
+  const [userName, setUserName] = useState('Rider');
+  const [isOnline, setIsOnline] = useState(true);
+
+  useEffect(() => {
+    fetchUserProfile();
+
+    // Listen for profile updates
+    const handleProfileUpdate = (event) => {
+      console.log('[RiderLayout] Profile updated:', event.detail);
+      if (event.detail?.profilePhoto) {
+        setProfileImage(event.detail.profilePhoto);
+      }
+      if (event.detail?.fullName || event.detail?.firstName) {
+        const name = event.detail.fullName || `${event.detail.firstName || ''} ${event.detail.lastName || ''}`.trim();
+        setUserName(name || 'Rider');
+      }
+    };
+
+    const handleVerificationComplete = (event) => {
+      console.log('[RiderLayout] Verification completed, refreshing profile');
+      fetchUserProfile();
+    };
+
+    window.addEventListener('profile:updated', handleProfileUpdate);
+    window.addEventListener('verification:completed', handleVerificationComplete);
+
+    return () => {
+      window.removeEventListener('profile:updated', handleProfileUpdate);
+      window.removeEventListener('verification:completed', handleVerificationComplete);
+    };
+  }, []);
+
+  const fetchUserProfile = async () => {
+    try {
+      const response = await getRiderProfile();
+      const profile = response?.data?.driver || response?.driver || response?.data;
+      
+      if (profile) {
+        // Update profile image
+        if (profile.profilePhoto) {
+          setProfileImage(profile.profilePhoto);
+        }
+        
+        // Update user name
+        const name = profile.fullName || `${profile.firstName || ''} ${profile.lastName || ''}`.trim();
+        if (name) {
+          setUserName(name);
+        }
+        
+        console.log('[RiderLayout] Profile loaded:', { name, hasPhoto: !!profile.profilePhoto });
+      }
+    } catch (error) {
+      console.error('[RiderLayout] Failed to fetch profile:', error);
+      // Fallback to localStorage
+      const userData = localStorage.getItem('user_data');
+      if (userData) {
+        try {
+          const user = JSON.parse(userData);
+          const name = user.fullName || `${user.firstName || ''} ${user.lastName || ''}`.trim();
+          if (name) setUserName(name);
+        } catch (e) {
+          console.error('[RiderLayout] Failed to parse user data:', e);
+        }
+      }
+    }
+  };
+
+  const handleAvailabilityToggle = () => {
+    setIsOnline(!isOnline);
+    // TODO: Call updateRiderAvailability API
+  };
+
   return (
     <div className="flex h-screen bg-[#f5f5f5]">
       <RiderSidebar />
@@ -24,12 +98,17 @@ const RiderLayout = ({ children }) => {
               {/* Right: actions */}
               <div className="flex items-center justify-end gap-4 pr-6">
                 <div className="flex items-center gap-4 bg-[#F3F4F6] p-3 px-5 rounded-full shadow-sm">
-                  <YummyText className="text-sm text-[#0A0A0A]">Online</YummyText>
+                  <YummyText className="text-sm text-[#0A0A0A]">{isOnline ? 'Online' : 'Offline'}</YummyText>
                   <label className="relative inline-block w-11 h-6">
-                    <input type="checkbox" className="sr-only peer" defaultChecked />
+                    <input 
+                      type="checkbox" 
+                      className="sr-only peer" 
+                      checked={isOnline}
+                      onChange={handleAvailabilityToggle}
+                    />
                     <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-[#00D68F]"></div>
                   </label>
-                  <div className="w-2 h-2 bg-[#00D68F] rounded-full"></div>
+                  <div className={`w-2 h-2 rounded-full ${isOnline ? 'bg-[#00D68F]' : 'bg-gray-400'}`}></div>
                 </div>
 
                 <button className="relative p-2 hover:bg-gray-50 rounded-lg transition-colors">
@@ -40,7 +119,11 @@ const RiderLayout = ({ children }) => {
                 </button>
 
                 <button className="w-10 h-10 rounded-full bg-gradient-to-br from-[#00D68F] to-[#00B876] flex items-center justify-center overflow-hidden">
-                  <img src="https://api.dicebear.com/7.x/avataaars/svg?seed=Marcus" alt="Profile" className="w-full h-full" />
+                  <img 
+                    src={profileImage} 
+                    alt={userName} 
+                    className="w-full h-full object-cover" 
+                  />
                 </button>
               </div>
             </div>

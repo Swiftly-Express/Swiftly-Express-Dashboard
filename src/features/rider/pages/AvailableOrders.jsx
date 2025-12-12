@@ -1,7 +1,8 @@
-import React, { useState } from 'react';
-import { IonPage, IonContent } from '@ionic/react';
+import React, { useState, useEffect } from 'react';
+import { IonPage, IonContent, IonToast } from '@ionic/react';
 import RiderLayout from '../components/RiderLayout';
 import { YummyText } from '../../../components/YummyText';
+import { getAvailableJobs, acceptDeliveryJob } from '../../../utils/authApi';
 
 // Shadow only on left, right and bottom - no top shadow for seamless blend
 const sideBottomShadow = {
@@ -18,7 +19,23 @@ const StatCard = ({ icon, title, value, subtitle, color }) => (
   </div>
 );
 
-const OrderCard = ({ packageId, priority, size, pickupName, pickupAddress, deliveryName, deliveryAddress, distance, time, packageSize, price, tips }) => (
+const OrderCard = ({ 
+  deliveryId,
+  packageId, 
+  priority, 
+  size, 
+  pickupName, 
+  pickupAddress, 
+  deliveryName, 
+  deliveryAddress, 
+  distance, 
+  time, 
+  packageSize, 
+  price, 
+  tips,
+  onAccept,
+  accepting 
+}) => (
   <div className="bg-white rounded-2xl p-6 mb-4" style={sideBottomShadow}>
     <YummyText>
     <div className="flex items-start justify-between mb-4">
@@ -98,8 +115,12 @@ const OrderCard = ({ packageId, priority, size, pickupName, pickupAddress, deliv
     {/* Action Buttons */}
     <YummyText>
     <div className="flex gap-3">
-      <button className="flex-1 bg-[#00B75A] hover:bg-[#00B876] text-white py-2 rounded-lg transition-colors font-[400]">
-        Accept Order
+      <button 
+        onClick={() => onAccept(deliveryId)}
+        disabled={accepting}
+        className={`flex-1 bg-[#00B75A] hover:bg-[#00B876] text-white py-2 rounded-lg transition-colors font-[400] ${accepting ? 'opacity-50 cursor-not-allowed' : ''}`}
+      >
+        {accepting ? 'Accepting...' : 'Accept Order'}
       </button>
       <button className="flex-1 bg-white border border-gray-200 hover:bg-gray-50 rounded-lg transition-colors text-[#0F172A] font-[400] py-2" style={{border: "1px solid #0000001A"}}>
         View Details
@@ -111,65 +132,99 @@ const OrderCard = ({ packageId, priority, size, pickupName, pickupAddress, deliv
 
 const AvailableOrders = () => {
   const [activeTab, setActiveTab] = useState('all');
+  const [orders, setOrders] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [accepting, setAccepting] = useState(null);
+  const [page, setPage] = useState(1);
+  const [toastMsg, setToastMsg] = useState('');
+  const [showToast, setShowToast] = useState(false);
 
-  const orders = [
-    {
-      id: 'PKG-2405',
-      priority: null,
-      size: 'Medium',
-      pickupName: 'Downtown Market',
-      pickupAddress: '789 Market St, NY 10001',
-      deliveryName: 'Riverside Apartments',
-      deliveryAddress: '456 River Rd, NY 10002',
-      distance: '2.1 mi',
-      time: '18 min',
-      packageSize: '25.5',
-      price: 'N2348.00',
-      tips: '0.00'
-    },
-    {
-      id: 'PKG-2406',
-      priority: 'Express',
-      size: 'Large',
-      pickupName: 'West Side Plaza',
-      pickupAddress: '321 Plaza Ave, NY 10003',
-      deliveryName: 'Tech Campus Building B',
-      deliveryAddress: '999 Innovation Dr, NY 10004',
-      distance: '4.5 mi',
-      time: '25 min',
-      packageSize: '33.5',
-      price: 'N2348.00',
-      tips: 'N5.00'
-    },
-    {
-      id: 'PKG-2407',
-      priority: null,
-      size: 'Small',
-      pickupName: 'Central Pharmacy',
-      pickupAddress: '555 Health Blvd, NY 10005',
-      deliveryName: 'Greenwood Residence',
-      deliveryAddress: '123 Green St, NY 10006',
-      distance: '1.3 mi',
-      time: '12 min',
-      packageSize: '20',
-      price: 'N2348.00',
-      tips: 'N2.00'
-    },
-    {
-      id: 'PKG-2408',
-      priority: 'Express',
-      size: 'Medium',
-      pickupName: 'Fashion Outlet',
-      pickupAddress: '888 Style Ave, NY 10007',
-      deliveryName: 'Sunset Towers',
-      deliveryAddress: '777 Sunset Blvd, NY 10008',
-      distance: '3.8 mi',
-      time: '22 min',
-      packageSize: '28',
-      price: 'N2348.00',
-      tips: 'N4.00'
+  // Fetch available jobs on mount
+  useEffect(() => {
+    fetchAvailableJobs();
+  }, [page]);
+
+  // Listen for new deliveries created by customers
+  useEffect(() => {
+    const handleDeliveryCreated = (event) => {
+      console.log('[AvailableOrders] New delivery created, refreshing jobs:', event.detail);
+      setToastMsg('New delivery available!');
+      setShowToast(true);
+      fetchAvailableJobs();
+    };
+
+    const handleDeliveriesRefresh = () => {
+      console.log('[AvailableOrders] Deliveries refresh requested');
+      fetchAvailableJobs();
+    };
+
+    window.addEventListener('delivery:created', handleDeliveryCreated);
+    window.addEventListener('deliveries:refresh', handleDeliveriesRefresh);
+
+    return () => {
+      window.removeEventListener('delivery:created', handleDeliveryCreated);
+      window.removeEventListener('deliveries:refresh', handleDeliveriesRefresh);
+    };
+  }, []);
+
+  const fetchAvailableJobs = async () => {
+    setLoading(true);
+    try {
+      const response = await getAvailableJobs(page, 20);
+      console.log('[AvailableOrders] Fetched jobs:', response);
+      
+      // Extract jobs from response (adjust based on actual API response structure)
+      const jobs = response?.data?.jobs || response?.jobs || response?.data || [];
+      setOrders(jobs);
+    } catch (error) {
+      console.error('[AvailableOrders] Failed to fetch jobs:', error);
+      setToastMsg(error.message || 'Failed to load available jobs');
+      setShowToast(true);
+      // Keep mock data as fallback for development
+      setOrders([
+        {
+          id: 'PKG-2405',
+          _id: 'PKG-2405',
+          priority: null,
+          size: 'Medium',
+          pickupName: 'Downtown Market',
+          pickupAddress: '789 Market St, NY 10001',
+          deliveryName: 'Riverside Apartments',
+          deliveryAddress: '456 River Rd, NY 10002',
+          distance: '2.1 mi',
+          time: '18 min',
+          packageSize: '25.5',
+          price: 'N2348.00',
+          tips: '0.00'
+        }
+      ]);
+    } finally {
+      setLoading(false);
     }
-  ];
+  };
+
+  const handleAcceptOrder = async (deliveryId) => {
+    setAccepting(deliveryId);
+    try {
+      const response = await acceptDeliveryJob(deliveryId);
+      console.log('[AvailableOrders] Job accepted:', response);
+      
+      setToastMsg('Order accepted successfully!');
+      setShowToast(true);
+      
+      // Remove accepted order from list
+      setOrders(prev => prev.filter(order => (order._id || order.id) !== deliveryId));
+      
+      // Dispatch event to refresh active deliveries
+      window.dispatchEvent(new CustomEvent('delivery:accepted', { detail: { deliveryId } }));
+    } catch (error) {
+      console.error('[AvailableOrders] Failed to accept job:', error);
+      setToastMsg(error.message || 'Failed to accept order');
+      setShowToast(true);
+    } finally {
+      setAccepting(null);
+    }
+  };
 
   const filteredOrders = orders.filter(order => {
     if (activeTab === 'all') return true;
@@ -263,24 +318,46 @@ const AvailableOrders = () => {
 
           {/* Orders List */}
           <div className="max-h-[800px] overflow-y-auto pr-2">
-            {filteredOrders.map((order) => (
-              <OrderCard
-                key={order.id}
-                packageId={order.id}
-                priority={order.priority}
-                size={order.size}
-                pickupName={order.pickupName}
-                pickupAddress={order.pickupAddress}
-                deliveryName={order.deliveryName}
-                deliveryAddress={order.deliveryAddress}
-                distance={order.distance}
-                time={order.time}
-                packageSize={order.packageSize}
-                price={order.price}
-                tips={order.tips}
-              />
-            ))}
+            {loading ? (
+              <div className="text-center py-12">
+                <div className="inline-block animate-spin rounded-full h-8 w-8 border-4 border-gray-300 border-t-[#00B75A]"></div>
+                <p className="mt-4 text-[#64748B]">Loading available orders...</p>
+              </div>
+            ) : filteredOrders.length === 0 ? (
+              <div className="text-center py-12">
+                <p className="text-[#64748B]">No available orders at the moment</p>
+              </div>
+            ) : (
+              filteredOrders.map((order) => (
+                <OrderCard
+                  key={order._id || order.id}
+                  deliveryId={order._id || order.id}
+                  packageId={order.trackingNumber || order.id}
+                  priority={order.priority}
+                  size={order.size || order.packageDetails?.size}
+                  pickupName={order.pickupName || order.pickupAddress?.name}
+                  pickupAddress={order.pickupAddress?.street || order.pickupAddress}
+                  deliveryName={order.deliveryName || order.deliveryAddress?.name}
+                  deliveryAddress={order.deliveryAddress?.street || order.deliveryAddress}
+                  distance={order.distance || 'N/A'}
+                  time={order.estimatedTimeMinutes ? `${order.estimatedTimeMinutes} min` : order.time || 'N/A'}
+                  packageSize={order.packageSize || order.packageDetails?.weight || 'N/A'}
+                  price={order.price || 'N/A'}
+                  tips={order.tips || '0.00'}
+                  onAccept={handleAcceptOrder}
+                  accepting={accepting === (order._id || order.id)}
+                />
+              ))
+            )}
           </div>
+
+          <IonToast
+            isOpen={showToast}
+            onDidDismiss={() => setShowToast(false)}
+            message={toastMsg}
+            duration={3000}
+            position="top"
+          />
         </IonContent>
       </RiderLayout>
     </IonPage>

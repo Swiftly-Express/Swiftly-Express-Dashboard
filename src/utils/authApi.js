@@ -22,7 +22,28 @@ function getCookie(name) {
 apiClient.interceptors.request.use(
   (config) => {
     if (typeof window !== 'undefined') {
-      const token = localStorage.getItem('auth_token');
+      // Determine which token to use based on the endpoint
+      let token = null;
+      
+      if (config.url?.includes('/customer/') || config.url?.includes('/deliveries/create')) {
+        // Use customer token for customer endpoints
+        token = localStorage.getItem('customer_token');
+      } else if (config.url?.includes('/driver/')) {
+        // Use rider token for driver/rider endpoints
+        token = localStorage.getItem('rider_token');
+      } else {
+        // Fallback: try to detect from current page or use userRole
+        const userRole = localStorage.getItem('userRole');
+        if (userRole === 'customer') {
+          token = localStorage.getItem('customer_token');
+        } else if (userRole === 'rider' || userRole === 'driver') {
+          token = localStorage.getItem('rider_token');
+        } else {
+          // Last resort: try old auth_token for backward compatibility
+          token = localStorage.getItem('auth_token');
+        }
+      }
+      
       if (token) {
         config.headers.Authorization = `Bearer ${token}`;
       }
@@ -62,33 +83,48 @@ apiClient.interceptors.response.use(
 
 /**
  * Check if user is authenticated
+ * @param {string} role - Optional role to check specific authentication (customer/rider)
  */
-export function isAuthenticated() {
+export function isAuthenticated(role = null) {
   if (typeof window === 'undefined') return false;
 
-  // Consider the user authenticated only when there's a usable auth token
-  const token = localStorage.getItem('auth_token');
-  if (token) return true;
+  if (role === 'customer') {
+    return !!localStorage.getItem('customer_token');
+  } else if (role === 'rider' || role === 'driver') {
+    return !!localStorage.getItem('rider_token');
+  }
 
-  const cookieToken = getCookie('auth_token');
-  if (cookieToken) return true;
-
-  return false;
+  // Check if any token exists
+  const customerToken = localStorage.getItem('customer_token');
+  const riderToken = localStorage.getItem('rider_token');
+  const oldToken = localStorage.getItem('auth_token');
+  
+  return !!(customerToken || riderToken || oldToken);
 }
 
 /**
  * Get stored auth token
+ * @param {string} role - Optional role to get specific token (customer/rider)
  */
-export function getAuthToken() {
+export function getAuthToken(role = null) {
   if (typeof window === 'undefined') return null;
-  // Prefer localStorage token, fallback to cookie token
-  const local = localStorage.getItem('auth_token');
-  if (local) return local;
-
-  const cookieToken = getCookie('auth_token');
-  if (cookieToken) return cookieToken;
-
-  return null;
+  
+  if (role === 'customer') {
+    return localStorage.getItem('customer_token');
+  } else if (role === 'rider' || role === 'driver') {
+    return localStorage.getItem('rider_token');
+  }
+  
+  // Auto-detect based on userRole
+  const userRole = localStorage.getItem('userRole');
+  if (userRole === 'customer') {
+    return localStorage.getItem('customer_token');
+  } else if (userRole === 'rider' || userRole === 'driver') {
+    return localStorage.getItem('rider_token');
+  }
+  
+  // Fallback to old token
+  return localStorage.getItem('auth_token');
 }
 
 /**
@@ -137,8 +173,9 @@ export async function registerRider(payload) {
     
     if (token) {
       try {
-        localStorage.setItem('auth_token', token);
-        console.log('[authApi] Token stored after registration');
+        localStorage.setItem('rider_token', token);
+        localStorage.setItem('auth_token', token); // backward compatibility
+        console.log('[authApi] Rider token stored after registration');
       } catch (e) {
         console.error('[authApi] Failed to store token:', e);
       }
@@ -146,8 +183,9 @@ export async function registerRider(payload) {
     
     if (refresh) {
       try {
+        localStorage.setItem('rider_refresh_token', refresh);
         localStorage.setItem('refresh_token', refresh);
-        console.log('[authApi] Refresh token stored after registration');
+        console.log('[authApi] Rider refresh token stored after registration');
       } catch (e) {
         console.error('[authApi] Failed to store refresh token:', e);
       }
@@ -156,8 +194,9 @@ export async function registerRider(payload) {
     if (user) {
       try {
         localStorage.setItem('user_data', JSON.stringify(user));
+        localStorage.setItem('userRole', 'rider');
         localStorage.setItem('user_type', user?.role || 'driver');
-        console.log('[authApi] User data stored after registration');
+        console.log('[authApi] Rider user data stored after registration');
       } catch (e) {
         console.error('[authApi] Failed to store user data:', e);
       }
@@ -170,8 +209,9 @@ export async function registerRider(payload) {
         if (me) {
           try {
             localStorage.setItem('user_data', JSON.stringify(me));
+            localStorage.setItem('userRole', 'rider');
             localStorage.setItem('user_type', me?.role || 'driver');
-            console.log('[authApi] Fetched and stored current user after registration');
+            console.log('[authApi] Fetched and stored rider user after registration');
           } catch (e) {
             console.error('[authApi] Failed to store fetched user data:', e);
           }
@@ -232,13 +272,15 @@ export async function registerCustomer(payload) {
     // If token is provided immediately (no email verification required), store it
     if (token) {
       try {
-        localStorage.setItem('auth_token', token);
-        console.log('[authApi] Token stored after registration');
+        localStorage.setItem('customer_token', token);
+        localStorage.setItem('auth_token', token); // backward compatibility
+        console.log('[authApi] Customer token stored after registration');
         
         if (user) {
           localStorage.setItem('user_data', JSON.stringify(user));
+          localStorage.setItem('userRole', 'customer');
           localStorage.setItem('user_type', user?.role || 'customer');
-          console.log('[authApi] User authenticated after registration');
+          console.log('[authApi] Customer authenticated after registration');
         }
       } catch (e) {
         console.error('[authApi] Failed to store token:', e);
@@ -247,8 +289,9 @@ export async function registerCustomer(payload) {
     
     if (refresh) {
       try {
+        localStorage.setItem('customer_refresh_token', refresh);
         localStorage.setItem('refresh_token', refresh);
-        console.log('[authApi] Refresh token stored after registration');
+        console.log('[authApi] Customer refresh token stored after registration');
       } catch (e) {
         console.error('[authApi] Failed to store refresh token:', e);
       }
@@ -372,13 +415,22 @@ export async function login(payload) {
     const token = response?.token || response?.data?.token || response?.accessToken || response?.data?.accessToken || response?.auth_token || response?.data?.auth_token;
     const refresh = response?.refreshToken || response?.refresh_token || response?.data?.refreshToken || response?.data?.refresh_token;
     const user = response?.user || response?.data?.user || response?.data || response?.user_data || response?.data?.user_data || null;
+    const userRole = user?.role || payload?.role || 'customer';
     
-    console.log('[authApi] Extracted from response:', { hasToken: !!token, hasUser: !!user });
+    console.log('[authApi] Extracted from response:', { hasToken: !!token, hasUser: !!user, userRole });
     
     if (token) {
       try {
+        // Store token in role-specific key
+        if (userRole === 'rider' || userRole === 'driver') {
+          localStorage.setItem('rider_token', token);
+          console.log('[authApi] Rider token stored in localStorage');
+        } else {
+          localStorage.setItem('customer_token', token);
+          console.log('[authApi] Customer token stored in localStorage');
+        }
+        // Keep old key for backward compatibility (will be phased out)
         localStorage.setItem('auth_token', token);
-        console.log('[authApi] Token stored in localStorage');
       } catch (e) {
         console.error('[authApi] Failed to store token:', e);
       }
@@ -386,6 +438,12 @@ export async function login(payload) {
     
     if (refresh) {
       try {
+        // Store refresh token with role prefix
+        if (userRole === 'rider' || userRole === 'driver') {
+          localStorage.setItem('rider_refresh_token', refresh);
+        } else {
+          localStorage.setItem('customer_refresh_token', refresh);
+        }
         localStorage.setItem('refresh_token', refresh);
         console.log('[authApi] Refresh token stored in localStorage');
       } catch (e) {
@@ -396,8 +454,9 @@ export async function login(payload) {
     if (user) {
       try {
         localStorage.setItem('user_data', JSON.stringify(user));
-        localStorage.setItem('user_type', user?.role || 'customer');
-        console.log('[authApi] User data stored');
+        localStorage.setItem('userRole', userRole);
+        localStorage.setItem('user_type', userRole);
+        console.log('[authApi] User data stored with role:', userRole);
       } catch (e) {
         console.error('[authApi] Failed to store user data:', e);
       }
@@ -409,9 +468,11 @@ export async function login(payload) {
         const me = await getCurrentUser(token);
         if (me) {
           try {
+            const fetchedRole = me?.role || userRole;
             localStorage.setItem('user_data', JSON.stringify(me));
-            localStorage.setItem('user_type', me?.role || 'customer');
-            console.log('[authApi] Fetched and stored current user after login');
+            localStorage.setItem('userRole', fetchedRole);
+            localStorage.setItem('user_type', fetchedRole);
+            console.log('[authApi] Fetched and stored current user after login with role:', fetchedRole);
           } catch (e) {
             console.error('[authApi] Failed to store fetched user data:', e);
           }
@@ -449,7 +510,25 @@ export async function getCurrentUser(token) {
  * Expects payload: { refreshToken }
  */
 export async function logout(payload = {}) {
-  return apiClient.post('/api/auth/logout', payload);
+  try {
+    await apiClient.post('/api/auth/logout', payload);
+  } catch (error) {
+    console.error('[authApi] Logout request failed:', error);
+  } finally {
+    // Clear all tokens and user data regardless of API response
+    if (typeof window !== 'undefined') {
+      localStorage.removeItem('auth_token');
+      localStorage.removeItem('customer_token');
+      localStorage.removeItem('rider_token');
+      localStorage.removeItem('refresh_token');
+      localStorage.removeItem('customer_refresh_token');
+      localStorage.removeItem('rider_refresh_token');
+      localStorage.removeItem('user_data');
+      localStorage.removeItem('userRole');
+      localStorage.removeItem('user_type');
+      console.log('[authApi] All auth data cleared from localStorage');
+    }
+  }
 }
 
 /**
@@ -500,8 +579,8 @@ export async function getDeliveryById(deliveryId) {
 
 /**
  * Rate a driver for a delivery
- * @param {string} deliveryId - The delivery ID
- * @param {object} payload - Rating details (e.g., { rating: 5, comment: "Great service!" })
+ * @param {string} deliveryId 
+ * @param {object} payload 
  */
 export async function rateDriver(deliveryId, payload) {
   if (!deliveryId) throw new Error('deliveryId is required');
@@ -510,8 +589,8 @@ export async function rateDriver(deliveryId, payload) {
 
 /**
  * Cancel a delivery
- * @param {string} deliveryId - The delivery ID
- * @param {object} payload - Optional cancellation reason (e.g., { reason: "Changed mind" })
+ * @param {string} deliveryId
+ * @param {object} payload 
  */
 export async function cancelDelivery(deliveryId, payload = {}) {
   if (!deliveryId) throw new Error('deliveryId is required');
@@ -527,7 +606,7 @@ export async function getCustomerProfile() {
 
 /**
  * Update customer profile
- * @param {object} payload - Profile fields to update (e.g., { fullName, phone, address })
+ * @param {object} payload
  */
 export async function updateCustomerProfile(payload) {
   return apiClient.put('/api/customer/profile', payload);
@@ -535,7 +614,7 @@ export async function updateCustomerProfile(payload) {
 
 /**
  * Upload customer profile image
- * @param {File|FormData} file - The image file or FormData containing the image
+ * @param {File|FormData} file
  */
 export async function uploadProfileImage(file) {
   const formData = file instanceof FormData ? file : new FormData();
@@ -552,11 +631,122 @@ export async function uploadProfileImage(file) {
 
 /**
  * Track delivery by tracking number (public endpoint)
- * @param {string} trackingNumber - The tracking number
+ * @param {string} trackingNumber
  */
 export async function getDeliveryByTracking(trackingNumber) {
   if (!trackingNumber) throw new Error('trackingNumber is required');
   return apiClient.get(`/api/tracking/${trackingNumber}`);
+}
+
+// ============================================
+// RIDER/DRIVER ENDPOINTS
+// ============================================
+
+/**
+ * Submit rider verification documents
+ * @param {Object} verificationData
+ */
+export async function submitRiderVerification(verificationData) {
+  console.log('[authApi] Submitting rider verification...');
+  
+  if (verificationData instanceof FormData) {
+    console.log('[authApi] FormData entries:');
+    for (let [key, value] of verificationData.entries()) {
+      if (value instanceof File) {
+        console.log(`  ${key}: [File] ${value.name} (${value.size} bytes, ${value.type})`);
+      } else {
+        console.log(`  ${key}: ${value}`);
+      }
+    }
+  }
+  
+  return apiClient.post('/api/driver/verification', verificationData, {
+    headers: {
+      'Content-Type': undefined
+    }
+  });
+}
+
+
+export async function getRiderVerificationStatus() {
+  return apiClient.get('/api/driver/verification');
+}
+
+/**
+ * Get available jobs/deliveries for rider
+ * @param {number} page
+ * @param {number} limit
+ */
+export async function getAvailableJobs(page = 1, limit = 20) {
+  return apiClient.get(`/api/driver/available-jobs?page=${page}&limit=${limit}`);
+}
+
+/**
+ * Accept a delivery job
+ * @param {string} deliveryId
+ */
+export async function acceptDeliveryJob(deliveryId) {
+  if (!deliveryId) throw new Error('deliveryId is required');
+  return apiClient.post(`/api/driver/deliveries/${deliveryId}/accept`);
+}
+
+/**
+ * Get rider's active deliveries
+ * @param {number} page
+ * @param {number} limit 
+ */
+export async function getRiderDeliveries(page = 1, limit = 10) {
+  return apiClient.get(`/api/driver/my-deliveries?page=${page}&limit=${limit}`);
+}
+
+/**
+ * Update delivery status
+ * @param {string} deliveryId
+ * @param {Object} statusData 
+ */
+export async function updateDeliveryStatus(deliveryId, statusData) {
+  if (!deliveryId) throw new Error('deliveryId is required');
+  return apiClient.put(`/api/driver/deliveries/${deliveryId}/status`, statusData);
+}
+
+/**
+ * Upload delivery proof (photo)
+ * @param {string} deliveryId
+ * @param {FormData} proofData
+ */
+export async function uploadDeliveryProof(deliveryId, proofData) {
+  if (!deliveryId) throw new Error('deliveryId is required');
+  return apiClient.post(`/api/driver/deliveries/${deliveryId}/upload-proof`, proofData, {
+    headers: {
+      'Content-Type': 'multipart/form-data'
+    }
+  });
+}
+
+
+export async function getRiderEarnings() {
+  return apiClient.get('/api/driver/earnings');
+}
+
+/**
+ * Update rider availability status
+ * @param {Object} availabilityData
+ */
+export async function updateRiderAvailability(availabilityData) {
+  return apiClient.put('/api/driver/availability', availabilityData);
+}
+
+
+export async function getRiderProfile() {
+  return apiClient.get('/api/driver/profile');
+}
+
+/**
+ * Update rider profile
+ * @param {Object} profileData
+ */
+export async function updateRiderProfile(profileData) {
+  return apiClient.put('/api/driver/profile', profileData);
 }
 
 export default {
@@ -579,6 +769,17 @@ export default {
   getCustomerProfile,
   updateCustomerProfile,
   uploadProfileImage,
+  submitRiderVerification,
+  getRiderVerificationStatus,
+  getAvailableJobs,
+  acceptDeliveryJob,
+  getRiderDeliveries,
+  updateDeliveryStatus,
+  uploadDeliveryProof,
+  getRiderEarnings,
+  updateRiderAvailability,
+  getRiderProfile,
+  updateRiderProfile,
   isAuthenticated,
   getAuthToken,
   getPendingUserId,

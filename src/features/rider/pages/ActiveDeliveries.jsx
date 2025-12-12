@@ -1,11 +1,12 @@
-import React from 'react';
-import { IonContent, IonPage } from '@ionic/react';
+import React, { useState, useEffect } from 'react';
+import { IonContent, IonPage, IonToast } from '@ionic/react';
 import RiderLayout from '../components/RiderLayout';
 import { YummyText } from '../../../components/YummyText';
 import TelephoneIcon from "../../../icons/Telephoneicon";
 import ChatIcon from "../../../icons/Chaticon";
 import MapboxMap from '../../../components/MapboxMap';
 import { useDelivery } from '../../../contexts/DeliveryContext';
+import { getRiderDeliveries, updateDeliveryStatus, uploadDeliveryProof } from '../../../utils/authApi';
 import './ActiveDeliveries.css';
 
 // Shadow only on left, right and bottom
@@ -164,16 +165,92 @@ const DeliveryCard = ({
 );
 
 const ActiveDeliveries = () => {
-  const { activeDeliveries, updateDeliveryStatus } = useDelivery();
+  const { activeDeliveries, updateDeliveryStatus: contextUpdateStatus } = useDelivery();
+  const [deliveries, setDeliveries] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [toastMsg, setToastMsg] = useState('');
+  const [showToast, setShowToast] = useState(false);
+  const [updatingStatus, setUpdatingStatus] = useState(null);
 
-  // Use context data instead of hardcoded deliveries
-  const deliveries = activeDeliveries;
+  // Fetch rider's active deliveries on mount
+  useEffect(() => {
+    fetchActiveDeliveries();
+    
+    // Listen for delivery acceptance events
+    const handleDeliveryAccepted = () => {
+      fetchActiveDeliveries();
+    };
+    window.addEventListener('delivery:accepted', handleDeliveryAccepted);
+    
+    return () => {
+      window.removeEventListener('delivery:accepted', handleDeliveryAccepted);
+    };
+  }, []);
 
-  const handleStatusUpdate = (orderId, newStatus, statusColor) => {
-    updateDeliveryStatus(orderId, newStatus, statusColor);
+  const fetchActiveDeliveries = async () => {
+    setLoading(true);
+    try {
+      const response = await getRiderDeliveries(1, 10);
+      console.log('[ActiveDeliveries] Fetched deliveries:', response);
+      
+      // Extract deliveries from response
+      const fetchedDeliveries = response?.data?.deliveries || response?.deliveries || response?.data || [];
+      setDeliveries(fetchedDeliveries);
+    } catch (error) {
+      console.error('[ActiveDeliveries] Failed to fetch deliveries:', error);
+      setToastMsg(error.message || 'Failed to load active deliveries');
+      setShowToast(true);
+      // Fallback to context data
+      setDeliveries(activeDeliveries || []);
+    } finally {
+      setLoading(false);
+    }
   };
 
-  return (
+  const handleStatusUpdate = async (deliveryId, newStatus) => {
+    setUpdatingStatus(deliveryId);
+    try {
+      const response = await updateDeliveryStatus(deliveryId, { status: newStatus });
+      console.log('[ActiveDeliveries] Status updated:', response);
+      
+      setToastMsg('Status updated successfully!');
+      setShowToast(true);
+      
+      // Refresh deliveries
+      await fetchActiveDeliveries();
+      
+      // Update context if available
+      if (contextUpdateStatus) {
+        contextUpdateStatus(deliveryId, newStatus);
+      }
+    } catch (error) {
+      console.error('[ActiveDeliveries] Failed to update status:', error);
+      setToastMsg(error.message || 'Failed to update status');
+      setShowToast(true);
+    } finally {
+      setUpdatingStatus(null);
+    }
+  };
+
+  const handleProofUpload = async (deliveryId, file) => {
+    try {
+      const formData = new FormData();
+      formData.append('proof', file);
+      
+      const response = await uploadDeliveryProof(deliveryId, formData);
+      console.log('[ActiveDeliveries] Proof uploaded:', response);
+      
+      setToastMsg('Delivery proof uploaded successfully!');
+      setShowToast(true);
+      
+      // Refresh deliveries
+      await fetchActiveDeliveries();
+    } catch (error) {
+      console.error('[ActiveDeliveries] Failed to upload proof:', error);
+      setToastMsg(error.message || 'Failed to upload proof');
+      setShowToast(true);
+    }
+  };  return (
     <IonPage>
       <RiderLayout>
         <IonContent className="ion-padding">
@@ -191,28 +268,36 @@ const ActiveDeliveries = () => {
 
           {/* Deliveries List */}
           <div className="max-h-[900px] overflow-y-auto pr-2">
-            {deliveries.length > 0 ? (
+            {loading ? (
+              <div className="text-center py-12">
+                <div className="inline-block animate-spin rounded-full h-8 w-8 border-4 border-gray-300 border-t-[#00B75A]"></div>
+                <p className="mt-4 text-[#64748B]">Loading active deliveries...</p>
+              </div>
+            ) : deliveries.length > 0 ? (
               deliveries.map((delivery) => (
                 <DeliveryCard
-                  key={delivery.id}
-                  packageId={delivery.id}
+                  key={delivery._id || delivery.id}
+                  packageId={delivery.trackingNumber || delivery.id}
                   status={delivery.status}
-                  statusColor={delivery.statusColor}
-                  distance={delivery.distance}
-                  time={delivery.time}
-                  price={delivery.price}
-                  pickupName={delivery.pickupName}
-                  pickupAddress={delivery.pickupAddress}
-                  pickupCoords={delivery.pickupCoords}
+                  statusColor={delivery.statusColor || 'bg-blue-100 text-blue-700'}
+                  distance={delivery.distance || 'N/A'}
+                  time={delivery.estimatedTimeMinutes ? `${delivery.estimatedTimeMinutes} min` : delivery.time || 'N/A'}
+                  price={delivery.price || 'N/A'}
+                  pickupName={delivery.pickupName || delivery.pickupAddress?.name || 'Pickup Location'}
+                  pickupAddress={delivery.pickupAddress?.street || delivery.pickupAddress || 'Address not available'}
+                  pickupCoords={delivery.pickupCoords || delivery.pickupAddress?.coordinates}
                   pickupBorder={delivery.status === 'Package Picked Up' ? 'border-[#E5E7EB]' : 'border-[#00D68F]'}
-                  deliveryName={delivery.deliveryName}
-                  deliveryAddress={delivery.deliveryAddress}
-                  deliveryCoords={delivery.deliveryCoords}
+                  deliveryName={delivery.deliveryName || delivery.deliveryAddress?.name || 'Delivery Location'}
+                  deliveryAddress={delivery.deliveryAddress?.street || delivery.deliveryAddress || 'Address not available'}
+                  deliveryCoords={delivery.deliveryCoords || delivery.deliveryAddress?.coordinates}
                   deliveryBorder={delivery.status === 'Package Picked Up' ? 'border-[#FF9500]' : 'border-gray-200'}
-                  size={delivery.size}
-                  weight={delivery.weight}
-                  notes={delivery.notes || delivery.packageDescription}
+                  size={delivery.size || delivery.packageDetails?.size || 'N/A'}
+                  weight={delivery.weight || delivery.packageDetails?.weight || 'N/A'}
+                  notes={delivery.notes || delivery.packageDescription || delivery.packageDetails?.description}
                   actionButtonText={delivery.status === 'En Route to Pickup' ? 'Arrived at Pickup' : 'Started Delivery'}
+                  onStatusUpdate={(newStatus) => handleStatusUpdate(delivery._id || delivery.id, newStatus)}
+                  onProofUpload={(file) => handleProofUpload(delivery._id || delivery.id, file)}
+                  updating={updatingStatus === (delivery._id || delivery.id)}
                 />
               ))
             ) : (
@@ -223,6 +308,14 @@ const ActiveDeliveries = () => {
               </div>
             )}
           </div>
+
+          <IonToast
+            isOpen={showToast}
+            onDidDismiss={() => setShowToast(false)}
+            message={toastMsg}
+            duration={3000}
+            position="top"
+          />
         </IonContent>
       </RiderLayout>
     </IonPage>

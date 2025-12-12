@@ -1,9 +1,10 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { IonContent, IonPage } from '@ionic/react';
+import { IonContent, IonPage, IonToast } from '@ionic/react';
 import RiderLayout from '../components/RiderLayout';
 import { YummyText } from '../../../components/YummyText';
 import DocumentIcon from "../../../icons/Documenticon";
 import UploadIcon from "../../../icons/Uploadicon";
+import { getRiderProfile, updateRiderProfile } from '../../../utils/authApi';
 
 const sideBottomShadow = {
   boxShadow: '2px 4px 4px rgba(0,0,0,0.06), -2px 4px 4px rgba(0,0,0,0.06), 0 4px 8px rgba(0,0,0,0.08)'
@@ -15,7 +16,12 @@ const RiderProfile = () => {
     return sessionStorage.getItem('riderProfileTab') || 'personal';
   });
 
+  const [loading, setLoading] = useState(true);
+  const [profileData, setProfileData] = useState(null);
   const [profileImage, setProfileImage] = useState('/profileimage.svg');
+  const [toastMsg, setToastMsg] = useState('');
+  const [showToast, setShowToast] = useState(false);
+  
   const [documents, setDocuments] = useState({
     driversLicense: { uploaded: true, verified: true, expires: 'Dec 15, 2026' },
     vehicleRegistration: { uploaded: true, verified: true, expires: 'Aug 20, 2025' },
@@ -35,23 +41,98 @@ const RiderProfile = () => {
     sessionStorage.setItem('riderProfileTab', activeTab);
   }, [activeTab]);
 
+  // Fetch profile data on mount
+  useEffect(() => {
+    fetchProfile();
+    
+    // Listen for verification completion event
+    const handleVerificationComplete = (event) => {
+      console.log('[Profile] Verification completed, refreshing profile');
+      fetchProfile();
+    };
+    
+    window.addEventListener('verification:completed', handleVerificationComplete);
+    
+    return () => {
+      window.removeEventListener('verification:completed', handleVerificationComplete);
+    };
+  }, []);
+
+  const fetchProfile = async () => {
+    try {
+      setLoading(true);
+      
+      const response = await getRiderProfile();
+      const profile = response?.data?.driver || response?.driver || response?.data;
+      setProfileData(profile);
+      
+      // Update profile image if available
+      if (profile?.profilePhoto) {
+        setProfileImage(profile.profilePhoto);
+      }
+      
+      // Update documents status from API
+      if (profile?.documents) {
+        setDocuments(prev => ({
+          ...prev,
+          ...profile.documents
+        }));
+      }
+      
+      // Update verification status
+      if (profile?.verificationStatus) {
+        localStorage.setItem('riderVerificationStatus', profile.verificationStatus);
+      }
+      
+      console.log('[Profile] Profile loaded:', profile);
+    } catch (error) {
+      console.error('[Profile] Error fetching profile:', error);
+      
+      // Handle 403 Forbidden specifically
+      if (error.message.includes('403') || error.message.includes('Insufficient permissions')) {
+        setToastMsg('Access denied. Please logout and login as a rider.');
+      } else {
+        setToastMsg(error.message || 'Failed to load profile');
+      }
+      setShowToast(true);
+    } finally {
+      setLoading(false);
+    }
+  };
+
   // Handle profile image upload
-  const handleProfileImageUpload = (e) => {
+  const handleProfileImageUpload = async (e) => {
     const file = e.target.files[0];
     if (file) {
       const validTypes = ['image/jpeg', 'image/png', 'image/gif', 'image/webp'];
       if (!validTypes.includes(file.type)) {
-        alert('Please upload a valid image file (JPG, PNG, GIF, or WebP)');
+        setToastMsg('Please upload a valid image file (JPG, PNG, GIF, or WebP)');
+        setShowToast(true);
         return;
       }
       if (file.size > 5 * 1024 * 1024) {
-        alert('Image size should be less than 5MB');
+        setToastMsg('Image size should be less than 5MB');
+        setShowToast(true);
         return;
       }
 
       const reader = new FileReader();
       reader.onload = (event) => {
-        setProfileImage(event.target.result);
+        const newImageUrl = event.target.result;
+        setProfileImage(newImageUrl);
+        
+        // Dispatch event to update profile image across app
+        window.dispatchEvent(new CustomEvent('profile:updated', {
+          detail: { profilePhoto: newImageUrl }
+        }));
+        
+        setToastMsg('Profile image updated successfully!');
+        setShowToast(true);
+        
+        // TODO: Upload to server using updateRiderProfile API
+        // const formData = new FormData();
+        // formData.append('profilePhoto', file);
+        // await updateRiderProfile(formData);
       };
       reader.readAsDataURL(file);
     }
@@ -122,6 +203,24 @@ const RiderProfile = () => {
   const completionPercentage = calculateCompletion();
   const completionColors = getCompletionColor(completionPercentage);
   const missingDocs = getMissingDocuments();
+
+  // Show loading state
+  if (loading) {
+    return (
+      <IonPage>
+        <RiderLayout>
+          <IonContent className="ion-padding">
+            <div className="flex items-center justify-center h-full">
+              <div className="text-center">
+                <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-[#00D68F] mx-auto mb-4"></div>
+                <p className="text-[#64748B]">Loading profile...</p>
+              </div>
+            </div>
+          </IonContent>
+        </RiderLayout>
+      </IonPage>
+    );
+  }
 
   return (
     <IonPage>
@@ -626,6 +725,16 @@ const RiderProfile = () => {
             </>
           )}
           </YummyText>
+
+          {/* Toast Notification */}
+          <IonToast
+            isOpen={showToast}
+            onDidDismiss={() => setShowToast(false)}
+            message={toastMsg}
+            duration={3000}
+            position="top"
+            color={toastMsg.includes('Failed') || toastMsg.includes('Error') ? 'danger' : 'success'}
+          />
         </IonContent>
       </RiderLayout>
     </IonPage>

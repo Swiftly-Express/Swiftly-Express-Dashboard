@@ -7,6 +7,7 @@ import NairaIcon from "../../../icons/Nairaicon";
 import AnalyticsIcon from "../../../icons/Analyticsicon";
 import VerificationPromptModal from '../components/VerificationPromptModal';
 import { initializeVerificationNotifications } from '../../../utils/verificationNotifications';
+import { getRiderProfile } from '../../../utils/authApi';
 
 // Shadow only on left, right and bottom - no top shadow for seamless blend
 const sideBottomShadow = {
@@ -83,8 +84,11 @@ const AvailableOrderCard = ({ packageId, location, distance, price }) => (
 
 const Dashboard = () => {
   const [showVerificationModal, setShowVerificationModal] = useState(false);
+  const [userName, setUserName] = useState('Rider');
 
   useEffect(() => {
+    fetchUserProfile();
+    
     // Check if verification has been completed (submitted successfully)
     const verificationCompleted = localStorage.getItem('verificationCompleted') === 't';
     
@@ -101,6 +105,33 @@ const Dashboard = () => {
     return () => clearTimeout(timer);
   }, []);
 
+  const fetchUserProfile = async () => {
+    try {
+      const response = await getRiderProfile();
+      const profile = response?.data?.driver || response?.driver || response?.data;
+      
+      if (profile) {
+        const name = profile.fullName || `${profile.firstName || ''} ${profile.lastName || ''}`.trim();
+        if (name) {
+          setUserName(name);
+        }
+      }
+    } catch (error) {
+      console.error('[Dashboard] Failed to fetch profile:', error);
+      // Fallback to localStorage
+      const userData = localStorage.getItem('user_data');
+      if (userData) {
+        try {
+          const user = JSON.parse(userData);
+          const name = user.fullName || `${user.firstName || ''} ${user.lastName || ''}`.trim();
+          if (name) setUserName(name);
+        } catch (e) {
+          console.error('[Dashboard] Failed to parse user data:', e);
+        }
+      }
+    }
+  };
+
   const handleCloseModal = () => {
     setShowVerificationModal(false);
   };
@@ -113,7 +144,7 @@ const Dashboard = () => {
           <YummyText>
             <div className="mb-8 py-2">
               <div className="text-3xl font-medium text-[#0F172A] mb-2">
-                Welcome back, Marcus!
+                Welcome back, {userName}!
               </div>
               <div className="text-[#4A5565] text-[15px] font-[400]">
                 You're doing great today. Keep up the excellent work!
