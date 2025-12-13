@@ -19,6 +19,23 @@ const generateMockAvatar = (name) => {
   return `https://api.dicebear.com/7.x/avataaars/svg?seed=${encodeURIComponent(name)}`;
 };
 
+// Get user-specific profile image key
+const getProfileImageKey = () => {
+  try {
+    const userData = localStorage.getItem('user_data');
+    if (userData) {
+      const user = JSON.parse(userData);
+      const userId = user.id || user._id || user.email;
+      if (userId) {
+        return `profile_image_${userId}`;
+      }
+    }
+  } catch (e) {
+    console.error('[Profile] Error getting user ID:', e);
+  }
+  return 'profile_image'; // fallback
+};
+
 const RiderProfile = () => {
   // Get initial tab from sessionStorage or default to 'personal'
   const [activeTab, setActiveTab] = useState(() => {
@@ -56,7 +73,8 @@ const RiderProfile = () => {
     return '';
   });
   const [profileImage, setProfileImage] = useState(() => {
-    const cachedImage = localStorage.getItem('profile_image');
+    const imageKey = getProfileImageKey();
+    const cachedImage = localStorage.getItem(imageKey);
     if (cachedImage && !cachedImage.includes('dicebear') && !cachedImage.includes('profileimage.svg')) {
       // User has uploaded a custom image
       return cachedImage;
@@ -118,7 +136,8 @@ const RiderProfile = () => {
       setLoading(true);
       
       // Load cached profile image immediately
-      const cachedImage = localStorage.getItem('profile_image');
+      const imageKey = getProfileImageKey();
+      const cachedImage = localStorage.getItem(imageKey);
       if (cachedImage) {
         setProfileImage(cachedImage);
       }
@@ -146,7 +165,7 @@ const RiderProfile = () => {
       if (profile?.profilePhoto && !profile.profilePhoto.includes('dicebear')) {
         // User has a custom uploaded image
         setProfileImage(profile.profilePhoto);
-        localStorage.setItem('profile_image', profile.profilePhoto);
+        localStorage.setItem(imageKey, profile.profilePhoto);
       } else if (!cachedImage || cachedImage.includes('dicebear') || cachedImage.includes('profileimage.svg')) {
         // No custom image, generate mock avatar based on name
         const name = profile?.fullName || `${profile?.firstName || ''} ${profile?.lastName || ''}`.trim() || userName;
@@ -246,8 +265,9 @@ const RiderProfile = () => {
       
       if (imageUrl) {
         setProfileImage(imageUrl);
-        // Persist to localStorage
-        localStorage.setItem('profile_image', imageUrl);
+        // Persist to localStorage with user-specific key
+        const imageKey = getProfileImageKey();
+        localStorage.setItem(imageKey, imageUrl);
         console.log('[Profile] Saved profile image to localStorage:', imageUrl);
         
         // Dispatch event to notify other components (like RiderLayout)
@@ -263,7 +283,8 @@ const RiderProfile = () => {
         const reader = new FileReader();
         reader.onloadend = () => {
           setProfileImage(reader.result);
-          localStorage.setItem('profile_image', reader.result);
+          const imageKey = getProfileImageKey();
+          localStorage.setItem(imageKey, reader.result);
           window.dispatchEvent(new CustomEvent('profile:updated', {
             detail: { profileImage: reader.result }
           }));

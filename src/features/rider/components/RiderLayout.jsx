@@ -12,9 +12,27 @@ const generateMockAvatar = (name) => {
   return `https://api.dicebear.com/7.x/avataaars/svg?seed=${encodeURIComponent(name)}`;
 };
 
+// Get user-specific profile image key
+const getProfileImageKey = () => {
+  try {
+    const userData = localStorage.getItem('user_data');
+    if (userData) {
+      const user = JSON.parse(userData);
+      const userId = user.id || user._id || user.email;
+      if (userId) {
+        return `profile_image_${userId}`;
+      }
+    }
+  } catch (e) {
+    console.error('[RiderLayout] Error getting user ID:', e);
+  }
+  return 'profile_image'; // fallback
+};
+
 const RiderLayout = ({ children }) => {
   const [profileImage, setProfileImage] = useState(() => {
-    const cachedImage = localStorage.getItem('profile_image');
+    const imageKey = getProfileImageKey();
+    const cachedImage = localStorage.getItem(imageKey);
     if (cachedImage && !cachedImage.includes('dicebear') && !cachedImage.includes('profileimage.svg')) {
       // User has uploaded a custom image
       return cachedImage;
@@ -45,7 +63,8 @@ const RiderLayout = ({ children }) => {
         const newImage = event.detail.profileImage || event.detail.profilePhoto;
         console.log('[RiderLayout] Updating profile image to:', newImage);
         setProfileImage(newImage);
-        localStorage.setItem('profile_image', newImage);
+        const imageKey = getProfileImageKey();
+        localStorage.setItem(imageKey, newImage);
         console.log('[RiderLayout] Profile image state updated and saved to localStorage');
       }
       if (event.detail?.fullName || event.detail?.firstName) {
@@ -71,7 +90,8 @@ const RiderLayout = ({ children }) => {
   const fetchUserProfile = async () => {
     try {
       // Load cached profile image immediately
-      const cachedImage = localStorage.getItem('profile_image');
+      const imageKey = getProfileImageKey();
+      const cachedImage = localStorage.getItem(imageKey);
       if (cachedImage) {
         setProfileImage(cachedImage);
       }
@@ -84,7 +104,7 @@ const RiderLayout = ({ children }) => {
         if (profile.profilePhoto && !profile.profilePhoto.includes('dicebear')) {
           // User has a custom uploaded image
           setProfileImage(profile.profilePhoto);
-          localStorage.setItem('profile_image', profile.profilePhoto);
+          localStorage.setItem(imageKey, profile.profilePhoto);
         } else if (!cachedImage || cachedImage.includes('dicebear') || cachedImage.includes('profileimage.svg')) {
           // No custom image, generate mock avatar based on name
           const name = profile.fullName || `${profile.firstName || ''} ${profile.lastName || ''}`.trim();
