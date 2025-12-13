@@ -94,6 +94,16 @@ const RiderProfile = () => {
   });
   const [toastMsg, setToastMsg] = useState('');
   const [showToast, setShowToast] = useState(false);
+  const [saving, setSaving] = useState(false);
+  
+  const [personalInfo, setPersonalInfo] = useState({
+    firstName: '',
+    lastName: '',
+    email: '',
+    phone: '',
+    address: '',
+    emergencyContact: ''
+  });
   
   const [documents, setDocuments] = useState({
     driversLicense: { uploaded: true, verified: true, expires: 'Dec 15, 2026' },
@@ -135,6 +145,14 @@ const RiderProfile = () => {
     try {
       setLoading(true);
       
+      // Check if token exists before making API call
+      const token = localStorage.getItem('rider_token') || localStorage.getItem('auth_token');
+      if (!token) {
+        console.log('[Profile] No token found, skipping API call');
+        setLoading(false);
+        return;
+      }
+      
       // Load cached profile image immediately
       const imageKey = getProfileImageKey();
       const cachedImage = localStorage.getItem(imageKey);
@@ -152,6 +170,15 @@ const RiderProfile = () => {
           if (user.riderId || user.driverId || user.id) {
             setRiderId(user.riderId || user.driverId || `RD-${user.id}`);
           }
+          // Load personal info from cached data
+          setPersonalInfo({
+            firstName: user.firstName || '',
+            lastName: user.lastName || '',
+            email: user.email || '',
+            phone: user.phone || '',
+            address: user.address || '',
+            emergencyContact: user.emergencyContact || ''
+          });
         } catch (e) {
           console.error('[Profile] Failed to parse cached user data:', e);
         }
@@ -184,6 +211,16 @@ const RiderProfile = () => {
         if (profile.riderId || profile.driverId || profile.id) {
           setRiderId(profile.riderId || profile.driverId || `RD-${profile.id}`);
         }
+        
+        // Update personal info from profile
+        setPersonalInfo({
+          firstName: profile.firstName || '',
+          lastName: profile.lastName || '',
+          email: profile.email || '',
+          phone: profile.phone || profile.contactInfo?.phone || '',
+          address: profile.address || profile.contactInfo?.streetAddress || '',
+          emergencyContact: profile.emergencyContact || ''
+        });
       }
       
       // Update documents status from API
@@ -202,6 +239,12 @@ const RiderProfile = () => {
       console.log('[Profile] Profile loaded:', profile);
     } catch (error) {
       console.error('[Profile] Error fetching profile:', error);
+      
+      // Don't show error toast for missing token on page load
+      if (error.message?.includes('token') || error.message?.includes('Access denied')) {
+        console.log('[Profile] Token error on load, user may need to log in');
+        return;
+      }
       
       // Handle 403 Forbidden specifically
       if (error.message.includes('403') || error.message.includes('Insufficient permissions')) {
@@ -300,6 +343,61 @@ const RiderProfile = () => {
       setShowToast(true);
     } finally {
       setUploading(false);
+    }
+  };
+
+  // Handle personal info change
+  const handlePersonalInfoChange = (field, value) => {
+    setPersonalInfo(prev => ({
+      ...prev,
+      [field]: value
+    }));
+  };
+
+  // Save personal information
+  const handleSavePersonalInfo = async () => {
+    try {
+      setSaving(true);
+      console.log('[Profile] Saving personal info:', personalInfo);
+      
+      const payload = {
+        firstName: personalInfo.firstName,
+        lastName: personalInfo.lastName,
+        email: personalInfo.email,
+        phone: personalInfo.phone,
+        address: personalInfo.address,
+        emergencyContact: personalInfo.emergencyContact
+      };
+      
+      const response = await updateRiderProfile(payload);
+      console.log('[Profile] Personal info saved:', response);
+      
+      // Update localStorage user_data
+      const userData = localStorage.getItem('user_data');
+      if (userData) {
+        try {
+          const user = JSON.parse(userData);
+          const updatedUser = { ...user, ...payload, fullName: `${payload.firstName} ${payload.lastName}`.trim() };
+          localStorage.setItem('user_data', JSON.stringify(updatedUser));
+        } catch (e) {
+          console.error('[Profile] Failed to update cached user data:', e);
+        }
+      }
+      
+      // Update userName
+      const fullName = `${personalInfo.firstName} ${personalInfo.lastName}`.trim();
+      if (fullName) {
+        setUserName(fullName);
+      }
+      
+      setToastMsg('Personal information updated successfully!');
+      setShowToast(true);
+    } catch (error) {
+      console.error('[Profile] Failed to save personal info:', error);
+      setToastMsg(error.message || 'Failed to save personal information');
+      setShowToast(true);
+    } finally {
+      setSaving(false);
     }
   };
 
@@ -542,6 +640,8 @@ const RiderProfile = () => {
                     <input
                       type="text"
                       placeholder="Marcus"
+                      value={personalInfo.firstName}
+                      onChange={(e) => handlePersonalInfoChange('firstName', e.target.value)}
                       className="w-full px-4 py-3 bg-gray-50 border border-gray-200 placeholder:text-[#717182] rounded-xl text-[#0F172A] focus:outline-none focus:border-[#00D68F]"
                     />
                   </div>
@@ -550,6 +650,8 @@ const RiderProfile = () => {
                     <input
                       type="text"
                       placeholder="Johnson"
+                      value={personalInfo.lastName}
+                      onChange={(e) => handlePersonalInfoChange('lastName', e.target.value)}
                       className="w-full px-4 py-3 bg-gray-50 border border-gray-200 placeholder:text-[#717182] rounded-xl text-[#0F172A] focus:outline-none focus:border-[#00D68F]"
                     />
                   </div>
@@ -561,6 +663,8 @@ const RiderProfile = () => {
                   <input
                     type="email"
                     placeholder="marcus.j@email.com"
+                    value={personalInfo.email}
+                    onChange={(e) => handlePersonalInfoChange('email', e.target.value)}
                     className="w-full px-4 py-3 bg-gray-50 border border-gray-200 placeholder:text-[#717182] rounded-xl text-[#0F172A] focus:outline-none focus:border-[#00D68F]"
                   />
                 </div>
@@ -571,6 +675,8 @@ const RiderProfile = () => {
                   <input
                     type="tel"
                     placeholder="+1 (555) 234-5678"
+                    value={personalInfo.phone}
+                    onChange={(e) => handlePersonalInfoChange('phone', e.target.value)}
                     className="w-full px-4 py-3 bg-gray-50 border border-gray-200 placeholder:text-[#717182] rounded-xl text-[#0F172A] focus:outline-none focus:border-[#00D68F]"
                   />
                 </div>
@@ -581,6 +687,8 @@ const RiderProfile = () => {
                   <input
                     type="text"
                     placeholder="456 Rider Street, New York, NY 10001"
+                    value={personalInfo.address}
+                    onChange={(e) => handlePersonalInfoChange('address', e.target.value)}
                     className="w-full px-4 py-3 bg-gray-50 border border-gray-200 placeholder:text-[#717182] rounded-xl text-[#0F172A] focus:outline-none focus:border-[#00D68F]"
                   />
                 </div>
@@ -591,13 +699,19 @@ const RiderProfile = () => {
                   <input
                     type="text"
                     placeholder="Name and phone number"
+                    value={personalInfo.emergencyContact}
+                    onChange={(e) => handlePersonalInfoChange('emergencyContact', e.target.value)}
                     className="w-full px-4 py-3 bg-gray-50 placeholder:text-[#717182] border border-gray-200 rounded-xl text-[#64748B] focus:outline-none focus:border-[#00D68F]"
                   />
                 </div>
 
                 {/* Save Button */}
-                <button className="bg-[#00B75A] hover:bg-[#00B876] font-[400] text-white px-6 py-3 rounded-xl transition-colors font-[300]">
-                  Save Changes
+                <button 
+                  onClick={handleSavePersonalInfo}
+                  disabled={saving}
+                  className="bg-[#00B75A] hover:bg-[#00B876] font-[400] text-white px-6 py-3 rounded-xl transition-colors font-[300] disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  {saving ? 'Saving...' : 'Save Changes'}
                 </button>
               </div>
             </div>
