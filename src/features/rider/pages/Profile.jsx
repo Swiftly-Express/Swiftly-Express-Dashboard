@@ -19,7 +19,9 @@ const RiderProfile = () => {
   const [loading, setLoading] = useState(true);
   const [uploading, setUploading] = useState(false);
   const [profileData, setProfileData] = useState(null);
-  const [profileImage, setProfileImage] = useState('/profileimage.svg');
+  const [profileImage, setProfileImage] = useState(() => {
+    return localStorage.getItem('profile_image') || '/profileimage.svg';
+  });
   const [toastMsg, setToastMsg] = useState('');
   const [showToast, setShowToast] = useState(false);
   
@@ -127,6 +129,19 @@ const RiderProfile = () => {
       setShowToast(true);
       return;
     }
+
+    // Show immediate preview while uploading
+    const reader = new FileReader();
+    reader.onloadend = () => {
+      const previewUrl = reader.result;
+      setProfileImage(previewUrl);
+      // Dispatch event immediately for instant UI update
+      window.dispatchEvent(new CustomEvent('profile:updated', {
+        detail: { profileImage: previewUrl }
+      }));
+      console.log('[Profile] Dispatched immediate preview event');
+    };
+    reader.readAsDataURL(file);
 
     setUploading(true);
     

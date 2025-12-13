@@ -4,7 +4,9 @@ import { YummyText } from '../../../components/YummyText';
 import { getRiderProfile } from '../../../utils/authApi';
 
 const RiderLayout = ({ children }) => {
-  const [profileImage, setProfileImage] = useState('https://api.dicebear.com/7.x/avataaars/svg?seed=Marcus');
+  const [profileImage, setProfileImage] = useState(() => {
+    return localStorage.getItem('profile_image') || 'https://api.dicebear.com/7.x/avataaars/svg?seed=Marcus';
+  });
   const [userName, setUserName] = useState('Rider');
   const [isOnline, setIsOnline] = useState(true);
 
@@ -13,11 +15,13 @@ const RiderLayout = ({ children }) => {
 
     // Listen for profile updates
     const handleProfileUpdate = (event) => {
-      console.log('[RiderLayout] Profile updated:', event.detail);
+      console.log('[RiderLayout] Profile updated event received:', event.detail);
       if (event.detail?.profileImage || event.detail?.profilePhoto) {
         const newImage = event.detail.profileImage || event.detail.profilePhoto;
+        console.log('[RiderLayout] Updating profile image to:', newImage);
         setProfileImage(newImage);
         localStorage.setItem('profile_image', newImage);
+        console.log('[RiderLayout] Profile image state updated and saved to localStorage');
       }
       if (event.detail?.fullName || event.detail?.firstName) {
         const name = event.detail.fullName || `${event.detail.firstName || ''} ${event.detail.lastName || ''}`.trim();
@@ -54,7 +58,7 @@ const RiderLayout = ({ children }) => {
         // Update profile image from API
         if (profile.profilePhoto) {
           setProfileImage(profile.profilePhoto);
-          localStorage.setItem('profile_image', profile.profilePhoto);
+          localStorage.setItem('rider_profile_image', profile.profilePhoto);
         }
         
         // Update user name
