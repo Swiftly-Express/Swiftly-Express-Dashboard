@@ -14,8 +14,10 @@ const RiderLayout = ({ children }) => {
     // Listen for profile updates
     const handleProfileUpdate = (event) => {
       console.log('[RiderLayout] Profile updated:', event.detail);
-      if (event.detail?.profilePhoto) {
-        setProfileImage(event.detail.profilePhoto);
+      if (event.detail?.profileImage || event.detail?.profilePhoto) {
+        const newImage = event.detail.profileImage || event.detail.profilePhoto;
+        setProfileImage(newImage);
+        localStorage.setItem('profile_image', newImage);
       }
       if (event.detail?.fullName || event.detail?.firstName) {
         const name = event.detail.fullName || `${event.detail.firstName || ''} ${event.detail.lastName || ''}`.trim();
@@ -39,13 +41,20 @@ const RiderLayout = ({ children }) => {
 
   const fetchUserProfile = async () => {
     try {
+      // Load cached profile image immediately
+      const cachedImage = localStorage.getItem('profile_image');
+      if (cachedImage) {
+        setProfileImage(cachedImage);
+      }
+      
       const response = await getRiderProfile();
       const profile = response?.data?.driver || response?.driver || response?.data;
       
       if (profile) {
-        // Update profile image
+        // Update profile image from API
         if (profile.profilePhoto) {
           setProfileImage(profile.profilePhoto);
+          localStorage.setItem('profile_image', profile.profilePhoto);
         }
         
         // Update user name

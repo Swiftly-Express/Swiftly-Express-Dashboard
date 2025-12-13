@@ -4,7 +4,7 @@ import RiderLayout from '../components/RiderLayout';
 import { YummyText } from '../../../components/YummyText';
 import DocumentIcon from "../../../icons/Documenticon";
 import UploadIcon from "../../../icons/Uploadicon";
-import { getRiderProfile, updateRiderProfile } from '../../../utils/authApi';
+import { getRiderProfile, updateRiderProfile, uploadRiderProfileImage } from '../../../utils/authApi';
 
 const sideBottomShadow = {
   boxShadow: '2px 4px 4px rgba(0,0,0,0.06), -2px 4px 4px rgba(0,0,0,0.06), 0 4px 8px rgba(0,0,0,0.08)'
@@ -17,6 +17,7 @@ const RiderProfile = () => {
   });
 
   const [loading, setLoading] = useState(true);
+  const [uploading, setUploading] = useState(false);
   const [profileData, setProfileData] = useState(null);
   const [profileImage, setProfileImage] = useState('/profileimage.svg');
   const [toastMsg, setToastMsg] = useState('');
@@ -62,13 +63,20 @@ const RiderProfile = () => {
     try {
       setLoading(true);
       
+      // Load cached profile image immediately
+      const cachedImage = localStorage.getItem('profile_image');
+      if (cachedImage) {
+        setProfileImage(cachedImage);
+      }
+      
       const response = await getRiderProfile();
       const profile = response?.data?.driver || response?.driver || response?.data;
       setProfileData(profile);
       
-      // Update profile image if available
+      // Update profile image if available from API
       if (profile?.profilePhoto) {
         setProfileImage(profile.profilePhoto);
+        localStorage.setItem('profile_image', profile.profilePhoto);
       }
       
       // Update documents status from API
@@ -103,38 +111,73 @@ const RiderProfile = () => {
   // Handle profile image upload
   const handleProfileImageUpload = async (e) => {
     const file = e.target.files[0];
-    if (file) {
-      const validTypes = ['image/jpeg', 'image/png', 'image/gif', 'image/webp'];
-      if (!validTypes.includes(file.type)) {
-        setToastMsg('Please upload a valid image file (JPG, PNG, GIF, or WebP)');
-        setShowToast(true);
-        return;
-      }
-      if (file.size > 5 * 1024 * 1024) {
-        setToastMsg('Image size should be less than 5MB');
-        setShowToast(true);
-        return;
-      }
+    if (!file) return;
+    
+    // Validate file type
+    const validTypes = ['image/jpeg', 'image/png', 'image/gif'];
+    if (!validTypes.includes(file.type)) {
+      setToastMsg('Please upload a JPG, PNG, or GIF image');
+      setShowToast(true);
+      return;
+    }
+    
+    // Validate file size (max 5MB)
+    if (file.size > 5 * 1024 * 1024) {
+      setToastMsg('File size must be less than 5MB');
+      setShowToast(true);
+      return;
+    }
 
-      const reader = new FileReader();
-      reader.onload = (event) => {
-        const newImageUrl = event.target.result;
-        setProfileImage(newImageUrl);
+    setUploading(true);
+    
+    try {
+      console.log('[Profile] Uploading profile image...');
+      
+      // Create FormData
+      const formData = new FormData();
+      formData.append('image', file);
+      
+      const response = await uploadRiderProfileImage(formData);
+      console.log('[Profile] Upload response:', response);
+      
+      // Update profile image with multiple fallback paths
+      const imageUrl = response?.imageUrl || response?.data?.imageUrl || response?.url || response?.data?.url || response?.data?.driver?.profilePhoto || response?.driver?.profilePhoto;
+      
+      if (imageUrl) {
+        setProfileImage(imageUrl);
+        // Persist to localStorage
+        localStorage.setItem('profile_image', imageUrl);
+        console.log('[Profile] Saved profile image to localStorage:', imageUrl);
         
-        // Dispatch event to update profile image across app
+        // Dispatch event to notify other components (like RiderLayout)
         window.dispatchEvent(new CustomEvent('profile:updated', {
-          detail: { profilePhoto: newImageUrl }
+          detail: { profileImage: imageUrl }
         }));
+        console.log('[Profile] Dispatched profile:updated event for image');
         
-        setToastMsg('Profile image updated successfully!');
-        setShowToast(true);
-        
-        // TODO: Upload to server using updateRiderProfile API
-        // const formData = new FormData();
-        // formData.append('profilePhoto', file);
-        // await updateRiderProfile(formData);
-      };
-      reader.readAsDataURL(file);
+        setToastMsg('Profile photo updated successfully!');
+      } else {
+        // Fallback to FileReader preview
+        console.log('[Profile] No URL returned, using local preview');
+        const reader = new FileReader();
+        reader.onloadend = () => {
+          setProfileImage(reader.result);
+          localStorage.setItem('profile_image', reader.result);
+          window.dispatchEvent(new CustomEvent('profile:updated', {
+            detail: { profileImage: reader.result }
+          }));
+        };
+        reader.readAsDataURL(file);
+        setToastMsg('Profile photo updated!');
+      }
+      
+      setShowToast(true);
+    } catch (err) {
+      console.error('[Profile] Upload failed:', err);
+      setToastMsg(err?.message || 'Failed to upload image');
+      setShowToast(true);
+    } finally {
+      setUploading(false);
     }
   };
 

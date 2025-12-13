@@ -638,9 +638,6 @@ export async function getDeliveryByTracking(trackingNumber) {
   return apiClient.get(`/api/tracking/${trackingNumber}`);
 }
 
-// ============================================
-// RIDER/DRIVER ENDPOINTS
-// ============================================
 
 /**
  * Submit rider verification documents
@@ -749,6 +746,23 @@ export async function updateRiderProfile(profileData) {
   return apiClient.put('/api/driver/profile', profileData);
 }
 
+/**
+ * Upload rider profile image
+ * @param {File|FormData} file
+ */
+export async function uploadRiderProfileImage(file) {
+  const formData = file instanceof FormData ? file : new FormData();
+  if (!(file instanceof FormData)) {
+    formData.append('image', file);
+  }
+  
+  return apiClient.post('/api/driver/profile/upload-image', formData, {
+    headers: {
+      'Content-Type': 'multipart/form-data'
+    }
+  });
+}
+
 export default {
   registerRider,
   registerCustomer,
@@ -780,6 +794,7 @@ export default {
   updateRiderAvailability,
   getRiderProfile,
   updateRiderProfile,
+  uploadRiderProfileImage,
   isAuthenticated,
   getAuthToken,
   getPendingUserId,
