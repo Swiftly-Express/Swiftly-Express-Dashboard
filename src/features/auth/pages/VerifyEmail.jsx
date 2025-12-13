@@ -84,49 +84,30 @@ const VerifyEmail = () => {
       
       console.log('[VerifyEmail] Verification response:', response);
       
-      // Extract and store auth tokens from response
-      const token = response?.token || response?.data?.token || response?.accessToken || response?.data?.accessToken || response?.auth_token || response?.data?.auth_token;
-      const refreshToken = response?.refreshToken || response?.refresh_token || response?.data?.refreshToken || response?.data?.refresh_token;
-      const user = response?.user || response?.data?.user || response?.data;
+      // Token storage is handled automatically by authApi.js verifyEmail function
+      // Just verify tokens were stored
+      const storedToken = userType === 'rider' || userType === 'driver' 
+        ? localStorage.getItem('rider_token')
+        : localStorage.getItem('customer_token');
       
-      if (token) {
-        // Store role-specific token
-        if (userType === 'rider' || userType === 'driver') {
-          localStorage.setItem('rider_token', token);
-          console.log('[VerifyEmail] Rider token stored');
-        } else {
-          localStorage.setItem('customer_token', token);
-          console.log('[VerifyEmail] Customer token stored');
-        }
-        localStorage.setItem('auth_token', token); // backward compatibility
-      }
-      
-      if (refreshToken) {
-        // Store role-specific refresh token
-        if (userType === 'rider' || userType === 'driver') {
-          localStorage.setItem('rider_refresh_token', refreshToken);
-          console.log('[VerifyEmail] Rider refresh token stored');
-        } else {
-          localStorage.setItem('customer_refresh_token', refreshToken);
-          console.log('[VerifyEmail] Customer refresh token stored');
-        }
-        localStorage.setItem('refresh_token', refreshToken); // backward compatibility
-      }
-      
-      // Store or update user data
-      if (user) {
-        localStorage.setItem('user_data', JSON.stringify(user));
-        localStorage.setItem('userRole', userType === 'rider' || userType === 'driver' ? 'rider' : 'customer');
-        localStorage.setItem('user_type', user?.role || userType || 'customer');
-        console.log('[VerifyEmail] User data stored');
+      if (storedToken) {
+        console.log('[VerifyEmail] Tokens successfully stored by authApi');
       } else {
-        // If no user in response, try to get from pendingUserData
+        console.warn('[VerifyEmail] Warning: No token found after verification');
+      }
+      
+      // Verify user data was stored
+      const userData = localStorage.getItem('user_data');
+      if (userData) {
+        console.log('[VerifyEmail] User data successfully stored by authApi');
+      } else {
+        // Fallback: try to use pending user data if authApi didn't handle it
         const pendingUserData = localStorage.getItem('pendingUserData');
         if (pendingUserData) {
           localStorage.setItem('user_data', pendingUserData);
           localStorage.setItem('userRole', userType === 'rider' || userType === 'driver' ? 'rider' : 'customer');
           localStorage.setItem('user_type', userType || 'customer');
-          console.log('[VerifyEmail] Stored pending user data');
+          console.log('[VerifyEmail] Stored pending user data as fallback');
         }
       }
 

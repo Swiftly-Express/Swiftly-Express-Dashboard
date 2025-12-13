@@ -106,12 +106,14 @@ const Dashboard = () => {
     const verificationCompletedValue = localStorage.getItem('verificationCompleted');
     const verificationCompleted = verificationCompletedValue === 't' || verificationCompletedValue === 'true';
     
-    // Also check if account is already verified
-    const accountVerified = localStorage.getItem('riderAccountVerified') === 'true';
+    // Check if account verification is explicitly set to true (documents submitted and approved)
+    const accountVerifiedValue = localStorage.getItem('riderAccountVerified');
+    const accountVerified = accountVerifiedValue === 'true';
     
-    // Don't show modal if verification has been completed or account is verified
-    if (verificationCompleted || accountVerified) {
-      console.log('[Dashboard] Verification already completed, modal will not show');
+    // Don't show modal ONLY if verification has been submitted (verificationCompleted is set)
+    // Note: riderAccountVerified='false' means email verified but documents not submitted yet
+    if (verificationCompleted) {
+      console.log('[Dashboard] Verification already submitted, modal will not show');
       return;
     }
     
@@ -123,8 +125,8 @@ const Dashboard = () => {
     
     window.addEventListener('verification:completed', handleVerificationComplete);
     
-    // Show modal after 3 seconds for unverified riders
-    console.log('[Dashboard] Rider not verified, modal will show in 3 seconds');
+    // Show modal after 3 seconds for riders who haven't submitted documents
+    console.log('[Dashboard] Rider needs to submit verification, modal will show in 3 seconds');
     const timer = setTimeout(() => {
       setShowVerificationModal(true);
     }, 3000);

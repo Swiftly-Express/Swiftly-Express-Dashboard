@@ -1,4 +1,4 @@
-import axios from 'axios';
+﻿import axios from 'axios';
 const BASE_URL = import.meta.env.VITE_API_BASE_URL || 'https://api.swiftlyxpress.com';
 
 const apiClient = axios.create({
@@ -13,60 +13,20 @@ const apiClient = axios.create({
 // Request interceptor to add auth token to requests
 apiClient.interceptors.request.use(
   (config) => {
-    if (typeof window !== 'undefined') {
-      let token = null;
-      
-      // Skip token for auth endpoints that don't need it
-      const authEndpointsNoToken = ['/auth/register', '/auth/login', '/auth/forgot-password', '/auth/reset-password'];
-      const needsNoToken = authEndpointsNoToken.some(endpoint => config.url?.includes(endpoint));
-      
-      if (needsNoToken) {
-        console.log('[authApi] Auth endpoint, no token needed:', config.url);
-        return config;
-      }
-      
-      // For verification endpoints, need token
-      if (config.url?.includes('/auth/verify-email') || config.url?.includes('/auth/resend-verification')) {
-        // Try to get token from any available source
-        token = localStorage.getItem('rider_token') || 
-                localStorage.getItem('customer_token') || 
-                localStorage.getItem('auth_token');
-        console.log('[authApi] Verification endpoint, using available token:', !!token);
-      }
-      // Customer endpoints
-      else if (config.url?.includes('/customer/') || config.url?.includes('/deliveries/create')) {
-        token = localStorage.getItem('customer_token');
-        console.log('[authApi] Using customer_token for:', config.url);
-      } 
-      // Driver/Rider endpoints
-      else if (config.url?.includes('/driver/')) {
-        token = localStorage.getItem('rider_token');
-        console.log('[authApi] Using rider_token for:', config.url);
-      } 
-      // Fallback based on userRole
-      else {
-        const userRole = localStorage.getItem('userRole');
-        if (userRole === 'customer') {
-          token = localStorage.getItem('customer_token');
-          console.log('[authApi] Using customer_token based on userRole');
-        } else if (userRole === 'rider' || userRole === 'driver') {
-          token = localStorage.getItem('rider_token');
-          console.log('[authApi] Using rider_token based on userRole');
-        } else {
-          token = localStorage.getItem('auth_token');
-          if (token) {
-            console.log('[authApi] Using fallback auth_token');
-          }
-        }
-      }
-      
-      if (token) {
-        config.headers.Authorization = `Bearer ${token}`;
-        console.log('[authApi] Added Bearer token to request');
-      } else {
-        console.warn('[authApi] No token available for request:', config.url);
-      }
+    if (typeof window === "undefined") return config;
+
+    const token =
+      localStorage.getItem("rider_token") ||
+      localStorage.getItem("customer_token") ||
+      localStorage.getItem("auth_token");
+
+    if (token) {
+      config.headers.Authorization = `Bearer ${token}`;
+      console.log("[authApi] Authorization attached →", config.url);
+    } else {
+      console.warn("[authApi] No token found for →", config.url);
     }
+
     return config;
   },
   (error) => Promise.reject(error)
@@ -76,30 +36,50 @@ apiClient.interceptors.request.use(
 apiClient.interceptors.response.use(
   (response) => response.data,
   (error) => {
-    console.error('[authApi] Request failed:', {
+    console.error("[authApi] Request failed:", {
       url: error.config?.url,
       method: error.config?.method,
       status: error.response?.status,
-      statusText: error.response?.statusText,
       data: error.response?.data,
-      message: error.message,
-      code: error.code
     });
 
     const message =
       error.response?.data?.message ||
       error.response?.data?.error?.errorMessage ||
-      error.response?.data ||
       error.message ||
-      'Request failed';
-    
-    const customError = new Error(message);
-    customError.status = error.response?.status;
-    customError.data = error.response?.data;
-    
-    throw customError;
+      "Request failed";
+
+    const err = new Error(message);
+    err.status = error.response?.status;
+    err.data = error.response?.data;
+    throw err;
   }
 );
+
+
+/**
+ * ============================
+ * AUTH HELPERS
+ * ============================
+ */
+const saveAuth = ({ token, refreshToken, user, role }) => {
+  if (!token) return;
+
+  if (role === "rider" || role === "driver") {
+    localStorage.setItem("rider_token", token);
+  } else {
+    localStorage.setItem("customer_token", token);
+  }
+
+  localStorage.setItem("auth_token", token);
+  if (refreshToken) localStorage.setItem("refresh_token", refreshToken);
+
+  if (user) {
+    localStorage.setItem("user_data", JSON.stringify(user));
+    localStorage.setItem("userRole", role);
+    localStorage.setItem("user_type", role);
+  }
+};
 
 /**
  * Register a rider
@@ -122,12 +102,16 @@ export async function registerRider(payload) {
     
     console.log('[authApi] Extracted:', { hasToken: !!token, hasUser: !!user, userId });
     
-    // Store userId for verification
+    // Store userId and type for verification
     if (userId) {
       localStorage.setItem('pending_user_id', userId);
       localStorage.setItem('pendingVerificationUserId', userId);
       console.log('[authApi] UserId stored for verification:', userId);
     }
+    
+    // Always set pendingVerificationType for riders
+    localStorage.setItem('pendingVerificationType', 'rider');
+    console.log('[authApi] pendingVerificationType set to rider');
     
     // Store token immediately if provided
     if (token) {
@@ -220,13 +204,26 @@ export async function registerCustomer(payload) {
  */
 export async function verifyEmail(payload) {
   const { userId, ...body } = payload;
-  if (!userId) {
-    throw new Error('userId is required for email verification');
+  
+  // Try to get userId from multiple sources
+  const effectiveUserId = userId || 
+                          localStorage.getItem('pendingVerificationUserId') || 
+                          localStorage.getItem('pending_user_id');
+  
+  if (!effectiveUserId) {
+    // Fallback to email-based verification if no userId
+    const email = body.email || localStorage.getItem('pendingVerificationEmail');
+    if (!email) {
+      throw new Error('Either userId or email is required for email verification');
+    }
+    console.log('[authApi] No userId available, attempting email-based verification:', email);
+    const response = await apiClient.post('/api/auth/verify-email', { ...body, email });
+    return response;
   }
   
-  console.log('[authApi] Attempting email verification for userId:', userId);
+  console.log('[authApi] Attempting email verification for userId:', effectiveUserId);
   
-  const response = await apiClient.post(`/api/auth/verify-email/${userId}`, body);
+  const response = await apiClient.post(`/api/auth/verify-email/${effectiveUserId}`, body);
   
   console.log('[authApi] Verification response:', response);
   
@@ -357,7 +354,7 @@ export async function submitRiderVerification(verificationData) {
     throw new Error('Authentication required. Please log in to submit verification.');
   }
   
-  console.log('[authApi] Using token for verification:', token.substring(0, 20) + '...');
+  console.log('[authApi] Token available for verification:', token.substring(0, 20) + '...');
   
   if (verificationData instanceof FormData) {
     console.log('[authApi] FormData entries:');
@@ -370,11 +367,11 @@ export async function submitRiderVerification(verificationData) {
     }
   }
   
-  // CRITICAL: Don't set Content-Type header - let browser set it with boundary
+  // Don't override headers - let the interceptor add the Authorization header
+  // Just ensure Content-Type is multipart/form-data for FormData
   return apiClient.post('/api/driver/verification', verificationData, {
     headers: {
-      'Content-Type': undefined,
-      'Authorization': `Bearer ${token}` // Explicitly add token
+      'Content-Type': 'multipart/form-data'
     }
   });
 }
