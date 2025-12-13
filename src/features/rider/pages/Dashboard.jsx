@@ -106,17 +106,33 @@ const Dashboard = () => {
     const verificationCompletedValue = localStorage.getItem('verificationCompleted');
     const verificationCompleted = verificationCompletedValue === 't' || verificationCompletedValue === 'true';
     
-    // Don't show modal if verification has been completed
-    if (verificationCompleted) {
+    // Also check if account is already verified
+    const accountVerified = localStorage.getItem('riderAccountVerified') === 'true';
+    
+    // Don't show modal if verification has been completed or account is verified
+    if (verificationCompleted || accountVerified) {
+      console.log('[Dashboard] Verification already completed, modal will not show');
       return;
     }
     
-    // Show modal after 3 seconds
+    // Listen for verification completion to close modal
+    const handleVerificationComplete = () => {
+      console.log('[Dashboard] Verification completed, closing modal');
+      setShowVerificationModal(false);
+    };
+    
+    window.addEventListener('verification:completed', handleVerificationComplete);
+    
+    // Show modal after 3 seconds for unverified riders
+    console.log('[Dashboard] Rider not verified, modal will show in 3 seconds');
     const timer = setTimeout(() => {
       setShowVerificationModal(true);
     }, 3000);
 
-    return () => clearTimeout(timer);
+    return () => {
+      clearTimeout(timer);
+      window.removeEventListener('verification:completed', handleVerificationComplete);
+    };
   }, []);
 
   const fetchUserProfile = async () => {
