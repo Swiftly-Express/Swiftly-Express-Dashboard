@@ -90,18 +90,33 @@ const VerifyEmail = () => {
       const user = response?.user || response?.data?.user || response?.data;
       
       if (token) {
-        localStorage.setItem('auth_token', token);
-        console.log('[VerifyEmail] Auth token stored');
+        // Store role-specific token
+        if (userType === 'rider' || userType === 'driver') {
+          localStorage.setItem('rider_token', token);
+          console.log('[VerifyEmail] Rider token stored');
+        } else {
+          localStorage.setItem('customer_token', token);
+          console.log('[VerifyEmail] Customer token stored');
+        }
+        localStorage.setItem('auth_token', token); // backward compatibility
       }
       
       if (refreshToken) {
-        localStorage.setItem('refresh_token', refreshToken);
-        console.log('[VerifyEmail] Refresh token stored');
+        // Store role-specific refresh token
+        if (userType === 'rider' || userType === 'driver') {
+          localStorage.setItem('rider_refresh_token', refreshToken);
+          console.log('[VerifyEmail] Rider refresh token stored');
+        } else {
+          localStorage.setItem('customer_refresh_token', refreshToken);
+          console.log('[VerifyEmail] Customer refresh token stored');
+        }
+        localStorage.setItem('refresh_token', refreshToken); // backward compatibility
       }
       
       // Store or update user data
       if (user) {
         localStorage.setItem('user_data', JSON.stringify(user));
+        localStorage.setItem('userRole', userType === 'rider' || userType === 'driver' ? 'rider' : 'customer');
         localStorage.setItem('user_type', user?.role || userType || 'customer');
         console.log('[VerifyEmail] User data stored');
       } else {
@@ -109,6 +124,7 @@ const VerifyEmail = () => {
         const pendingUserData = localStorage.getItem('pendingUserData');
         if (pendingUserData) {
           localStorage.setItem('user_data', pendingUserData);
+          localStorage.setItem('userRole', userType === 'rider' || userType === 'driver' ? 'rider' : 'customer');
           localStorage.setItem('user_type', userType || 'customer');
           console.log('[VerifyEmail] Stored pending user data');
         }

@@ -103,7 +103,8 @@ const Dashboard = () => {
     fetchUserProfile();
     
     // Check if verification has been completed (submitted successfully)
-    const verificationCompleted = localStorage.getItem('verificationCompleted') === 't';
+    const verificationCompletedValue = localStorage.getItem('verificationCompleted');
+    const verificationCompleted = verificationCompletedValue === 't' || verificationCompletedValue === 'true';
     
     // Don't show modal if verification has been completed
     if (verificationCompleted) {

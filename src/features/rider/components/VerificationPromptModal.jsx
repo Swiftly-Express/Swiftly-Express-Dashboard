@@ -106,10 +106,10 @@ const VerificationPromptModal = ({ isOpen, onClose }) => {
       return;
     }
 
-    // Validate file type
+    // Validate file type - Accept both images (JPEG, PNG) and PDFs
     const allowedTypes = ['image/jpeg', 'image/png', 'image/jpg', 'application/pdf'];
     if (!allowedTypes.includes(file.type)) {
-      alert('Please upload a valid image (JPG, PNG) or PDF file');
+      alert('Please upload a valid file: JPEG, PNG, or PDF');
       return;
     }
 
@@ -232,7 +232,7 @@ const VerificationPromptModal = ({ isOpen, onClose }) => {
       // Mark account as verified
       localStorage.setItem('riderAccountVerified', 'true');
       localStorage.setItem('accountVerifiedAt', new Date().toISOString());
-      localStorage.setItem('verificationCompleted', 'true');
+      localStorage.setItem('verificationCompleted', 't'); // Use 't' to match Dashboard check
       
       // Remove verification notifications
       removeVerificationNotification();
