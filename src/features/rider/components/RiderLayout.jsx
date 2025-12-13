@@ -3,9 +3,34 @@ import RiderSidebar from './RiderSidebar';
 import { YummyText } from '../../../components/YummyText';
 import { getRiderProfile } from '../../../utils/authApi';
 
+// Generate mock avatar based on user name
+const generateMockAvatar = (name) => {
+  if (!name || name === 'Rider') {
+    return 'https://api.dicebear.com/7.x/avataaars/svg?seed=Rider';
+  }
+  // Use the name as seed for consistent avatar
+  return `https://api.dicebear.com/7.x/avataaars/svg?seed=${encodeURIComponent(name)}`;
+};
+
 const RiderLayout = ({ children }) => {
   const [profileImage, setProfileImage] = useState(() => {
-    return localStorage.getItem('profile_image') || 'https://api.dicebear.com/7.x/avataaars/svg?seed=Marcus';
+    const cachedImage = localStorage.getItem('profile_image');
+    if (cachedImage && !cachedImage.includes('dicebear') && !cachedImage.includes('profileimage.svg')) {
+      // User has uploaded a custom image
+      return cachedImage;
+    }
+    // Generate mock avatar based on user name
+    const cachedUserData = localStorage.getItem('user_data');
+    if (cachedUserData) {
+      try {
+        const user = JSON.parse(cachedUserData);
+        const name = user.fullName || `${user.firstName || ''} ${user.lastName || ''}`.trim();
+        return generateMockAvatar(name);
+      } catch (e) {
+        return generateMockAvatar('Rider');
+      }
+    }
+    return generateMockAvatar('Rider');
   });
   const [userName, setUserName] = useState('Rider');
   const [isOnline, setIsOnline] = useState(true);
@@ -56,9 +81,17 @@ const RiderLayout = ({ children }) => {
       
       if (profile) {
         // Update profile image from API
-        if (profile.profilePhoto) {
+        if (profile.profilePhoto && !profile.profilePhoto.includes('dicebear')) {
+          // User has a custom uploaded image
           setProfileImage(profile.profilePhoto);
-          localStorage.setItem('rider_profile_image', profile.profilePhoto);
+          localStorage.setItem('profile_image', profile.profilePhoto);
+        } else if (!cachedImage || cachedImage.includes('dicebear') || cachedImage.includes('profileimage.svg')) {
+          // No custom image, generate mock avatar based on name
+          const name = profile.fullName || `${profile.firstName || ''} ${profile.lastName || ''}`.trim();
+          if (name) {
+            const mockAvatar = generateMockAvatar(name);
+            setProfileImage(mockAvatar);
+          }
         }
         
         // Update user name
