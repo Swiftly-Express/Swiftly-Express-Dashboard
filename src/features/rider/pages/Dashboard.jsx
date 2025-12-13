@@ -84,7 +84,20 @@ const AvailableOrderCard = ({ packageId, location, distance, price }) => (
 
 const Dashboard = () => {
   const [showVerificationModal, setShowVerificationModal] = useState(false);
-  const [userName, setUserName] = useState('Rider');
+  const [userName, setUserName] = useState(() => {
+    // Initialize from localStorage immediately
+    const cachedUserData = localStorage.getItem('user_data');
+    if (cachedUserData) {
+      try {
+        const user = JSON.parse(cachedUserData);
+        const name = user.fullName || `${user.firstName || ''} ${user.lastName || ''}`.trim();
+        return name || 'Rider';
+      } catch (e) {
+        return 'Rider';
+      }
+    }
+    return 'Rider';
+  });
 
   useEffect(() => {
     fetchUserProfile();

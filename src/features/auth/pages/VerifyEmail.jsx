@@ -52,9 +52,10 @@ const VerifyEmail = () => {
   const handlePaste = (e) => {
     e.preventDefault();
     const pastedData = e.clipboardData.getData('text').replace(/\D/g, '').slice(0, 6);
+    
     if (!pastedData) return;
 
-    const newOtp = [...otp];
+    const newOtp = ['', '', '', '', '', ''];
     pastedData.split('').forEach((char, index) => {
       if (index < 6) newOtp[index] = char;
     });
@@ -62,7 +63,9 @@ const VerifyEmail = () => {
 
     // Focus the last filled input or the next empty one
     const nextIndex = Math.min(pastedData.length, 5);
-    inputRefs.current[nextIndex]?.focus();
+    setTimeout(() => {
+      inputRefs.current[nextIndex]?.focus();
+    }, 0);
   };
 
   // Handle verify

@@ -19,6 +19,33 @@ const RiderProfile = () => {
   const [loading, setLoading] = useState(true);
   const [uploading, setUploading] = useState(false);
   const [profileData, setProfileData] = useState(null);
+  const [userName, setUserName] = useState(() => {
+    // Initialize from localStorage immediately
+    const cachedUserData = localStorage.getItem('user_data');
+    if (cachedUserData) {
+      try {
+        const user = JSON.parse(cachedUserData);
+        const name = user.fullName || `${user.firstName || ''} ${user.lastName || ''}`.trim();
+        return name || 'Rider';
+      } catch (e) {
+        return 'Rider';
+      }
+    }
+    return 'Rider';
+  });
+  const [riderId, setRiderId] = useState(() => {
+    // Initialize from localStorage immediately
+    const cachedUserData = localStorage.getItem('user_data');
+    if (cachedUserData) {
+      try {
+        const user = JSON.parse(cachedUserData);
+        return user.riderId || user.driverId || (user.id ? `RD-${user.id}` : '');
+      } catch (e) {
+        return '';
+      }
+    }
+    return '';
+  });
   const [profileImage, setProfileImage] = useState(() => {
     return localStorage.getItem('profile_image') || '/profileimage.svg';
   });
@@ -71,6 +98,21 @@ const RiderProfile = () => {
         setProfileImage(cachedImage);
       }
       
+      // Load cached user data immediately
+      const cachedUserData = localStorage.getItem('user_data');
+      if (cachedUserData) {
+        try {
+          const user = JSON.parse(cachedUserData);
+          const name = user.fullName || `${user.firstName || ''} ${user.lastName || ''}`.trim();
+          if (name) setUserName(name);
+          if (user.riderId || user.driverId || user.id) {
+            setRiderId(user.riderId || user.driverId || `RD-${user.id}`);
+          }
+        } catch (e) {
+          console.error('[Profile] Failed to parse cached user data:', e);
+        }
+      }
+      
       const response = await getRiderProfile();
       const profile = response?.data?.driver || response?.driver || response?.data;
       setProfileData(profile);
@@ -79,6 +121,19 @@ const RiderProfile = () => {
       if (profile?.profilePhoto) {
         setProfileImage(profile.profilePhoto);
         localStorage.setItem('profile_image', profile.profilePhoto);
+      }
+      
+      // Update user name from API
+      if (profile) {
+        const name = profile.fullName || `${profile.firstName || ''} ${profile.lastName || ''}`.trim();
+        if (name) {
+          setUserName(name);
+        }
+        
+        // Update rider ID
+        if (profile.riderId || profile.driverId || profile.id) {
+          setRiderId(profile.riderId || profile.driverId || `RD-${profile.id}`);
+        }
       }
       
       // Update documents status from API
@@ -304,7 +359,7 @@ const RiderProfile = () => {
                 <div className="relative">
                   <img
                     src={profileImage}
-                    alt="Marcus Johnson"
+                    alt={userName}
                     className="w-24 h-24 rounded-full border-4 border-white shadow-md bg-gray-200 object-cover"
                   />
                   <input
@@ -325,8 +380,8 @@ const RiderProfile = () => {
 
                 {/* Profile Details */}
                 <div>
-                  <div className="text-xl font-medium text-[#0F172A] mb-1">Marcus Johnson</div>
-                  <div className="text-sm text-[#64748B] mb-3">Rider ID: RD-78945</div>
+                  <div className="text-xl font-medium text-[#0F172A] mb-1">{userName}</div>
+                  <div className="text-sm text-[#64748B] mb-3">{riderId ? `Rider ID: ${riderId}` : 'Rider'}</div>
                   
                   {/* Badges */}
                   <div className="flex items-center gap-2 mb-3">
