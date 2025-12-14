@@ -6,13 +6,44 @@ import BlockIcon from "../../../icons/Blockicon";
 import NairaIcon from "../../../icons/Nairaicon";
 import AnalyticsIcon from "../../../icons/Analyticsicon";
 import VerificationPromptModal from '../components/VerificationPromptModal';
-import { initializeVerificationNotifications } from '../../../utils/verificationNotifications';
+import { initializeVerificationSystem } from '../../../utils/verificationNotifications';
 import { getRiderProfile } from '../../../utils/authApi';
+import { getCookie, setCookie, getJSONCookie } from '../../../utils/cookies';
 
 // Shadow only on left, right and bottom - no top shadow for seamless blend
 const sideBottomShadow = {
   boxShadow: '2px 2px 4px rgba(0,0,0,0.06), -2px 2px 4px rgba(0,0,0,0.06), 0 4px 8px rgba(0,0,0,0.08)'
 };
+
+export const shouldShowVerificationModal = () => {
+  const isVerified = getCookie('riderAccountVerified') === 'true';
+  if (isVerified) return false;
+
+  const lastShown = getCookie('lastVerificationModalShownAt');
+  if (!lastShown) return true;
+
+  const hoursSince =
+    (Date.now() - Number(lastShown)) / (1000 * 60 * 60);
+
+  // Show at most once every 24 hours
+  return hoursSince >= 24;
+};
+
+export const markVerificationModalShown = () => {
+  setCookie(
+    'lastVerificationModalShownAt',
+    Date.now().toString(),
+    1
+  );
+};
+
+if (shouldShowVerificationModal()) {
+  setTimeout(() => {
+    setShowVerificationModal(true);
+    markVerificationModalShown();
+  }, 3000);
+}
+
 
 const StatCard = ({ icon, title, value, subtitle, iconBg }) => (
   <div className="bg-white rounded-xl p-5" style={sideBottomShadow}>
@@ -85,12 +116,11 @@ const AvailableOrderCard = ({ packageId, location, distance, price }) => (
 const Dashboard = () => {
   const [showVerificationModal, setShowVerificationModal] = useState(false);
   const [userName, setUserName] = useState(() => {
-    // Initialize from localStorage immediately
-    const cachedUserData = localStorage.getItem('user_data');
+    // Initialize from cookies immediately
+    const cachedUserData = getJSONCookie('user_data');
     if (cachedUserData) {
       try {
-        const user = JSON.parse(cachedUserData);
-        const name = user.fullName || `${user.firstName || ''} ${user.lastName || ''}`.trim();
+        const name = cachedUserData.fullName || `${cachedUserData.firstName || ''} ${cachedUserData.lastName || ''}`.trim();
         return name || 'Rider';
       } catch (e) {
         return 'Rider';
@@ -103,11 +133,11 @@ const Dashboard = () => {
     fetchUserProfile();
     
     // Check if verification has been completed (submitted successfully)
-    const verificationCompletedValue = localStorage.getItem('verificationCompleted');
+    const verificationCompletedValue = getCookie('verificationCompleted');
     const verificationCompleted = verificationCompletedValue === 't' || verificationCompletedValue === 'true';
     
     // Check if account verification is explicitly set to true (documents submitted and approved)
-    const accountVerifiedValue = localStorage.getItem('riderAccountVerified');
+    const accountVerifiedValue = getCookie('riderAccountVerified');
     const accountVerified = accountVerifiedValue === 'true';
     
     // Don't show modal ONLY if verification has been submitted (verificationCompleted is set)
@@ -137,6 +167,7 @@ const Dashboard = () => {
     };
   }, []);
 
+
   const fetchUserProfile = async () => {
     try {
       const response = await getRiderProfile();
@@ -150,12 +181,11 @@ const Dashboard = () => {
       }
     } catch (error) {
       console.error('[Dashboard] Failed to fetch profile:', error);
-      // Fallback to localStorage
-      const userData = localStorage.getItem('user_data');
+      // Fallback to cookies
+      const userData = getJSONCookie('user_data');
       if (userData) {
         try {
-          const user = JSON.parse(userData);
-          const name = user.fullName || `${user.firstName || ''} ${user.lastName || ''}`.trim();
+          const name = userData.fullName || `${userData.firstName || ''} ${userData.lastName || ''}`.trim();
           if (name) setUserName(name);
         } catch (e) {
           console.error('[Dashboard] Failed to parse user data:', e);

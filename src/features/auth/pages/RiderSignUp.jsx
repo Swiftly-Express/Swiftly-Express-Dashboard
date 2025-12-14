@@ -4,6 +4,7 @@ import { eyeOutline, eyeOffOutline } from 'ionicons/icons';
 import { YummyText } from '../../../components/YummyText';
 import Button from '../../../components/Button';
 import { registerRider } from '../../../utils/authApi';
+import { setCookie, setJSONCookie } from '../../../utils/cookies';
 
 const RiderSignup = () => {
   const router = useIonRouter();
@@ -67,20 +68,20 @@ const RiderSignup = () => {
 
       const res = await registerRider(payload);
 
-      // Store pending verification data
-      localStorage.setItem('pendingVerificationEmail', formData.email);
-      localStorage.setItem('pendingVerificationType', 'rider');
-      localStorage.setItem('pendingUserData', JSON.stringify({
+      // Store pending verification data in cookies (1 day expiration)
+      setCookie('pendingVerificationEmail', formData.email, 1);
+      setCookie('pendingVerificationType', 'rider', 1);
+      setJSONCookie('pendingUserData', {
         fullName: formData.fullName,
         email: formData.email,
         phone: formData.phone,
         vehicleType: formData.vehicleType
-      }));
+      }, 1);
 
       // If backend returned a user id, store it for verify/resend endpoints
       try {
         const returnedId = res?.data?.userId || res?.data?.id || res?.data?._id || res?.user?.id || res?.userId || res?.id;
-        if (returnedId) localStorage.setItem('pendingVerificationUserId', returnedId);
+        if (returnedId) setCookie('pendingVerificationUserId', returnedId, 1);
       } catch (e) {
         // ignore
       }

@@ -2,6 +2,7 @@ import { useLocation } from 'react-router-dom';
 import { useIonRouter } from '@ionic/react';
 import { YummyText } from '../../../components/YummyText';
 import { logout as apiLogout } from '../../../utils/authApi';
+import { getCookie, deleteCookie } from '../../../utils/cookies';
 import React from 'react';
 
 const SidebarButton = ({ to, active, icon, label, count }) => {
@@ -39,15 +40,21 @@ const RiderSidebar = () => {
   const handleLogout = () => {
     (async () => {
       try {
-        const refreshToken = localStorage.getItem('refresh_token') || '';
+        const refreshToken = getCookie('refresh_token') || '';
         if (refreshToken) await apiLogout({ refreshToken });
       } catch (err) {
         console.error('Logout API failed', err);
       } finally {
-        localStorage.removeItem('auth_token');
-        localStorage.removeItem('refresh_token');
-        localStorage.removeItem('user_type');
-        localStorage.removeItem('user_data');
+        // Note: apiLogout already clears cookies, but let's ensure they're all cleared
+        deleteCookie('auth_token');
+        deleteCookie('rider_token');
+        deleteCookie('customer_token');
+        deleteCookie('refresh_token');
+        deleteCookie('rider_refresh_token');
+        deleteCookie('customer_refresh_token');
+        deleteCookie('user_type');
+        deleteCookie('user_data');
+        deleteCookie('userRole');
         if (document && document.activeElement) document.activeElement.blur();
         router.push('/auth/rider/login', 'back', 'pop');
       }

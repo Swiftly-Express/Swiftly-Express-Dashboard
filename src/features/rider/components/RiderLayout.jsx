@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import RiderSidebar from './RiderSidebar';
 import { YummyText } from '../../../components/YummyText';
 import { getRiderProfile } from '../../../utils/authApi';
+import { getCookie, setCookie, getJSONCookie } from '../../../utils/cookies';
 
 // Generate mock avatar based on user name
 const generateMockAvatar = (name) => {
@@ -15,10 +16,9 @@ const generateMockAvatar = (name) => {
 // Get user-specific profile image key
 const getProfileImageKey = () => {
   try {
-    const userData = localStorage.getItem('user_data');
+    const userData = getJSONCookie('user_data');
     if (userData) {
-      const user = JSON.parse(userData);
-      const userId = user.id || user._id || user.email;
+      const userId = userData.id || userData._id || userData.email;
       if (userId) {
         return `profile_image_${userId}`;
       }
@@ -32,17 +32,16 @@ const getProfileImageKey = () => {
 const RiderLayout = ({ children }) => {
   const [profileImage, setProfileImage] = useState(() => {
     const imageKey = getProfileImageKey();
-    const cachedImage = localStorage.getItem(imageKey);
+    const cachedImage = getCookie(imageKey);
     if (cachedImage && !cachedImage.includes('dicebear') && !cachedImage.includes('profileimage.svg')) {
       // User has uploaded a custom image
       return cachedImage;
     }
     // Generate mock avatar based on user name
-    const cachedUserData = localStorage.getItem('user_data');
+    const cachedUserData = getJSONCookie('user_data');
     if (cachedUserData) {
       try {
-        const user = JSON.parse(cachedUserData);
-        const name = user.fullName || `${user.firstName || ''} ${user.lastName || ''}`.trim();
+        const name = cachedUserData.fullName || `${cachedUserData.firstName || ''} ${cachedUserData.lastName || ''}`.trim();
         return generateMockAvatar(name);
       } catch (e) {
         return generateMockAvatar('Rider');
@@ -64,8 +63,8 @@ const RiderLayout = ({ children }) => {
         console.log('[RiderLayout] Updating profile image to:', newImage);
         setProfileImage(newImage);
         const imageKey = getProfileImageKey();
-        localStorage.setItem(imageKey, newImage);
-        console.log('[RiderLayout] Profile image state updated and saved to localStorage');
+        setCookie(imageKey, newImage, 7);
+        console.log('[RiderLayout] Profile image state updated and saved to cookies');
       }
       if (event.detail?.fullName || event.detail?.firstName) {
         const name = event.detail.fullName || `${event.detail.firstName || ''} ${event.detail.lastName || ''}`.trim();
@@ -91,7 +90,7 @@ const RiderLayout = ({ children }) => {
     try {
       // Load cached profile image immediately
       const imageKey = getProfileImageKey();
-      const cachedImage = localStorage.getItem(imageKey);
+      const cachedImage = getCookie(imageKey);
       if (cachedImage) {
         setProfileImage(cachedImage);
       }
@@ -104,7 +103,7 @@ const RiderLayout = ({ children }) => {
         if (profile.profilePhoto && !profile.profilePhoto.includes('dicebear')) {
           // User has a custom uploaded image
           setProfileImage(profile.profilePhoto);
-          localStorage.setItem(imageKey, profile.profilePhoto);
+          setCookie(imageKey, profile.profilePhoto, 7);
         } else if (!cachedImage || cachedImage.includes('dicebear') || cachedImage.includes('profileimage.svg')) {
           // No custom image, generate mock avatar based on name
           const name = profile.fullName || `${profile.firstName || ''} ${profile.lastName || ''}`.trim();
@@ -124,12 +123,11 @@ const RiderLayout = ({ children }) => {
       }
     } catch (error) {
       console.error('[RiderLayout] Failed to fetch profile:', error);
-      // Fallback to localStorage
-      const userData = localStorage.getItem('user_data');
+      // Fallback to cookies
+      const userData = getJSONCookie('user_data');
       if (userData) {
         try {
-          const user = JSON.parse(userData);
-          const name = user.fullName || `${user.firstName || ''} ${user.lastName || ''}`.trim();
+          const name = userData.fullName || `${userData.firstName || ''} ${userData.lastName || ''}`.trim();
           if (name) setUserName(name);
         } catch (e) {
           console.error('[RiderLayout] Failed to parse user data:', e);

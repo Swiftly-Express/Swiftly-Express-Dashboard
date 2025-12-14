@@ -5,6 +5,7 @@ import { YummyText } from '../../../components/YummyText';
 import Button from '../../../components/Button';
 import { useHistory } from 'react-router-dom';
 import { login } from '../../../utils/authApi';
+import { setCookie, setJSONCookie } from '../../../utils/cookies';
 
 const RiderSignIn = () => {
   const history = useHistory();
@@ -35,17 +36,38 @@ const RiderSignIn = () => {
     }
 
     try {
-      const res = await login({ email: formData.email.trim(), password: formData.password });
+      const res = await login({ email: formData.email.trim(), password: formData.password, role: 'driver' });
+
+      console.log('[RiderLogin] Login response:', res);
 
       const token = res?.token || res?.data?.token || res?.accessToken || res?.data?.accessToken;
       const refresh = res?.refreshToken || res?.data?.refreshToken || res?.refresh_token || res?.data?.refresh_token;
       const user = res?.user || res?.data?.user || res?.data || null;
 
-      if (token) localStorage.setItem('auth_token', token);
-      if (refresh) localStorage.setItem('refresh_token', refresh);
-      if (user) localStorage.setItem('user_data', JSON.stringify(user));
-      // app expects 'rider' in other places
-      localStorage.setItem('user_type', 'rider');
+      // The login function in authApi.js should handle token storage, but let's verify
+      console.log('[RiderLogin] Token and user data:', {
+        hasToken: !!token,
+        hasUser: !!user,
+        tokenPreview: token ? token.substring(0, 20) + '...' : 'none'
+      });
+
+      // Note: The login() function in authApi.js already stores tokens and user data in cookies
+      // But if for some reason it didn't, we'll do it here as a fallback
+      if (token) {
+        setCookie('rider_token', token, 7);
+        setCookie('auth_token', token, 7);
+        console.log('[RiderLogin] Token stored in cookies');
+      }
+      if (refresh) {
+        setCookie('rider_refresh_token', refresh, 7);
+        setCookie('refresh_token', refresh, 7);
+      }
+      if (user) {
+        setJSONCookie('user_data', user, 7);
+        setCookie('user_type', 'rider', 7);
+        setCookie('userRole', 'rider', 7);
+        console.log('[RiderLogin] User data stored in cookies');
+      }
 
       if (document && document.activeElement) document.activeElement.blur();
       history.push('/rider/dashboard');

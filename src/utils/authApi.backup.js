@@ -1,4 +1,4 @@
-import axios from 'axios';
+﻿import axios from 'axios';
 import { getCookie, setCookie, deleteCookie, getJSONCookie, setJSONCookie } from './cookies';
 const BASE_URL = import.meta.env.VITE_API_BASE_URL || 'https://api.swiftlyxpress.com';
 
@@ -111,38 +111,38 @@ export async function registerRider(payload) {
     
     // Store userId and type for verification
     if (userId) {
-      setCookie('pending_user_id', userId, 1);
-      setCookie('pendingVerificationUserId', userId, 1);
+      localStorage.setItem('pending_user_id', userId);
+      localStorage.setItem('pendingVerificationUserId', userId);
       console.log('[authApi] UserId stored for verification:', userId);
     }
     
     // Always set pendingVerificationType for riders
-    setCookie('pendingVerificationType', 'rider', 1);
+    localStorage.setItem('pendingVerificationType', 'rider');
     console.log('[authApi] pendingVerificationType set to rider');
     
     // Store token immediately if provided
     if (token) {
-      setCookie('rider_token', token, 7);
-      setCookie('auth_token', token, 7);
+      localStorage.setItem('rider_token', token);
+      localStorage.setItem('auth_token', token);
       console.log('[authApi] Rider token stored after registration');
       
       if (refresh) {
-        setCookie('rider_refresh_token', refresh, 7);
-        setCookie('refresh_token', refresh, 7);
+        localStorage.setItem('rider_refresh_token', refresh);
+        localStorage.setItem('refresh_token', refresh);
       }
       
       if (user) {
-        setJSONCookie('user_data', user, 7);
-        setCookie('userRole', 'rider', 7);
-        setCookie('user_type', user?.role || 'driver', 7);
+        localStorage.setItem('user_data', JSON.stringify(user));
+        localStorage.setItem('userRole', 'rider');
+        localStorage.setItem('user_type', user?.role || 'driver');
         console.log('[authApi] Rider authenticated after registration');
       }
     } else {
       // No token yet - store pending data for after verification
       if (user) {
-        setJSONCookie('pending_user_data', user, 1);
-        setCookie('pendingVerificationEmail', user.email || payload.email, 1);
-        setCookie('pendingVerificationType', 'rider', 1);
+        localStorage.setItem('pending_user_data', JSON.stringify(user));
+        localStorage.setItem('pendingVerificationEmail', user.email || payload.email);
+        localStorage.setItem('pendingVerificationType', 'rider');
         console.log('[authApi] Pending rider data stored for verification');
       }
     }
@@ -173,31 +173,31 @@ export async function registerCustomer(payload) {
     console.log('[authApi] Extracted:', { hasToken: !!token, hasUser: !!user, userId });
     
     if (userId) {
-      setCookie('pending_user_id', userId, 1);
-      setCookie('pendingVerificationUserId', userId, 1);
+      localStorage.setItem('pending_user_id', userId);
+      localStorage.setItem('pendingVerificationUserId', userId);
       console.log('[authApi] UserId stored for verification:', userId);
     }
     
     if (token) {
-      setCookie('customer_token', token, 7);
-      setCookie('auth_token', token, 7);
+      localStorage.setItem('customer_token', token);
+      localStorage.setItem('auth_token', token);
       console.log('[authApi] Customer token stored after registration');
       
       if (refresh) {
-        setCookie('customer_refresh_token', refresh, 7);
-        setCookie('refresh_token', refresh, 7);
+        localStorage.setItem('customer_refresh_token', refresh);
+        localStorage.setItem('refresh_token', refresh);
       }
       
       if (user) {
-        setJSONCookie('user_data', user, 7);
-        setCookie('userRole', 'customer', 7);
-        setCookie('user_type', user?.role || 'customer', 7);
+        localStorage.setItem('user_data', JSON.stringify(user));
+        localStorage.setItem('userRole', 'customer');
+        localStorage.setItem('user_type', user?.role || 'customer');
       }
     } else {
       if (user) {
-        setJSONCookie('pending_user_data', user, 1);
-        setCookie('pendingVerificationEmail', user.email || payload.email, 1);
-        setCookie('pendingVerificationType', 'customer', 1);
+        localStorage.setItem('pending_user_data', JSON.stringify(user));
+        localStorage.setItem('pendingVerificationEmail', user.email || payload.email);
+        localStorage.setItem('pendingVerificationType', 'customer');
         console.log('[authApi] Pending customer data stored for verification');
       }
     }
@@ -214,12 +214,12 @@ export async function verifyEmail(payload) {
   
   // Try to get userId from multiple sources
   const effectiveUserId = userId || 
-                          getCookie('pendingVerificationUserId') || 
-                          getCookie('pending_user_id');
+                          localStorage.getItem('pendingVerificationUserId') || 
+                          localStorage.getItem('pending_user_id');
   
   if (!effectiveUserId) {
     // Fallback to email-based verification if no userId
-    const email = body.email || getCookie('pendingVerificationEmail');
+    const email = body.email || localStorage.getItem('pendingVerificationEmail');
     if (!email) {
       throw new Error('Either userId or email is required for email verification');
     }
@@ -239,7 +239,7 @@ export async function verifyEmail(payload) {
     const token = response?.token || response?.accessToken || response?.data?.token || response?.data?.accessToken;
     const refresh = response?.refreshToken || response?.refresh_token || response?.data?.refreshToken || response?.data?.refresh_token;
     const user = response?.user || response?.data?.user || response?.data;
-    const userType = getCookie('pendingVerificationType') || 'customer';
+    const userType = localStorage.getItem('pendingVerificationType') || 'customer';
     
     console.log('[authApi] Extracted from verification:', { 
       hasToken: !!token, 
@@ -251,21 +251,21 @@ export async function verifyEmail(payload) {
     if (token) {
       // Store role-specific token
       if (userType === 'rider' || userType === 'driver') {
-        setCookie('rider_token', token, 7);
+        localStorage.setItem('rider_token', token);
         console.log('[authApi] Rider token stored after verification:', token.substring(0, 20) + '...');
       } else {
-        setCookie('customer_token', token, 7);
+        localStorage.setItem('customer_token', token);
         console.log('[authApi] Customer token stored after verification:', token.substring(0, 20) + '...');
       }
-      setCookie('auth_token', token, 7);
+      localStorage.setItem('auth_token', token);
       
       if (refresh) {
         if (userType === 'rider' || userType === 'driver') {
-          setCookie('rider_refresh_token', refresh, 7);
+          localStorage.setItem('rider_refresh_token', refresh);
         } else {
-          setCookie('customer_refresh_token', refresh, 7);
+          localStorage.setItem('customer_refresh_token', refresh);
         }
-        setCookie('refresh_token', refresh, 7);
+        localStorage.setItem('refresh_token', refresh);
       }
     } else {
       console.error('[authApi] No token found in verification response. Response structure:', Object.keys(response || {}));
@@ -273,22 +273,22 @@ export async function verifyEmail(payload) {
     
     let userData = user;
     if (!userData) {
-      const pendingData = getJSONCookie('pending_user_data');
+      const pendingData = localStorage.getItem('pending_user_data');
       if (pendingData) {
-        userData = pendingData;
+        userData = JSON.parse(pendingData);
         console.log('[authApi] Using pending user data after verification');
       }
     }
     
     if (userData) {
-      setJSONCookie('user_data', userData, 7);
-      setCookie('userRole', userType === 'rider' || userType === 'driver' ? 'rider' : 'customer', 7);
-      setCookie('user_type', userData?.role || userType, 7);
+      localStorage.setItem('user_data', JSON.stringify(userData));
+      localStorage.setItem('userRole', userType === 'rider' || userType === 'driver' ? 'rider' : 'customer');
+      localStorage.setItem('user_type', userData?.role || userType);
       console.log('[authApi] User data stored after verification');
       
       // Clean up
-      deleteCookie('pending_user_data');
-      deleteCookie('pending_user_id');
+      localStorage.removeItem('pending_user_data');
+      localStorage.removeItem('pending_user_id');
     }
   }
   
@@ -326,27 +326,27 @@ export async function login(payload) {
     
     if (token) {
       if (userRole === 'rider' || userRole === 'driver') {
-        setCookie('rider_token', token, 7);
+        localStorage.setItem('rider_token', token);
         console.log('[authApi] Rider token stored');
       } else {
-        setCookie('customer_token', token, 7);
+        localStorage.setItem('customer_token', token);
         console.log('[authApi] Customer token stored');
       }
-      setCookie('auth_token', token, 7);
+      localStorage.setItem('auth_token', token);
       
       if (refresh) {
         if (userRole === 'rider' || userRole === 'driver') {
-          setCookie('rider_refresh_token', refresh, 7);
+          localStorage.setItem('rider_refresh_token', refresh);
         } else {
-          setCookie('customer_refresh_token', refresh, 7);
+          localStorage.setItem('customer_refresh_token', refresh);
         }
-        setCookie('refresh_token', refresh, 7);
+        localStorage.setItem('refresh_token', refresh);
       }
       
       if (user) {
-        setJSONCookie('user_data', user, 7);
-        setCookie('userRole', userRole === 'driver' ? 'rider' : userRole, 7);
-        setCookie('user_type', userRole, 7);
+        localStorage.setItem('user_data', JSON.stringify(user));
+        localStorage.setItem('userRole', userRole === 'driver' ? 'rider' : userRole);
+        localStorage.setItem('user_type', userRole);
         console.log('[authApi] User data stored with role:', userRole);
       }
     }
@@ -357,18 +357,19 @@ export async function login(payload) {
 
 /**
  * Submit rider verification documents
+ * CRITICAL: Must include Authorization header with rider token
  */
 export async function submitRiderVerification(verificationData) {
   console.log('[authApi] Submitting rider verification...');
   
-  // Check for token but don't throw error - let interceptor handle it
-  const token = getCookie('rider_token') || getCookie('auth_token') || getCookie('customer_token');
-  
-  if (token) {
-    console.log('[authApi] Token available for verification:', token.substring(0, 20) + '...');
-  } else {
-    console.warn('[authApi] No token found - request will be made anyway, interceptor will handle auth');
+  // Verify we have a token
+  const token = localStorage.getItem('rider_token') || localStorage.getItem('auth_token');
+  if (!token) {
+    console.error('[authApi] No rider token found! User must be authenticated.');
+    throw new Error('Authentication required. Please log in to submit verification.');
   }
+  
+  console.log('[authApi] Token available for verification:', token.substring(0, 20) + '...');
   
   if (verificationData instanceof FormData) {
     console.log('[authApi] FormData entries:');
@@ -381,6 +382,8 @@ export async function submitRiderVerification(verificationData) {
     }
   }
   
+  // Don't override headers - let the interceptor add the Authorization header
+  // Just ensure Content-Type is multipart/form-data for FormData
   return apiClient.post('/api/driver/verification', verificationData, {
     headers: {
       'Content-Type': 'multipart/form-data'
@@ -504,7 +507,7 @@ export async function refreshToken(payload) {
 }
 
 export async function getCurrentUser(token) {
-  const t = token || (typeof window !== 'undefined' && getCookie('auth_token'));
+  const t = token || (typeof window !== 'undefined' && localStorage.getItem('auth_token'));
   return apiClient.get('/api/auth/me', {
     headers: t ? { Authorization: `Bearer ${t}` } : {}
   });
@@ -517,15 +520,15 @@ export async function logout(payload = {}) {
     console.error('[authApi] Logout request failed:', error);
   } finally {
     if (typeof window !== 'undefined') {
-      deleteCookie('auth_token');
-      deleteCookie('customer_token');
-      deleteCookie('rider_token');
-      deleteCookie('refresh_token');
-      deleteCookie('customer_refresh_token');
-      deleteCookie('rider_refresh_token');
-      deleteCookie('user_data');
-      deleteCookie('userRole');
-      deleteCookie('user_type');
+      localStorage.removeItem('auth_token');
+      localStorage.removeItem('customer_token');
+      localStorage.removeItem('rider_token');
+      localStorage.removeItem('refresh_token');
+      localStorage.removeItem('customer_refresh_token');
+      localStorage.removeItem('rider_refresh_token');
+      localStorage.removeItem('user_data');
+      localStorage.removeItem('userRole');
+      localStorage.removeItem('user_type');
       console.log('[authApi] All auth data cleared');
     }
   }
@@ -543,14 +546,14 @@ export function isAuthenticated(role = null) {
   if (typeof window === 'undefined') return false;
 
   if (role === 'customer') {
-    return !!getCookie('customer_token');
+    return !!localStorage.getItem('customer_token');
   } else if (role === 'rider' || role === 'driver') {
-    return !!getCookie('rider_token');
+    return !!localStorage.getItem('rider_token');
   }
 
-  const customerToken = getCookie('customer_token');
-  const riderToken = getCookie('rider_token');
-  const oldToken = getCookie('auth_token');
+  const customerToken = localStorage.getItem('customer_token');
+  const riderToken = localStorage.getItem('rider_token');
+  const oldToken = localStorage.getItem('auth_token');
   
   return !!(customerToken || riderToken || oldToken);
 }
@@ -559,29 +562,35 @@ export function getAuthToken(role = null) {
   if (typeof window === 'undefined') return null;
   
   if (role === 'customer') {
-    return getCookie('customer_token');
+    return localStorage.getItem('customer_token');
   } else if (role === 'rider' || role === 'driver') {
-    return getCookie('rider_token');
+    return localStorage.getItem('rider_token');
   }
   
-  const userRole = getCookie('userRole');
+  const userRole = localStorage.getItem('userRole');
   if (userRole === 'customer') {
-    return getCookie('customer_token');
+    return localStorage.getItem('customer_token');
   } else if (userRole === 'rider' || userRole === 'driver') {
-    return getCookie('rider_token');
+    return localStorage.getItem('rider_token');
   }
   
-  return getCookie('auth_token');
+  return localStorage.getItem('auth_token');
 }
 
 export function getPendingUserId() {
   if (typeof window === 'undefined') return null;
-  return getCookie('pending_user_id') || getCookie('pendingVerificationUserId');
+  return localStorage.getItem('pending_user_id') || localStorage.getItem('pendingVerificationUserId');
 }
 
 export function getPendingUserData() {
   if (typeof window === 'undefined') return null;
-  return getJSONCookie('pending_user_data');
+  try {
+    const data = localStorage.getItem('pending_user_data');
+    return data ? JSON.parse(data) : null;
+  } catch (e) {
+    console.error('[authApi] Failed to parse pending user data:', e);
+    return null;
+  }
 }
 
 export default {

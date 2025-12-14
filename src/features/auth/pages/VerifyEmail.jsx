@@ -4,6 +4,7 @@ import { useIonRouter } from '@ionic/react';
 import { alertCircleOutline } from 'ionicons/icons';
 import { YummyText } from '../../../components/YummyText';
 import { verifyEmail, resendVerification } from '../../../utils/authApi';
+import { getCookie, setCookie, deleteCookie, getJSONCookie, setJSONCookie } from '../../../utils/cookies';
 
 const VerifyEmail = () => {
   const router = useIonRouter();
@@ -13,10 +14,10 @@ const VerifyEmail = () => {
   const [isVerifying, setIsVerifying] = useState(false);
   const inputRefs = useRef([]);
 
-  // Get email and user type from navigation state or localStorage
-  const email = localStorage.getItem('pendingVerificationEmail') || 'user@email.com';
-  const userType = localStorage.getItem('pendingVerificationType') || 'customer';
-  const pendingVerificationUserId = localStorage.getItem('pendingVerificationUserId') || null;
+  // Get email and user type from navigation state or cookies
+  const email = getCookie('pendingVerificationEmail') || 'user@email.com';
+  const userType = getCookie('pendingVerificationType') || 'customer';
+  const pendingVerificationUserId = getCookie('pendingVerificationUserId') || null;
 
   // Countdown timer for resend button
   useEffect(() => {
@@ -87,8 +88,8 @@ const VerifyEmail = () => {
       // Token storage is handled automatically by authApi.js verifyEmail function
       // Just verify tokens were stored
       const storedToken = userType === 'rider' || userType === 'driver' 
-        ? localStorage.getItem('rider_token')
-        : localStorage.getItem('customer_token');
+        ? getCookie('rider_token')
+        : getCookie('customer_token');
       
       if (storedToken) {
         console.log('[VerifyEmail] Tokens successfully stored by authApi');
@@ -97,30 +98,30 @@ const VerifyEmail = () => {
       }
       
       // Verify user data was stored
-      const userData = localStorage.getItem('user_data');
+      const userData = getJSONCookie('user_data');
       if (userData) {
         console.log('[VerifyEmail] User data successfully stored by authApi');
       } else {
         // Fallback: try to use pending user data if authApi didn't handle it
-        const pendingUserData = localStorage.getItem('pendingUserData');
+        const pendingUserData = getJSONCookie('pendingUserData');
         if (pendingUserData) {
-          localStorage.setItem('user_data', pendingUserData);
-          localStorage.setItem('userRole', userType === 'rider' || userType === 'driver' ? 'rider' : 'customer');
-          localStorage.setItem('user_type', userType || 'customer');
+          setJSONCookie('user_data', pendingUserData, 7);
+          setCookie('userRole', userType === 'rider' || userType === 'driver' ? 'rider' : 'customer', 7);
+          setCookie('user_type', userType || 'customer', 7);
           console.log('[VerifyEmail] Stored pending user data as fallback');
         }
       }
 
       // Clear pending verification data
-      localStorage.removeItem('pendingVerificationEmail');
-      localStorage.removeItem('pendingVerificationType');
-      localStorage.removeItem('pendingVerificationUserId');
-      localStorage.removeItem('pendingUserData');
+      deleteCookie('pendingVerificationEmail');
+      deleteCookie('pendingVerificationType');
+      deleteCookie('pendingVerificationUserId');
+      deleteCookie('pendingUserData');
 
       // For riders, mark email as verified but account verification still pending
       if (userType === 'rider') {
-        localStorage.setItem('riderEmailVerified', 'true');
-        localStorage.setItem('riderAccountVerified', 'false'); // Still need to upload documents
+        setCookie('riderEmailVerified', 'true', 7);
+        setCookie('riderAccountVerified', 'false', 7); // Still need to upload documents
       }
 
       alert('Email verified successfully!');

@@ -5,27 +5,24 @@ import { YummyText } from '../../../components/YummyText';
 import DocumentIcon from "../../../icons/Documenticon";
 import UploadIcon from "../../../icons/Uploadicon";
 import { getRiderProfile, updateRiderProfile, uploadRiderProfileImage } from '../../../utils/authApi';
+import { getCookie, setCookie, getJSONCookie, setJSONCookie } from '../../../utils/cookies';
 
 const sideBottomShadow = {
   boxShadow: '2px 4px 4px rgba(0,0,0,0.06), -2px 4px 4px rgba(0,0,0,0.06), 0 4px 8px rgba(0,0,0,0.08)'
 };
 
-// Generate mock avatar based on user name
 const generateMockAvatar = (name) => {
   if (!name || name === 'Rider') {
     return 'https://api.dicebear.com/7.x/avataaars/svg?seed=Rider';
   }
-  // Use the name as seed for consistent avatar
   return `https://api.dicebear.com/7.x/avataaars/svg?seed=${encodeURIComponent(name)}`;
 };
 
-// Get user-specific profile image key
 const getProfileImageKey = () => {
   try {
-    const userData = localStorage.getItem('user_data');
+    const userData = getJSONCookie('user_data');
     if (userData) {
-      const user = JSON.parse(userData);
-      const userId = user.id || user._id || user.email;
+      const userId = userData.id || userData._id || userData.email;
       if (userId) {
         return `profile_image_${userId}`;
       }
@@ -33,68 +30,18 @@ const getProfileImageKey = () => {
   } catch (e) {
     console.error('[Profile] Error getting user ID:', e);
   }
-  return 'profile_image'; // fallback
+  return 'profile_image';
 };
 
 const RiderProfile = () => {
-  // Get initial tab from sessionStorage or default to 'personal'
   const [activeTab, setActiveTab] = useState(() => {
     return sessionStorage.getItem('riderProfileTab') || 'personal';
   });
 
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(false);
   const [uploading, setUploading] = useState(false);
-  const [profileData, setProfileData] = useState(null);
-  const [userName, setUserName] = useState(() => {
-    // Initialize from localStorage immediately
-    const cachedUserData = localStorage.getItem('user_data');
-    if (cachedUserData) {
-      try {
-        const user = JSON.parse(cachedUserData);
-        const name = user.fullName || `${user.firstName || ''} ${user.lastName || ''}`.trim();
-        return name || 'Rider';
-      } catch (e) {
-        return 'Rider';
-      }
-    }
-    return 'Rider';
-  });
-  const [riderId, setRiderId] = useState(() => {
-    // Initialize from localStorage immediately
-    const cachedUserData = localStorage.getItem('user_data');
-    if (cachedUserData) {
-      try {
-        const user = JSON.parse(cachedUserData);
-        return user.riderId || user.driverId || (user.id ? `RD-${user.id}` : '');
-      } catch (e) {
-        return '';
-      }
-    }
-    return '';
-  });
-  const [profileImage, setProfileImage] = useState(() => {
-    const imageKey = getProfileImageKey();
-    const cachedImage = localStorage.getItem(imageKey);
-    if (cachedImage && !cachedImage.includes('dicebear') && !cachedImage.includes('profileimage.svg')) {
-      // User has uploaded a custom image
-      return cachedImage;
-    }
-    // Generate mock avatar based on user name
-    const cachedUserData = localStorage.getItem('user_data');
-    if (cachedUserData) {
-      try {
-        const user = JSON.parse(cachedUserData);
-        const name = user.fullName || `${user.firstName || ''} ${user.lastName || ''}`.trim();
-        return generateMockAvatar(name);
-      } catch (e) {
-        return generateMockAvatar('Rider');
-      }
-    }
-    return generateMockAvatar('Rider');
-  });
-  const [toastMsg, setToastMsg] = useState('');
-  const [showToast, setShowToast] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [profileData, setProfileData] = useState(null);
   
   const [personalInfo, setPersonalInfo] = useState({
     firstName: '',
@@ -105,6 +52,61 @@ const RiderProfile = () => {
     emergencyContact: ''
   });
   
+  const [vehicleInfo, setVehicleInfo] = useState({
+    type: '',
+    makeModel: '',
+    year: '',
+    color: '',
+    licensePlate: '',
+    insurancePolicy: ''
+  });
+
+  const [userName, setUserName] = useState(() => {
+    const cachedUserData = getJSONCookie('user_data');
+    if (cachedUserData) {
+      try {
+        const name = cachedUserData.fullName || `${cachedUserData.firstName || ''} ${cachedUserData.lastName || ''}`.trim();
+        return name || 'Rider';
+      } catch (e) {
+        return 'Rider';
+      }
+    }
+    return 'Rider';
+  });
+
+  const [riderId, setRiderId] = useState(() => {
+    const cachedUserData = getJSONCookie('user_data');
+    if (cachedUserData) {
+      try {
+        return cachedUserData.riderId || cachedUserData.driverId || (cachedUserData.id ? `RD-${cachedUserData.id}` : '');
+      } catch (e) {
+        return '';
+      }
+    }
+    return '';
+  });
+
+  const [profileImage, setProfileImage] = useState(() => {
+    const imageKey = getProfileImageKey();
+    const cachedImage = getCookie(imageKey);
+    if (cachedImage && !cachedImage.includes('dicebear') && !cachedImage.includes('profileimage.svg')) {
+      return cachedImage;
+    }
+    const cachedUserData = getJSONCookie('user_data');
+    if (cachedUserData) {
+      try {
+        const name = cachedUserData.fullName || `${cachedUserData.firstName || ''} ${cachedUserData.lastName || ''}`.trim();
+        return generateMockAvatar(name);
+      } catch (e) {
+        return generateMockAvatar('Rider');
+      }
+    }
+    return generateMockAvatar('Rider');
+  });
+
+  const [toastMsg, setToastMsg] = useState('');
+  const [showToast, setShowToast] = useState(false);
+  
   const [documents, setDocuments] = useState({
     driversLicense: { uploaded: true, verified: true, expires: 'Dec 15, 2026' },
     vehicleRegistration: { uploaded: true, verified: true, expires: 'Aug 20, 2025' },
@@ -112,23 +114,72 @@ const RiderProfile = () => {
     backgroundCheck: { uploaded: true, verified: false, lastUpdated: '6 months ago' }
   });
 
-  // File input refs
   const profileImageInputRef = useRef(null);
   const driversLicenseInputRef = useRef(null);
   const vehicleRegistrationInputRef = useRef(null);
   const insuranceCertificateInputRef = useRef(null);
   const backgroundCheckInputRef = useRef(null);
 
-  // Save active tab to sessionStorage whenever it changes
   useEffect(() => {
     sessionStorage.setItem('riderProfileTab', activeTab);
   }, [activeTab]);
 
-  // Fetch profile data on mount
+  // Load saved data from cookies on mount
+  useEffect(() => {
+    // Load personal info
+    const savedPersonalInfo = getJSONCookie('riderPersonalInfo');
+    if (savedPersonalInfo) {
+      try {
+        setPersonalInfo(savedPersonalInfo);
+      } catch (e) {
+        console.error('[Profile] Error parsing saved personal info:', e);
+      }
+    }
+    
+    // Load vehicle info
+    const savedVehicleInfo = getJSONCookie('riderVehicleInfo');
+    if (savedVehicleInfo) {
+      try {
+        setVehicleInfo(savedVehicleInfo);
+      } catch (e) {
+        console.error('[Profile] Error parsing saved vehicle info:', e);
+      }
+    }
+    
+    // Load verification data if available
+    const verificationData = getJSONCookie('riderVerificationData');
+    if (verificationData) {
+      try {
+        console.log('[Profile] Loading verification data:', verificationData);
+        
+        // Update personal info with contact info
+        if (verificationData.contactInfo) {
+          setPersonalInfo(prev => ({
+            ...prev,
+            phone: verificationData.contactInfo.phone || prev.phone,
+            address: `${verificationData.contactInfo.streetAddress || ''}, ${verificationData.contactInfo.city || ''}, ${verificationData.contactInfo.state || ''} ${verificationData.contactInfo.zipCode || ''}`.trim() || prev.address
+          }));
+        }
+        
+        // Update vehicle info
+        if (verificationData.vehicle) {
+          setVehicleInfo(prev => ({
+            ...prev,
+            type: verificationData.vehicle.type || prev.type,
+            makeModel: verificationData.vehicle.makeModel || prev.makeModel,
+            year: verificationData.vehicle.year || prev.year,
+            licensePlate: verificationData.vehicle.licensePlate || prev.licensePlate
+          }));
+        }
+      } catch (e) {
+        console.error('[Profile] Error loading verification data:', e);
+      }
+    }
+  }, []);
+
   useEffect(() => {
     fetchProfile();
     
-    // Listen for verification completion event
     const handleVerificationComplete = (event) => {
       console.log('[Profile] Verification completed, refreshing profile');
       fetchProfile();
@@ -145,23 +196,20 @@ const RiderProfile = () => {
     try {
       setLoading(true);
       
-      // Check if token exists before making API call
-      const token = localStorage.getItem('rider_token') || localStorage.getItem('auth_token');
+      const token = getCookie('rider_token') || getCookie('auth_token');
       if (!token) {
         console.log('[Profile] No token found, skipping API call');
         setLoading(false);
         return;
       }
       
-      // Load cached profile image immediately
       const imageKey = getProfileImageKey();
-      const cachedImage = localStorage.getItem(imageKey);
+      const cachedImage = getCookie(imageKey);
       if (cachedImage) {
         setProfileImage(cachedImage);
       }
       
-      // Load cached user data immediately
-      const cachedUserData = localStorage.getItem('user_data');
+      const cachedUserData = getJSONCookie('user_data');
       if (cachedUserData) {
         try {
           const user = JSON.parse(cachedUserData);
@@ -170,15 +218,13 @@ const RiderProfile = () => {
           if (user.riderId || user.driverId || user.id) {
             setRiderId(user.riderId || user.driverId || `RD-${user.id}`);
           }
-          // Load personal info from cached data
-          setPersonalInfo({
-            firstName: user.firstName || '',
-            lastName: user.lastName || '',
-            email: user.email || '',
-            phone: user.phone || '',
-            address: user.address || '',
-            emergencyContact: user.emergencyContact || ''
-          });
+          setPersonalInfo(prev => ({
+            ...prev,
+            firstName: user.firstName || prev.firstName,
+            lastName: user.lastName || prev.lastName,
+            email: user.email || prev.email,
+            phone: user.phone || prev.phone
+          }));
         } catch (e) {
           console.error('[Profile] Failed to parse cached user data:', e);
         }
@@ -188,42 +234,48 @@ const RiderProfile = () => {
       const profile = response?.data?.driver || response?.driver || response?.data;
       setProfileData(profile);
       
-      // Update profile image if available from API
       if (profile?.profilePhoto && !profile.profilePhoto.includes('dicebear')) {
-        // User has a custom uploaded image
         setProfileImage(profile.profilePhoto);
-        localStorage.setItem(imageKey, profile.profilePhoto);
+        setCookie(imageKey, profile.profilePhoto, 7);
       } else if (!cachedImage || cachedImage.includes('dicebear') || cachedImage.includes('profileimage.svg')) {
-        // No custom image, generate mock avatar based on name
         const name = profile?.fullName || `${profile?.firstName || ''} ${profile?.lastName || ''}`.trim() || userName;
         const mockAvatar = generateMockAvatar(name);
         setProfileImage(mockAvatar);
       }
       
-      // Update user name from API
       if (profile) {
         const name = profile.fullName || `${profile.firstName || ''} ${profile.lastName || ''}`.trim();
         if (name) {
           setUserName(name);
         }
         
-        // Update rider ID
         if (profile.riderId || profile.driverId || profile.id) {
           setRiderId(profile.riderId || profile.driverId || `RD-${profile.id}`);
         }
         
-        // Update personal info from profile
-        setPersonalInfo({
-          firstName: profile.firstName || '',
-          lastName: profile.lastName || '',
-          email: profile.email || '',
-          phone: profile.phone || profile.contactInfo?.phone || '',
-          address: profile.address || profile.contactInfo?.streetAddress || '',
-          emergencyContact: profile.emergencyContact || ''
-        });
+        setPersonalInfo(prev => ({
+          ...prev,
+          firstName: profile.firstName || prev.firstName,
+          lastName: profile.lastName || prev.lastName,
+          email: profile.email || prev.email,
+          phone: profile.phone || profile.contactInfo?.phone || prev.phone,
+          address: profile.address || profile.contactInfo?.streetAddress || prev.address,
+          emergencyContact: profile.emergencyContact || profile.contactInfo?.emergencyContact || prev.emergencyContact
+        }));
+        
+        if (profile.vehicle) {
+          setVehicleInfo(prev => ({
+            ...prev,
+            type: profile.vehicle.type || prev.type,
+            makeModel: profile.vehicle.makeModel || prev.makeModel,
+            year: profile.vehicle.year || prev.year,
+            color: profile.vehicle.color || prev.color,
+            licensePlate: profile.vehicle.licensePlate || prev.licensePlate,
+            insurancePolicy: profile.vehicle.insurancePolicy || prev.insurancePolicy
+          }));
+        }
       }
       
-      // Update documents status from API
       if (profile?.documents) {
         setDocuments(prev => ({
           ...prev,
@@ -231,22 +283,19 @@ const RiderProfile = () => {
         }));
       }
       
-      // Update verification status
       if (profile?.verificationStatus) {
-        localStorage.setItem('riderVerificationStatus', profile.verificationStatus);
+        setCookie('riderVerificationStatus', profile.verificationStatus, 7);
       }
       
       console.log('[Profile] Profile loaded:', profile);
     } catch (error) {
       console.error('[Profile] Error fetching profile:', error);
       
-      // Don't show error toast for missing token on page load
       if (error.message?.includes('token') || error.message?.includes('Access denied')) {
         console.log('[Profile] Token error on load, user may need to log in');
         return;
       }
       
-      // Handle 403 Forbidden specifically
       if (error.message.includes('403') || error.message.includes('Insufficient permissions')) {
         setToastMsg('Access denied. Please logout and login as a rider.');
       } else {
@@ -258,12 +307,10 @@ const RiderProfile = () => {
     }
   };
 
-  // Handle profile image upload
   const handleProfileImageUpload = async (e) => {
     const file = e.target.files[0];
     if (!file) return;
     
-    // Validate file type
     const validTypes = ['image/jpeg', 'image/png', 'image/gif'];
     if (!validTypes.includes(file.type)) {
       setToastMsg('Please upload a JPG, PNG, or GIF image');
@@ -271,19 +318,16 @@ const RiderProfile = () => {
       return;
     }
     
-    // Validate file size (max 5MB)
     if (file.size > 5 * 1024 * 1024) {
       setToastMsg('File size must be less than 5MB');
       setShowToast(true);
       return;
     }
 
-    // Show immediate preview while uploading
     const reader = new FileReader();
     reader.onloadend = () => {
       const previewUrl = reader.result;
       setProfileImage(previewUrl);
-      // Dispatch event immediately for instant UI update
       window.dispatchEvent(new CustomEvent('profile:updated', {
         detail: { profileImage: previewUrl }
       }));
@@ -296,24 +340,20 @@ const RiderProfile = () => {
     try {
       console.log('[Profile] Uploading profile image...');
       
-      // Create FormData
       const formData = new FormData();
       formData.append('image', file);
       
       const response = await uploadRiderProfileImage(formData);
       console.log('[Profile] Upload response:', response);
       
-      // Update profile image with multiple fallback paths
       const imageUrl = response?.imageUrl || response?.data?.imageUrl || response?.url || response?.data?.url || response?.data?.driver?.profilePhoto || response?.driver?.profilePhoto;
       
       if (imageUrl) {
         setProfileImage(imageUrl);
-        // Persist to localStorage with user-specific key
         const imageKey = getProfileImageKey();
-        localStorage.setItem(imageKey, imageUrl);
-        console.log('[Profile] Saved profile image to localStorage:', imageUrl);
+        setCookie(imageKey, imageUrl, 7);
+        console.log('[Profile] Saved profile image to cookies:', imageUrl);
         
-        // Dispatch event to notify other components (like RiderLayout)
         window.dispatchEvent(new CustomEvent('profile:updated', {
           detail: { profileImage: imageUrl }
         }));
@@ -321,13 +361,12 @@ const RiderProfile = () => {
         
         setToastMsg('Profile photo updated successfully!');
       } else {
-        // Fallback to FileReader preview
         console.log('[Profile] No URL returned, using local preview');
         const reader = new FileReader();
         reader.onloadend = () => {
           setProfileImage(reader.result);
           const imageKey = getProfileImageKey();
-          localStorage.setItem(imageKey, reader.result);
+          setCookie(imageKey, reader.result, 7);
           window.dispatchEvent(new CustomEvent('profile:updated', {
             detail: { profileImage: reader.result }
           }));
@@ -346,7 +385,6 @@ const RiderProfile = () => {
     }
   };
 
-  // Handle personal info change
   const handlePersonalInfoChange = (field, value) => {
     setPersonalInfo(prev => ({
       ...prev,
@@ -354,13 +392,12 @@ const RiderProfile = () => {
     }));
   };
 
-  // Save personal information
   const handleSavePersonalInfo = async () => {
     try {
       setSaving(true);
-      console.log('[Profile] Saving personal info:', personalInfo);
       
-      const payload = {
+      // Save to localStorage first (always works)
+      const localStorageData = {
         firstName: personalInfo.firstName,
         lastName: personalInfo.lastName,
         email: personalInfo.email,
@@ -368,17 +405,19 @@ const RiderProfile = () => {
         address: personalInfo.address,
         emergencyContact: personalInfo.emergencyContact
       };
+      setJSONCookie('riderPersonalInfo', localStorageData, 7);
+      console.log('[Profile] Personal info saved to cookies');
       
-      const response = await updateRiderProfile(payload);
-      console.log('[Profile] Personal info saved:', response);
-      
-      // Update localStorage user_data
-      const userData = localStorage.getItem('user_data');
+      // Update user_data cookie
+      const userData = getJSONCookie('user_data');
       if (userData) {
         try {
-          const user = JSON.parse(userData);
-          const updatedUser = { ...user, ...payload, fullName: `${payload.firstName} ${payload.lastName}`.trim() };
-          localStorage.setItem('user_data', JSON.stringify(updatedUser));
+          const updatedUser = { 
+            ...userData, 
+            fullName: `${personalInfo.firstName} ${personalInfo.lastName}`.trim(),
+            phone: personalInfo.phone
+          };
+          setJSONCookie('user_data', updatedUser, 7);
         } catch (e) {
           console.error('[Profile] Failed to update cached user data:', e);
         }
@@ -390,7 +429,26 @@ const RiderProfile = () => {
         setUserName(fullName);
       }
       
-      setToastMsg('Personal information updated successfully!');
+      // Try to update API with correct format
+      try {
+        const payload = {
+          fullName: `${personalInfo.firstName} ${personalInfo.lastName}`.trim(),
+          phone: personalInfo.phone,
+          contactInfo: {
+            phone: personalInfo.phone,
+            streetAddress: personalInfo.address,
+            emergencyContact: personalInfo.emergencyContact
+          }
+        };
+        
+        console.log('[Profile] Updating API with payload:', payload);
+        const response = await updateRiderProfile(payload);
+        console.log('[Profile] API update response:', response);
+      } catch (apiError) {
+        console.warn('[Profile] API update failed (continuing with localStorage):', apiError);
+      }
+      
+      setToastMsg('Personal information saved successfully!');
       setShowToast(true);
     } catch (error) {
       console.error('[Profile] Failed to save personal info:', error);
@@ -401,7 +459,52 @@ const RiderProfile = () => {
     }
   };
 
-  // Handle document upload
+  const handleVehicleInfoChange = (field, value) => {
+    setVehicleInfo(prev => ({
+      ...prev,
+      [field]: value
+    }));
+  };
+
+  const handleSaveVehicleInfo = async () => {
+    try {
+      setSaving(true);
+      
+      // Save to cookies first (always works)
+      setJSONCookie('riderVehicleInfo', vehicleInfo, 7);
+      console.log('[Profile] Vehicle info saved to cookies');
+      
+      // Try to update API
+      try {
+        const payload = {
+          vehicle: {
+            type: vehicleInfo.type,
+            makeModel: vehicleInfo.makeModel,
+            year: vehicleInfo.year,
+            color: vehicleInfo.color,
+            licensePlate: vehicleInfo.licensePlate,
+            insurancePolicy: vehicleInfo.insurancePolicy
+          }
+        };
+        
+        console.log('[Profile] Updating vehicle API with payload:', payload);
+        const response = await updateRiderProfile(payload);
+        console.log('[Profile] Vehicle API update response:', response);
+      } catch (apiError) {
+        console.warn('[Profile] Vehicle API update failed (continuing with localStorage):', apiError);
+      }
+      
+      setToastMsg('Vehicle information updated successfully!');
+      setShowToast(true);
+    } catch (error) {
+      console.error('[Profile] Failed to save vehicle info:', error);
+      setToastMsg(error.message || 'Failed to update vehicle information');
+      setShowToast(true);
+    } finally {
+      setSaving(false);
+    }
+  };
+
   const handleDocumentUpload = (documentType, e) => {
     const file = e.target.files[0];
     if (file) {
@@ -415,7 +518,6 @@ const RiderProfile = () => {
         return;
       }
 
-      // Update document status
       setDocuments(prev => ({
         ...prev,
         [documentType]: {
@@ -430,9 +532,8 @@ const RiderProfile = () => {
     }
   };
 
-  // Calculate profile completion percentage
   const calculateCompletion = () => {
-    const totalFields = 4; // 4 required documents
+    const totalFields = 4;
     let completed = 0;
     
     Object.values(documents).forEach(doc => {
@@ -442,18 +543,16 @@ const RiderProfile = () => {
     return Math.round((completed / totalFields) * 100);
   };
 
-  // Get completion color based on percentage
   const getCompletionColor = (percentage) => {
     if (percentage >= 0 && percentage <= 45) {
-      return { bar: 'bg-[#0F172A]', text: 'text-[#0F172A]' }; // Black
+      return { bar: 'bg-[#0F172A]', text: 'text-[#0F172A]' };
     } else if (percentage >= 46 && percentage <= 75) {
-      return { bar: 'bg-orange-500', text: 'text-orange-600' }; // Orange
+      return { bar: 'bg-orange-500', text: 'text-orange-600' };
     } else {
-      return { bar: 'bg-[#00D68F]', text: 'text-[#00D68F]' }; // Green
+      return { bar: 'bg-[#00D68F]', text: 'text-[#00D68F]' };
     }
   };
 
-  // Get missing documents
   const getMissingDocuments = () => {
     const missing = [];
     if (!documents.driversLicense.verified) missing.push("Driver's License");
@@ -467,7 +566,6 @@ const RiderProfile = () => {
   const completionColors = getCompletionColor(completionPercentage);
   const missingDocs = getMissingDocuments();
 
-  // Show loading state
   if (loading) {
     return (
       <IonPage>
@@ -489,7 +587,6 @@ const RiderProfile = () => {
     <IonPage>
       <RiderLayout>
         <IonContent className="ion-padding">
-          {/* Header */}
           <YummyText>
           <div className="mb-4 py-2">
             <div className="text-3xl font-medium text-[#0F172A] mb-2">
@@ -500,12 +597,9 @@ const RiderProfile = () => {
             </div>
           </div>
 
-          {/* Profile Card */}
           <div className="bg-gradient-to-br from-[#EFF6FF] to-[#EDFFF9] rounded-2xl p-6 mb-8" style={sideBottomShadow}>
             <div className="flex items-start justify-between">
-              {/* Left: Profile Info */}
               <div className="flex items-start gap-4">
-                {/* Avatar with Edit Button */}
                 <div className="relative">
                   <img
                     src={profileImage}
@@ -528,12 +622,10 @@ const RiderProfile = () => {
                   </button>
                 </div>
 
-                {/* Profile Details */}
                 <div>
                   <div className="text-xl font-medium text-[#0F172A] mb-1">{userName}</div>
                   <div className="text-sm text-[#64748B] mb-3">{riderId ? `Rider ID: ${riderId}` : 'Rider'}</div>
                   
-                  {/* Badges */}
                   <div className="flex items-center gap-2 mb-3">
                     <span className="px-3 py-1 bg-green-100 text-green-700 rounded-full text-xs font-medium">
                       Active Rider
@@ -546,7 +638,6 @@ const RiderProfile = () => {
                     </span>
                   </div>
 
-                  {/* Rating */}
                   <div className="flex items-center gap-2 mb-2">
                     <div className="flex items-center gap-">
                       {[1, 2, 3, 4, 5].map((star) => (
@@ -560,7 +651,6 @@ const RiderProfile = () => {
                         >
                           <path d="M12 2.75c.28 0 .53.16.65.41l2.12 4.3c.1.21.3.35.53.38l4.75.69c.69.1.97.95.47 1.43l-3.44 3.35c-.17.16-.25.39-.21.62l.81 4.72c.12.69-.61 1.22-1.23.89l-4.24-2.23a.75.75 0 0 0-.7 0l-4.24 2.23c-.62.33-1.35-.2-1.23-.89l.81-4.72c.04-.23-.04-.46-.21-.62L2.48 10c-.5-.48-.22-1.33.47-1.43l4.75-.69c.23-.03.43-.17.53-.38l2.12-4.3A.74.74 0 0 1 12 2.75Z"/>
                         </svg>
-
                       ))}
                     </div>
                     <span className="text-sm text-[#0F172A] font-medium">4.95 (238 ratings)</span>
@@ -570,7 +660,6 @@ const RiderProfile = () => {
                 </div>
               </div>
 
-              {/* Right: Stats */}
               <div className="flex gap-4">
                 <div className="bg-white rounded-xl p-4 text-center min-w-[120px] shadow-md" style={sideBottomShadow}>
                   <div className="text-2xl font-medium text-[#3B82F6] mb-1">542</div>
@@ -585,7 +674,6 @@ const RiderProfile = () => {
           </div>
           </YummyText>
 
-          {/* Tab Navigation */}
           <YummyText>
           <div className="flex items-center gap-2 mb-8 bg-gray-100 p-1 py-1 rounded-full w-fit">
             <button
@@ -620,7 +708,6 @@ const RiderProfile = () => {
             </button>
           </div>
 
-          {/* Personal Info Tab */}
           {activeTab === 'personal' && (
             <div className="bg-white rounded-2xl p-6 border border-gray-100" style={sideBottomShadow}>
               <div className="mb-6">
@@ -633,7 +720,6 @@ const RiderProfile = () => {
               </div>
 
               <div className="space-y-6">
-                {/* First Name & Last Name */}
                 <div className="grid grid-cols-2 gap-4">
                   <div>
                     <label className="block text-sm font-medium text-[#0A0A0A] mb-2">First Name</label>
@@ -657,7 +743,6 @@ const RiderProfile = () => {
                   </div>
                 </div>
 
-                {/* Email Address */}
                 <div>
                   <label className="block text-sm font-medium text-[#0A0A0A] mb-2">Email Address</label>
                   <input
@@ -666,10 +751,10 @@ const RiderProfile = () => {
                     value={personalInfo.email}
                     onChange={(e) => handlePersonalInfoChange('email', e.target.value)}
                     className="w-full px-4 py-3 bg-gray-50 border border-gray-200 placeholder:text-[#717182] rounded-xl text-[#0F172A] focus:outline-none focus:border-[#00D68F]"
+                    readOnly
                   />
                 </div>
 
-                {/* Phone Number */}
                 <div>
                   <label className="block text-sm font-medium text-[#0A0A0A] mb-2">Phone Number</label>
                   <input
@@ -681,7 +766,6 @@ const RiderProfile = () => {
                   />
                 </div>
 
-                {/* Address */}
                 <div>
                   <label className="block text-sm font-medium text-[#0A0A0A] mb-2">Address</label>
                   <input
@@ -693,7 +777,6 @@ const RiderProfile = () => {
                   />
                 </div>
 
-                {/* Emergency Contact */}
                 <div>
                   <label className="block text-sm font-medium text-[#0A0A0A] mb-2">Emergency Contact</label>
                   <input
@@ -705,7 +788,6 @@ const RiderProfile = () => {
                   />
                 </div>
 
-                {/* Save Button */}
                 <button 
                   onClick={handleSavePersonalInfo}
                   disabled={saving}
@@ -715,12 +797,8 @@ const RiderProfile = () => {
                 </button>
               </div>
             </div>
-  
           )}
-          </YummyText>
 
-          {/* Vehicle Tab */}
-          <YummyText>
           {activeTab === 'vehicle' && (
             <div className="bg-white rounded-2xl p-6 border border-gray-100" style={sideBottomShadow}>
               <div className="mb-6">
@@ -733,13 +811,14 @@ const RiderProfile = () => {
               </div>
 
               <div className="space-y-6">
-                {/* Vehicle Type & Make/Model */}
                 <div className="grid grid-cols-2 gap-4">
                   <div>
                     <label className="block text-sm font-medium text-[#0A0A0A] mb-2">Vehicle Type</label>
                     <input
                       type="text"
                       placeholder="Motorcycle"
+                      value={vehicleInfo.type}
+                      onChange={(e) => handleVehicleInfoChange('type', e.target.value)}
                       className="w-full px-4 py-3 bg-gray-50 placeholder:text-[#717182] border border-gray-200 rounded-xl text-[#0F172A] focus:outline-none focus:border-[#00D68F]"
                     />
                   </div>
@@ -748,18 +827,21 @@ const RiderProfile = () => {
                     <input
                       type="text"
                       placeholder="Honda CBR 250R"
+                      value={vehicleInfo.makeModel}
+                      onChange={(e) => handleVehicleInfoChange('makeModel', e.target.value)}
                       className="w-full px-4 py-3 bg-gray-50 placeholder:text-[#717182] border border-gray-200 rounded-xl text-[#0F172A] focus:outline-none focus:border-[#00D68F]"
                     />
                   </div>
                 </div>
 
-                {/* Year & Color */}
                 <div className="grid grid-cols-2 gap-4">
                   <div>
                     <label className="block text-sm font-medium text-[#0A0A0A] mb-2">Year</label>
                     <input
                       type="text"
                       placeholder="2022"
+                      value={vehicleInfo.year}
+                      onChange={(e) => handleVehicleInfoChange('year', e.target.value)}
                       className="w-full px-4 py-3 bg-gray-50 placeholder:text-[#717182] border border-gray-200 rounded-xl text-[#0F172A] focus:outline-none focus:border-[#00D68F]"
                     />
                   </div>
@@ -768,40 +850,46 @@ const RiderProfile = () => {
                     <input
                       type="text"
                       placeholder="Red"
+                      value={vehicleInfo.color}
+                      onChange={(e) => handleVehicleInfoChange('color', e.target.value)}
                       className="w-full px-4 py-3 bg-gray-50 placeholder:text-[#717182] border border-gray-200 rounded-xl text-[#0F172A] focus:outline-none focus:border-[#00D68F]"
                     />
                   </div>
                 </div>
 
-                {/* License Plate */}
                 <div>
                   <label className="block text-sm font-medium text-[#0A0A0A] mb-2">License Plate</label>
                   <input
                     type="text"
                     placeholder="ABC-1234"
+                    value={vehicleInfo.licensePlate}
+                    onChange={(e) => handleVehicleInfoChange('licensePlate', e.target.value)}
                     className="w-full px-4 py-3 bg-gray-50 placeholder:text-[#717182] border border-gray-200 rounded-xl text-[#0F172A] focus:outline-none focus:border-[#00D68F]"
                   />
                 </div>
 
-                {/* Insurance Policy Number */}
                 <div>
                   <label className="block text-sm font-medium text-[#0A0A0A] mb-2">Insurance Policy Number</label>
                   <input
                     type="text"
                     placeholder="INS-9876543210"
+                    value={vehicleInfo.insurancePolicy}
+                    onChange={(e) => handleVehicleInfoChange('insurancePolicy', e.target.value)}
                     className="w-full px-4 py-3 bg-gray-50 placeholder:text-[#717182] border border-gray-200 rounded-xl text-[#0F172A] focus:outline-none focus:border-[#00D68F]"
                   />
                 </div>
 
-                {/* Save Button */}
-                <button className="bg-[#00B75A] hover:bg-[#00B876] text-white px-6 py-3 rounded-xl transition-colors font-[400]">
-                  Update Vehicle Info
+                <button 
+                  onClick={handleSaveVehicleInfo}
+                  disabled={saving}
+                  className="bg-[#00B75A] hover:bg-[#00B876] text-white px-6 py-3 rounded-xl transition-colors font-[400] disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  {saving ? 'Updating...' : 'Update Vehicle Info'}
                 </button>
               </div>
             </div>
           )}
 
-          {/* Documents Tab */}
           {activeTab === 'documents' && (
             <>
               <div className="bg-white rounded-2xl p-6 mb-8 border border-gray-100" style={sideBottomShadow}>
@@ -815,7 +903,6 @@ const RiderProfile = () => {
                 </div>
 
                 <div className="space-y-4">
-                  {/* Driver's License */}
                   <div className="flex items-start justify-between p-4 border border-gray-200 rounded-xl">
                     <div className="flex flex-col gap-3 flex-1">
                       <div className="flex items-start gap-4">
@@ -848,7 +935,6 @@ const RiderProfile = () => {
                     </span>
                   </div>
 
-                  {/* Vehicle Registration */}
                   <div className="flex items-start justify-between p-4 border border-gray-200 rounded-xl">
                     <div className="flex flex-col gap-3 flex-1">
                       <div className="flex items-start gap-4">
@@ -881,7 +967,6 @@ const RiderProfile = () => {
                     </span>
                   </div>
 
-                  {/* Insurance Certificate */}
                   <div className="flex items-start justify-between p-4 border border-gray-200 rounded-xl">
                     <div className="flex flex-col gap-3 flex-1">
                       <div className="flex items-start gap-4">
@@ -914,7 +999,6 @@ const RiderProfile = () => {
                     </span>
                   </div>
 
-                  {/* Background Check */}
                   <div className="flex items-start justify-between p-4 border border-gray-200 rounded-xl">
                     <div className="flex flex-col gap-3 flex-1">
                       <div className="flex items-start gap-4">
@@ -949,7 +1033,6 @@ const RiderProfile = () => {
                 </div>
               </div>
 
-              {/* Profile Completion */}
               <div className="bg-white rounded-2xl p-6 border border-gray-100" style={sideBottomShadow}>
                 <div className="mb-6">
                   <div className="text-xl font-normal text-[#0F172A] mb-1">
@@ -1005,7 +1088,6 @@ const RiderProfile = () => {
           )}
           </YummyText>
 
-          {/* Toast Notification */}
           <IonToast
             isOpen={showToast}
             onDidDismiss={() => setShowToast(false)}

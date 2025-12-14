@@ -14,6 +14,7 @@ import { useIonRouter } from '@ionic/react';
 import { YummyText } from '../../../components/YummyText';
 import { removeVerificationNotification } from '../../../utils/verificationNotifications';
 import { submitRiderVerification, getRiderProfile } from '../../../utils/authApi';
+import { getCookie, setCookie, deleteCookie } from '../../../utils/cookies';
 
 const VerificationPromptModal = ({ isOpen, onClose }) => {
   const router = useIonRouter();
@@ -90,7 +91,7 @@ const VerificationPromptModal = ({ isOpen, onClose }) => {
     { id: 4, name: 'Review', active: false }
   ];
 
-  if (!isOpen) return null;
+  // if (!isOpen) return null;
 
   const handleInputChange = (field, value) => {
     setFormData(prev => ({ ...prev, [field]: value }));
@@ -106,10 +107,10 @@ const VerificationPromptModal = ({ isOpen, onClose }) => {
       return;
     }
 
-    // Validate file type - Accept both images (JPEG, PNG) and PDFs
+    // Validate file type
     const allowedTypes = ['image/jpeg', 'image/png', 'image/jpg', 'application/pdf'];
     if (!allowedTypes.includes(file.type)) {
-      alert('Please upload a valid file: JPEG, PNG, or PDF');
+      alert('Please upload a valid image (JPG, PNG) or PDF file');
       return;
     }
 
@@ -137,6 +138,24 @@ const VerificationPromptModal = ({ isOpen, onClose }) => {
   const handleSubmit = async () => {
     if (!formData.agreeBackgroundCheck) {
       alert('Please accept the background check authorization');
+      return;
+    }
+
+    // Check if user is authenticated (but don't block - let the API handle it)
+    const riderToken = getCookie('rider_token');
+    const authToken = getCookie('auth_token');
+    const customerToken = getCookie('customer_token');
+    
+    console.log('[VerificationPromptModal] Token check before submission:', {
+      riderToken: riderToken ? riderToken.substring(0, 20) + '...' : 'missing',
+      authToken: authToken ? authToken.substring(0, 20) + '...' : 'missing',
+      customerToken: customerToken ? customerToken.substring(0, 20) + '...' : 'missing',
+      hasAnyToken: !!(riderToken || authToken || customerToken)
+    });
+    
+    if (!riderToken && !authToken && !customerToken) {
+      console.error('[VerificationPromptModal] No tokens found in cookies!');
+      alert('You must be logged in to submit verification. Please log in and try again.');
       return;
     }
 
@@ -230,17 +249,17 @@ const VerificationPromptModal = ({ isOpen, onClose }) => {
       console.log('[VerificationPromptModal] Verification submitted successfully:', response);
 
       // Mark account as verified
-      localStorage.setItem('riderAccountVerified', 'true');
-      localStorage.setItem('accountVerifiedAt', new Date().toISOString());
-      localStorage.setItem('verificationCompleted', 't'); // Use 't' to match Dashboard check
+      setCookie('riderAccountVerified', 'true', 7);
+      setCookie('accountVerifiedAt', new Date().toISOString(), 7);
+      setCookie('verificationSubmitted', 'true', 7);
       
       // Remove verification notifications
       removeVerificationNotification();
       
       // Clear verification prompt data
-      localStorage.removeItem('verificationPromptDismissedAt');
-      localStorage.removeItem('nextVerificationPushNotification');
-      localStorage.removeItem('lastVerificationPushNotification');
+      deleteCookie('verificationPromptDismissedAt');
+      deleteCookie('nextVerificationPushNotification');
+      deleteCookie('lastVerificationPushNotification');
 
       // Refresh profile
       try {
@@ -264,7 +283,7 @@ const VerificationPromptModal = ({ isOpen, onClose }) => {
   };
 
   const handleDismiss = () => {
-    localStorage.setItem('verificationPromptDismissedAt', new Date().toISOString());
+    setCookie('verificationPromptDismissedAt', Date.now().toString(), 1);
     setCurrentStep(1);
     setFormData({
       phoneNumber: '',
@@ -337,10 +356,12 @@ const VerificationPromptModal = ({ isOpen, onClose }) => {
   };
 
   return (
-    <div 
-      className="fixed inset-0 z-50 flex items-center justify-center p-4"
-      onClick={handleBackdropClick}
-    >
+  <div
+    className={`fixed inset-0 z-50 flex items-center justify-center p-4 transition-opacity ${
+      isOpen ? 'opacity-100 pointer-events-auto' : 'opacity-0 pointer-events-none'
+    }`}
+    onClick={handleBackdropClick}
+  >
       <div 
         className="absolute inset-0 bg-black/40 backdrop-blur-md"
         style={{ backdropFilter: 'blur(8px)' }}
