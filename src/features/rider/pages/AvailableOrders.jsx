@@ -483,13 +483,19 @@ const AvailableOrders = () => {
               {/* Orders List */}
               <div className="max-h-[800px] overflow-y-auto pr-2">
                 {loading ? (
-                  <div className="text-center py-12">
-                    <div className="inline-block animate-spin rounded-full h-8 w-8 border-4 border-gray-300 border-t-[#00B75A]"></div>
-                    <p className="mt-4 text-[#64748B]">Loading available orders...</p>
+                  <div className="flex items-center justify-center py-20">
+                    <div className="text-center">
+                      <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-[#00D68F] mx-auto mb-4"></div>
+                      <p className="text-[#64748B]">Loading available orders...</p>
+                    </div>
                   </div>
                 ) : filteredOrders.length === 0 ? (
-                  <div className="text-center py-12">
-                    <p className="text-[#64748B]">No available orders at the moment</p>
+                  <div className="text-center py-20">
+                    <div className="text-6xl mb-6">🔍</div>
+                    <div className="text-xl font-medium text-[#0F172A] mb-3">No Available Orders</div>
+                    <div className="text-sm text-[#64748B] max-w-md mx-auto">
+                      There are no delivery orders available in your area right now. Check back soon for new opportunities!
+                    </div>
                   </div>
                 ) : (
                   filteredOrders.map((order) => (

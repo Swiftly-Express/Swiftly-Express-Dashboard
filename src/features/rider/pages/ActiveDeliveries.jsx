@@ -288,9 +288,11 @@ const ActiveDeliveries = () => {
           {/* Deliveries List */}
           <div className="max-h-[900px] overflow-y-auto pr-2">
             {loading ? (
-              <div className="text-center py-12">
-                <div className="inline-block animate-spin rounded-full h-8 w-8 border-4 border-gray-300 border-t-[#00B75A]"></div>
-                <p className="mt-4 text-[#64748B]">Loading active deliveries...</p>
+              <div className="flex items-center justify-center py-20">
+                <div className="text-center">
+                  <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-[#00D68F] mx-auto mb-4"></div>
+                  <p className="text-[#64748B]">Loading active deliveries...</p>
+                </div>
               </div>
             ) : deliveries.length > 0 ? (
               deliveries.map((delivery) => {
@@ -355,10 +357,18 @@ const ActiveDeliveries = () => {
                 );
               })
             ) : (
-              <div className="text-center py-12">
-                <div className="text-gray-400 text-5xl mb-4">📦</div>
-                <div className="text-lg text-gray-500">No active deliveries</div>
-                <div className="text-sm text-gray-400 mt-2">Accept orders from the Available Orders page</div>
+              <div className="text-center py-20">
+                <div className="text-6xl mb-6">📦</div>
+                <div className="text-xl font-medium text-[#0F172A] mb-3">No Active Deliveries Yet</div>
+                <div className="text-sm text-[#64748B] mb-6 max-w-md mx-auto">
+                  You don't have any active deliveries at the moment. Head over to the Available Orders page to accept new delivery requests.
+                </div>
+                <button
+                  onClick={() => window.location.href = '/rider/available-orders'}
+                  className="bg-[#00B75A] hover:bg-[#00B876] text-white px-6 py-3 rounded-xl transition-colors font-medium"
+                >
+                  View Available Orders
+                </button>
               </div>
             )}
           </div>
