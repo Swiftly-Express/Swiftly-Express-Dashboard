@@ -426,19 +426,19 @@ const AvailableOrders = () => {
                 />
                 <StatCard
                   title="Potential Earnings"
-                  value="N8976.50"
+                  value={`₦${orders.reduce((sum, order) => sum + (order.amount || order.price || 0), 0).toFixed(2)}`}
                   subtitle=""
                   color="text-[#00A63E]"
                 />
                 <StatCard
                   title="Avg. Distance"
-                  value="2.4 mi"
+                  value={orders.length > 0 ? `${(orders.reduce((sum, o) => sum + (o.distance || 0), 0) / orders.length).toFixed(1)} km` : '0 km'}
                   subtitle=""
                   color="text-[#FF7A00]"
                 />
                 <StatCard
                   title="Avg. Time"
-                  value="17 min"
+                  value={orders.length > 0 && orders[0].estimatedTime ? orders[0].estimatedTime : 'N/A'}
                   subtitle=""
                   color="text-[#9810FA]"
                 />

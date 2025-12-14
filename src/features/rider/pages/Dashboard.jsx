@@ -6,9 +6,7 @@ import BlockIcon from "../../../icons/Blockicon";
 import NairaIcon from "../../../icons/Nairaicon";
 import AnalyticsIcon from "../../../icons/Analyticsicon";
 import VerificationPromptModal from '../components/VerificationPromptModal';
-// import { initializeVerificationSystem } from '../../../utils/verificationNotifications';
-// import { isRiderVerified } from '../../../utils/cookies';
-import { getRiderProfile } from '../../../utils/authApi';
+import { getRiderProfile, getRiderDeliveries, getAvailableJobs, getRiderEarnings } from '../../../utils/authApi';
 import { getCookie, setCookie, getJSONCookie } from '../../../utils/cookies';
 
 // Shadow only on left, right and bottom - no top shadow for seamless blend
@@ -121,9 +119,22 @@ const Dashboard = () => {
     }
     return 'Rider';
   });
+  const [stats, setStats] = useState({
+    todayDeliveries: 0,
+    todayCompleted: 0,
+    todayPending: 0,
+    todayEarnings: '0.00',
+    weeklyEarnings: '0.00',
+    weeklyDeliveries: 0,
+    avgDeliveryTime: '0'
+  });
+  const [activeDeliveries, setActiveDeliveries] = useState([]);
+  const [availableOrders, setAvailableOrders] = useState([]);
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     fetchUserProfile();
+    fetchDashboardData();
     
     // Check if verification has been completed
     const verificationCompleted = getCookie('verificationCompleted');
@@ -194,6 +205,66 @@ const Dashboard = () => {
     }
   };
 
+  const fetchDashboardData = async () => {
+    try {
+      setLoading(true);
+      
+      // Fetch all data in parallel
+      const [deliveriesRes, ordersRes, earningsRes] = await Promise.all([
+        getRiderDeliveries(1, 10).catch(err => ({ data: { deliveries: [] } })),
+        getAvailableJobs(1, 5).catch(err => ({ data: { jobs: [] } })),
+        getRiderEarnings().catch(err => ({ data: {} }))
+      ]);
+      
+      // Process deliveries
+      const deliveries = deliveriesRes?.data?.deliveries || deliveriesRes?.deliveries || [];
+      const activeOnly = deliveries.filter(d => 
+        d.status !== 'delivered' && d.status !== 'cancelled'
+      );
+      setActiveDeliveries(activeOnly.slice(0, 3));
+      
+      // Process available orders
+      const orders = ordersRes?.data?.jobs || ordersRes?.jobs || ordersRes?.data || [];
+      setAvailableOrders(orders.slice(0, 2));
+      
+      // Process earnings and stats
+      const earnings = earningsRes?.data || earningsRes;
+      const todayEarnings = earnings?.today?.total || earnings?.todayEarnings || 0;
+      const weeklyEarnings = earnings?.weekly?.total || earnings?.weeklyEarnings || 0;
+      const todayDeliveries = earnings?.today?.count || deliveries.filter(d => {
+        const deliveryDate = new Date(d.createdAt);
+        const today = new Date();
+        return deliveryDate.toDateString() === today.toDateString();
+      }).length || 0;
+      
+      const todayCompleted = deliveries.filter(d => {
+        const deliveryDate = new Date(d.createdAt);
+        const today = new Date();
+        return deliveryDate.toDateString() === today.toDateString() && d.status === 'delivered';
+      }).length || 0;
+      
+      const todayPending = todayDeliveries - todayCompleted;
+      const weeklyDeliveries = earnings?.weekly?.count || 0;
+      const avgTime = earnings?.averageDeliveryTime || '0';
+      
+      setStats({
+        todayDeliveries,
+        todayCompleted,
+        todayPending,
+        todayEarnings: todayEarnings.toFixed(2),
+        weeklyEarnings: weeklyEarnings.toFixed(2),
+        weeklyDeliveries,
+        avgDeliveryTime: avgTime
+      });
+      
+      console.log('[Dashboard] Fetched data:', { deliveries: deliveries.length, orders: orders.length, stats });
+    } catch (error) {
+      console.error('[Dashboard] Failed to fetch dashboard data:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const handleCloseModal = () => {
     setShowVerificationModal(false);
   };
@@ -221,22 +292,22 @@ const Dashboard = () => {
               icon={<BlockIcon width={24} height={24} stroke="#007BFF" />}
               iconBg="bg-[#EFF6FF]"
               title="Today's Deliveries"
-              value="8"
-              subtitle="3 completed, 5 pending"
+              value={loading ? '...' : stats.todayDeliveries.toString()}
+              subtitle={loading ? 'Loading...' : `${stats.todayCompleted} completed, ${stats.todayPending} pending`}
             />
             <StatCard
               icon={<NairaIcon size={24} color="#00C950" />}
               iconBg="bg-green-50"
               title="Today's Earnings"
-              value="N12400.50"
-              subtitle="+N2500.50 from yesterday"
+              value={loading ? '...' : `₦${stats.todayEarnings}`}
+              subtitle={loading ? 'Loading...' : 'Today\'s total'}
             />
             <StatCard
               icon={<AnalyticsIcon width={24} height={24} stroke="#FF8C00" />}
               iconBg="bg-orange-50"
               title="This Week"
-              value="N75948.25"
-              subtitle="42 deliveries completed"
+              value={loading ? '...' : `₦${stats.weeklyEarnings}`}
+              subtitle={loading ? 'Loading...' : `${stats.weeklyDeliveries} deliveries completed`}
             />
             <StatCard
               icon={
@@ -246,8 +317,8 @@ const Dashboard = () => {
               }
               iconBg="bg-purple-50"
               title="Avg. Delivery Time"
-              value="28 min"
-              subtitle="Faster than 85% of riders"
+              value={loading ? '...' : `${stats.avgDeliveryTime} min`}
+              subtitle="Average delivery time"
             />
           </div>
           </YummyText>
@@ -266,41 +337,36 @@ const Dashboard = () => {
             </YummyText>
             
             <div className="max-h-[600px] overflow-y-auto pr-2">
-              <DeliveryCard
-                packageId="PKG-2401"
-                status="Picked Up"
-                statusColor="bg-blue-100 text-blue-600"
-                from="Central Mall, 5th Ave"
-                to="123 Oak Street"
-                customer="Sarah Mitchell"
-                price="N2300.50"
-                distance="3.2 mi"
-                time="15 min"
-              />
-              
-              <DeliveryCard
-                packageId="PKG-2403"
-                status="En Route to Pickup"
-                statusColor="bg-orange-100 text-orange-600"
-                from="Tech Store, Main St"
-                to="456 Elm Avenue"
-                customer="Mike Johnson"
-                price="N1300.50"
-                distance="1.8 mi"
-                time="8 min"
-              />
-              
-              <DeliveryCard
-                packageId="PKG-2404"
-                status="Not Yet Moved"
-                statusColor="bg-red-500 text-gray-600"
-                from="Downtown Store, 2nd St"
-                to="789 Pine Road"
-                customer="John Doe"
-                price="N1800.00"
-                distance="2.5 mi"
-                time="12 min"
-              />
+              {loading ? (
+                <div className="text-center py-8 text-gray-500">Loading active deliveries...</div>
+              ) : activeDeliveries.length === 0 ? (
+                <div className="text-center py-8 text-gray-500">No active deliveries at the moment</div>
+              ) : (
+                activeDeliveries.map((delivery) => {
+                  const statusColors = {
+                    'picked_up': 'bg-blue-100 text-blue-600',
+                    'in_transit': 'bg-blue-100 text-blue-600',
+                    'pending': 'bg-orange-100 text-orange-600',
+                    'accepted': 'bg-green-100 text-green-600',
+                    'assigned': 'bg-gray-100 text-gray-600'
+                  };
+                  
+                  return (
+                    <DeliveryCard
+                      key={delivery._id || delivery.id}
+                      packageId={delivery.trackingNumber || delivery.deliveryId || 'N/A'}
+                      status={delivery.status?.replace('_', ' ').replace(/\b\w/g, l => l.toUpperCase()) || 'Unknown'}
+                      statusColor={statusColors[delivery.status] || 'bg-gray-100 text-gray-600'}
+                      from={delivery.pickupAddress || delivery.pickup?.address || 'N/A'}
+                      to={delivery.deliveryAddress || delivery.dropoff?.address || 'N/A'}
+                      customer={delivery.customerName || delivery.customer?.name || 'Customer'}
+                      price={`₦${delivery.amount?.toFixed(2) || delivery.price?.toFixed(2) || '0.00'}`}
+                      distance={delivery.distance ? `${delivery.distance} km` : 'N/A'}
+                      time={delivery.estimatedTime || 'N/A'}
+                    />
+                  );
+                })
+              )}
             </div>
           </div>
 
@@ -324,18 +390,21 @@ const Dashboard = () => {
 
             {/* Make available orders list scrollable independently */}
             <div className="max-h-[360px] overflow-y-auto pr-2">
-              <AvailableOrderCard
-                packageId="PKG-2405"
-                location="Downtown Market"
-                distance="2.1 mi away"
-                price="N2000.00"
-              />
-              <AvailableOrderCard
-                packageId="PKG-2406"
-                location="West Side Plaza"
-                distance="4.5 mi away"
-                price="N3000.50"
-              />
+              {loading ? (
+                <div className="text-center py-8 text-gray-500">Loading available orders...</div>
+              ) : availableOrders.length === 0 ? (
+                <div className="text-center py-8 text-gray-500">No available orders nearby</div>
+              ) : (
+                availableOrders.map((order) => (
+                  <AvailableOrderCard
+                    key={order._id || order.id}
+                    packageId={order.trackingNumber || order.deliveryId || 'N/A'}
+                    location={order.pickupAddress || order.pickup?.address || 'N/A'}
+                    distance={order.distance ? `${order.distance} km away` : 'N/A'}
+                    price={`₦${order.amount?.toFixed(2) || order.price?.toFixed(2) || '0.00'}`}
+                  />
+                ))
+              )}
             </div>
           </div>
         </IonContent>
