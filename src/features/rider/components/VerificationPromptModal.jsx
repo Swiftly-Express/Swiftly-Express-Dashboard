@@ -14,13 +14,18 @@ import { useIonRouter } from '@ionic/react';
 import { YummyText } from '../../../components/YummyText';
 import { removeVerificationNotification } from '../../../utils/verificationNotifications';
 import { submitRiderVerification, getRiderProfile } from '../../../utils/authApi';
-import { getCookie, setCookie, deleteCookie } from '../../../utils/cookies';
+import { getCookie, setCookie, deleteCookie, setJSONCookie, getJSONCookie } from '../../../utils/cookies';
 
 const VerificationPromptModal = ({ isOpen, onClose }) => {
   const router = useIonRouter();
   const [currentStep, setCurrentStep] = useState(1);
   const [showSuccessModal, setShowSuccessModal] = useState(false);
   const [uploading, setUploading] = useState(false);
+  
+  // Debug log to track modal visibility
+  useEffect(() => {
+    console.log('[VerificationPromptModal] 👁️ isOpen prop changed:', isOpen);
+  }, [isOpen]);
   
   const [formData, setFormData] = useState({
     // Contact Information
@@ -97,15 +102,69 @@ const VerificationPromptModal = ({ isOpen, onClose }) => {
     setFormData(prev => ({ ...prev, [field]: value }));
   };
 
-  const handleFileUpload = (field, event) => {
+  // Compress image files
+  const compressImage = async (file, maxSizeMB = 1) => {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.readAsDataURL(file);
+      reader.onload = (event) => {
+        const img = new Image();
+        img.src = event.target.result;
+        img.onload = () => {
+          const canvas = document.createElement('canvas');
+          let width = img.width;
+          let height = img.height;
+
+          // Calculate new dimensions (max 1920x1920)
+          const maxDimension = 1920;
+          if (width > maxDimension || height > maxDimension) {
+            if (width > height) {
+              height = (height / width) * maxDimension;
+              width = maxDimension;
+            } else {
+              width = (width / height) * maxDimension;
+              height = maxDimension;
+            }
+          }
+
+          canvas.width = width;
+          canvas.height = height;
+
+          const ctx = canvas.getContext('2d');
+          ctx.drawImage(img, 0, 0, width, height);
+
+          // Start with quality 0.8 and reduce if needed
+          let quality = 0.8;
+          canvas.toBlob(
+            (blob) => {
+              if (blob) {
+                const compressedFile = new File([blob], file.name, {
+                  type: 'image/jpeg',
+                  lastModified: Date.now(),
+                });
+                console.log(`[VerificationModal] Compressed ${file.name}:`, {
+                  originalSize: (file.size / 1024 / 1024).toFixed(2) + 'MB',
+                  compressedSize: (compressedFile.size / 1024 / 1024).toFixed(2) + 'MB',
+                  reduction: ((1 - compressedFile.size / file.size) * 100).toFixed(1) + '%'
+                });
+                resolve(compressedFile);
+              } else {
+                reject(new Error('Compression failed'));
+              }
+            },
+            'image/jpeg',
+            quality
+          );
+        };
+        img.onerror = reject;
+      };
+      reader.onerror = reject;
+    });
+  };
+
+  const handleFileUpload = async (field, event) => {
     const file = event.target.files[0];
     if (!file) return;
-
-    // Validate file size (max 10MB)
-    if (file.size > 10 * 1024 * 1024) {
-      alert('File size must be less than 10MB');
-      return;
-    }
 
     // Validate file type
     const allowedTypes = ['image/jpeg', 'image/png', 'image/jpg', 'application/pdf'];
@@ -114,13 +173,40 @@ const VerificationPromptModal = ({ isOpen, onClose }) => {
       return;
     }
 
-    console.log(`[VerificationPromptModal] File selected for ${field}:`, {
-      name: file.name,
-      size: file.size,
-      type: file.type
+    let processedFile = file;
+
+    // Compress images before storing
+    if (file.type.startsWith('image/')) {
+      try {
+        // Show processing message
+        console.log(`[VerificationModal] Processing ${field}...`);
+        processedFile = await compressImage(file, 1); // Max 1MB per image
+        
+        // Final size check after compression
+        if (processedFile.size > 2 * 1024 * 1024) {
+          alert('File is still too large after compression. Please use a smaller image.');
+          return;
+        }
+      } catch (error) {
+        console.error('[VerificationModal] Compression error:', error);
+        alert('Failed to process image. Please try another file.');
+        return;
+      }
+    } else if (file.type === 'application/pdf') {
+      // For PDFs, enforce stricter size limit
+      if (file.size > 3 * 1024 * 1024) {
+        alert('PDF file must be less than 3MB');
+        return;
+      }
+    }
+
+    console.log(`[VerificationModal] File ready for ${field}:`, {
+      name: processedFile.name,
+      size: (processedFile.size / 1024).toFixed(2) + 'KB',
+      type: processedFile.type
     });
 
-    handleInputChange(field, file);
+    handleInputChange(field, processedFile);
   };
 
   const nextStep = () => {
@@ -183,6 +269,28 @@ const handleSubmit = async () => {
     return;
   }
 
+  // Check total upload size
+  const totalSize = (formData.idDocument?.size || 0) + 
+                    (formData.profilePhoto?.size || 0) + 
+                    (formData.driversLicense?.size || 0) + 
+                    (formData.insurance?.size || 0);
+  
+  const totalSizeMB = totalSize / 1024 / 1024;
+  
+  console.log('[VerificationModal] 📦 Total upload size:', {
+    idDocument: (formData.idDocument.size / 1024).toFixed(2) + 'KB',
+    profilePhoto: (formData.profilePhoto.size / 1024).toFixed(2) + 'KB',
+    driversLicense: (formData.driversLicense.size / 1024).toFixed(2) + 'KB',
+    insurance: formData.insurance ? (formData.insurance.size / 1024).toFixed(2) + 'KB' : 'Not provided',
+    total: totalSizeMB.toFixed(2) + 'MB'
+  });
+
+  // Enforce maximum total size of 8MB
+  if (totalSize > 8 * 1024 * 1024) {
+    alert(`Total file size (${totalSizeMB.toFixed(2)}MB) exceeds 8MB limit. Please use smaller images.`);
+    return;
+  }
+
   setUploading(true);
 
   try {
@@ -214,27 +322,84 @@ const handleSubmit = async () => {
       submitData.append('insurance', formData.insurance, formData.insurance.name);
     }
 
-    console.log('[VerificationModal] → Submitting to API...');
+    console.log('[VerificationModal] 📤 Submitting verification documents to API...');
+    console.log('[VerificationModal] ℹ️ This may take a moment due to file uploads...');
 
     const response = await submitRiderVerification(submitData);
     
-    console.log('[VerificationModal] ✓ Success:', response);
+    console.log('[VerificationModal] ✅ Submission successful:', response);
 
-    // Mark verification as submitted
-    setCookie('verificationCompleted', 'true', 7);
-    setCookie('riderAccountVerified', 'pending', 7);
+    // Store verification data in cookies for profile sync
+    const verificationData = {
+      contactInfo: {
+        phone: formData.phoneNumber,
+        streetAddress: formData.streetAddress,
+        city: formData.city,
+        state: formData.state,
+        zipCode: formData.zipCode
+      },
+      vehicle: {
+        type: formData.vehicleType,
+        makeModel: formData.makeModel,
+        year: formData.year,
+        licensePlate: formData.licensePlate
+      },
+      identity: {
+        idType: formData.idType,
+        idNumber: formData.idNumber
+      }
+    };
     
+    // Store in cookies for profile access
+    setJSONCookie('riderVerificationData', verificationData, 7);
+    console.log('[VerificationModal] 💾 Verification data stored in cookies');
+
+    // Mark verification as submitted - CRITICAL: Use consistent values
+    setCookie('verificationCompleted', 'true', 7);
+    setCookie('verificationSubmitted', 'true', 7);
+    setCookie('riderAccountVerified', 'pending', 7);
+    setCookie('riderVerificationStatus', 'pending', 7);
+    
+    console.log('[VerificationModal] ✓ Verification flags set in cookies');
+
     // Clean up
     deleteCookie('verificationPromptDismissedAt');
+    deleteCookie('nextVerificationPushNotification');
+    deleteCookie('lastVerificationPushNotification');
 
-    // Refresh profile
+    // Refresh profile and update cookies
     try {
+      console.log('[VerificationModal] 🔄 Fetching updated profile...');
       const profileResponse = await getRiderProfile();
+      const profile = profileResponse?.data?.driver || profileResponse?.driver || profileResponse?.data;
+      
+      if (profile) {
+        // Update user_data cookie with latest profile info
+        const existingUserData = getJSONCookie('user_data') || {};
+        const updatedUserData = {
+          ...existingUserData,
+          ...profile,
+          phone: formData.phoneNumber || existingUserData.phone,
+          verificationStatus: 'pending'
+        };
+        setJSONCookie('user_data', updatedUserData, 7);
+        console.log('[VerificationModal] ✓ user_data cookie updated with profile');
+      }
+      
+      // Dispatch event for other components to refresh
       window.dispatchEvent(new CustomEvent('verification:completed', { 
-        detail: { profile: profileResponse?.data || profileResponse } 
+        detail: { 
+          profile: profile,
+          verificationData: verificationData
+        } 
       }));
+      console.log('[VerificationModal] 📢 verification:completed event dispatched');
     } catch (profileError) {
       console.error('[VerificationModal] Profile refresh failed:', profileError);
+      // Still dispatch event even if profile fetch fails
+      window.dispatchEvent(new CustomEvent('verification:completed', { 
+        detail: { verificationData: verificationData } 
+      }));
     }
 
     setShowSuccessModal(true);
@@ -719,13 +884,16 @@ const handleSubmit = async () => {
                   <button
                     onClick={handleSubmit}
                     disabled={!formData.agreeBackgroundCheck || uploading}
-                    className={`flex-1 px-6 py-3 rounded-xl transition-colors font-medium ${
+                    className={`flex-1 px-6 py-3 rounded-xl transition-colors font-medium flex items-center justify-center gap-2 ${
                       formData.agreeBackgroundCheck && !uploading
                         ? 'bg-[#00D68F] hover:bg-[#00B876] text-white'
                         : 'bg-gray-300 text-gray-500 cursor-not-allowed'
                     }`}
                   >
-                    {uploading ? 'Submitting...' : 'Submit for Verification'}
+                    {uploading && (
+                      <div className="animate-spin rounded-full h-4 w-4 border-2 border-white border-t-transparent"></div>
+                    )}
+                    {uploading ? 'Uploading Documents...' : 'Submit for Verification'}
                   </button>
                 )}
               </div>
@@ -759,7 +927,10 @@ const handleSubmit = async () => {
                 onClick={() => {
                   setShowSuccessModal(false);
                   onClose();
-                  window.location.reload();
+                  // Force a small delay to ensure cookies are written before reload
+                  setTimeout(() => {
+                    window.location.reload();
+                  }, 100);
                 }}
                 className="w-full py-3 bg-[#00B75A] hover:bg-[#00B876] text-white text-sm rounded-xl transition-colors font-medium"
               >

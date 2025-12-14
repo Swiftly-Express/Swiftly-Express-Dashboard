@@ -39,99 +39,32 @@ const Earnings = () => {
   const fetchEarnings = async () => {
     try {
       setLoading(true);
+      console.log('[Earnings] 🔍 Fetching earnings from API...');
       const response = await getRiderEarnings();
-      const earningsData = response?.data?.earnings || response?.earnings;
+      console.log('[Earnings] ✅ API Response:', response);
+      const earningsData = response?.data?.earnings || response?.earnings || response?.data;
+      console.log('[Earnings] 📊 Earnings data:', earningsData);
       setEarnings(earningsData);
     } catch (error) {
-      console.error('Error fetching earnings:', error);
+      console.error('[Earnings] ❌ Error fetching earnings:', error);
       setToastMsg(error.message || 'Failed to load earnings data');
       setShowToast(true);
-      // Fallback to mock data on error
       setEarnings(null);
     } finally {
       setLoading(false);
     }
   };
 
-  const todayDeliveries = earnings?.todayDeliveries || [
-    {
-      orderId: 'PKG-2401',
-      time: '08:30 AM',
-      from: 'Downtown',
-      to: 'Riverside',
-      distance: '3.2 mi',
-      basePay: '$24.50',
-      tips: '+$3.50',
-      total: '$28.00'
-    },
-    {
-      orderId: 'PKG-2402',
-      time: '09:15 AM',
-      from: 'Mall',
-      to: 'Suburbs',
-      distance: '5.1 mi',
-      basePay: '$28.00',
-      tips: '+$5.00',
-      total: '$33.00'
-    },
-    {
-      orderId: 'PKG-2403',
-      time: '10:45 AM',
-      from: 'Market',
-      to: 'Campus',
-      distance: '2.3 mi',
-      basePay: '$18.00',
-      tips: '+$2.00',
-      total: '$20.00'
-    },
-    {
-      orderId: 'PKG-2404',
-      time: '12:20 PM',
-      from: 'Plaza',
-      to: 'Heights',
-      distance: '4.5 mi',
-      basePay: '$26.00',
-      tips: '+$4.00',
-      total: '$30.00'
-    },
-    {
-      orderId: 'PKG-2405',
-      time: '02:00 PM',
-      from: 'Station',
-      to: 'Parkside',
-      distance: '1.8 mi',
-      basePay: '$16.00',
-      tips: '+$2.00',
-      total: '$18.00'
-    },
-    {
-      orderId: 'PKG-2406',
-      time: '03:30 PM',
-      from: 'Center',
-      to: 'Lakeside',
-      distance: '2.9 mi',
-      basePay: '$22.00',
-      tips: '+$3.00',
-      total: '$25.00'
-    }
-  ];
+  const todayDeliveries = earnings?.todayDeliveries || earnings?.deliveries || [];
 
-  const weekDeliveries = earnings?.weeklyTrend || [
-    { day: 'Monday', deliveries: 8, earnings: '$124.50' },
-    { day: 'Tuesday', deliveries: 12, earnings: '$189.75' },
-    { day: 'Wednesday', deliveries: 10, earnings: '$156.25' },
-    { day: 'Thursday', deliveries: 9, earnings: '$142.00' },
-    { day: 'Friday', deliveries: 15, earnings: '$234.50' },
-    { day: 'Saturday', deliveries: 6, earnings: '$98.25' },
-    { day: 'Sunday', deliveries: 4, earnings: '$68.00' }
-  ];
+  const weekDeliveries = earnings?.weeklyTrend || earnings?.weeklyDeliveries || [];
 
-  // Calculate totals from API or fallback to mock calculation
-  const todayEarnings = earnings?.todayTotal || '$124.50';
-  const weeklyEarnings = earnings?.weeklyTotal || '$687.25';
-  const monthlyEarnings = earnings?.monthlyTotal || '$2,845.00';
-  const totalDeliveries = earnings?.totalDeliveries || 42;
-  const avgPerDelivery = earnings?.avgPerDelivery || '$16.36';
+  // Calculate totals from API data only
+  const todayEarnings = earnings?.todayTotal || earnings?.today || 'N0.00';
+  const weeklyEarnings = earnings?.weeklyTotal || earnings?.weekly || 'N0.00';
+  const monthlyEarnings = earnings?.monthlyTotal || earnings?.monthly || 'N0.00';
+  const totalDeliveries = earnings?.totalDeliveries || 0;
+  const avgPerDelivery = earnings?.avgPerDelivery || earnings?.average || 'N0.00';
 
   const totalToday = todayDeliveries.reduce((sum, delivery) => {
     const total = typeof delivery.total === 'string' 
@@ -190,7 +123,7 @@ const Earnings = () => {
               iconBg="bg-green-50"
               title="Today's Earnings"
               value={todayEarnings}
-              subtitle={earnings?.todayChange || "+$32.50 from yesterday"}
+              subtitle={earnings?.todayChange || "No change from yesterday"}
             />
             <StatCard
               icon={
@@ -201,7 +134,7 @@ const Earnings = () => {
               iconBg="bg-blue-50"
               title="This Week"
               value={weeklyEarnings}
-              subtitle={earnings?.weeklyChange || "+15% from last week"}
+              subtitle={earnings?.weeklyChange || "Weekly total"}
             />
             <StatCard
               icon={
@@ -212,7 +145,7 @@ const Earnings = () => {
               iconBg="bg-orange-50"
               title="Total Deliveries"
               value={totalDeliveries}
-              subtitle={earnings?.deliveriesSubtitle || "This week"}
+              subtitle={earnings?.deliveriesSubtitle || "Completed"}
             />
             <StatCard
               icon={
@@ -223,7 +156,7 @@ const Earnings = () => {
               iconBg="bg-purple-50"
               title="Avg. per Delivery"
               value={avgPerDelivery}
-              subtitle={earnings?.avgChange || "+$2.15 improvement"}
+              subtitle={earnings?.avgChange || "Average earnings"}
             />
           </div>
 
@@ -242,27 +175,35 @@ const Earnings = () => {
 
             {/* Simple Bar Chart */}
             <div className="h-64 flex items-end justify-between gap-4 px-4">
-              {weekDeliveries.map((day, index) => {
-                const maxEarnings = 250;
-                const earningsValue = typeof day.earnings === 'string' 
-                  ? parseFloat(day.earnings.replace('$', ''))
-                  : day.earnings;
-                const height = (earningsValue / maxEarnings) * 100;
-                
-                return (
-                  <YummyText>
-                  <div key={index} className="flex-1 flex flex-col items-center">
-                    <div className="w-full bg-gray-100 rounded-t-lg relative" style={{ height: '100%' }}>
-                      <div 
-                        className="w-full bg-[#00D68F] rounded-t-lg absolute bottom-0 transition-all hover:bg-[#00B876]"
-                        style={{ height: `${height}%` }}
-                      ></div>
-                    </div>
-                    <div className="text-xs text-[#64748B] mt-3">{day.day.slice(0, 3)}</div>
+              {weekDeliveries.length === 0 ? (
+                <div className="w-full flex items-center justify-center">
+                  <div className="text-center">
+                    <p className="text-[#64748B] mb-2">No weekly data available</p>
+                    <p className="text-sm text-[#94A3B8]">Complete deliveries to see your trend</p>
                   </div>
-                  </YummyText>
-                );
-              })}
+                </div>
+              ) : (
+                weekDeliveries.map((day, index) => {
+                  const maxEarnings = 250;
+                  const earningsStr = typeof day.earnings === 'string' ? day.earnings : `$${day.earnings}`;
+                  const earningsValue = parseFloat(earningsStr.replace(/[$N,]/g, ''));
+                  const height = (earningsValue / maxEarnings) * 100;
+                  
+                  return (
+                    <YummyText key={index}>
+                    <div className="flex-1 flex flex-col items-center">
+                      <div className="w-full bg-gray-100 rounded-t-lg relative" style={{ height: '100%' }}>
+                        <div 
+                          className="w-full bg-[#00D68F] rounded-t-lg absolute bottom-0 transition-all hover:bg-[#00B876]"
+                          style={{ height: `${Math.max(height, 5)}%` }}
+                        ></div>
+                      </div>
+                      <div className="text-xs text-[#64748B] mt-3">{day.day.slice(0, 3)}</div>
+                    </div>
+                    </YummyText>
+                  );
+                })
+              )}
             </div>
           </div>
 
@@ -308,6 +249,12 @@ const Earnings = () => {
               {/* Table */}
               <div className="overflow-x-auto">
                 <div className="max-h-[400px] overflow-y-auto">
+                  {todayDeliveries.length === 0 ? (
+                    <div className="text-center py-12">
+                      <p className="text-[#64748B] mb-2">No deliveries completed today</p>
+                      <p className="text-sm text-[#94A3B8]">Start accepting orders to earn!</p>
+                    </div>
+                  ) : (
                   <table className="w-full">
                     <thead className="sticky top-0 bg-white z-10">
                       <tr className="border-b border-gray-200">
@@ -340,11 +287,14 @@ const Earnings = () => {
                       ))}
                     </tbody>
                   </table>
+                  )}
                 </div>
+                {todayDeliveries.length > 0 && (
                 <div className="border-t border-gray-200 bg-gray-50 px-4 py-4 flex items-center justify-between">
                   <span className="text-sm font-medium text-[#0F172A]">Total Today</span>
                   <span className="text-xl font-medium text-[#00D68F]">${totalToday.toFixed(2)}</span>
                 </div>
+                )}
               </div>
             </div>
             </YummyText>
@@ -366,6 +316,12 @@ const Earnings = () => {
               {/* Table */}
               <div className="overflow-x-auto">
                 <div className="max-h-[400px] overflow-y-auto">
+                  {weekDeliveries.length === 0 ? (
+                    <div className="text-center py-12">
+                      <p className="text-[#64748B] mb-2">No deliveries this week</p>
+                      <p className="text-sm text-[#94A3B8]">Your weekly summary will appear here</p>
+                    </div>
+                  ) : (
                   <table className="w-full">
                     <thead className="sticky top-0 bg-white z-10">
                       <tr className="border-b border-gray-200">
@@ -378,7 +334,8 @@ const Earnings = () => {
                     </thead>
                     <tbody>
                       {weekDeliveries.map((day, index) => {
-                        const totalEarnings = parseFloat(day.earnings.replace('$', ''));
+                        const earningsStr = typeof day.earnings === 'string' ? day.earnings : `$${day.earnings}`;
+                        const totalEarnings = parseFloat(earningsStr.replace(/[$N,]/g, ''));
                         const basePay = totalEarnings * 0.85; // Assuming ~85% is base pay
                         const tips = totalEarnings * 0.15; // Assuming ~15% is tips
                         
@@ -388,17 +345,20 @@ const Earnings = () => {
                             <td className="py-4 px-4 text-sm text-[#64748B]">{day.deliveries}</td>
                             <td className="py-4 px-4 text-sm text-[#0F172A]">${basePay.toFixed(2)}</td>
                             <td className="py-4 px-4 text-sm text-[#00D68F] font-medium">+${tips.toFixed(2)}</td>
-                            <td className="py-4 px-4 text-sm text-[#0F172A] font-medium text-right">{day.earnings}</td>
+                            <td className="py-4 px-4 text-sm text-[#0F172A] font-medium text-right">{earningsStr}</td>
                           </tr>
                         );
                       })}
                     </tbody>
                   </table>
+                  )}
                 </div>
+                {weekDeliveries.length > 0 && (
                 <div className="border-t border-gray-200 bg-gray-50 px-4 py-4 flex items-center justify-between">
                   <span className="text-sm font-medium text-[#0F172A]">Total This Week</span>
-                  <span className="text-xl font-medium text-[#00D68F]">$687.25</span>
+                  <span className="text-xl font-medium text-[#00D68F]">{weeklyEarnings}</span>
                 </div>
+                )}
               </div>
             </div>
             </YummyText>

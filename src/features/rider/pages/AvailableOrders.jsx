@@ -3,7 +3,8 @@ import { IonPage, IonContent, IonToast } from '@ionic/react';
 import RiderLayout from '../components/RiderLayout';
 import { YummyText } from '../../../components/YummyText';
 import { getAvailableJobs, acceptDeliveryJob } from '../../../utils/authApi';
-import { getCookie, getJSONCookie } from '../../../utils/cookies';
+import { getCookie, getJSONCookie, isRiderVerified } from '../../../utils/cookies';
+
 
 const sideBottomShadow = {
   boxShadow: '0.5px 1.5px 2px rgba(0, 0, 0, 0.05), -0.5px 1.5px 2px rgba(0, 0, 0, 0.05), 0 1.5px 3px rgba(0, 0, 0, 0.07)'
@@ -134,6 +135,8 @@ const AvailableOrders = () => {
   const [toastMsg, setToastMsg] = useState('');
   const [showToast, setShowToast] = useState(false);
   const [isVerified, setIsVerified] = useState(false);
+  const [lastRefresh, setLastRefresh] = useState(Date.now());
+  const [autoRefresh, setAutoRefresh] = useState(true);
 
   // Debug: Check tokens on mount
   useEffect(() => {
@@ -152,30 +155,16 @@ const AvailableOrders = () => {
 
   // Check verification status
   const checkVerificationStatus = () => {
-    const verificationCompleted = getCookie('verificationCompleted');
-    const riderAccountVerified = getCookie('riderAccountVerified');
-    const riderVerificationStatus = getCookie('riderVerificationStatus');
+    const verified = isRiderVerified();
     
-    // Check multiple conditions for verification
-    const isComplete = verificationCompleted === 'true' || verificationCompleted === 't';
-    const isAccountVerified = riderAccountVerified === 'true';
-    const hasSubmittedDocs = riderVerificationStatus === 'pending' || riderVerificationStatus === 'approved';
-    
-    console.log('[AvailableOrders] Verification status check:', {
-      verificationCompleted,
-      riderAccountVerified,
-      riderVerificationStatus,
-      isComplete,
-      isAccountVerified,
-      hasSubmittedDocs,
-      finalDecision: isComplete || isAccountVerified || hasSubmittedDocs
+    console.log('[AvailableOrders] 🔍 Verification check:', {
+      verified,
+      verificationCompleted: getCookie('verificationCompleted'),
+      verificationSubmitted: getCookie('verificationSubmitted'),
+      riderAccountVerified: getCookie('riderAccountVerified'),
+      riderVerificationStatus: getCookie('riderVerificationStatus')
     });
     
-    // Consider verified if:
-    // 1. Verification is marked complete
-    // 2. Account is marked verified
-    // 3. Documents have been submitted (pending/approved status)
-    const verified = isComplete || isAccountVerified || hasSubmittedDocs;
     setIsVerified(verified);
     return verified;
   };
@@ -187,11 +176,17 @@ const AvailableOrders = () => {
     // Listen for verification completion
     const handleVerificationComplete = (event) => {
       console.log('[AvailableOrders] Verification completed event received:', event.detail);
-      setIsVerified(true);
-      setToastMsg('✅ Verification submitted! You can now view available orders.');
-      setShowToast(true);
-      // Refresh jobs after verification
-      fetchAvailableJobs();
+      // Re-check verification status to ensure it's properly updated
+      const verified = checkVerificationStatus();
+      console.log('[AvailableOrders] ✓ Verification status after event:', verified);
+      setIsVerified(verified);
+      
+      if (verified) {
+        setToastMsg('✅ Verification submitted! You can now view available orders.');
+        setShowToast(true);
+        // Refresh jobs after verification
+        fetchAvailableJobs();
+      }
     };
 
     window.addEventListener('verification:completed', handleVerificationComplete);
@@ -206,6 +201,18 @@ const AvailableOrders = () => {
       fetchAvailableJobs();
     }
   }, [page, isVerified]);
+
+  // Auto-refresh every 30 seconds if enabled
+  useEffect(() => {
+    if (!autoRefresh || !isVerified) return;
+    
+    const intervalId = setInterval(() => {
+      console.log('[AvailableOrders] Auto-refreshing jobs...');
+      fetchAvailableJobs();
+    }, 30000); // 30 seconds
+
+    return () => clearInterval(intervalId);
+  }, [autoRefresh, isVerified]);
 
   // Listen for new deliveries created by customers
   useEffect(() => {
@@ -233,33 +240,36 @@ const AvailableOrders = () => {
   const fetchAvailableJobs = async () => {
     setLoading(true);
     try {
+      console.log('[AvailableOrders] Fetching available jobs from API...');
       const response = await getAvailableJobs(page, 20);
-      console.log('[AvailableOrders] Fetched jobs:', response);
+      console.log('[AvailableOrders] API Response:', response);
       
-      const jobs = response?.data?.jobs || response?.jobs || response?.data || [];
+      // Handle different response structures
+      const jobs = response?.data?.jobs || 
+                   response?.data?.deliveries || 
+                   response?.jobs || 
+                   response?.deliveries || 
+                   response?.data || 
+                   [];
+      
+      console.log('[AvailableOrders] Extracted jobs:', jobs);
+      console.log('[AvailableOrders] Total jobs found:', jobs.length);
+      
       setOrders(jobs);
+      setLastRefresh(Date.now());
+      
+      if (jobs.length === 0) {
+        console.warn('[AvailableOrders] No jobs returned from API');
+      }
     } catch (error) {
       console.error('[AvailableOrders] Failed to fetch jobs:', error);
+      console.error('[AvailableOrders] Error details:', {
+        message: error.message,
+        status: error.status,
+        data: error.data
+      });
       setToastMsg(error.message || 'Failed to load available jobs');
       setShowToast(true);
-      // Keep mock data as fallback for development
-      setOrders([
-        {
-          id: 'PKG-2405',
-          _id: 'PKG-2405',
-          priority: null,
-          size: 'Medium',
-          pickupName: 'Downtown Market',
-          pickupAddress: '789 Market St, NY 10001',
-          deliveryName: 'Riverside Apartments',
-          deliveryAddress: '456 River Rd, NY 10002',
-          distance: '2.1 mi',
-          time: '18 min',
-          packageSize: '25.5',
-          price: 'N2348.00',
-          tips: '0.00'
-        }
-      ]);
     } finally {
       setLoading(false);
     }
@@ -302,11 +312,39 @@ const AvailableOrders = () => {
         <IonContent className="ion-padding">
           <YummyText>
             <div className="mb-8 py-2">
-              <div className="text-3xl font-medium text-[#0F172A] mb-2">
-                Available Orders
+              <div className="flex items-center justify-between mb-2">
+                <div className="text-3xl font-medium text-[#0F172A]">
+                  Available Orders
+                </div>
+                <div className="flex items-center gap-3">
+                  <button
+                    onClick={() => setAutoRefresh(!autoRefresh)}
+                    className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-colors ${
+                      autoRefresh 
+                        ? 'bg-green-50 text-green-600 border border-green-200' 
+                        : 'bg-gray-100 text-gray-600 border border-gray-200'
+                    }`}
+                  >
+                    {autoRefresh ? '🔄 Auto-refresh ON' : 'Auto-refresh OFF'}
+                  </button>
+                  <button
+                    onClick={() => fetchAvailableJobs()}
+                    disabled={loading}
+                    className="px-4 py-1.5 bg-[#00B75A] hover:bg-[#00B876] text-white rounded-lg text-xs font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    {loading ? 'Refreshing...' : '↻ Refresh'}
+                  </button>
+                </div>
               </div>
-              <div className="text-[#4A5565] text-[15px] font-[400]">
-                Accept orders in your area and start earning
+              <div className="flex items-center justify-between">
+                <div className="text-[#4A5565] text-[15px] font-[400]">
+                  Accept orders in your area and start earning
+                </div>
+                {lastRefresh && (
+                  <div className="text-xs text-gray-400">
+                    Last updated: {new Date(lastRefresh).toLocaleTimeString()}
+                  </div>
+                )}
               </div>
             </div>
           </YummyText>

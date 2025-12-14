@@ -181,8 +181,36 @@ const RiderProfile = () => {
     fetchProfile();
     
     const handleVerificationComplete = (event) => {
-      console.log('[Profile] Verification completed, refreshing profile');
+      console.log('[Profile] Verification completed, refreshing profile and data');
       fetchProfile();
+      
+      // Reload verification data from cookies
+      const verificationData = getJSONCookie('riderVerificationData');
+      if (verificationData) {
+        console.log('[Profile] Syncing verification data to profile:', verificationData);
+        
+        // Update personal info with contact info
+        if (verificationData.contactInfo) {
+          setPersonalInfo(prev => ({
+            ...prev,
+            phone: verificationData.contactInfo.phone || prev.phone,
+            address: `${verificationData.contactInfo.streetAddress || ''}, ${verificationData.contactInfo.city || ''}, ${verificationData.contactInfo.state || ''} ${verificationData.contactInfo.zipCode || ''}`.trim() || prev.address
+          }));
+        }
+        
+        // Update vehicle info
+        if (verificationData.vehicle) {
+          setVehicleInfo(prev => ({
+            ...prev,
+            type: verificationData.vehicle.type || prev.type,
+            makeModel: verificationData.vehicle.makeModel || prev.makeModel,
+            year: verificationData.vehicle.year || prev.year,
+            licensePlate: verificationData.vehicle.licensePlate || prev.licensePlate
+          }));
+        }
+        
+        console.log('[Profile] ✓ Profile data synced with verification data');
+      }
     };
     
     window.addEventListener('verification:completed', handleVerificationComplete);

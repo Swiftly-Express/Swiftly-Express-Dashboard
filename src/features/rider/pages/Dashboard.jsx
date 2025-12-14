@@ -6,7 +6,8 @@ import BlockIcon from "../../../icons/Blockicon";
 import NairaIcon from "../../../icons/Nairaicon";
 import AnalyticsIcon from "../../../icons/Analyticsicon";
 import VerificationPromptModal from '../components/VerificationPromptModal';
-import { initializeVerificationSystem } from '../../../utils/verificationNotifications';
+// import { initializeVerificationSystem } from '../../../utils/verificationNotifications';
+// import { isRiderVerified } from '../../../utils/cookies';
 import { getRiderProfile } from '../../../utils/authApi';
 import { getCookie, setCookie, getJSONCookie } from '../../../utils/cookies';
 
@@ -36,14 +37,6 @@ export const markVerificationModalShown = () => {
     1
   );
 };
-
-if (shouldShowVerificationModal()) {
-  setTimeout(() => {
-    setShowVerificationModal(true);
-    markVerificationModalShown();
-  }, 3000);
-}
-
 
 const StatCard = ({ icon, title, value, subtitle, iconBg }) => (
   <div className="bg-white rounded-xl p-5" style={sideBottomShadow}>
@@ -132,34 +125,41 @@ const Dashboard = () => {
   useEffect(() => {
     fetchUserProfile();
     
-    // Check if verification has been completed (submitted successfully)
-    const verificationCompletedValue = getCookie('verificationCompleted');
-    const verificationCompleted = verificationCompletedValue === 't' || verificationCompletedValue === 'true';
+    // Check if verification has been completed
+    const verificationCompleted = getCookie('verificationCompleted');
+    const verificationSubmitted = getCookie('verificationSubmitted');
+    const riderVerificationStatus = getCookie('riderVerificationStatus');
     
-    // Check if account verification is explicitly set to true (documents submitted and approved)
-    const accountVerifiedValue = getCookie('riderAccountVerified');
-    const accountVerified = accountVerifiedValue === 'true';
-    
-    // Don't show modal ONLY if verification has been submitted (verificationCompleted is set)
-    // Note: riderAccountVerified='false' means email verified but documents not submitted yet
-    if (verificationCompleted) {
-      console.log('[Dashboard] Verification already submitted, modal will not show');
-      return;
-    }
+    console.log('[Dashboard] 🔍 Verification status check:', { 
+      verificationCompleted, 
+      verificationSubmitted, 
+      riderVerificationStatus
+    });
     
     // Listen for verification completion to close modal
     const handleVerificationComplete = () => {
-      console.log('[Dashboard] Verification completed, closing modal');
+      console.log('[Dashboard] ✅ Verification completed, closing modal');
       setShowVerificationModal(false);
     };
     
     window.addEventListener('verification:completed', handleVerificationComplete);
     
-    // Show modal after 3 seconds for riders who haven't submitted documents
-    console.log('[Dashboard] Rider needs to submit verification, modal will show in 3 seconds');
+    // Show modal if NOT approved
+    const isApproved = riderVerificationStatus === 'approved';
+    
+    if (isApproved) {
+      console.log('[Dashboard] ✓ Already approved - modal will NOT show');
+      return () => {
+        window.removeEventListener('verification:completed', handleVerificationComplete);
+      };
+    }
+    
+    // Show modal after 2 seconds
+    console.log('[Dashboard] 🔔 Will show verification modal in 2 seconds...');
     const timer = setTimeout(() => {
+      console.log('[Dashboard] 📋 Showing verification modal NOW');
       setShowVerificationModal(true);
-    }, 3000);
+    }, 2000);
 
     return () => {
       clearTimeout(timer);

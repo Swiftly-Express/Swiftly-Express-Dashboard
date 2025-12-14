@@ -47,6 +47,26 @@ export function getCookie(name) {
 }
 
 /**
+ * Check if rider verification is complete
+ * @returns {boolean}
+ */
+export function isRiderVerified() {
+  if (typeof window === 'undefined') return false;
+  
+  const verificationCompleted = getCookie('verificationCompleted') === 'true';
+  const verificationSubmitted = getCookie('verificationSubmitted') === 'true';
+  const riderAccountVerified = getCookie('riderAccountVerified');
+  const riderVerificationStatus = getCookie('riderVerificationStatus');
+  
+  return verificationCompleted || 
+         verificationSubmitted || 
+         riderAccountVerified === 'true' || 
+         riderAccountVerified === 'pending' ||
+         riderVerificationStatus === 'pending' ||
+         riderVerificationStatus === 'approved';
+}
+
+/**
  * Delete a cookie
  * @param {string} name - Cookie name
  * @param {object} options - Cookie options (must match the options used when setting)

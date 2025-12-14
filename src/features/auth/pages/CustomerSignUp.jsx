@@ -295,7 +295,7 @@ const CustomerSignUp = () => {
           </div>
 
           {/* Right Side - Image */}
-          <div className="hidden relative bg-[#00B75A] rounded-[32px] p-12 flex flex-col justify-between overflow-hidden">
+          <div className=" relative bg-[#00B75A] rounded-[32px] p-12 flex flex-col justify-between overflow-hidden">
             {/* Text Content at Top */}
             <div className="relative z-10 mt-2">
               <YummyText className="text-lg text-white mb-4 opacity-90 leading-[1.3] font-[400]">
