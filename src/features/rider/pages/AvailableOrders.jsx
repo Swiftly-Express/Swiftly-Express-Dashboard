@@ -2,8 +2,8 @@ import React, { useState, useEffect } from 'react';
 import { IonPage, IonContent, IonToast } from '@ionic/react';
 import RiderLayout from '../components/RiderLayout';
 import { YummyText } from '../../../components/YummyText';
-import { getAvailableJobs, acceptDeliveryJob } from '../../../utils/authApi';
-import { getCookie, getJSONCookie, isRiderVerified } from '../../../utils/cookies';
+import { getAvailableJobs, acceptDeliveryJob, getRiderProfile } from '../../../utils/authApi';
+import { getCookie, getJSONCookie, isRiderVerified, setCookie, setJSONCookie } from '../../../utils/cookies';
 
 
 const sideBottomShadow = {
@@ -153,39 +153,75 @@ const AvailableOrders = () => {
     });
   }, []);
 
-  // Check verification status
-  const checkVerificationStatus = () => {
-    const verified = isRiderVerified();
-    
-    console.log('[AvailableOrders] 🔍 Verification check:', {
-      verified,
-      verificationCompleted: getCookie('verificationCompleted'),
-      verificationSubmitted: getCookie('verificationSubmitted'),
-      riderAccountVerified: getCookie('riderAccountVerified'),
-      riderVerificationStatus: getCookie('riderVerificationStatus')
-    });
-    
-    setIsVerified(verified);
-    return verified;
+  // Check verification status from backend
+  const checkVerificationStatus = async () => {
+    try {
+      console.log('[AvailableOrders] 🔍 Fetching verification status from backend...');
+      const response = await getRiderProfile();
+      const profile = response?.data?.driver || response?.driver || response?.data || response;
+      
+      console.log('[AvailableOrders] 📦 Backend profile:', profile);
+      
+      const backendStatus = profile?.verificationStatus || profile?.accountStatus || profile?.status;
+      const isApproved = backendStatus === 'approved' || backendStatus === 'active';
+      
+      console.log('[AvailableOrders] Backend verification status:', {
+        backendStatus,
+        isApproved,
+        localCookies: {
+          verificationCompleted: getCookie('verificationCompleted'),
+          verificationSubmitted: getCookie('verificationSubmitted'),
+          riderAccountVerified: getCookie('riderAccountVerified'),
+          riderVerificationStatus: getCookie('riderVerificationStatus')
+        }
+      });
+      
+      // Sync backend status to cookies
+      if (backendStatus) {
+        setCookie('riderVerificationStatus', backendStatus, 7);
+        setCookie('riderAccountVerified', backendStatus, 7);
+        
+        // Update user_data with latest profile
+        const existingUserData = getJSONCookie('user_data') || {};
+        setJSONCookie('user_data', { ...existingUserData, ...profile, verificationStatus: backendStatus }, 7);
+        console.log('[AvailableOrders] ✓ Synced backend status to cookies:', backendStatus);
+      }
+      
+      setIsVerified(isApproved);
+      return isApproved;
+    } catch (error) {
+      console.error('[AvailableOrders] Failed to check verification status:', error);
+      // Fallback to local cookie check
+      const verified = isRiderVerified();
+      setIsVerified(verified);
+      return verified;
+    }
   };
 
   useEffect(() => {
-    const verified = checkVerificationStatus();
-    console.log('[AvailableOrders] Initial verification check:', verified);
+    // Initial verification check with backend
+    checkVerificationStatus().then(verified => {
+      console.log('[AvailableOrders] Initial verification check:', verified);
+      if (verified) {
+        fetchAvailableJobs();
+      }
+    });
 
     // Listen for verification completion
-    const handleVerificationComplete = (event) => {
+    const handleVerificationComplete = async (event) => {
       console.log('[AvailableOrders] Verification completed event received:', event.detail);
-      // Re-check verification status to ensure it's properly updated
-      const verified = checkVerificationStatus();
+      // Re-check verification status from backend
+      const verified = await checkVerificationStatus();
       console.log('[AvailableOrders] ✓ Verification status after event:', verified);
-      setIsVerified(verified);
       
       if (verified) {
-        setToastMsg('✅ Verification submitted! You can now view available orders.');
+        setToastMsg('✅ Verification approved! You can now view available orders.');
         setShowToast(true);
         // Refresh jobs after verification
         fetchAvailableJobs();
+      } else {
+        setToastMsg('⏳ Verification submitted! Waiting for admin approval.');
+        setShowToast(true);
       }
     };
 
@@ -351,19 +387,31 @@ const AvailableOrders = () => {
 
           {!isVerified ? (
             <div className="bg-amber-50 border border-amber-200 rounded-xl p-8 text-center max-w-2xl mx-auto mt-12">
-              <div className="text-amber-600 text-5xl mb-4">⚠️</div>
-              <h3 className="text-xl font-semibold text-amber-900 mb-3">Verification Required</h3>
+              <div className="text-amber-600 text-5xl mb-4">
+                {getCookie('verificationSubmitted') === 'true' || getCookie('riderVerificationStatus') === 'pending' ? '⏳' : '⚠️'}
+              </div>
+              <h3 className="text-xl font-semibold text-amber-900 mb-3">
+                {getCookie('verificationSubmitted') === 'true' || getCookie('riderVerificationStatus') === 'pending' 
+                  ? 'Verification Pending Approval' 
+                  : 'Verification Required'}
+              </h3>
               <p className="text-sm text-amber-700 mb-4">
-                Please complete your driver verification to view and accept orders.
+                {getCookie('verificationSubmitted') === 'true' || getCookie('riderVerificationStatus') === 'pending'
+                  ? 'Your verification documents have been submitted and are under review by our admin team.'
+                  : 'Please complete your driver verification to view and accept orders.'}
               </p>
               <p className="text-xs text-amber-600 mb-6">
-                Go to Dashboard to complete your verification.
+                {getCookie('verificationSubmitted') === 'true' || getCookie('riderVerificationStatus') === 'pending'
+                  ? 'You will be notified once your account is approved. This usually takes 24-48 hours.'
+                  : 'Go to Dashboard to complete your verification.'}
               </p>
               <button
                 onClick={() => window.location.href = '/rider/dashboard'}
                 className="bg-amber-600 hover:bg-amber-700 text-white px-6 py-3 rounded-lg font-medium transition-colors"
               >
-                Go to Dashboard
+                {getCookie('verificationSubmitted') === 'true' || getCookie('riderVerificationStatus') === 'pending'
+                  ? 'View Dashboard'
+                  : 'Go to Dashboard'}
               </button>
             </div>
           ) : (
