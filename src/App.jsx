@@ -29,6 +29,7 @@ import RiderLogin from "./features/auth/pages/RiderLogin";
 import RiderSignUp from "./features/auth/pages/RiderSignUp";
 import VerifyEmail from "./features/auth/pages/VerifyEmail";
 import ForgotPassword from "./features/auth/pages/ForgotPassword";
+import AdminLogin from "./features/auth/pages/AdminLogin";
 
 /* Customer Dashboard pages */
 import CustomerDashboard from "./features/customer/pages/Dashboard";
@@ -49,6 +50,13 @@ import Support from "./features/rider/pages/Support";
 
 /* Admin Dashboard pages */
 import AdminDashboard from "./features/admin/pages/Dashboard";
+import ManageUsers from "./features/admin/pages/ManageUsers";
+import ManageRiders from "./features/admin/pages/ManageRiders";
+import ManageOrders from "./features/admin/pages/ManageOrders";
+import KYCApprovals from "./features/admin/pages/KYCApprovals";
+import Analytics from "./features/admin/pages/Analytics";
+import Settings from "./features/admin/pages/Settings";
+import AdminRouteGuard from "./features/admin/components/AdminRouteGuard";
 
 setupIonicReact();
 
@@ -83,6 +91,11 @@ const App = () => (
         {/* Email Verification */}
         <Route exact path="/auth/verify-email">
           <VerifyEmail />
+        </Route>
+
+        {/* Admin Auth */}
+        <Route exact path="/auth/admin/login">
+          <AdminLogin />
         </Route>
 
         {/* Protected Dashboard Routes - Customer */}
@@ -130,7 +143,39 @@ const App = () => (
 
         {/* Protected Dashboard Routes - Admin */}
         <Route exact path="/admin/dashboard">
-          <AdminDashboard />
+          <AdminRouteGuard>
+            <AdminDashboard />
+          </AdminRouteGuard>
+        </Route>
+        <Route exact path="/admin/users">
+          <AdminRouteGuard>
+            <ManageUsers />
+          </AdminRouteGuard>
+        </Route>
+        <Route exact path="/admin/riders">
+          <AdminRouteGuard>
+            <ManageRiders />
+          </AdminRouteGuard>
+        </Route>
+        <Route exact path="/admin/orders">
+          <AdminRouteGuard>
+            <ManageOrders />
+          </AdminRouteGuard>
+        </Route>
+        <Route exact path="/admin/kyc">
+          <AdminRouteGuard>
+            <KYCApprovals />
+          </AdminRouteGuard>
+        </Route>
+        <Route exact path="/admin/analytics">
+          <AdminRouteGuard>
+            <Analytics />
+          </AdminRouteGuard>
+        </Route>
+        <Route exact path="/admin/settings">
+          <AdminRouteGuard>
+            <Settings />
+          </AdminRouteGuard>
         </Route>
 
         {/* Public page routes removed — archived */}
