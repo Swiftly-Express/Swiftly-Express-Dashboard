@@ -1,10 +1,10 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { IonContent, IonPage, IonIcon } from '@ionic/react';
 import { useIonRouter } from '@ionic/react';
-import { alertCircleOutline } from 'ionicons/icons';
+import { alertCircleOutline, checkmarkCircleOutline } from 'ionicons/icons';
 import { YummyText } from '../../../components/YummyText';
 import { verifyEmail, resendVerification } from '../../../utils/authApi';
-import { getCookie, setCookie, deleteCookie, getJSONCookie, setJSONCookie } from '../../../utils/cookies';
+import { getCookie, setCookie, deleteCookie, getJSONCookie } from '../../../utils/cookies';
 
 const VerifyEmail = () => {
   const router = useIonRouter();
@@ -12,20 +12,21 @@ const VerifyEmail = () => {
   const [isResending, setIsResending] = useState(false);
   const [countdown, setCountdown] = useState(60);
   const [isVerifying, setIsVerifying] = useState(false);
+  const [showLoginPrompt, setShowLoginPrompt] = useState(false);
   const inputRefs = useRef([]);
 
   // Get email and user type from navigation state or cookies
-  const email = getCookie('pendingVerificationEmail') || 'user@email.com';
+  const email = getCookie('pendingVerificationEmail') || getCookie('verifiedEmail') || 'user@email.com';
   const userType = getCookie('pendingVerificationType') || 'customer';
   const pendingVerificationUserId = getCookie('pendingVerificationUserId') || null;
 
   // Countdown timer for resend button
   useEffect(() => {
-    if (countdown > 0) {
+    if (countdown > 0 && !showLoginPrompt) {
       const timer = setTimeout(() => setCountdown(countdown - 1), 1000);
       return () => clearTimeout(timer);
     }
-  }, [countdown]);
+  }, [countdown, showLoginPrompt]);
 
   // Handle OTP input change
   const handleChange = (index, value) => {
@@ -79,62 +80,47 @@ const VerifyEmail = () => {
 
     setIsVerifying(true);
     try {
-      // Backend expects payload: { code: '123456' }
-      // Pass pendingVerificationUserId when available so backend can identify the user
-      const response = await verifyEmail({ code: otpCode, userId: pendingVerificationUserId });
+      const response = await verifyEmail({ 
+        code: otpCode, 
+        userId: pendingVerificationUserId 
+      });
       
-      console.log('[VerifyEmail] Verification response:', response);
+      console.log('[VerifyEmail] ✓ Verification response:', response);
       
-      // Token storage is handled automatically by authApi.js verifyEmail function
-      // Just verify tokens were stored
-      const storedToken = userType === 'rider' || userType === 'driver' 
-        ? getCookie('rider_token')
-        : getCookie('customer_token');
-      
-      if (storedToken) {
-        console.log('[VerifyEmail] Tokens successfully stored by authApi');
+      // Check if we got tokens (authenticated) or need to login
+      if (response.authenticated === false || response.requiresLogin === true) {
+        console.log('[VerifyEmail] ⚠ Email verified but requires login');
+        setShowLoginPrompt(true);
       } else {
-        console.warn('[VerifyEmail] Warning: No token found after verification');
-      }
-      
-      // Verify user data was stored
-      const userData = getJSONCookie('user_data');
-      if (userData) {
-        console.log('[VerifyEmail] User data successfully stored by authApi');
-      } else {
-        // Fallback: try to use pending user data if authApi didn't handle it
-        const pendingUserData = getJSONCookie('pendingUserData');
-        if (pendingUserData) {
-          setJSONCookie('user_data', pendingUserData, 7);
-          setCookie('userRole', userType === 'rider' || userType === 'driver' ? 'rider' : 'customer', 7);
-          setCookie('user_type', userType || 'customer', 7);
-          console.log('[VerifyEmail] Stored pending user data as fallback');
+        // Check if tokens were stored
+        const storedToken = userType === 'rider' || userType === 'driver' 
+          ? getCookie('rider_token')
+          : getCookie('customer_token');
+        
+        if (storedToken) {
+          console.log('[VerifyEmail] ✓ Authenticated - redirecting to dashboard');
+          
+          // Clear pending data
+          deleteCookie('pendingVerificationEmail');
+          deleteCookie('pendingVerificationType');
+          deleteCookie('pendingVerificationUserId');
+          
+          alert('Email verified successfully!');
+          
+          // Redirect to dashboard
+          if (userType === 'rider' || userType === 'driver') {
+            router.push('/rider/dashboard', 'root', 'replace');
+          } else {
+            router.push('/customer/dashboard', 'root', 'replace');
+          }
+        } else {
+          console.warn('[VerifyEmail] ⚠ Verification succeeded but no token found');
+          setShowLoginPrompt(true);
         }
       }
 
-      // Clear pending verification data
-      deleteCookie('pendingVerificationEmail');
-      deleteCookie('pendingVerificationType');
-      deleteCookie('pendingVerificationUserId');
-      deleteCookie('pendingUserData');
-
-      // For riders, mark email as verified but account verification still pending
-      if (userType === 'rider') {
-        setCookie('riderEmailVerified', 'true', 7);
-        setCookie('riderAccountVerified', 'false', 7); // Still need to upload documents
-      }
-
-      alert('Email verified successfully!');
-      
-      // Redirect based on user type - user is now authenticated
-      if (userType === 'rider' || userType === 'driver') {
-        router.push('/rider/dashboard', 'root', 'replace');
-      } else {
-        router.push('/customer/dashboard', 'root', 'replace');
-      }
-
     } catch (err) {
-      console.error('Verification failed', err);
+      console.error('[VerifyEmail] ❌ Verification failed:', err);
       alert(err?.message || 'Verification failed. Please try again.');
     } finally {
       setIsVerifying(false);
@@ -147,7 +133,6 @@ const VerifyEmail = () => {
 
     setIsResending(true);
     try {
-      // Include userId if available to support backend routes that expect it
       await resendVerification({ email, userId: pendingVerificationUserId });
       setCountdown(60);
       setOtp(['', '', '', '', '', '']);
@@ -161,11 +146,21 @@ const VerifyEmail = () => {
     }
   };
 
+  const handleProceedToLogin = () => {
+    // Use correct login routes
+    const loginPath = userType === 'rider' || userType === 'driver' 
+      ? '/auth/rider/login' 
+      : '/auth/customer/login';
+    
+    router.push(loginPath, 'root', 'replace');
+  };
+
+  // KEEP YOUR ORIGINAL UI - Just add login prompt overlay when needed
   return (
     <IonPage>
       <IonContent className="ion-no-padding !fullscreen">
         <div className="!h-full grid grid-cols-1 lg:grid-cols-2 overflow-hidden">
-          {/* Left Side - Verification Form */}
+          {/* Left Side - Verification Form - ORIGINAL UI */}
           <div className="bg-white flex items-center justify-start !p-12 !lg:p-2 !h-full overflow-y-auto">
             <div className="w-full max-w-md">
               {/* Back Button */}
@@ -188,11 +183,8 @@ const VerifyEmail = () => {
                     Email Verification
                   </h1>
                   <p className="text-sm text-[#0A0A0A]">
-                    We’ve sent a One-Time Password (OTP) to your email. Please enter the code to complete your account verification.
+                    We've sent a One-Time Password (OTP) to your email. Please enter the code to complete your account verification.
                   </p>
-                  {/* <p className="text-sm font-medium text-[#0F172A] mt-1">
-                    {email}
-                  </p> */}
                 </div>
 
                 {/* OTP Input */}
@@ -210,6 +202,7 @@ const VerifyEmail = () => {
                       onPaste={handlePaste}
                       className="w-20 h-20 text-center text-xl font-medium border-2 border-[#F3F4F6] rounded-xl focus:border-[#00D68F] focus:outline-none transition-colors"
                       autoFocus={index === 0}
+                      disabled={showLoginPrompt}
                     />
                   ))}
                 </div>
@@ -217,9 +210,9 @@ const VerifyEmail = () => {
                 {/* Verify Button */}
                 <button
                   onClick={handleVerify}
-                  disabled={isVerifying || otp.join('').length !== 6}
+                  disabled={isVerifying || otp.join('').length !== 6 || showLoginPrompt}
                   className={`py-3 rounded-xl font-medium transition-colors mb-4 ${
-                    isVerifying || otp.join('').length !== 6
+                    isVerifying || otp.join('').length !== 6 || showLoginPrompt
                       ? 'bg-[#00B75A] text-[#FFFFFF] opacity-[50%] cursor-not-allowed'
                       : 'bg-[#00B75A] hover:bg-[#00B876] text-white'
                   }`}
@@ -234,9 +227,9 @@ const VerifyEmail = () => {
                     Didn't receive the code?{' '}
                     <button
                       onClick={handleResend}
-                      disabled={countdown > 0 || isResending}
+                      disabled={countdown > 0 || isResending || showLoginPrompt}
                       className={`font-medium transition-colors ${
-                        countdown > 0 || isResending
+                        countdown > 0 || isResending || showLoginPrompt
                           ? 'text-[#00B75A] cursor-not-allowed'
                           : 'text-[#00D68F] hover:text-[#00B876]'
                       }`}
@@ -261,7 +254,7 @@ const VerifyEmail = () => {
             </div>
           </div>
 
-          {/* Right Side - Image */}
+          {/* Right Side - Image - ORIGINAL UI */}
           <div className="hidden lg:flex h-full bg-[#1E1E1E] relative overflow-hidden">
             {/* Zigzag decoration - top left */}
             <img 
@@ -288,10 +281,61 @@ const VerifyEmail = () => {
             <img 
               src="/smallenvelope.svg" 
               alt="" 
-              className="absolute top-80 mt-40 right-20  ml-80 w-44 h-auto"
+              className="absolute top-80 mt-40 right-20 ml-80 w-44 h-auto"
             />
           </div>
         </div>
+
+        {/* Login Prompt Overlay - NEW: Only shows when needed */}
+        {showLoginPrompt && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm">
+            <div className="bg-white rounded-3xl shadow-2xl max-w-md w-full p-8 text-center animate-scale-in">
+              <YummyText>
+                <div className="w-20 h-20 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-6">
+                  <IonIcon icon={checkmarkCircleOutline} className="text-green-600 text-5xl" />
+                </div>
+                
+                <h2 className="text-2xl font-semibold text-[#0F172A] mb-3">
+                  Email Verified Successfully! ✓
+                </h2>
+                
+                <p className="text-[#64748B] mb-6">
+                  Your email has been verified. Please log in with your credentials to access your account.
+                </p>
+                
+                <div className="bg-blue-50 border border-blue-200 rounded-xl p-4 mb-6">
+                  <p className="text-sm text-[#1E40AF] flex items-start gap-2">
+                    <IonIcon icon={alertCircleOutline} className="text-lg flex-shrink-0 mt-0.5" />
+                    <span>Use the same email and password you registered with to sign in.</span>
+                  </p>
+                </div>
+                
+                <button
+                  onClick={handleProceedToLogin}
+                  className="w-full py-4 bg-[#00B75A] hover:bg-[#00B876] text-white rounded-xl font-semibold transition-colors text-lg"
+                >
+                  Continue to Login
+                </button>
+              </YummyText>
+            </div>
+          </div>
+        )}
+
+        <style jsx>{`
+          @keyframes scale-in {
+            from {
+              opacity: 0;
+              transform: scale(0.9);
+            }
+            to {
+              opacity: 1;
+              transform: scale(1);
+            }
+          }
+          .animate-scale-in {
+            animation: scale-in 0.3s ease-out;
+          }
+        `}</style>
       </IonContent>
     </IonPage>
   );

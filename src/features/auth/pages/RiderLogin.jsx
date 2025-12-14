@@ -1,11 +1,12 @@
 import { IonPage, IonContent, IonIcon } from '@ionic/react';
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { eyeOutline, eyeOffOutline } from 'ionicons/icons';
 import { YummyText } from '../../../components/YummyText';
 import Button from '../../../components/Button';
 import { useHistory } from 'react-router-dom';
 import { login } from '../../../utils/authApi';
 import { setCookie, setJSONCookie } from '../../../utils/cookies';
+import { getCookie, deleteCookie } from '../../../utils/cookies';
 
 const RiderSignIn = () => {
   const history = useHistory();
@@ -17,63 +18,53 @@ const RiderSignIn = () => {
 
   const [error, setError] = useState('');
   const [showPassword, setShowPassword] = useState(false);
+  const [showVerifiedBanner, setShowVerifiedBanner] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
 
-  const handleSubmit = async () => {
-    // Reset error
+  useEffect(() => {
+    const needsLogin = getCookie('emailVerifiedNeedsLogin') === 'true';
+    const verifiedEmail = getCookie('verifiedEmail');
+
+    if (needsLogin && verifiedEmail) {
+      setShowVerifiedBanner(true);
+      deleteCookie('emailVerifiedNeedsLogin');
+      deleteCookie('verifiedEmail');
+      setTimeout(() => {
+        setShowVerifiedBanner(false);
+      }, 5000);
+    }
+  }, []);
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
     setError('');
-
-    // Basic validation
+    
     if (!formData.email || !formData.password) {
-      setError('Please fill in all fields');
+      setError('Please enter both email and password');
       return;
     }
-
-    // Email validation
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    if (!emailRegex.test(formData.email)) {
-      setError('Please enter a valid email address');
-      return;
-    }
-
+    
+    setIsLoading(true);
     try {
-      const res = await login({ email: formData.email.trim(), password: formData.password, role: 'driver' });
-
-      console.log('[RiderLogin] Login response:', res);
-
-      const token = res?.token || res?.data?.token || res?.accessToken || res?.data?.accessToken;
-      const refresh = res?.refreshToken || res?.data?.refreshToken || res?.refresh_token || res?.data?.refresh_token;
-      const user = res?.user || res?.data?.user || res?.data || null;
-
-      // The login function in authApi.js should handle token storage, but let's verify
-      console.log('[RiderLogin] Token and user data:', {
-        hasToken: !!token,
-        hasUser: !!user,
-        tokenPreview: token ? token.substring(0, 20) + '...' : 'none'
+      const response = await login({ 
+        email: formData.email, 
+        password: formData.password,
+        role: 'driver'
       });
-
-      // Note: The login() function in authApi.js already stores tokens and user data in cookies
-      // But if for some reason it didn't, we'll do it here as a fallback
-      if (token) {
-        setCookie('rider_token', token, 7);
-        setCookie('auth_token', token, 7);
-        console.log('[RiderLogin] Token stored in cookies');
-      }
-      if (refresh) {
-        setCookie('rider_refresh_token', refresh, 7);
-        setCookie('refresh_token', refresh, 7);
-      }
-      if (user) {
-        setJSONCookie('user_data', user, 7);
-        setCookie('user_type', 'rider', 7);
-        setCookie('userRole', 'rider', 7);
-        console.log('[RiderLogin] User data stored in cookies');
-      }
-
-      if (document && document.activeElement) document.activeElement.blur();
+      
+      console.log('[RiderLogin] ✓ Login successful', response);
+      
+      // Clear verified email cookie after successful login
+      deleteCookie('verifiedEmail');
+      
+      // Redirect to dashboard
       history.push('/rider/dashboard');
-    } catch (err) {
-      console.error('Rider login failed', err);
-      setError(err?.message || 'Login failed. Please try again.');
+      
+    } catch (error) {
+      console.error('[RiderLogin] ❌ Login failed:', error);
+      setError(error?.message || 'Login failed. Please check your credentials.');
+    } finally {
+      setIsLoading(false);
     }
   };
 
@@ -114,6 +105,20 @@ const RiderSignIn = () => {
                   customers moving — one delivery at a time.
                 </YummyText>
               </div>
+
+              {/* Success Banner for Verified Email */}
+              {showVerifiedBanner && (
+                <div className="mb-4 p-3 bg-green-50 border border-green-200 rounded-lg animate-slide-in">
+                  <YummyText className="text-sm text-green-600">✓ Email verified successfully! Please log in to continue.</YummyText>
+                </div>
+              )}
+
+              {/* Error Banner */}
+              {error && (
+                <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-lg">
+                  <YummyText className="text-sm text-red-600">{error}</YummyText>
+                </div>
+              )}
 
               {/* Form */}
               <div className="space-y-2">
@@ -182,9 +187,10 @@ const RiderSignIn = () => {
                 <Button
                   variant="primary"
                   onClick={handleSubmit}
-                  className="!w-full !py-3 !bg-[#00B75A] hover:!bg-[#00B876] !mb-3 !text-white rounded-lg transition-all duration-300"
+                  disabled={isLoading}
+                  className="!w-full !py-3 !bg-[#00B75A] hover:!bg-[#00B876] !mb-3 !text-white rounded-lg transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed"
                 >
-                  <YummyText className="font-[300] text-sm">Log In</YummyText>
+                  <YummyText className="font-[300] text-sm">{isLoading ? 'Logging in...' : 'Log In'}</YummyText>
                 </Button>
 
                 {/* Divider */}
@@ -258,5 +264,21 @@ const RiderSignIn = () => {
     </IonPage>
   );
 };
+
+<style jsx>{`
+  @keyframes slide-in {
+    from {
+      opacity: 0;
+      transform: translateY(-10px);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+  .animate-slide-in {
+    animation: slide-in 0.3s ease-out;
+  }
+`}</style>
 
 export default RiderSignIn;

@@ -135,152 +135,122 @@ const VerificationPromptModal = ({ isOpen, onClose }) => {
     }
   };
 
-  const handleSubmit = async () => {
-    if (!formData.agreeBackgroundCheck) {
-      alert('Please accept the background check authorization');
-      return;
-    }
+  // Add this to the handleSubmit function in VerificationPromptModal
+// Replace the existing token check section
 
-    // Check if user is authenticated (but don't block - let the API handle it)
-    const riderToken = getCookie('rider_token');
-    const authToken = getCookie('auth_token');
-    const customerToken = getCookie('customer_token');
+const handleSubmit = async () => {
+  if (!formData.agreeBackgroundCheck) {
+    alert('Please accept the background check authorization');
+    return;
+  }
+
+  // CRITICAL AUTH CHECK
+  const riderToken = getCookie('rider_token');
+  const authToken = getCookie('auth_token');
+  const customerToken = getCookie('customer_token');
+  
+  console.log('[VerificationModal] 🔍 Auth Check:', {
+    riderToken: riderToken ? '✓ Present' : '✗ Missing',
+    authToken: authToken ? '✓ Present' : '✗ Missing',
+    customerToken: customerToken ? '✓ Present' : '✗ Missing',
+    allCookies: document.cookie
+  });
+  
+  const hasToken = !!(riderToken || authToken || customerToken);
+  
+  if (!hasToken) {
+    console.error('[VerificationModal] ❌ NO AUTHENTICATION TOKEN FOUND!');
+    alert('Authentication required. You need to verify your email first, then log in before submitting documents.');
     
-    console.log('[VerificationPromptModal] Token check before submission:', {
-      riderToken: riderToken ? riderToken.substring(0, 20) + '...' : 'missing',
-      authToken: authToken ? authToken.substring(0, 20) + '...' : 'missing',
-      customerToken: customerToken ? customerToken.substring(0, 20) + '...' : 'missing',
-      hasAnyToken: !!(riderToken || authToken || customerToken)
-    });
+    // Redirect to login
+    window.location.href = '/rider/login';
+    return;
+  }
+  
+  console.log('[VerificationModal] ✓ Token verified, proceeding with submission');
+
+  // Validate files
+  if (!formData.idDocument || !(formData.idDocument instanceof File)) {
+    alert('Please upload your ID document');
+    return;
+  }
+  if (!formData.profilePhoto || !(formData.profilePhoto instanceof File)) {
+    alert('Please upload your profile photo');
+    return;
+  }
+  if (!formData.driversLicense || !(formData.driversLicense instanceof File)) {
+    alert("Please upload your driver's license");
+    return;
+  }
+
+  setUploading(true);
+
+  try {
+    const submitData = new FormData();
     
-    if (!riderToken && !authToken && !customerToken) {
-      console.error('[VerificationPromptModal] No tokens found in cookies!');
-      alert('You must be logged in to submit verification. Please log in and try again.');
-      return;
+    // Add all form fields
+    submitData.append('contactInfo[phone]', formData.phoneNumber || '');
+    submitData.append('contactInfo[streetAddress]', formData.streetAddress || '');
+    submitData.append('contactInfo[city]', formData.city || '');
+    submitData.append('contactInfo[state]', formData.state || '');
+    submitData.append('contactInfo[zipCode]', formData.zipCode || '');
+    
+    submitData.append('identity[idType]', formData.idType || '');
+    submitData.append('identity[idNumber]', formData.idNumber || '');
+    
+    submitData.append('vehicle[type]', formData.vehicleType || '');
+    submitData.append('vehicle[makeModel]', formData.makeModel || '');
+    submitData.append('vehicle[year]', formData.year ? parseInt(formData.year) : '');
+    submitData.append('vehicle[licensePlate]', formData.licensePlate || '');
+    
+    submitData.append('backgroundCheckConsent', true);
+    
+    // Add files with explicit filenames
+    submitData.append('idDocument', formData.idDocument, formData.idDocument.name);
+    submitData.append('profilePhoto', formData.profilePhoto, formData.profilePhoto.name);
+    submitData.append('driversLicense', formData.driversLicense, formData.driversLicense.name);
+    
+    if (formData.insurance && formData.insurance instanceof File) {
+      submitData.append('insurance', formData.insurance, formData.insurance.name);
     }
 
-    // Validate that all required files are present and are actual File objects
-    if (!formData.idDocument || !(formData.idDocument instanceof File)) {
-      alert('Please upload your ID document');
-      return;
-    }
-    if (!formData.profilePhoto || !(formData.profilePhoto instanceof File)) {
-      alert('Please upload your profile photo');
-      return;
-    }
-    if (!formData.driversLicense || !(formData.driversLicense instanceof File)) {
-      alert("Please upload your driver's license");
-      return;
-    }
+    console.log('[VerificationModal] → Submitting to API...');
 
-    console.log('[VerificationPromptModal] Starting submission with files:', {
-      idDocument: {
-        name: formData.idDocument.name,
-        size: formData.idDocument.size,
-        type: formData.idDocument.type
-      },
-      profilePhoto: {
-        name: formData.profilePhoto.name,
-        size: formData.profilePhoto.size,
-        type: formData.profilePhoto.type
-      },
-      driversLicense: {
-        name: formData.driversLicense.name,
-        size: formData.driversLicense.size,
-        type: formData.driversLicense.type
-      },
-      insurance: formData.insurance ? {
-        name: formData.insurance.name,
-        size: formData.insurance.size,
-        type: formData.insurance.type
-      } : null
-    });
+    const response = await submitRiderVerification(submitData);
+    
+    console.log('[VerificationModal] ✓ Success:', response);
 
-    setUploading(true);
+    // Mark verification as submitted
+    setCookie('verificationCompleted', 'true', 7);
+    setCookie('riderAccountVerified', 'pending', 7);
+    
+    // Clean up
+    deleteCookie('verificationPromptDismissedAt');
 
+    // Refresh profile
     try {
-      // Create FormData object
-      const submitData = new FormData();
-      
-      // Add contact information
-      submitData.append('contactInfo[phone]', formData.phoneNumber || '');
-      submitData.append('contactInfo[streetAddress]', formData.streetAddress || '');
-      submitData.append('contactInfo[city]', formData.city || '');
-      submitData.append('contactInfo[state]', formData.state || '');
-      submitData.append('contactInfo[zipCode]', formData.zipCode || '');
-      
-      // Add identity information
-      submitData.append('identity[idType]', formData.idType || '');
-      submitData.append('identity[idNumber]', formData.idNumber || '');
-      
-      // Add vehicle information
-      submitData.append('vehicle[type]', formData.vehicleType || '');
-      submitData.append('vehicle[makeModel]', formData.makeModel || '');
-      submitData.append('vehicle[year]', formData.year ? parseInt(formData.year) : '');
-      submitData.append('vehicle[licensePlate]', formData.licensePlate || '');
-      
-      // Add background check consent
-      submitData.append('backgroundCheckConsent', true);
-      
-      // Add files - CRITICAL: Use the File objects directly with explicit filenames
-      submitData.append('idDocument', formData.idDocument, formData.idDocument.name);
-      submitData.append('profilePhoto', formData.profilePhoto, formData.profilePhoto.name);
-      submitData.append('driversLicense', formData.driversLicense, formData.driversLicense.name);
-      
-      if (formData.insurance && formData.insurance instanceof File) {
-        submitData.append('insurance', formData.insurance, formData.insurance.name);
-      }
-
-      // Debug: Log all FormData entries
-      console.log('[VerificationPromptModal] FormData contents:');
-      for (let [key, value] of submitData.entries()) {
-        if (value instanceof File) {
-          console.log(`  ${key}: [File] ${value.name} (${value.size} bytes, ${value.type})`);
-        } else {
-          console.log(`  ${key}: ${value}`);
-        }
-      }
-
-      console.log('[VerificationPromptModal] Submitting to API...');
-
-      // Submit to API
-      const response = await submitRiderVerification(submitData);
-      
-      console.log('[VerificationPromptModal] Verification submitted successfully:', response);
-
-      // Mark account as verified
-      setCookie('riderAccountVerified', 'true', 7);
-      setCookie('accountVerifiedAt', new Date().toISOString(), 7);
-      setCookie('verificationSubmitted', 'true', 7);
-      
-      // Remove verification notifications
-      removeVerificationNotification();
-      
-      // Clear verification prompt data
-      deleteCookie('verificationPromptDismissedAt');
-      deleteCookie('nextVerificationPushNotification');
-      deleteCookie('lastVerificationPushNotification');
-
-      // Refresh profile
-      try {
-        const profileResponse = await getRiderProfile();
-        console.log('[VerificationPromptModal] Profile refreshed:', profileResponse);
-        
-        window.dispatchEvent(new CustomEvent('verification:completed', { 
-          detail: { profile: profileResponse?.data || profileResponse } 
-        }));
-      } catch (profileError) {
-        console.error('[VerificationPromptModal] Failed to refresh profile:', profileError);
-      }
-
-      setShowSuccessModal(true);
-    } catch (error) {
-      console.error('[VerificationPromptModal] Verification failed:', error);
-      alert(error.message || 'Failed to submit documents. Please try again.');
-    } finally {
-      setUploading(false);
+      const profileResponse = await getRiderProfile();
+      window.dispatchEvent(new CustomEvent('verification:completed', { 
+        detail: { profile: profileResponse?.data || profileResponse } 
+      }));
+    } catch (profileError) {
+      console.error('[VerificationModal] Profile refresh failed:', profileError);
     }
-  };
+
+    setShowSuccessModal(true);
+  } catch (error) {
+    console.error('[VerificationModal] ❌ Submission failed:', error);
+    
+    if (error.status === 401 || error.message?.includes('token') || error.message?.includes('auth')) {
+      alert('Session expired. Please log in again and retry.');
+      window.location.href = '/rider/login';
+    } else {
+      alert(error.message || 'Failed to submit documents. Please try again.');
+    }
+  } finally {
+    setUploading(false);
+  }
+};
 
   const handleDismiss = () => {
     setCookie('verificationPromptDismissedAt', Date.now().toString(), 1);
