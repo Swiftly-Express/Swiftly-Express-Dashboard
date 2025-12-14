@@ -4,7 +4,7 @@ import RiderLayout from '../components/RiderLayout';
 import { YummyText } from '../../../components/YummyText';
 import DocumentIcon from "../../../icons/Documenticon";
 import UploadIcon from "../../../icons/Uploadicon";
-import { getRiderProfile, updateRiderProfile, uploadRiderProfileImage } from '../../../utils/authApi';
+import { getRiderProfile, updateRiderProfile, uploadRiderProfileImage, getRiderEarnings } from '../../../utils/authApi';
 import { getCookie, setCookie, getJSONCookie, setJSONCookie } from '../../../utils/cookies';
 
 const sideBottomShadow = {
@@ -112,6 +112,14 @@ const RiderProfile = () => {
     vehicleRegistration: { uploaded: true, verified: true, expires: 'Aug 20, 2025' },
     insuranceCertificate: { uploaded: true, verified: true, expires: 'Nov 30, 2025' },
     backgroundCheck: { uploaded: true, verified: false, lastUpdated: '6 months ago' }
+  });
+
+  const [stats, setStats] = useState({
+    totalDeliveries: 0,
+    rating: 0,
+    totalRatings: 0,
+    successRate: 0,
+    memberSince: 'Loading...'
   });
 
   const profileImageInputRef = useRef(null);
@@ -261,6 +269,30 @@ const RiderProfile = () => {
       const response = await getRiderProfile();
       const profile = response?.data?.driver || response?.driver || response?.data;
       setProfileData(profile);
+      
+      // Fetch stats
+      try {
+        const earningsRes = await getRiderEarnings();
+        const earnings = earningsRes?.data || earningsRes;
+        
+        const totalDeliveries = earnings?.totalDeliveries || earnings?.total?.count || profile?.totalDeliveries || 0;
+        const rating = profile?.rating || profile?.averageRating || 0;
+        const totalRatings = profile?.totalRatings || profile?.ratingsCount || 0;
+        const successRate = profile?.successRate || (profile?.completedDeliveries && totalDeliveries ? (profile.completedDeliveries / totalDeliveries * 100) : 0);
+        const memberSince = profile?.createdAt ? new Date(profile.createdAt).toLocaleDateString('en-US', { month: 'long', year: 'numeric' }) : 'N/A';
+        
+        setStats({
+          totalDeliveries,
+          rating: Number(rating).toFixed(2),
+          totalRatings,
+          successRate: Number(successRate).toFixed(0),
+          memberSince
+        });
+        
+        console.log('[Profile] Stats loaded:', { totalDeliveries, rating, totalRatings, successRate, memberSince });
+      } catch (statsError) {
+        console.error('[Profile] Failed to load stats:', statsError);
+      }
       
       if (profile?.profilePhoto && !profile.profilePhoto.includes('dicebear')) {
         setProfileImage(profile.profilePhoto);
@@ -662,7 +694,7 @@ const RiderProfile = () => {
                       Top Performer
                     </span>
                     <span className="px-3 py-1 bg-purple-100 text-purple-700 rounded-full text-xs font-medium">
-                      500+ Deliveries
+                      {stats.totalDeliveries > 0 ? `${stats.totalDeliveries}+ Deliveries` : 'New Rider'}
                     </span>
                   </div>
 
@@ -674,27 +706,29 @@ const RiderProfile = () => {
                           width="22" 
                           height="22" 
                           viewBox="0 0 24 24" 
-                          fill="#00D68F" 
+                          fill={star <= Math.round(stats.rating) ? "#00D68F" : "#E5E7EB"}
                           xmlns="http://www.w3.org/2000/svg"
                         >
                           <path d="M12 2.75c.28 0 .53.16.65.41l2.12 4.3c.1.21.3.35.53.38l4.75.69c.69.1.97.95.47 1.43l-3.44 3.35c-.17.16-.25.39-.21.62l.81 4.72c.12.69-.61 1.22-1.23.89l-4.24-2.23a.75.75 0 0 0-.7 0l-4.24 2.23c-.62.33-1.35-.2-1.23-.89l.81-4.72c.04-.23-.04-.46-.21-.62L2.48 10c-.5-.48-.22-1.33.47-1.43l4.75-.69c.23-.03.43-.17.53-.38l2.12-4.3A.74.74 0 0 1 12 2.75Z"/>
                         </svg>
                       ))}
                     </div>
-                    <span className="text-sm text-[#0F172A] font-medium">4.95 (238 ratings)</span>
+                    <span className="text-sm text-[#0F172A] font-medium">
+                      {stats.rating > 0 ? `${stats.rating} (${stats.totalRatings} ratings)` : 'No ratings yet'}
+                    </span>
                   </div>
 
-                  <div className="text-xs text-[#64748B]">Member since March 2024</div>
+                  <div className="text-xs text-[#64748B]">Member since {stats.memberSince}</div>
                 </div>
               </div>
 
               <div className="flex gap-4">
                 <div className="bg-white rounded-xl p-4 text-center min-w-[120px] shadow-md" style={sideBottomShadow}>
-                  <div className="text-2xl font-medium text-[#3B82F6] mb-1">542</div>
+                  <div className="text-2xl font-medium text-[#3B82F6] mb-1">{stats.totalDeliveries}</div>
                   <div className="text-xs text-[#64748B]">Total Deliveries</div>
                 </div>
                 <div className="bg-white rounded-xl p-4 text-center min-w-[120px] shadow-md" style={sideBottomShadow}>
-                  <div className="text-2xl font-medium text-[#00D68F] mb-1">98%</div>
+                  <div className="text-2xl font-medium text-[#00D68F] mb-1">{stats.successRate}%</div>
                   <div className="text-xs text-[#64748B]">Success Rate</div>
                 </div>
               </div>

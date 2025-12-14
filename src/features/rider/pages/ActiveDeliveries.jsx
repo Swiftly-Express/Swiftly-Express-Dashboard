@@ -176,14 +176,28 @@ const ActiveDeliveries = () => {
   useEffect(() => {
     fetchActiveDeliveries();
     
+    // Auto-refresh every 30 seconds
+    const refreshInterval = setInterval(() => {
+      fetchActiveDeliveries();
+    }, 30000);
+    
     // Listen for delivery acceptance events
     const handleDeliveryAccepted = () => {
       fetchActiveDeliveries();
     };
+    
+    // Listen for delivery status updates
+    const handleDeliveryStatusChanged = () => {
+      fetchActiveDeliveries();
+    };
+    
     window.addEventListener('delivery:accepted', handleDeliveryAccepted);
+    window.addEventListener('delivery:statusChanged', handleDeliveryStatusChanged);
     
     return () => {
+      clearInterval(refreshInterval);
       window.removeEventListener('delivery:accepted', handleDeliveryAccepted);
+      window.removeEventListener('delivery:statusChanged', handleDeliveryStatusChanged);
     };
   }, []);
 
@@ -213,8 +227,13 @@ const ActiveDeliveries = () => {
       const response = await updateDeliveryStatus(deliveryId, { status: newStatus });
       console.log('[ActiveDeliveries] Status updated:', response);
       
-      setToastMsg('Status updated successfully!');
+      setToastMsg('✅ Status updated successfully!');
       setShowToast(true);
+      
+      // Dispatch event for other components
+      window.dispatchEvent(new CustomEvent('delivery:statusChanged', {
+        detail: { deliveryId, newStatus }
+      }));
       
       // Refresh deliveries
       await fetchActiveDeliveries();
@@ -225,7 +244,7 @@ const ActiveDeliveries = () => {
       }
     } catch (error) {
       console.error('[ActiveDeliveries] Failed to update status:', error);
-      setToastMsg(error.message || 'Failed to update status');
+      setToastMsg('❌ ' + (error.message || 'Failed to update status'));
       setShowToast(true);
     } finally {
       setUpdatingStatus(null);
@@ -240,14 +259,14 @@ const ActiveDeliveries = () => {
       const response = await uploadDeliveryProof(deliveryId, formData);
       console.log('[ActiveDeliveries] Proof uploaded:', response);
       
-      setToastMsg('Delivery proof uploaded successfully!');
+      setToastMsg('✅ Delivery proof uploaded successfully!');
       setShowToast(true);
       
       // Refresh deliveries
       await fetchActiveDeliveries();
     } catch (error) {
       console.error('[ActiveDeliveries] Failed to upload proof:', error);
-      setToastMsg(error.message || 'Failed to upload proof');
+      setToastMsg('❌ ' + (error.message || 'Failed to upload proof'));
       setShowToast(true);
     }
   };  return (
@@ -274,32 +293,67 @@ const ActiveDeliveries = () => {
                 <p className="mt-4 text-[#64748B]">Loading active deliveries...</p>
               </div>
             ) : deliveries.length > 0 ? (
-              deliveries.map((delivery) => (
-                <DeliveryCard
-                  key={delivery._id || delivery.id}
-                  packageId={delivery.trackingNumber || delivery.id}
-                  status={delivery.status}
-                  statusColor={delivery.statusColor || 'bg-blue-100 text-blue-700'}
-                  distance={delivery.distance || 'N/A'}
-                  time={delivery.estimatedTimeMinutes ? `${delivery.estimatedTimeMinutes} min` : delivery.time || 'N/A'}
-                  price={delivery.price || 'N/A'}
-                  pickupName={delivery.pickupName || delivery.pickupAddress?.name || 'Pickup Location'}
-                  pickupAddress={delivery.pickupAddress?.street || delivery.pickupAddress || 'Address not available'}
-                  pickupCoords={delivery.pickupCoords || delivery.pickupAddress?.coordinates}
-                  pickupBorder={delivery.status === 'Package Picked Up' ? 'border-[#E5E7EB]' : 'border-[#00D68F]'}
-                  deliveryName={delivery.deliveryName || delivery.deliveryAddress?.name || 'Delivery Location'}
-                  deliveryAddress={delivery.deliveryAddress?.street || delivery.deliveryAddress || 'Address not available'}
-                  deliveryCoords={delivery.deliveryCoords || delivery.deliveryAddress?.coordinates}
-                  deliveryBorder={delivery.status === 'Package Picked Up' ? 'border-[#FF9500]' : 'border-gray-200'}
-                  size={delivery.size || delivery.packageDetails?.size || 'N/A'}
-                  weight={delivery.weight || delivery.packageDetails?.weight || 'N/A'}
-                  notes={delivery.notes || delivery.packageDescription || delivery.packageDetails?.description}
-                  actionButtonText={delivery.status === 'En Route to Pickup' ? 'Arrived at Pickup' : 'Started Delivery'}
-                  onStatusUpdate={(newStatus) => handleStatusUpdate(delivery._id || delivery.id, newStatus)}
-                  onProofUpload={(file) => handleProofUpload(delivery._id || delivery.id, file)}
-                  updating={updatingStatus === (delivery._id || delivery.id)}
-                />
-              ))
+              deliveries.map((delivery) => {
+                // Map status to color
+                const getStatusColor = (status) => {
+                  const statusLower = status?.toLowerCase() || '';
+                  if (statusLower.includes('picked') || statusLower.includes('transit')) return 'bg-blue-100 text-blue-600';
+                  if (statusLower.includes('delivered') || statusLower.includes('completed')) return 'bg-green-100 text-green-600';
+                  if (statusLower.includes('pending') || statusLower.includes('assigned')) return 'bg-orange-100 text-orange-600';
+                  if (statusLower.includes('cancelled')) return 'bg-red-100 text-red-600';
+                  return 'bg-gray-100 text-gray-600';
+                };
+                
+                // Format status text
+                const formatStatus = (status) => {
+                  if (!status) return 'Unknown';
+                  return status.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
+                };
+                
+                // Get coordinates
+                const pickupCoords = delivery.pickup?.coordinates || delivery.pickupCoords || 
+                  (delivery.pickupAddress?.coordinates ? [delivery.pickupAddress.coordinates.lng, delivery.pickupAddress.coordinates.lat] : null);
+                  
+                const deliveryCoords = delivery.dropoff?.coordinates || delivery.deliveryCoords || delivery.destination?.coordinates ||
+                  (delivery.deliveryAddress?.coordinates ? [delivery.deliveryAddress.coordinates.lng, delivery.deliveryAddress.coordinates.lat] : null);
+                
+                // Get action button text based on status
+                const getActionButtonText = (status) => {
+                  const statusLower = status?.toLowerCase() || '';
+                  if (statusLower.includes('assigned') || statusLower.includes('pending')) return 'Start Pickup';
+                  if (statusLower.includes('route') && statusLower.includes('pickup')) return 'Arrived at Pickup';
+                  if (statusLower.includes('picked')) return 'Start Delivery';
+                  if (statusLower.includes('transit') || statusLower.includes('delivery')) return 'Complete Delivery';
+                  return 'Update Status';
+                };
+                
+                return (
+                  <DeliveryCard
+                    key={delivery._id || delivery.id}
+                    packageId={delivery.trackingNumber || delivery.deliveryId || delivery.id || 'N/A'}
+                    status={formatStatus(delivery.status)}
+                    statusColor={getStatusColor(delivery.status)}
+                    distance={delivery.distance ? `${delivery.distance} km` : (delivery.distanceInKm ? `${delivery.distanceInKm} km` : 'N/A')}
+                    time={delivery.estimatedTime || delivery.estimatedDuration || (delivery.estimatedTimeMinutes ? `${delivery.estimatedTimeMinutes} min` : 'N/A')}
+                    price={delivery.amount ? `₦${Number(delivery.amount).toFixed(2)}` : (delivery.price ? `₦${Number(delivery.price).toFixed(2)}` : '₦0.00')}
+                    pickupName={delivery.pickup?.name || delivery.pickupName || delivery.senderName || 'Pickup Location'}
+                    pickupAddress={delivery.pickup?.address || delivery.pickupAddress?.address || delivery.pickupAddress || 'Address not available'}
+                    pickupCoords={pickupCoords}
+                    pickupBorder={(delivery.status?.toLowerCase() || '').includes('picked') ? 'border-[#E5E7EB]' : 'border-[#00D68F]'}
+                    deliveryName={delivery.dropoff?.name || delivery.deliveryName || delivery.recipientName || delivery.receiverName || 'Delivery Location'}
+                    deliveryAddress={delivery.dropoff?.address || delivery.deliveryAddress?.address || delivery.deliveryAddress || delivery.destinationAddress || 'Address not available'}
+                    deliveryCoords={deliveryCoords}
+                    deliveryBorder={(delivery.status?.toLowerCase() || '').includes('picked') ? 'border-[#FF9500]' : 'border-gray-200'}
+                    size={delivery.packageSize || delivery.size || delivery.packageDetails?.size || 'Standard'}
+                    weight={delivery.packageWeight || delivery.weight || delivery.packageDetails?.weight || 'N/A'}
+                    notes={delivery.specialInstructions || delivery.notes || delivery.description || delivery.packageDescription || delivery.packageDetails?.description || 'No special instructions'}
+                    actionButtonText={getActionButtonText(delivery.status)}
+                    onStatusUpdate={(newStatus) => handleStatusUpdate(delivery._id || delivery.id, newStatus)}
+                    onProofUpload={(file) => handleProofUpload(delivery._id || delivery.id, file)}
+                    updating={updatingStatus === (delivery._id || delivery.id)}
+                  />
+                );
+              })
             ) : (
               <div className="text-center py-12">
                 <div className="text-gray-400 text-5xl mb-4">📦</div>
