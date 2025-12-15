@@ -45,7 +45,7 @@ const ManageUsers = () => {
           <IonContent className="ion-padding">
             <div className="flex items-center justify-center h-full">
               <div className="text-center">
-                <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-[#9333EA] mx-auto mb-4"></div>
+                <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-[#00D68F] mx-auto mb-4"></div>
                 <p className="text-[#64748B]">Loading users...</p>
               </div>
             </div>
@@ -69,15 +69,15 @@ const ManageUsers = () => {
             <div className="flex gap-4 mb-6">
               <input
                 type="text"
-                placeholder="Search users..."
+                placeholder="Search by name or email..."
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                className="flex-1 px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:border-[#9333EA]"
+                className="flex-1 px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:border-[#00D68F]"
               />
               <select
                 value={filterRole}
                 onChange={(e) => setFilterRole(e.target.value)}
-                className="px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:border-[#9333EA]"
+                className="px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:border-[#00D68F]"
               >
                 <option value="all">All Roles</option>
                 <option value="customer">Customers</option>
@@ -116,7 +116,7 @@ const ManageUsers = () => {
                           </span>
                         </td>
                         <td className="px-6 py-4">
-                          <button className="text-[#9333EA] hover:underline text-sm">View</button>
+                          <button className="text-[#00D68F] hover:underline text-sm">View</button>
                         </td>
                       </tr>
                     ))}

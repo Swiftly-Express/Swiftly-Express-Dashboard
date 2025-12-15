@@ -51,7 +51,7 @@ const AdminLogin = () => {
           <div className="bg-white p-8 rounded-2xl shadow-lg w-full max-w-md">
             <YummyText>
               <div className="text-center mb-8">
-                <h1 className="text-3xl font-bold text-[#9333EA] mb-2">Admin Portal</h1>
+                <h1 className="text-3xl font-bold text-[#00D68F] mb-2">Admin Portal</h1>
                 <p className="text-[#64748B]">Sign in to manage Swiftly Express</p>
               </div>
 
@@ -64,7 +64,7 @@ const AdminLogin = () => {
                     type="email"
                     value={formData.email}
                     onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-                    className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:border-[#9333EA]"
+                    className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:border-[#00D68F]"
                     placeholder="admin@swiftlyxpress.com"
                     required
                   />
@@ -78,7 +78,7 @@ const AdminLogin = () => {
                     type="password"
                     value={formData.password}
                     onChange={(e) => setFormData({ ...formData, password: e.target.value })}
-                    className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:border-[#9333EA]"
+                    className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:border-[#00D68F]"
                     placeholder="••••••••"
                     required
                   />
@@ -93,7 +93,7 @@ const AdminLogin = () => {
                 <button
                   type="submit"
                   disabled={loading}
-                  className="w-full bg-[#9333EA] hover:bg-[#7C2DBD] text-white py-3 rounded-lg transition-colors disabled:opacity-50"
+                  className="w-full bg-[#00D68F] hover:bg-[#00B75A] text-white py-3 rounded-lg transition-colors disabled:opacity-50"
                 >
                   {loading ? 'Signing in...' : 'Sign In'}
                 </button>

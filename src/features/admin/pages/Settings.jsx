@@ -39,7 +39,7 @@ const Settings = () => {
                 onClick={() => setActiveTab('general')}
                 className={`px-4 py-2 border-b-2 transition-colors ${
                   activeTab === 'general'
-                    ? 'border-[#9333EA] text-[#9333EA]'
+                    ? 'border-[#00D68F] text-[#00D68F]'
                     : 'border-transparent text-gray-500'
                 }`}
               >
@@ -49,7 +49,7 @@ const Settings = () => {
                 onClick={() => setActiveTab('pricing')}
                 className={`px-4 py-2 border-b-2 transition-colors ${
                   activeTab === 'pricing'
-                    ? 'border-[#9333EA] text-[#9333EA]'
+                    ? 'border-[#00D68F] text-[#00D68F]'
                     : 'border-transparent text-gray-500'
                 }`}
               >
@@ -59,7 +59,7 @@ const Settings = () => {
                 onClick={() => setActiveTab('notifications')}
                 className={`px-4 py-2 border-b-2 transition-colors ${
                   activeTab === 'notifications'
-                    ? 'border-[#9333EA] text-[#9333EA]'
+                    ? 'border-[#00D68F] text-[#00D68F]'
                     : 'border-transparent text-gray-500'
                 }`}
               >
@@ -81,7 +81,7 @@ const Settings = () => {
                       type="text"
                       value={settings.platformName}
                       onChange={(e) => setSettings({ ...settings, platformName: e.target.value })}
-                      className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:border-[#9333EA]"
+                      className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:border-[#00D68F]"
                     />
                   </div>
 
@@ -93,7 +93,7 @@ const Settings = () => {
                       type="email"
                       value={settings.supportEmail}
                       onChange={(e) => setSettings({ ...settings, supportEmail: e.target.value })}
-                      className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:border-[#9333EA]"
+                      className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:border-[#00D68F]"
                     />
                   </div>
 
@@ -105,7 +105,7 @@ const Settings = () => {
                       type="tel"
                       value={settings.supportPhone}
                       onChange={(e) => setSettings({ ...settings, supportPhone: e.target.value })}
-                      className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:border-[#9333EA]"
+                      className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:border-[#00D68F]"
                     />
                   </div>
                 </div>
@@ -126,7 +126,7 @@ const Settings = () => {
                       type="number"
                       value={settings.commission}
                       onChange={(e) => setSettings({ ...settings, commission: e.target.value })}
-                      className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:border-[#9333EA]"
+                      className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:border-[#00D68F]"
                     />
                   </div>
 
@@ -138,7 +138,7 @@ const Settings = () => {
                       type="number"
                       value={settings.minimumDeliveryFee}
                       onChange={(e) => setSettings({ ...settings, minimumDeliveryFee: e.target.value })}
-                      className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:border-[#9333EA]"
+                      className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:border-[#00D68F]"
                     />
                   </div>
 
@@ -150,7 +150,7 @@ const Settings = () => {
                       type="number"
                       value={settings.maximumDeliveryRadius}
                       onChange={(e) => setSettings({ ...settings, maximumDeliveryRadius: e.target.value })}
-                      className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:border-[#9333EA]"
+                      className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:border-[#00D68F]"
                     />
                   </div>
                 </div>
@@ -169,7 +169,7 @@ const Settings = () => {
             <div className="mt-6">
               <button
                 onClick={handleSave}
-                className="bg-[#9333EA] hover:bg-[#7C2DBD] text-white px-6 py-3 rounded-lg transition-colors"
+                className="bg-[#00D68F] hover:bg-[#00B75A] text-white px-6 py-3 rounded-lg transition-colors"
               >
                 Save Changes
               </button>

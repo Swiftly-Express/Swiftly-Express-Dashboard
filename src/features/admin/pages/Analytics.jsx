@@ -20,40 +20,40 @@ const Analytics = () => {
             {/* Time Range Filter */}
             <div className="flex gap-2 mb-6">
               <button
-                onClick={() => setTimeRange('24hours')}
-                className={`px-4 py-2 rounded-lg transition-colors ${
-                  timeRange === '24hours'
-                    ? 'bg-[#9333EA] text-white'
+                onClick={() => setTimeRange('24h')}
+                className={`px-4 py-2 rounded-lg font-medium transition-colors ${
+                  timeRange === '24h'
+                    ? 'bg-[#00D68F] text-white'
                     : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
                 }`}
               >
                 24 Hours
               </button>
               <button
-                onClick={() => setTimeRange('7days')}
-                className={`px-4 py-2 rounded-lg transition-colors ${
-                  timeRange === '7days'
-                    ? 'bg-[#9333EA] text-white'
+                onClick={() => setTimeRange('7d')}
+                className={`px-4 py-2 rounded-lg font-medium transition-colors ${
+                  timeRange === '7d'
+                    ? 'bg-[#00D68F] text-white'
                     : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
                 }`}
               >
                 7 Days
               </button>
               <button
-                onClick={() => setTimeRange('30days')}
-                className={`px-4 py-2 rounded-lg transition-colors ${
-                  timeRange === '30days'
-                    ? 'bg-[#9333EA] text-white'
+                onClick={() => setTimeRange('30d')}
+                className={`px-4 py-2 rounded-lg font-medium transition-colors ${
+                  timeRange === '30d'
+                    ? 'bg-[#00D68F] text-white'
                     : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
                 }`}
               >
                 30 Days
               </button>
               <button
-                onClick={() => setTimeRange('90days')}
-                className={`px-4 py-2 rounded-lg transition-colors ${
-                  timeRange === '90days'
-                    ? 'bg-[#9333EA] text-white'
+                onClick={() => setTimeRange('90d')}
+                className={`px-4 py-2 rounded-lg font-medium transition-colors ${
+                  timeRange === '90d'
+                    ? 'bg-[#00D68F] text-white'
                     : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
                 }`}
               >

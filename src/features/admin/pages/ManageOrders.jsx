@@ -45,7 +45,7 @@ const ManageOrders = () => {
           <IonContent className="ion-padding">
             <div className="flex items-center justify-center h-full">
               <div className="text-center">
-                <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-[#9333EA] mx-auto mb-4"></div>
+                <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-[#00D68F] mx-auto mb-4"></div>
                 <p className="text-[#64748B]">Loading orders...</p>
               </div>
             </div>
@@ -72,12 +72,12 @@ const ManageOrders = () => {
                 placeholder="Search orders..."
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                className="flex-1 px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:border-[#9333EA]"
+                className="flex-1 px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:border-[#00D68F]"
               />
               <select
                 value={filterStatus}
                 onChange={(e) => setFilterStatus(e.target.value)}
-                className="px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:border-[#9333EA]"
+                className="px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:border-[#00D68F]"
               >
                 <option value="all">All Status</option>
                 <option value="pending">Pending</option>
@@ -124,7 +124,7 @@ const ManageOrders = () => {
                         </td>
                         <td className="px-6 py-4">₦{order.amount}</td>
                         <td className="px-6 py-4">
-                          <button className="text-[#9333EA] hover:underline text-sm">View</button>
+                          <button className="text-[#00D68F] hover:underline text-sm">View</button>
                         </td>
                       </tr>
                     ))}

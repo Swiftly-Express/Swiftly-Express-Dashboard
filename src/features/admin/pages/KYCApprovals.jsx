@@ -65,7 +65,7 @@ const KYCApprovals = () => {
           <IonContent className="ion-padding">
             <div className="flex items-center justify-center h-full">
               <div className="text-center">
-                <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-[#9333EA] mx-auto mb-4"></div>
+                <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-[#00D68F] mx-auto mb-4"></div>
                 <p className="text-[#64748B]">Loading KYC requests...</p>
               </div>
             </div>

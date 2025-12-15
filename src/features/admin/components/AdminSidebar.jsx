@@ -17,7 +17,7 @@ const SidebarButton = ({ to, active, icon, label, count }) => {
     <button onClick={handleClick} className="w-full text-left">
       <div
         className={`flex items-center gap-3 px-4 py-3 rounded-xl transition-colors w-full ${
-          active ? 'bg-[#9333EA] text-white' : 'text-[#4B5563] hover:bg-gray-50'
+          active ? 'bg-[#00D68F] text-white' : 'text-[#4B5563] hover:bg-gray-50'
         }`}
       >
         {icon}

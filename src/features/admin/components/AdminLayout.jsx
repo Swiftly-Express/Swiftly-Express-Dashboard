@@ -13,7 +13,7 @@ const AdminLayout = ({ children }) => {
             <div className="flex items-center justify-between">
               {/* Left: logo + title */}
               <div className="flex items-center gap-3 ml-4">
-                <div className="w-8 h-8 bg-gradient-to-br from-[#9333EA] to-[#7C3AED] rounded-lg flex items-center justify-center">
+                <div className="w-8 h-8 bg-gradient-to-br from-[#00D68F] to-[#00B75A] rounded-lg flex items-center justify-center">
                   <img src="/vanicon-white.svg" alt="truck" width={20} height={20} />
                 </div>
                 <div className="flex flex-col">
@@ -34,7 +34,7 @@ const AdminLayout = ({ children }) => {
                   </svg>
                   <span className="absolute top-1 right-2 w-2 h-2 bg-[#FF6B00] rounded-full"></span>
                 </button>
-                <button className="w-10 h-10 rounded-full bg-gradient-to-br from-[#9333EA] to-[#7C3AED] flex items-center justify-center overflow-hidden text-white font-medium text-sm">
+                <button className="w-10 h-10 rounded-full bg-gradient-to-br from-[#00D68F] to-[#00B75A] flex items-center justify-center overflow-hidden text-white font-medium text-sm">
                   AD
                 </button>
               </div>
