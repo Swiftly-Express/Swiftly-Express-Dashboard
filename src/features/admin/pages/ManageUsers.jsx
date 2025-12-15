@@ -1,138 +1,230 @@
-import React, { useState, useEffect } from 'react';
-import { IonPage, IonContent, IonToast } from '@ionic/react';
+import React, { useState } from 'react';
+import { IonPage, IonContent } from '@ionic/react';
+import { Search, Filter, MoreVertical, MapPin, Mail, Phone } from 'lucide-react';
 import AdminLayout from '../components/AdminLayout';
 import { YummyText } from '../../../components/YummyText';
 
 const ManageUsers = () => {
-  const [users, setUsers] = useState([]);
-  const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
-  const [filterRole, setFilterRole] = useState('all');
-  const [toastMsg, setToastMsg] = useState('');
-  const [showToast, setShowToast] = useState(false);
+  const [statusFilter, setStatusFilter] = useState('All Status');
 
-  useEffect(() => {
-    fetchUsers();
-  }, []);
+  // Stats data
+  const stats = [
+    { label: 'Total Users', value: '2,847', color: 'text-gray-900' },
+    { label: 'Active Users', value: '2,634', color: 'text-green-600' },
+    { label: 'Inactive Users', value: '189', color: 'text-gray-600' },
+    { label: 'Suspended', value: '24', color: 'text-red-600' }
+  ];
 
-  const fetchUsers = async () => {
-    try {
-      setLoading(true);
-      // TODO: Replace with actual API call
-      // const response = await getUsers();
-      // setUsers(response.data);
-      setUsers([]);
-    } catch (error) {
-      console.error('Failed to fetch users:', error);
-      setToastMsg('Failed to load users');
-      setShowToast(true);
-    } finally {
-      setLoading(false);
+  // Users data
+  const users = [
+    {
+      id: 'USR-001',
+      name: 'John Smith',
+      joined: 'Joined 2024-01-15',
+      email: 'john.smith@email.com',
+      phone: '+1 (555) 123-4567',
+      location: 'Benin City, ED',
+      orders: 45,
+      totalSpent: '₦1,245.00',
+      status: 'Active',
+      statusColor: 'bg-green-100 text-green-800'
+    },
+    {
+      id: 'USR-002',
+      name: 'Sarah Johnson',
+      joined: 'Joined 2024-02-20',
+      email: 'sarah.j@email.com',
+      phone: '+1 (555) 234-5678',
+      location: 'Enugu, EN',
+      orders: 32,
+      totalSpent: '₦8940.50',
+      status: 'Active',
+      statusColor: 'bg-green-100 text-green-800'
+    },
+    {
+      id: 'USR-003',
+      name: 'Mike Brown',
+      joined: 'Joined 2024-03-10',
+      email: 'mike.brown@email.com',
+      phone: '+1 (555) 345-6789',
+      location: 'Kaduna, KD',
+      orders: 18,
+      totalSpent: '₦4546.75',
+      status: 'Inactive',
+      statusColor: 'bg-gray-100 text-gray-800'
+    },
+    {
+      id: 'USR-004',
+      name: 'Emma Davis',
+      joined: 'Joined 2023-11-05',
+      email: 'emma.davis@email.com',
+      phone: '+1 (555) 456-7890',
+      location: 'Ibadan, OY',
+      orders: 67,
+      totalSpent: '₦2,134.20',
+      status: 'Active',
+      statusColor: 'bg-green-100 text-green-800'
+    },
+    {
+      id: 'USR-005',
+      name: 'James Wilson',
+      joined: 'Joined 2024-04-12',
+      email: 'james.w@email.com',
+      phone: '+1 (555) 567-8901',
+      location: 'Asaba, DT',
+      orders: 23,
+      totalSpent: '₦6728.90',
+      status: 'Suspended',
+      statusColor: 'bg-red-100 text-red-800'
+    },
+    {
+      id: 'USR-006',
+      name: 'Olivia Martinez',
+      joined: 'Joined 2024-01-28',
+      email: 'olivia.m@email.com',
+      phone: '+1 (555) 678-9012',
+      location: 'Owerri, IM',
+      orders: 41,
+      totalSpent: '₦1,023.45',
+      status: 'Active',
+      statusColor: 'bg-green-100 text-green-800'
     }
-  };
-
-  const filteredUsers = users.filter(user => {
-    const matchesSearch = user.name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-                         user.email?.toLowerCase().includes(searchQuery.toLowerCase());
-    const matchesRole = filterRole === 'all' || user.role === filterRole;
-    return matchesSearch && matchesRole;
-  });
-
-  if (loading) {
-    return (
-      <IonPage>
-        <AdminLayout>
-          <IonContent className="ion-padding">
-            <div className="flex items-center justify-center h-full">
-              <div className="text-center">
-                <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-[#00D68F] mx-auto mb-4"></div>
-                <p className="text-[#64748B]">Loading users...</p>
-              </div>
-            </div>
-          </IonContent>
-        </AdminLayout>
-      </IonPage>
-    );
-  }
+  ];
 
   return (
     <IonPage>
       <AdminLayout>
-        <IonContent className="ion-padding">
-          <YummyText>
-            <div className="mb-6">
-              <h1 className="text-3xl font-medium text-[#0F172A] mb-2">Manage Users</h1>
-              <p className="text-[#64748B]">View and manage all platform users</p>
-            </div>
+        <IonContent className="ion-no-padding">
+          {/* Header */}
+          <div className="mb-8">
+            <YummyText className="text-3xl font-bold text-gray-900 mb-2">Manage Users</YummyText>
+            <YummyText className="text-gray-500">View and manage all customer accounts</YummyText>
+          </div>
 
-            {/* Filters */}
-            <div className="flex gap-4 mb-6">
-              <input
-                type="text"
-                placeholder="Search by name or email..."
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                className="flex-1 px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:border-[#00D68F]"
-              />
-              <select
-                value={filterRole}
-                onChange={(e) => setFilterRole(e.target.value)}
-                className="px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:border-[#00D68F]"
-              >
-                <option value="all">All Roles</option>
-                <option value="customer">Customers</option>
-                <option value="rider">Riders</option>
-              </select>
-            </div>
+          {/* Stats Cards */}
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+            {stats.map((stat, index) => (
+              <div key={index} className="bg-white rounded-xl p-6 shadow-sm border border-gray-100">
+                <YummyText className="text-sm text-gray-500 mb-2">{stat.label}</YummyText>
+                <YummyText className={`text-3xl font-bold ${stat.color}`}>{stat.value}</YummyText>
+              </div>
+            ))}
+          </div>
 
-            {/* Users Table */}
-            <div className="bg-white rounded-xl shadow-sm overflow-hidden">
-              {filteredUsers.length === 0 ? (
-                <div className="text-center py-12">
-                  <p className="text-[#64748B]">No users found</p>
+          {/* Users Table */}
+          <div className="bg-white rounded-xl shadow-sm border border-gray-100">
+            {/* Table Header */}
+            <div className="p-6 border-b border-gray-100">
+              <div className="flex items-center justify-between mb-4">
+                <div>
+                  <YummyText className="text-lg font-semibold text-gray-900">All Users</YummyText>
+                  <YummyText className="text-sm text-gray-500">Showing 6 of 6 users</YummyText>
                 </div>
-              ) : (
-                <table className="w-full">
-                  <thead className="bg-gray-50 border-b">
-                    <tr>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-[#64748B] uppercase">Name</th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-[#64748B] uppercase">Email</th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-[#64748B] uppercase">Role</th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-[#64748B] uppercase">Status</th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-[#64748B] uppercase">Actions</th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y">
-                    {filteredUsers.map(user => (
-                      <tr key={user.id}>
-                        <td className="px-6 py-4">{user.name}</td>
-                        <td className="px-6 py-4">{user.email}</td>
-                        <td className="px-6 py-4">{user.role}</td>
-                        <td className="px-6 py-4">
-                          <span className={`px-2 py-1 rounded-full text-xs ${
-                            user.status === 'active' ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'
-                          }`}>
-                            {user.status}
-                          </span>
-                        </td>
-                        <td className="px-6 py-4">
-                          <button className="text-[#00D68F] hover:underline text-sm">View</button>
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              )}
+                <div className="flex items-center gap-3">
+                  {/* Search */}
+                  <div className="relative">
+                    <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400" />
+                    <input
+                      type="text"
+                      placeholder="Search users..."
+                      value={searchQuery}
+                      onChange={(e) => setSearchQuery(e.target.value)}
+                      className="pl-10 pr-4 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    />
+                  </div>
+                  {/* Filter */}
+                  <button className="flex items-center gap-2 px-4 py-2 border border-gray-200 rounded-lg text-sm text-gray-700 hover:bg-gray-50">
+                    <Filter className="w-4 h-4" />
+                    {statusFilter}
+                  </button>
+                </div>
+              </div>
             </div>
-          </YummyText>
 
-          <IonToast
-            isOpen={showToast}
-            onDidDismiss={() => setShowToast(false)}
-            message={toastMsg}
-            duration={3000}
-            position="top"
-          />
+            {/* Table */}
+            <div className="overflow-x-auto">
+              <table className="w-full table-fixed">
+                <thead className="bg-gray-50 border-b border-gray-100">
+                  <tr>
+                    <th className="w-[8%] px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      User ID
+                    </th>
+                    <th className="w-[15%] px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      Name
+                    </th>
+                    <th className="w-[18%] px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      Contact
+                    </th>
+                    <th className="w-[10%] px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      Location
+                    </th>
+                    <th className="w-[8%] px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      Orders
+                    </th>
+                    <th className="w-[12%] px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      Total Spent
+                    </th>
+                    <th className="w-[8%] px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      Status
+                    </th>
+                    <th className="w-[10%] px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      Actions
+                    </th>
+                  </tr>
+                </thead>
+                <tbody className="bg-white divide-y divide-gray-100">
+                  {users.map((user, index) => (
+                    <tr key={index} className="hover:bg-gray-50 transition-colors">
+                      <td className="px-3 py-4 whitespace-nowrap">
+                        <YummyText className="text-sm font-medium text-gray-900">{user.id}</YummyText>
+                      </td>
+                      <td className="px-3 py-4">
+                        <div>
+                          <YummyText className="text-sm font-medium text-gray-900 truncate">{user.name}</YummyText>
+                          <YummyText className="text-xs text-gray-500">{user.joined}</YummyText>
+                        </div>
+                      </td>
+                      <td className="px-3 py-4">
+                        <div className="space-y-1">
+                          <div className="flex items-center text-xs text-gray-600">
+                            <Mail className="w-3 h-3 mr-1 text-gray-400 flex-shrink-0" />
+                            <span className="truncate">{user.email}</span>
+                          </div>
+                          <div className="flex items-center text-xs text-gray-600">
+                            <Phone className="w-3 h-3 mr-1 text-gray-400 flex-shrink-0" />
+                            <span className="truncate">{user.phone}</span>
+                          </div>
+                        </div>
+                      </td>
+                      <td className="px-3 py-4">
+                        <div className="flex items-center text-xs text-gray-600">
+                          <MapPin className="w-3 h-3 mr-1 text-gray-400 flex-shrink-0" />
+                          <span className="truncate">{user.location}</span>
+                        </div>
+                      </td>
+                      <td className="px-3 py-4 whitespace-nowrap">
+                        <YummyText className="text-sm text-gray-900">{user.orders}</YummyText>
+                      </td>
+                      <td className="px-3 py-4 whitespace-nowrap">
+                        <YummyText className="text-sm font-medium text-gray-900">{user.totalSpent}</YummyText>
+                      </td>
+                      <td className="px-3 py-4 whitespace-nowrap">
+                        <span className={`px-2 py-1 rounded-full text-xs font-medium ${user.statusColor}`}>
+                          {user.status}
+                        </span>
+                      </td>
+                      <td className="px-3 py-4 whitespace-nowrap text-center">
+                        <button className="text-gray-400 hover:text-gray-600">
+                          <MoreVertical className="w-5 h-5" />
+                        </button>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </div>
         </IonContent>
       </AdminLayout>
     </IonPage>
