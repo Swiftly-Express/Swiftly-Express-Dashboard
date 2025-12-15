@@ -143,6 +143,7 @@ const ManageUsers = () => {
             </div>
 
             {/* Table */}
+            <YummyText>
             <div className="overflow-x-auto">
               <table className="w-full table-fixed">
                 <thead className="bg-gray-50 border-b border-gray-100">
@@ -224,6 +225,7 @@ const ManageUsers = () => {
                 </tbody>
               </table>
             </div>
+            </YummyText>
           </div>
         </IonContent>
       </AdminLayout>
