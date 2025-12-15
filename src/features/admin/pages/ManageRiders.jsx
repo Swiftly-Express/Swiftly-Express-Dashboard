@@ -150,7 +150,7 @@ const ManageRiders = () => {
           {/* Riders Table */}
           <div className="bg-white rounded-xl shadow-sm border border-gray-100">
             {/* Table Header */}
-            <div className="p-6 border-b border-gray-100">
+            <div className="p-3 border-b border-gray-100">
               <div className="flex items-center justify-between">
                 <div>
                   <YummyText className="text-medium font-medium text-gray-900">All Riders</YummyText>

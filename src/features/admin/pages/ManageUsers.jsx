@@ -1,8 +1,9 @@
 import React, { useState } from 'react';
 import { IonPage, IonContent } from '@ionic/react';
-import { Search, Filter, MoreVertical, MapPin, Mail, Phone } from 'lucide-react';
+import { Search, Filter, MoreVertical, Mail, Phone } from 'lucide-react';
 import AdminLayout from '../components/AdminLayout';
 import { YummyText } from '../../../components/YummyText';
+import LocationIcon from '../../../icons/Locationicon';
 
 const ManageUsers = () => {
   const [searchQuery, setSearchQuery] = useState('');
@@ -115,11 +116,11 @@ const ManageUsers = () => {
           {/* Users Table */}
           <div className="bg-white rounded-xl shadow-sm border border-gray-100">
             {/* Table Header */}
-            <div className="p-6 border-b border-gray-100">
-              <div className="flex items-center justify-between mb-4">
+            <div className="p-3 border-b border-gray-100">
+              <div className="flex items-center justify-between">
                 <div>
-                  <YummyText className="text-lg font-semibold text-gray-900">All Users</YummyText>
-                  <YummyText className="text-sm text-gray-500">Showing 6 of 6 users</YummyText>
+                  <YummyText className="text-medium font-medium text-gray-900">All Users</YummyText>
+                  <YummyText className="text-xs text-gray-500">Showing 6 of 6 users</YummyText>
                 </div>
                 <div className="flex items-center gap-3">
                   {/* Search */}
@@ -148,28 +149,28 @@ const ManageUsers = () => {
               <table className="w-full table-fixed">
                 <thead className="bg-gray-50 border-b border-gray-100">
                   <tr>
-                    <th className="w-[8%] px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    <th className="w-[8%] px-3 py-3 text-left text-xs font-medium text-[#0A0A0A] uppercase tracking-wider">
                       User ID
                     </th>
-                    <th className="w-[15%] px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    <th className="w-[15%] px-3 py-3 text-left text-xs font-medium text-[#0A0A0A] uppercase tracking-wider">
                       Name
                     </th>
-                    <th className="w-[18%] px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    <th className="w-[18%] px-3 py-3 text-left text-xs font-medium text-[#0A0A0A] uppercase tracking-wider">
                       Contact
                     </th>
-                    <th className="w-[10%] px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    <th className="w-[10%] px-3 py-3 text-left text-xs font-medium text-[#0A0A0A] uppercase tracking-wider">
                       Location
                     </th>
-                    <th className="w-[8%] px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    <th className="w-[8%] px-3 py-3 text-left text-xs font-medium text-[#0A0A0A] uppercase tracking-wider">
                       Orders
                     </th>
-                    <th className="w-[12%] px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    <th className="w-[12%] px-3 py-3 text-left text-xs font-medium text-[#0A0A0A] uppercase tracking-wider">
                       Total Spent
                     </th>
-                    <th className="w-[8%] px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    <th className="w-[8%] px-3 py-3 text-left text-xs font-medium text-[#0A0A0A] uppercase tracking-wider">
                       Status
                     </th>
-                    <th className="w-[10%] px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    <th className="w-[10%] px-3 py-3 text-left text-xs font-medium text-[#0A0A0A] uppercase tracking-wider">
                       Actions
                     </th>
                   </tr>
@@ -178,37 +179,37 @@ const ManageUsers = () => {
                   {users.map((user, index) => (
                     <tr key={index} className="hover:bg-gray-50 transition-colors">
                       <td className="px-3 py-4 whitespace-nowrap">
-                        <YummyText className="text-sm font-medium text-gray-900">{user.id}</YummyText>
+                        <YummyText className="text-sm font-medium text-[#101828]">{user.id}</YummyText>
                       </td>
                       <td className="px-3 py-4">
                         <div>
-                          <YummyText className="text-sm font-medium text-gray-900 truncate">{user.name}</YummyText>
-                          <YummyText className="text-xs text-gray-500">{user.joined}</YummyText>
+                          <YummyText className="text-sm font-medium text-[#101828] truncate">{user.name}</YummyText>
+                          <YummyText className="text-xs text-[#4A5565]">{user.joined}</YummyText>
                         </div>
                       </td>
                       <td className="px-3 py-4">
                         <div className="space-y-1">
-                          <div className="flex items-center text-xs text-gray-600">
-                            <Mail className="w-3 h-3 mr-1 text-gray-400 flex-shrink-0" />
+                          <div className="flex items-center text-xs text-[#4A5565]">
+                            <Mail className="w-3 h-3 mr-1 text-[#4A5565] flex-shrink-0" />
                             <span className="truncate">{user.email}</span>
                           </div>
-                          <div className="flex items-center text-xs text-gray-600">
-                            <Phone className="w-3 h-3 mr-1 text-gray-400 flex-shrink-0" />
+                          <div className="flex items-center text-xs text-[#4A5565]">
+                            <Phone className="w-3 h-3 mr-1 text-[#4A5565] flex-shrink-0" />
                             <span className="truncate">{user.phone}</span>
                           </div>
                         </div>
                       </td>
                       <td className="px-3 py-4">
-                        <div className="flex items-center text-xs text-gray-600">
-                          <MapPin className="w-3 h-3 mr-1 text-gray-400 flex-shrink-0" />
+                        <div className="flex items-center text-xs gap-1 text-[#4A5565]">
+                          <LocationIcon width={13} height={13} stroke="#4A5565" />
                           <span className="truncate">{user.location}</span>
                         </div>
                       </td>
-                      <td className="px-3 py-4 whitespace-nowrap">
-                        <YummyText className="text-sm text-gray-900">{user.orders}</YummyText>
+                      <td className="px-7 py-4 whitespace-nowrap">
+                        <YummyText className="text-sm text-[#101828]">{user.orders}</YummyText>
                       </td>
                       <td className="px-3 py-4 whitespace-nowrap">
-                        <YummyText className="text-sm font-medium text-gray-900">{user.totalSpent}</YummyText>
+                        <YummyText className="text-sm font-medium text-[#101828]">{user.totalSpent}</YummyText>
                       </td>
                       <td className="px-3 py-4 whitespace-nowrap">
                         <span className={`px-2 py-1 rounded-full text-xs font-medium ${user.statusColor}`}>
@@ -216,7 +217,7 @@ const ManageUsers = () => {
                         </span>
                       </td>
                       <td className="px-3 py-4 whitespace-nowrap text-center">
-                        <button className="text-gray-400 hover:text-gray-600">
+                        <button className="text-[#0A0A0A] hover:text-gray-600">
                           <MoreVertical className="w-5 h-5" />
                         </button>
                       </td>

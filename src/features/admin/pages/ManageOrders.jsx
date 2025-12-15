@@ -127,11 +127,11 @@ const ManageOrders = () => {
           {/* Orders Table */}
           <div className="bg-white rounded-xl shadow-sm border border-gray-100">
             {/* Table Header */}
-            <div className="p-6 border-b border-gray-100">
+            <div className="p-3 border-b border-gray-100">
               <div className="flex items-center justify-between">
                 <div>
-                  <YummyText className="text-lg font-semibold text-gray-900">All Orders</YummyText>
-                  <YummyText className="text-sm text-gray-500">Showing 6 of 6 orders</YummyText>
+                  <YummyText className="text-medium font-medium text-gray-900">All Orders</YummyText>
+                  <YummyText className="text-xs text-gray-500">Showing 6 of 6 orders</YummyText>
                 </div>
                 <div className="flex items-center gap-3">
                   {/* Search */}
@@ -161,31 +161,31 @@ const ManageOrders = () => {
                 <table className="w-full table-fixed">
                   <thead className="bg-gray-50 border-b border-gray-100 sticky top-0 z-10">
                     <tr>
-                      <th className="w-[10%] px-1 py-3 text-left text-[10.5px] font-[500] text-[#0A0A0A] uppercase tracking-wider">
+                      <th className="w-[9%] px-2 py-3 text-left text-[10.5px] font-[500] text-[#0A0A0A] uppercase tracking-wider">
                         Order ID
                       </th>
-                      <th className="w-[12%] px-1 py-3 text-left text-[10.5px] font-[500] text-[#0A0A0A] uppercase tracking-wider">
+                      <th className="w-[11%] px-3 py-3 text-left text-[10.5px] font-[500] text-[#0A0A0A] uppercase tracking-wider">
                         Customer
                       </th>
-                      <th className="w-[12%] px-1 py-3 text-left text-[10.5px] font-[500] text-[#0A0A0A] uppercase tracking-wider">
+                      <th className="w-[11%] px-4 py-3 text-left text-[10.5px] font-[500] text-[#0A0A0A] uppercase tracking-wider">
                         Rider
                       </th>
-                      <th className="w-[20%] px-1 py-3 text-left text-[10.5px] font-[500] text-[#0A0A0A] uppercase tracking-wider">
+                      <th className="w-[22%] px-3 py-3 text-left text-[10.5px] font-[500] text-[#0A0A0A] uppercase tracking-wider">
                         Route
                       </th>
-                      <th className="w-[10%] px-1 py-3 text-left text-[10.5px] font-[500] text-[#0A0A0A] uppercase tracking-wider">
+                      <th className="w-[9%] px-2 py-3 text-left text-[10.5px] font-[500] text-[#0A0A0A] uppercase tracking-wider">
                         Distance
                       </th>
-                      <th className="w-[8%] px-1 py-3 text-left text-[10.5px] font-[500] text-[#0A0A0A] uppercase tracking-wider">
+                      <th className="w-[9%] px-3 py-3 text-left text-[10.5px] font-[500] text-[#0A0A0A] uppercase tracking-wider">
                         Amount
                       </th>
-                      <th className="w-[10%] px-1 py-3 text-left text-[10.5px] font-[500] text-[#0A0A0A] uppercase tracking-wider">
+                      <th className="w-[11%] px-6 py-3 text-left text-[10.5px] font-[500] text-[#0A0A0A] uppercase tracking-wider">
                         Status
                       </th>
-                      <th className="w-[15%] px-1 py-3 text-left text-[10.5px] font-[500] text-[#0A0A0A] uppercase tracking-wider">
+                      <th className="w-[13%] px-6 py-3 text-left text-[10.5px] font-[500] text-[#0A0A0A] uppercase tracking-wider">
                         Date
                       </th>
-                      <th className="w-[6%] px-1 py-3 text-left text-[10.5px] font-[500] text-[#0A0A0A] uppercase tracking-wider">
+                      <th className="w-[6%] px-0 py-3 text-left text-[10.5px] font-[500] text-[#0A0A0A] uppercase tracking-wider">
                         Actions
                       </th>
                     </tr>
@@ -195,12 +195,12 @@ const ManageOrders = () => {
               <div className="overflow-y-auto max-h-[500px]">
                 <table className="w-full table-fixed">
                   <tbody className="bg-white divide-y divide-gray-200">
-                    {orders.map((order, index) => (
+                    {orders.map((order, index) => ( 
                       <tr key={index} className="hover:bg-gray-50 transition-colors">
-                        <td className="w-[10%] px-1 py-4 whitespace-nowrap">
+                        <td className="w-[9%] px-2 py-4 whitespace-nowrap">
                           <YummyText className="text-[12px] font-medium text-gray-900">{order.id}</YummyText>
                         </td>
-                        <td className="w-[12%] px-1 py-4 whitespace-nowrap">
+                        <td className="w-[11%] px-2 py-4 whitespace-nowrap">
                           <div className="flex items-center">
                             <User className="w-3 h-3 mr-1 text-gray-400 flex-shrink-0" />
                             <div>
@@ -209,7 +209,7 @@ const ManageOrders = () => {
                             </div>
                           </div>
                         </td>
-                        <td className="w-[12%] px-1 py-4 whitespace-nowrap">
+                        <td className="w-[11%] px-2 py-4 whitespace-nowrap">
                           <div className="flex items-center">
                             <Bike className="w-3 h-3 mr-1 text-gray-400 flex-shrink-0" />
                             <div>
@@ -218,34 +218,34 @@ const ManageOrders = () => {
                             </div>
                           </div>
                         </td>
-                        <td className="w-[20%] px-1 py-4">
+                        <td className="w-[22%] px-2 py-4">
                           <div className="space-y-1">
                             <div className="text-xs text-gray-900">
-                              <span className="font-medium">From:</span> <span className="truncate inline-block max-w-[150px] align-bottom">{order.from}</span>
+                              <span className="font-medium">From:</span> <span className="truncate inline-block max-w-[180px] align-bottom">{order.from}</span>
                             </div>
                             <div className="text-xs text-gray-900">
-                              <span className="font-medium">To:</span> <span className="truncate inline-block max-w-[150px] align-bottom">{order.to}</span>
+                              <span className="font-medium">To:</span> <span className="truncate inline-block max-w-[180px] align-bottom">{order.to}</span>
                             </div>
                           </div>
                         </td>
-                        <td className="w-[10%] px-1 py-4 whitespace-nowrap">
+                        <td className="w-[9%] px-2 py-4 whitespace-nowrap">
                           <YummyText className="text-xs text-gray-900">{order.distance}</YummyText>
                         </td>
-                        <td className="w-[8%] px-1 py-4 whitespace-nowrap">
+                        <td className="w-[9%] px-2 py-4 whitespace-nowrap">
                           <YummyText className="text-xs font-medium text-gray-900">{order.amount}</YummyText>
                         </td>
-                        <td className="w-[10%] px-1 py-4 whitespace-nowrap">
+                        <td className="w-[11%] px-2 py-4 whitespace-nowrap">
                           <span className={`px-2 py-1 rounded-full text-xs font-medium ${order.statusColor}`}>
                             {order.status}
                           </span>
                         </td>
-                        <td className="w-[15%] px-1 py-4 whitespace-nowrap">
+                        <td className="w-[13%] px-2 py-4 whitespace-nowrap">
                           <div>
                             <YummyText className="text-xs text-gray-900">{order.dateTime.split(' ')[0]}</YummyText>
                             <YummyText className="text-xs text-gray-500">{order.dateTime.split(' ')[1]}</YummyText>
                           </div>
                         </td>
-                        <td className="w-[6%] px-1 py-4 whitespace-nowrap text-center">
+                        <td className="w-[5%] px-0 py-4 whitespace-nowrap text-left">
                           <button className="text-gray-400 hover:text-gray-600">
                             <MoreVertical className="w-5 h-5" />
                           </button>
