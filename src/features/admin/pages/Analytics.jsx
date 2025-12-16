@@ -80,69 +80,69 @@ const AnalyticsReports = () => {
           </div>
 
           {/* Stats Cards */}
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
             {/* Total Revenue */}
-            <div className="bg-white rounded-xl p-6 shadow-sm border border-gray-100">
-              <div className="flex items-start justify-between mb-4">
-                <div className="bg-blue-50 p-3 rounded-lg">
+            <div className="bg-white rounded-xl p-6 px-4 shadow-sm border border-gray-100">
+              <div className="flex items-start justify-between mb-8">
+                <div className="bg-blue-50 p-2.5 rounded-lg">
                   <DollarSign className="w-6 h-6 text-blue-600" />
                 </div>
-                <div className="flex items-center text-sm text-green-600">
+                <div className="flex items-center text-xs mt-3 gap-2 py-0.5 px-2 bg-[#F0FDF4] border border-[#B9F8CF] rounded-full text-green-600">
                   <TrendingUp className="w-4 h-4 mr-1" />
                   +18.2%
                 </div>
               </div>
-              <YummyText className="text-sm text-gray-500 mb-1">Total Revenue</YummyText>
-              <YummyText className="text-3xl font-bold text-gray-900 mb-1">₦346K</YummyText>
-              <YummyText className="text-xs text-gray-400">vs last period: ₦293K</YummyText>
+              <YummyText className="text-xs text-[#4A5565] mb-1">Total Revenue</YummyText>
+              <YummyText className="text-2xl font-medium text-[#0A0A0A] mb-1">₦346K</YummyText>
+              <YummyText className="text-xs text-[#4A5565]">vs last period: ₦293K</YummyText>
             </div>
 
             {/* Total Orders */}
-            <div className="bg-white rounded-xl p-6 shadow-sm border border-gray-100">
-              <div className="flex items-start justify-between mb-4">
-                <div className="bg-green-50 p-3 rounded-lg">
+            <div className="bg-white rounded-xl p-6 px-4 shadow-sm border border-gray-100">
+              <div className="flex items-start justify-between mb-8">
+                <div className="bg-green-50 p-2.5 rounded-lg">
                   <Package className="w-6 h-6 text-green-600" />
                 </div>
-                <div className="flex items-center text-sm text-green-600">
+                <div className="flex items-center text-xs mt-3 gap-2 py-0.5 px-2 bg-[#F0FDF4] border border-[#B9F8CF] rounded-full text-green-600">
                   <TrendingUp className="w-4 h-4 mr-1" />
                   +23.1%
                 </div>
               </div>
-              <YummyText className="text-sm text-gray-500 mb-1">Total Orders</YummyText>
-              <YummyText className="text-3xl font-bold text-gray-900 mb-1">9,310</YummyText>
-              <YummyText className="text-xs text-gray-400">vs last period: 7,562</YummyText>
+              <YummyText className="text-xs text-[#4A5565] mb-1">Total Orders</YummyText>
+              <YummyText className="text-2xl font-medium text-[#0A0A0A] mb-1">9,310</YummyText>
+              <YummyText className="text-xs text-[#4A5565]">vs last period: 7,562</YummyText>
             </div>
 
             {/* Active Users */}
-            <div className="bg-white rounded-xl p-6 shadow-sm border border-gray-100">
-              <div className="flex items-start justify-between mb-4">
-                <div className="bg-purple-50 p-3 rounded-lg">
+            <div className="bg-white rounded-xl p-6 px-4 shadow-sm border border-gray-100">
+              <div className="flex items-start justify-between mb-8">
+                <div className="bg-purple-50 p-2.5 rounded-lg">
                   <Users className="w-6 h-6 text-purple-600" />
                 </div>
-                <div className="flex items-center text-sm text-green-600">
+                <div className="flex items-center text-xs mt-3 gap-2 py-0.5 px-2 bg-[#F0FDF4] border border-[#B9F8CF] rounded-full text-green-600">
                   <TrendingUp className="w-4 h-4 mr-1" />
                   +12.5%
                 </div>
               </div>
-              <YummyText className="text-sm text-gray-500 mb-1">Active Users</YummyText>
-              <YummyText className="text-3xl font-bold text-gray-900 mb-1">2,847</YummyText>
-              <YummyText className="text-xs text-gray-400">vs last period: 2,531</YummyText>
+              <YummyText className="text-xs text-[#4A5565] mb-1">Active Users</YummyText>
+              <YummyText className="text-2xl font-medium text-[#0A0A0A] mb-1">2,847</YummyText>
+              <YummyText className="text-xs text-[#4A5565]">vs last period: 2,531</YummyText>
             </div>
 
             {/* Active Riders */}
-            <div className="bg-white rounded-xl p-6 shadow-sm border border-gray-100">
-              <div className="flex items-start justify-between mb-4">
-                <div className="bg-orange-50 p-3 rounded-lg">
+            <div className="bg-white rounded-xl p-6 px-4 shadow-sm border border-gray-100">
+              <div className="flex items-start justify-between mb-8">
+                <div className="bg-orange-50 p-2.5 rounded-lg">
                   <Bike className="w-6 h-6 text-orange-600" />
                 </div>
-                <div className="flex items-center text-sm text-green-600">
+                <div className="flex items-center text-xs mt-3 gap-2 py-0.5 px-2 bg-[#F0FDF4] border border-[#B9F8CF] rounded-full text-green-600">
                   <TrendingUp className="w-4 h-4 mr-1" />
                   +8.3%
                 </div>
               </div>
-              <YummyText className="text-sm text-gray-500 mb-1">Active Riders</YummyText>
-              <YummyText className="text-3xl font-bold text-gray-900 mb-1">486</YummyText>
-              <YummyText className="text-xs text-gray-400">vs last period: 449</YummyText>
+              <YummyText className="text-xs text-[#4A5565] mb-1">Active Riders</YummyText>
+              <YummyText className="text-2xl font-medium text-[#0A0A0A] mb-1">486</YummyText>
+              <YummyText className="text-xs text-[#4A5565]">vs last period: 449</YummyText>
             </div>
           </div>
 
@@ -156,10 +156,10 @@ const AnalyticsReports = () => {
                 Monthly performance metrics
               </YummyText>
 
-              <ResponsiveContainer width="100%" height={300}>
+              <ResponsiveContainer width="103%" height={300}>
                 <AreaChart
                   data={revenueOrdersData}
-                  margin={{ top: 10, right: 30, left: 0, bottom: 0 }}
+                  margin={{ top: 35, right: 0, left: 5, bottom: 0 }}
                 >
                   {/* Gradients */}
                   <defs>
@@ -187,24 +187,24 @@ const AnalyticsReports = () => {
                   {/* Axes */}
                   <XAxis
                     dataKey="month"
-                    axisLine={false}
+                    axisLine={true}
                     tickLine={true}
-                    tick={{ fill: '#9CA3AF', fontSize: 12 }}
+                    tick={{ fill: '#666666', fontSize: 12 }}
                   />
 
                   <YAxis
                     yAxisId="left"
-                    axisLine={false}
+                    axisLine={true}
                     tickLine={true}
-                    tick={{ fill: '#9CA3AF', fontSize: 12 }}
+                    tick={{ fill: '#666666', fontSize: 12 }}
                   />
 
                   <YAxis
                     yAxisId="right"
                     orientation="right"
-                    axisLine={false}
-                    tickLine={false}
-                    tick={{ fill: '#9CA3AF', fontSize: 12 }}
+                    axisLine={true}
+                    tickLine={true}
+                    tick={{ fill: '#666666', fontSize: 12 }}
                   />
 
                   {/* Tooltip */}
@@ -255,16 +255,17 @@ const AnalyticsReports = () => {
             <div className="bg-white rounded-xl p-6 shadow-sm border border-gray-100">
               <YummyText className="text-lg font-semibold text-gray-900 mb-2">Order Status</YummyText>
               <YummyText className="text-sm text-gray-500 mb-6">Distribution by status</YummyText>
-              <ResponsiveContainer width="100%" height={200}>
+              <ResponsiveContainer width="100%" height={240}>
                 <PieChart>
                   <Pie
                     data={orderStatusData}
+                    dataKey="value"
                     cx="50%"
                     cy="50%"
-                    innerRadius={60}
-                    outerRadius={90}
-                    paddingAngle={2}
-                    dataKey="value"
+                    outerRadius={95}
+                    stroke="#ffffff"
+                    strokeWidth={2}
+                    isAnimationActive={false}
                   >
                     {orderStatusData.map((entry, index) => (
                       <Cell key={`cell-${index}`} fill={entry.color} />
@@ -272,14 +273,22 @@ const AnalyticsReports = () => {
                   </Pie>
                 </PieChart>
               </ResponsiveContainer>
+              {/* Legend */}
               <div className="mt-6 space-y-3">
                 {orderStatusData.map((item, index) => (
                   <div key={index} className="flex items-center justify-between">
                     <div className="flex items-center">
-                      <div className="w-3 h-3 rounded-full mr-3" style={{ backgroundColor: item.color }}></div>
-                      <YummyText className="text-sm text-gray-600">{item.name}</YummyText>
+                      <span
+                        className="w-3 h-3 rounded-full mr-3"
+                        style={{ backgroundColor: item.color }}
+                      />
+                      <YummyText className="text-sm text-gray-600">
+                        {item.name}
+                      </YummyText>
                     </div>
-                    <YummyText className="text-sm font-semibold text-gray-900">{item.value.toLocaleString()}</YummyText>
+                    <YummyText className="text-sm font-semibold text-gray-900">
+                      {item.value.toLocaleString()}
+                    </YummyText>
                   </div>
                 ))}
               </div>
