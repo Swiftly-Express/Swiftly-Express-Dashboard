@@ -3,6 +3,13 @@ import { useIonRouter } from '@ionic/react';
 import { YummyText } from '../../../components/YummyText';
 import { logout as apiLogout } from '../../../utils/authApi';
 import React from 'react';
+import BlockIcon from '../../../icons/Blockicon';
+import DashboardIcon from '../../../icons/Dashboardicon';
+import PeopleIcon from '../../../icons/Peopleicon';
+import KycIcon from '../../../icons/Kycicon';
+import AnalyzeIcon from '../../../icons/Analyzeicon';
+import SettingsIcon from '../../../icons/Settingsicon';
+import ToybikeIcon from '../../../icons/Toybikeicon';
 
 const SidebarButton = ({ to, active, icon, label, count }) => {
   const router = useIonRouter();
@@ -20,7 +27,17 @@ const SidebarButton = ({ to, active, icon, label, count }) => {
           active ? 'bg-[#00D68F] text-white' : 'text-[#4B5563] hover:bg-gray-50'
         }`}
       >
-        {icon}
+        {typeof icon === 'string' ? (
+          <img src={icon} alt={`${label} icon`} className="w-5 h-5 flex-shrink-0" />
+        ) : React.isValidElement(icon) ? (
+          React.cloneElement(icon, {
+            className: [icon.props.className, `w-5 h-5 flex-shrink-0 ${active ? 'text-white' : 'text-[#101828]'}`]
+              .filter(Boolean)
+              .join(' '),
+          })
+        ) : (
+          icon
+        )}
         <YummyText className="flex-1 text-left text-[15px]">{label}</YummyText>
         {count !== undefined && (
           <span className="bg-[#FF6B00] text-white text-xs font-medium px-2 py-0.5 rounded-full min-w-[24px] text-center">
@@ -57,61 +74,45 @@ const AdminSidebar = () => {
     {
       id: 'dashboard',
       to: '/admin/dashboard',
-      icon: '/dashboard-icon.svg',
+      icon: <DashboardIcon />,
       label: 'Dashboard',
     },
     {
       id: 'manage-users',
       to: '/admin/users',
-     icon: '/block-icon.svg',
+      icon: <PeopleIcon />,
       label: 'Manage Users',
     },
     {
       id: 'manage-riders',
       to: '/admin/riders',
-      icon: (
-        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-          <path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z" fill="currentColor"/>
-        </svg>
-      ),
+      icon: <ToybikeIcon />,
       label: 'Manage Riders',
     },
     {
       id: 'manage-orders',
       to: '/admin/orders',
-      icon: '/block-icon.svg',
+      icon: <BlockIcon />,
       label: 'Manage Orders',
       count: 12,
     },
     {
       id: 'kyc-approvals',
       to: '/admin/kyc',
-      icon: (
-        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-          <path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41L9 16.17z" fill="currentColor"/>
-        </svg>
-      ),
+      icon: <KycIcon />,
       label: 'KYC Approvals',
       count: 5,
     },
     {
       id: 'analytics',
       to: '/admin/analytics',
-      icon: (
-        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-          <path d="M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zM9 17H7v-7h2v7zm4 0h-2V7h2v10zm4 0h-2v-4h2v4z" fill="currentColor"/>
-        </svg>
-      ),
+      icon: <AnalyzeIcon />,
       label: 'Analytics',
     },
     {
       id: 'settings',
       to: '/admin/settings',
-      icon: (
-        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-          <path d="M19.14 12.94c.04-.3.06-.61.06-.94 0-.32-.02-.64-.07-.94l2.03-1.58c.18-.14.23-.41.12-.61l-1.92-3.32c-.12-.22-.37-.29-.59-.22l-2.39.96c-.5-.38-1.03-.7-1.62-.94L14.4 2.81c-.04-.24-.24-.41-.48-.41h-3.84c-.24 0-.43.17-.47.41l-.36 2.54c-.59.24-1.13.57-1.62.94l-2.39-.96c-.22-.08-.47 0-.59.22L2.74 8.87c-.12.21-.08.47.12.61l2.03 1.58c-.05.3-.09.63-.09.94s.02.64.07.94l-2.03 1.58c-.18.14-.23.41-.12.61l1.92 3.32c.12.22.37.29.59.22l2.39-.96c.5.38 1.03.7 1.62.94l.36 2.54c.05.24.24.41.48.41h3.84c.24 0 .44-.17.47-.41l.36-2.54c.59-.24 1.13-.56 1.62-.94l2.39.96c.22.08.47 0 .59-.22l1.92-3.32c.12-.22.07-.47-.12-.61l-2.01-1.58zM12 15.6c-1.98 0-3.6-1.62-3.6-3.6s1.62-3.6 3.6-3.6 3.6 1.62 3.6 3.6-1.62 3.6-3.6 3.6z" fill="currentColor"/>
-        </svg>
-      ),
+      icon: <SettingsIcon />,
       label: 'Settings',
     },
   ];

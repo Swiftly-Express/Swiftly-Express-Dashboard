@@ -186,7 +186,7 @@ const ManageRiders = () => {
             <div className="overflow-hidden">
               <div className="overflow-x-auto">
                 <table className="w-full table-fixed">
-                  <thead className="bg-gray-50 border-b border-gray-100 sticky top-0 z-10">
+                  <thead className="border-b border-gray-100 sticky top-0 z-10">
                     <tr>
                       <th className="w-[8%] px-1 py-3 text-left text-[10.5px] font-[500] text-[#0A0A0A] uppercase tracking-wider">
                         Rider ID

@@ -1,0 +1,50 @@
+import React from "react";
+
+const PeopleIcon = ({
+  width = "1em",
+  height = "1em",
+  stroke = "currentColor",
+  className = ""
+}) => {
+  return (
+    <svg
+      width={width}
+      height={height}
+      viewBox="0 0 20 20"
+      fill="none"
+      xmlns="http://www.w3.org/2000/svg"
+      className={className}
+    >
+      <path
+        d="M13.3332 17.5V15.8333C13.3332 14.9493 12.982 14.1014 12.3569 13.4763C11.7317 12.8512 10.8839 12.5 9.99984 12.5H4.99984C4.11578 12.5 3.26794 12.8512 2.64281 13.4763C2.01769 14.1014 1.6665 14.9493 1.6665 15.8333V17.5"
+        stroke={stroke}
+        strokeWidth="1.66667"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+      <path
+        d="M13.3335 2.60667C14.0483 2.79198 14.6813 3.20939 15.1332 3.79339C15.5851 4.37739 15.8303 5.09492 15.8303 5.83334C15.8303 6.57177 15.5851 7.28929 15.1332 7.87329C14.6813 8.45729 14.0483 8.8747 13.3335 9.06001"
+        stroke={stroke}
+        strokeWidth="1.66667"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+      <path
+        d="M18.3335 17.5V15.8333C18.3329 15.0948 18.0871 14.3773 17.6346 13.7936C17.1821 13.2099 16.5486 12.793 15.8335 12.6083"
+        stroke={stroke}
+        strokeWidth="1.66667"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+      <path
+        d="M7.49984 9.16667C9.34079 9.16667 10.8332 7.67428 10.8332 5.83333C10.8332 3.99238 9.34079 2.5 7.49984 2.5C5.65889 2.5 4.1665 3.99238 4.1665 5.83333C4.1665 7.67428 5.65889 9.16667 7.49984 9.16667Z"
+        stroke={stroke}
+        strokeWidth="1.66667"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+    </svg>
+  );
+};
+
+export default PeopleIcon;

@@ -147,7 +147,7 @@ const ManageUsers = () => {
             <YummyText>
             <div className="overflow-x-auto">
               <table className="w-full table-fixed">
-                <thead className="bg-gray-50 border-b border-gray-100">
+                <thead className="border-b border-gray-100">
                   <tr>
                     <th className="w-[8%] px-3 py-3 text-left text-xs font-medium text-[#0A0A0A] uppercase tracking-wider">
                       User ID
