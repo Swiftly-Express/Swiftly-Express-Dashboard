@@ -49,6 +49,41 @@ const AnalyticsReports = () => {
     { time: '21:00', orders: 285 }
   ];
 
+  const renderLegend = (props) => {
+    const { payload } = props || {};
+
+    const mapLabelToColor = (label = '', entry = {}) => {
+      const l = String(label).toLowerCase();
+      if (l.includes('revenue') || l.includes('customers')) return { colorClass: 'text-blue-600', hex: '#3B82F6' };
+      if (l.includes('orders') || l.includes('riders')) return { colorClass: 'text-orange-500', hex: '#F59E0B' };
+      return { colorClass: 'text-gray-600', hex: entry?.color || '#6B7280' };
+    };
+
+    return (
+      <div className="flex items-center justify-center gap-6 mt-2">
+        {payload && payload.map((entry, index) => {
+          const label = entry.value || entry.payload?.name || entry.name;
+          const { colorClass, hex } = mapLabelToColor(label, entry);
+          const isIconSeries = typeof label === 'string' && (label.toLowerCase().includes('revenue') || label.toLowerCase().includes('orders') || label.toLowerCase().includes('customers') || label.toLowerCase().includes('riders'));
+
+          return (
+            <div key={index} className="flex items-center gap-2">
+              {isIconSeries ? (
+                <RevenueIcon className={`w-4 h-4 ${colorClass}`} />
+              ) : (
+                <span
+                  className="w-3 h-3 rounded-full block"
+                  style={{ backgroundColor: entry.color || hex }}
+                />
+              )}
+              <YummyText className={`text-medium ${colorClass}`}>{label}</YummyText>
+            </div>
+          );
+        })}
+      </div>
+    );
+  };
+
   // Top Performing Riders
   const topRiders = [
     { rank: 1, name: 'David Lee', deliveries: 456, rating: 4.9, earnings: '₦18,920', color: '#F59E0B' },
@@ -219,8 +254,8 @@ const AnalyticsReports = () => {
                     labelStyle={{ fontWeight: 600 }}
                   />
 
-                  {/* Legend */}
-                  <Legend verticalAlign="bottom" iconType="circle" height={3} />
+                  {/* Legend (custom) */}
+                  <Legend verticalAlign="bottom" content={renderLegend} />
 
                   {/* ORANGE AREA (Orders) */}
                   <Area
@@ -310,7 +345,7 @@ const AnalyticsReports = () => {
                   <Tooltip 
                     contentStyle={{ backgroundColor: '#fff', border: '1px solid #e5e7eb', borderRadius: '8px' }}
                   />
-                  <Legend verticalAlign="bottom" height={36} iconType="circle" />
+                  <Legend verticalAlign="bottom" content={renderLegend} />
                   <Line 
                     type="monotone" 
                     dataKey="customers" 
