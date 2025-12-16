@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { IonPage, IonContent } from '@ionic/react';
-import { DollarSign, Package, Users, Bike, TrendingUp, Star } from 'lucide-react';
+import { DollarSign, Package, Users, Bike, TrendingUp, TrendingDown, Star } from 'lucide-react';
 import { LineChart, AreaChart, Area, Line, BarChart, Bar, PieChart, Pie, Cell, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend } from 'recharts';
 import AdminLayout from '../components/AdminLayout';
 import { YummyText } from '../../../components/YummyText';
@@ -86,11 +86,11 @@ const AnalyticsReports = () => {
 
   // Top Performing Riders
   const topRiders = [
-    { rank: 1, name: 'David Lee', deliveries: 456, rating: 4.9, earnings: '₦18,920', color: '#F59E0B' },
-    { rank: 2, name: 'Mike Wilson', deliveries: 342, rating: 4.8, earnings: '₦12,450', color: '#F59E0B' },
-    { rank: 3, name: 'Chris Martin', deliveries: 267, rating: 4.7, earnings: '₦9,870', color: '#F59E0B' },
-    { rank: 4, name: 'Tom Anderson', deliveries: 198, rating: 4.6, earnings: '₦7,650', color: '#F59E0B' },
-    { rank: 5, name: 'Alex Turner', deliveries: 145, rating: 4.5, earnings: '₦5,230', color: '#F59E0B' }
+    { rank: 1, name: 'David Lee', deliveries: 456, rating: 4.9, earnings: '₦18,920', roi: '+390%', trend: 'up', color: '#F59E0B' },
+    { rank: 2, name: 'Mike Wilson', deliveries: 342, rating: 4.8, earnings: '₦12,450', roi: '+245%', trend: 'up', color: '#F59E0B' },
+    { rank: 3, name: 'Chris Martin', deliveries: 267, rating: 4.7, earnings: '₦9,870', roi: '+180%', trend: 'up', color: '#F59E0B' },
+    { rank: 4, name: 'Tom Anderson', deliveries: 198, rating: 4.6, earnings: '₦7,650', roi: '-12%', trend: 'down', color: '#F59E0B' },
+    { rank: 5, name: 'Alex Turner', deliveries: 145, rating: 4.5, earnings: '₦5,230', roi: '+95%', trend: 'up', color: '#F59E0B' }
   ];
 
   return (
@@ -185,10 +185,10 @@ const AnalyticsReports = () => {
           {/* Charts Row 1 */}
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-6">
             <div className="lg:col-span-2 bg-white rounded-xl p-6 shadow-sm border border-gray-100">
-              <YummyText className="text-lg font-semibold text-gray-900 mb-1">
+              <YummyText className="text-lg font-medium text-[#0A0A0A] mb-1">
                 Revenue & Orders Trend
               </YummyText>
-              <YummyText className="text-sm text-gray-500 mb-6">
+              <YummyText className="text-sm text-[#717182] mb-6">
                 Monthly performance metrics
               </YummyText>
 
@@ -289,8 +289,8 @@ const AnalyticsReports = () => {
 
             {/* Order Status */}
             <div className="bg-white rounded-xl p-6 shadow-sm border border-gray-100">
-              <YummyText className="text-lg font-semibold text-gray-900 mb-2">Order Status</YummyText>
-              <YummyText className="text-sm text-gray-500 mb-6">Distribution by status</YummyText>
+              <YummyText className="text-lg font-medium text-[#0A0A0A] mb-2">Order Status</YummyText>
+              <YummyText className="text-sm text-[#717182] mb-6">Distribution by status</YummyText>
               <ResponsiveContainer width="100%" height={240}>
                 <PieChart>
                   <Pie
@@ -310,7 +310,7 @@ const AnalyticsReports = () => {
                 </PieChart>
               </ResponsiveContainer>
               {/* Legend */}
-              <div className="mt-6 space-y-3">
+              <div className="mt-6 space-y-1">
                 {orderStatusData.map((item, index) => (
                   <div key={index} className="flex items-center justify-between">
                     <div className="flex items-center">
@@ -318,11 +318,11 @@ const AnalyticsReports = () => {
                         className="w-3 h-3 rounded-full mr-3"
                         style={{ backgroundColor: item.color }}
                       />
-                      <YummyText className="text-sm text-gray-600">
+                      <YummyText className="text-sm text-[#0A0A0A]">
                         {item.name}
                       </YummyText>
                     </div>
-                    <YummyText className="text-sm font-semibold text-gray-900">
+                    <YummyText className="text-sm font-medium text-[#0A0A0A]">
                       {item.value.toLocaleString()}
                     </YummyText>
                   </div>
@@ -335,13 +335,22 @@ const AnalyticsReports = () => {
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
             {/* User Growth */}
             <div className="bg-white rounded-xl p-6 shadow-sm border border-gray-100">
-              <YummyText className="text-lg font-semibold text-gray-900 mb-2">User Growth</YummyText>
-              <YummyText className="text-sm text-gray-500 mb-6">Customers and riders over time</YummyText>
+              <YummyText className="text-lg font-medium text-[#0A0A0A] mb-2">User Growth</YummyText>
+              <YummyText className="text-sm text-[#717182] mb-6">Customers and riders over time</YummyText>
               <ResponsiveContainer width="100%" height={250}>
-                <LineChart data={userGrowthData}>
+                <LineChart data={userGrowthData} margin={{ left: -15, top: 25, right: 0, bottom: 0 }}>
                   <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
-                  <XAxis dataKey="month" stroke="#94a3b8" />
-                  <YAxis stroke="#94a3b8" />
+                  <XAxis 
+                    dataKey="month" 
+                    axisLine={true}
+                    tickLine={true}
+                    tick={{ fill: '#666666', fontSize: 12 }}
+                  />
+                  <YAxis 
+                    axisLine={true}
+                    tickLine={true}
+                    tick={{ fill: '#666666', fontSize: 12 }}
+                  />
                   <Tooltip 
                     contentStyle={{ backgroundColor: '#fff', border: '1px solid #e5e7eb', borderRadius: '8px' }}
                   />
@@ -350,7 +359,7 @@ const AnalyticsReports = () => {
                     type="monotone" 
                     dataKey="customers" 
                     stroke="#3B82F6" 
-                    strokeWidth={2}
+                    strokeWidth={1.5}
                     name="Customers"
                     dot={{ fill: '#3B82F6', r: 4 }}
                   />
@@ -358,7 +367,7 @@ const AnalyticsReports = () => {
                     type="monotone" 
                     dataKey="riders" 
                     stroke="#F59E0B" 
-                    strokeWidth={2}
+                    strokeWidth={1.5}
                     name="Riders"
                     dot={{ fill: '#F59E0B', r: 4 }}
                   />
@@ -368,13 +377,22 @@ const AnalyticsReports = () => {
 
             {/* Peak Hours Analysis */}
             <div className="bg-white rounded-xl p-6 shadow-sm border border-gray-100">
-              <YummyText className="text-lg font-semibold text-gray-900 mb-2">Peak Hours Analysis</YummyText>
-              <YummyText className="text-sm text-gray-500 mb-6">Orders by time of day</YummyText>
+              <YummyText className="text-lg font-medium text-[#0A0A0A] mb-2">Peak Hours Analysis</YummyText>
+              <YummyText className="text-sm text-[#717182] mb-6">Orders by time of day</YummyText>
               <ResponsiveContainer width="100%" height={250}>
-                <BarChart data={peakHoursData}>
+                <BarChart data={peakHoursData} margin={{ left: -15, top: 25, right: 0, bottom: 0 }}>
                   <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
-                  <XAxis dataKey="time" stroke="#94a3b8" />
-                  <YAxis stroke="#94a3b8" />
+                  <XAxis 
+                    dataKey="time" 
+                    axisLine={true}
+                    tickLine={true}
+                    tick={{ fill: '#666666', fontSize: 12 }}
+                  />
+                  <YAxis 
+                    axisLine={true}
+                    tickLine={true}
+                    tick={{ fill: '#666666', fontSize: 12 }}
+                  />
                   <Tooltip 
                     contentStyle={{ backgroundColor: '#fff', border: '1px solid #e5e7eb', borderRadius: '8px' }}
                   />
@@ -386,8 +404,10 @@ const AnalyticsReports = () => {
 
           {/* Top Performing Riders */}
           <div className="bg-white rounded-xl p-6 shadow-sm border border-gray-100">
-            <YummyText className="text-lg font-semibold text-gray-900 mb-2">Top Performing Riders</YummyText>
-            <YummyText className="text-sm text-gray-500 mb-6">Highest performing riders this period</YummyText>
+            <YummyText> 
+            <div className="text-lg font-semibold text-gray-900 -mb-0.5">Top Performing Riders</ div>
+            <div className="text-sm text-gray-500 mb-6">Highest performing riders this period</div>
+            </YummyText>
             
             <div className="space-y-4">
               {topRiders.map((rider, index) => (
@@ -410,7 +430,23 @@ const AnalyticsReports = () => {
                     </div>
                   </div>
                   <div className="text-right">
-                    <YummyText className="text-xl font-bold text-orange-600">{rider.earnings}</YummyText>
+                    <div className="flex items-center justify-end gap-2 mb-1">
+                      <YummyText className={`text-xl font-bold ${
+                        rider.trend === 'up' ? 'text-green-600' : 'text-red-600'
+                      }`}>{rider.earnings}</YummyText>
+                      <div className={`flex items-center text-xs py-0.5 px-2 rounded-full ${
+                        rider.trend === 'up' 
+                          ? 'bg-[#F0FDF4] border border-[#B9F8CF] text-green-600' 
+                          : 'bg-red-50 border border-red-200 text-red-600'
+                      }`}>
+                        {rider.trend === 'up' ? (
+                          <TrendingUp className="w-3 h-3 mr-1" />
+                        ) : (
+                          <TrendingDown className="w-3 h-3 mr-1" />
+                        )}
+                        {rider.roi}
+                      </div>
+                    </div>
                     <YummyText className="text-xs text-gray-500">Total Earnings</YummyText>
                   </div>
                 </div>

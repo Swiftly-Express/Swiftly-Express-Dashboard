@@ -126,16 +126,17 @@ const AdminDashboard = () => {
             <div className="bg-white rounded-xl p-6 shadow-sm border border-gray-100">
               <YummyText className="text-lg font-semibold text-gray-900 mb-2">Order Status</YummyText>
               <YummyText className="text-sm text-gray-500 mb-6">Distribution of order statuses</YummyText>
-              <ResponsiveContainer width="100%" height={200}>
+              <ResponsiveContainer width="100%" height={240}>
                 <PieChart>
                   <Pie
                     data={orderStatusData}
+                    dataKey="value"
                     cx="50%"
                     cy="50%"
-                    innerRadius={60}
-                    outerRadius={90}
-                    paddingAngle={2}
-                    dataKey="value"
+                    outerRadius={95}
+                    stroke="#ffffff"
+                    strokeWidth={2}
+                    isAnimationActive={false}
                   >
                     {orderStatusData.map((entry, index) => (
                       <Cell key={`cell-${index}`} fill={entry.color} />
@@ -143,11 +144,15 @@ const AdminDashboard = () => {
                   </Pie>
                 </PieChart>
               </ResponsiveContainer>
-              <div className="mt-6 space-y-3">
+              {/* Legend */}
+              <div className="mt-6 space-y-1">
                 {orderStatusData.map((item, index) => (
                   <div key={index} className="flex items-center justify-between">
                     <div className="flex items-center">
-                      <div className="w-3 h-3 rounded-full mr-3" style={{ backgroundColor: item.color }}></div>
+                      <span
+                        className="w-3 h-3 rounded-full mr-3"
+                        style={{ backgroundColor: item.color }}
+                      />
                       <YummyText className="text-sm text-gray-600">{item.name}</YummyText>
                     </div>
                     <YummyText className="text-sm font-semibold text-gray-900">{item.value.toLocaleString()}</YummyText>
