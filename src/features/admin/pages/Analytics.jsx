@@ -1,10 +1,99 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { IonPage, IonContent } from '@ionic/react';
 import { DollarSign, Package, Users, Bike, TrendingUp, TrendingDown, Star } from 'lucide-react';
 import { LineChart, AreaChart, Area, Line, BarChart, Bar, PieChart, Pie, Cell, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend } from 'recharts';
 import AdminLayout from '../components/AdminLayout';
 import { YummyText } from '../../../components/YummyText';
 import RevenueIcon from '../../../icons/Revenueicon';
+
+// Rider Card Component with Flip Animation
+const RiderCard = ({ rider }) => {
+  const [showRank, setShowRank] = useState(false);
+
+  useEffect(() => {
+    const interval = setInterval(() => {
+      setShowRank(prev => !prev);
+    }, 2000);
+
+    return () => clearInterval(interval);
+  }, []);
+
+  return (
+    <div className="flex items-center justify-between py-4 border-b border-gray-100 last:border-0">
+      <div className="flex items-center flex-1">
+        <div className="relative w-12 h-12">
+          <div className="relative w-full h-full" style={{ perspective: '1000px' }}>
+            <div 
+              className="relative w-full h-full transition-transform duration-500"
+              style={{ 
+                transformStyle: 'preserve-3d',
+                transform: showRank ? 'rotateY(180deg)' : 'rotateY(0deg)'
+              }}
+            >
+              {/* Front - Profile Picture */}
+              <div 
+                className="absolute w-full h-full rounded-full overflow-hidden"
+                style={{ 
+                  backfaceVisibility: 'hidden',
+                  WebkitBackfaceVisibility: 'hidden'
+                }}
+              >
+                <img 
+                  src={rider.avatar} 
+                  alt={rider.name}
+                  className="w-full h-full object-cover"
+                />
+              </div>
+              
+              {/* Back - Rank */}
+              <div 
+                className="absolute w-full h-full rounded-full flex items-center justify-center text-white font-bold text-lg"
+                style={{ 
+                  backgroundColor: rider.color,
+                  backfaceVisibility: 'hidden',
+                  WebkitBackfaceVisibility: 'hidden',
+                  transform: 'rotateY(180deg)'
+                }}
+              >
+                #{rider.rank}
+              </div>
+            </div>
+          </div>
+        </div>
+        <div className="ml-4">
+          <YummyText className="text-base font-semibold text-gray-900">{rider.name}</YummyText>
+          <div className="flex items-center mt-1">
+            <YummyText className="text-sm text-gray-500 mr-4">{rider.deliveries} deliveries</YummyText>
+            <div className="flex items-center">
+              <Star className="w-4 h-4 text-yellow-400 fill-yellow-400 mr-1" />
+              <YummyText className="text-sm font-medium text-gray-700">{rider.rating}</YummyText>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div className="text-right">
+        <div className="flex items-center justify-end gap-2 mb-1">
+          <YummyText className={`text-xl font-bold ${
+            rider.trend === 'up' ? 'text-green-600' : 'text-red-600'
+          }`}>{rider.earnings}</YummyText>
+          <div className={`flex items-center text-xs py-0.5 px-2 rounded-full ${
+            rider.trend === 'up' 
+              ? 'bg-[#F0FDF4] border border-[#B9F8CF] text-green-600' 
+              : 'bg-red-50 border border-red-200 text-red-600'
+          }`}>
+            {rider.trend === 'up' ? (
+              <TrendingUp className="w-3 h-3 mr-1" />
+            ) : (
+              <TrendingDown className="w-3 h-3 mr-1" />
+            )}
+            {rider.roi}
+          </div>
+        </div>
+        <YummyText className="text-xs text-gray-500">Total Earnings</YummyText>
+      </div>
+    </div>
+  );
+};
 
 const AnalyticsReports = () => {
   const [timePeriod, setTimePeriod] = useState('Last 6 Months');
@@ -86,11 +175,11 @@ const AnalyticsReports = () => {
 
   // Top Performing Riders
   const topRiders = [
-    { rank: 1, name: 'David Lee', deliveries: 456, rating: 4.9, earnings: '₦18,920', roi: '+390%', trend: 'up', color: '#F59E0B' },
-    { rank: 2, name: 'Mike Wilson', deliveries: 342, rating: 4.8, earnings: '₦12,450', roi: '+245%', trend: 'up', color: '#F59E0B' },
-    { rank: 3, name: 'Chris Martin', deliveries: 267, rating: 4.7, earnings: '₦9,870', roi: '+180%', trend: 'up', color: '#F59E0B' },
-    { rank: 4, name: 'Tom Anderson', deliveries: 198, rating: 4.6, earnings: '₦7,650', roi: '-12%', trend: 'down', color: '#F59E0B' },
-    { rank: 5, name: 'Alex Turner', deliveries: 145, rating: 4.5, earnings: '₦5,230', roi: '+95%', trend: 'up', color: '#F59E0B' }
+    { rank: 1, name: 'David Lee', deliveries: 456, rating: 4.9, earnings: '₦18,920', roi: '+390%', trend: 'up', color: '#F59E0B', avatar: 'https://i.pravatar.cc/150?img=12' },
+    { rank: 2, name: 'Mike Wilson', deliveries: 342, rating: 4.8, earnings: '₦12,450', roi: '+245%', trend: 'up', color: '#F59E0B', avatar: 'https://i.pravatar.cc/150?img=13' },
+    { rank: 3, name: 'Chris Martin', deliveries: 267, rating: 4.7, earnings: '₦9,870', roi: '+180%', trend: 'up', color: '#F59E0B', avatar: 'https://i.pravatar.cc/150?img=14' },
+    { rank: 4, name: 'Tom Anderson', deliveries: 198, rating: 4.6, earnings: '₦7,650', roi: '-12%', trend: 'down', color: '#F59E0B', avatar: 'https://i.pravatar.cc/150?img=15' },
+    { rank: 5, name: 'Alex Turner', deliveries: 145, rating: 4.5, earnings: '₦5,230', roi: '+95%', trend: 'up', color: '#F59E0B', avatar: 'https://i.pravatar.cc/150?img=16' }
   ];
 
   return (
@@ -411,45 +500,7 @@ const AnalyticsReports = () => {
             
             <div className="space-y-4">
               {topRiders.map((rider, index) => (
-                <div key={index} className="flex items-center justify-between py-4 border-b border-gray-100 last:border-0">
-                  <div className="flex items-center flex-1">
-                    <div className="relative">
-                      <div className={`w-12 h-12 rounded-full flex items-center justify-center text-white font-bold`} style={{ backgroundColor: rider.color }}>
-                        #{rider.rank}
-                      </div>
-                    </div>
-                    <div className="ml-4">
-                      <YummyText className="text-base font-semibold text-gray-900">{rider.name}</YummyText>
-                      <div className="flex items-center mt-1">
-                        <YummyText className="text-sm text-gray-500 mr-4">{rider.deliveries} deliveries</YummyText>
-                        <div className="flex items-center">
-                          <Star className="w-4 h-4 text-yellow-400 fill-yellow-400 mr-1" />
-                          <YummyText className="text-sm font-medium text-gray-700">{rider.rating}</YummyText>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                  <div className="text-right">
-                    <div className="flex items-center justify-end gap-2 mb-1">
-                      <YummyText className={`text-xl font-bold ${
-                        rider.trend === 'up' ? 'text-green-600' : 'text-red-600'
-                      }`}>{rider.earnings}</YummyText>
-                      <div className={`flex items-center text-xs py-0.5 px-2 rounded-full ${
-                        rider.trend === 'up' 
-                          ? 'bg-[#F0FDF4] border border-[#B9F8CF] text-green-600' 
-                          : 'bg-red-50 border border-red-200 text-red-600'
-                      }`}>
-                        {rider.trend === 'up' ? (
-                          <TrendingUp className="w-3 h-3 mr-1" />
-                        ) : (
-                          <TrendingDown className="w-3 h-3 mr-1" />
-                        )}
-                        {rider.roi}
-                      </div>
-                    </div>
-                    <YummyText className="text-xs text-gray-500">Total Earnings</YummyText>
-                  </div>
-                </div>
+                <RiderCard key={index} rider={rider} />
               ))}
             </div>
           </div>
