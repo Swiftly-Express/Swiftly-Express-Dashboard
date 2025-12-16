@@ -4,6 +4,7 @@ import { DollarSign, Package, Users, Bike, TrendingUp, Star } from 'lucide-react
 import { LineChart, AreaChart, Area, Line, BarChart, Bar, PieChart, Pie, Cell, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend } from 'recharts';
 import AdminLayout from '../components/AdminLayout';
 import { YummyText } from '../../../components/YummyText';
+import RevenueIcon from '../../../icons/Revenueicon';
 
 const AnalyticsReports = () => {
   const [timePeriod, setTimePeriod] = useState('Last 6 Months');
