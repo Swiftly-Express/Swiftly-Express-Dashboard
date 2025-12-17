@@ -18,25 +18,29 @@ const KYCApprovals = () => {
       label: 'Pending Review', 
       value: '18', 
       icon: <ClockIcon className="w-5 h-5" stroke="#D08700" />, 
-      bgColor: '#FEF9C2'
+      bgColor: '#FEF9C2',
+      valueColor: '#000000'
     },
     { 
       label: 'Approved Today', 
       value: '7', 
       icon: <CheckCircleIcon size={18} color="#00A63E" />, 
-      bgColor: '#D1FAE5'
+      bgColor: '#D1FAE5',
+      valueColor: '#00A63E'
     },
     { 
       label: 'Rejected Today', 
       value: '2', 
       icon: <CircleXIcon className="w-5 h-5" stroke="#EF4444" />, 
-      bgColor: '#FFE2E2'
+      bgColor: '#FFE2E2',
+      valueColor: '#E7000B'
     },
     { 
       label: 'Total This Month', 
       value: '156', 
       icon: <DocumentIcon width={18} height={18} stroke="#3B82F6" />, 
-      bgColor: '#DBEAFE'
+      bgColor: '#DBEAFE',
+      valueColor: '#000000'
     }
   ];
 
@@ -148,7 +152,7 @@ const KYCApprovals = () => {
                     {stat.icon}
                   </div>
                   <YummyText className="text-sm text-gray-500 -mt-2 -mb-0.5">{stat.label}</YummyText>
-                  <YummyText className="text-3xl font-medium text-[#00A63E]">{stat.value}</YummyText>
+                  <YummyText className="text-3xl font-medium" style={{ color: stat.valueColor }}>{stat.value}</YummyText>
                 </div>
               </div>
             ))}
