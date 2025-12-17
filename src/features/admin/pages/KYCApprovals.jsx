@@ -4,7 +4,7 @@ import { X, Eye, FileText, Bike, Car } from 'lucide-react';
 import AdminLayout from '../components/AdminLayout';
 import { YummyText } from '../../../components/YummyText';
 import ClockIcon from '../../../icons/Clockicon';
-import CheckCircleIcon from '../../../icons/Circlecheck';
+import CheckIcon from '../../../icons/Checkicon';
 import CircleXIcon from '../../../icons/Circlexicon';
 import DocumentIcon from '../../../icons/Documenticon';
 
@@ -24,7 +24,7 @@ const KYCApprovals = () => {
     { 
       label: 'Approved Today', 
       value: '7', 
-      icon: <CheckCircleIcon size={18} color="#00A63E" />, 
+      icon: <CheckIcon size={18} color="#00A63E" />, 
       bgColor: '#D1FAE5',
       valueColor: '#00A63E'
     },
@@ -57,7 +57,6 @@ const KYCApprovals = () => {
       vehicle: 'BMW F 750 GS',
       documents: 'All Submitted',
       status: 'Pending',
-      statusColor: 'bg-yellow-100 text-yellow-800',
       fullDetails: {
         address: '123 Main Street, Apt 4B',
         city: 'New York, NY',
@@ -93,8 +92,7 @@ const KYCApprovals = () => {
       identity: 'Passport',
       vehicle: 'Vespa Primavera 150',
       documents: 'All Submitted',
-      status: 'Pending',
-      statusColor: 'bg-yellow-100 text-yellow-800'
+      status: 'Approved'
     },
     {
       id: 'KYC-003',
@@ -106,10 +104,43 @@ const KYCApprovals = () => {
       identity: 'Driver\'s License',
       vehicle: 'Honda CB500X',
       documents: 'All Submitted',
-      status: 'Pending',
-      statusColor: 'bg-yellow-100 text-yellow-800'
+      status: 'Rejected'
     }
   ];
+
+  // Get status icon and styling
+  const getStatusDisplay = (status) => {
+    switch(status) {
+      case 'Pending':
+        return {
+          icon: <ClockIcon className="w-3.5 h-3.5" stroke="#D08700" />,
+          bgColor: 'bg-[#FEF9C2]',
+          textColor: 'text-[#D08700]',
+          borderColor: 'border-[#F5E6B3]'
+        };
+      case 'Approved':
+        return {
+          icon: <CheckIcon size={14} color="#00A63E" />,
+          bgColor: 'bg-[#D1FAE5]',
+          textColor: 'text-[#00A63E]',
+          borderColor: 'border-[#A7F3D0]'
+        };
+      case 'Rejected':
+        return {
+          icon: <CircleXIcon className="w-3.5 h-3.5" stroke="#E7000B" />,
+          bgColor: 'bg-[#FFE2E2]',
+          textColor: 'text-[#E7000B]',
+          borderColor: 'border-[#FFC9C9]'
+        };
+      default:
+        return {
+          icon: <ClockIcon className="w-3.5 h-3.5" stroke="#D08700" />,
+          bgColor: 'bg-[#FEF9C2]',
+          textColor: 'text-[#D08700]',
+          borderColor: 'border-[#F5E6B3]'
+        };
+    }
+  };
 
   const openModal = (application) => {
     setSelectedApplication(application);
@@ -136,14 +167,16 @@ const KYCApprovals = () => {
         <IonContent className="ion-padding">
           {/* Header */}
           <div className="mb-8">
-            <YummyText className="text-3xl font-bold text-gray-900 mb-2">KYC Approvals</YummyText>
-            <YummyText className="text-gray-500">Review and approve rider verification applications</YummyText>
+            <YummyText>
+              <div className="text-3xl font-medium text-[#1E1E1E] mb-0.5">KYC Approvals</div>
+             <div className="text-[#717182]">Review and approve rider verification applications</div>
+            </YummyText>
           </div>
 
           {/* Stats Cards */}
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-3 mb-8">
             {stats.map((stat, index) => (
-              <div key={index} className="bg-white rounded-xl p-6 shadow-sm border border-gray-100">
+              <div key={index} className="bg-white rounded-xl p-5 shadow-sm border border-gray-100">
                 <div className="flex flex-col items-start">
                   <div
                     className="p-2 rounded-lg mb-3"
@@ -155,14 +188,16 @@ const KYCApprovals = () => {
                   <YummyText className="text-3xl font-medium" style={{ color: stat.valueColor }}>{stat.value}</YummyText>
                 </div>
               </div>
-            ))}
+            ))}  
           </div>
 
           {/* Applications List */}
           <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
             <div className="mb-6">
-              <YummyText className="text-lg font-semibold text-gray-900">Pending Applications</YummyText>
-              <YummyText className="text-sm text-gray-500">Review and verify rider KYC submissions</YummyText>
+              <YummyText> 
+                <div className="text-lg font-medium text-gray-900">Pending Applications </div>
+                <div className="text-sm text-[#717182]">Review and verify rider KYC submissions</div>
+              </YummyText>
             </div>
 
             <div className="space-y-4">
@@ -171,9 +206,10 @@ const KYCApprovals = () => {
                   <div className="flex items-start justify-between mb-4">
                     <div className="flex-1">
                       <div className="flex items-center mb-2">
-                        <YummyText className="text-lg font-semibold text-gray-900 mr-3">{app.name}</YummyText>
-                        <span className={`px-3 py-1 rounded-full text-xs font-medium ${app.statusColor}`}>
-                          ⏱ {app.status}
+                        <YummyText className="text-lg font-medium text-[#0A0A0A] mr-3">{app.name}</YummyText>
+                        <span className={`px-3 py-1 rounded-full text-xs font-medium flex items-center gap-1.5 border ${getStatusDisplay(app.status).bgColor} ${getStatusDisplay(app.status).textColor} ${getStatusDisplay(app.status).borderColor}`}>
+                          {getStatusDisplay(app.status).icon}
+                          {app.status}
                         </span>
                       </div>
                       <YummyText className="text-sm text-gray-600 mb-1">Application ID: {app.id}</YummyText>
@@ -184,7 +220,7 @@ const KYCApprovals = () => {
                     </div>
                     <button
                       onClick={() => openModal(app)}
-                      className="bg-green-500 hover:bg-green-600 text-white px-6 py-2 rounded-lg text-sm font-medium transition-colors flex items-center gap-2"
+                      className="bg-green-500 hover:bg-green-600 text-white px-6 py-2 rounded-full text-sm font-medium transition-colors flex items-center gap-2"
                     >
                       <Eye className="w-4 h-4" />
                       Review
@@ -230,10 +266,10 @@ const KYCApprovals = () => {
                 <div className="p-6 border-b border-gray-200">
                   <div className="flex items-start justify-between">
                     <div>
-                      <YummyText className="text-xl font-bold text-gray-900 mb-1">KYC Application Review</YummyText>
-                      <YummyText className="text-sm text-gray-500">Review all submitted information and documents</YummyText>
+                      <YummyText className="text-xl font-medium text-[#1E1E1E] mb-1">KYC Application Review</YummyText>
+                      <YummyText className="text-sm text-[#717182]">Review all submitted information and documents</YummyText>
                     </div>
-                    <button onClick={closeModal} className="text-gray-400 hover:text-gray-600 transition-colors">
+                    <button onClick={closeModal} className="text-[#717182] hover:text-gray-600 transition-colors">
                       <X className="w-6 h-6" />
                     </button>
                   </div>
@@ -245,41 +281,44 @@ const KYCApprovals = () => {
                     {/* Applicant Info */}
                     <div className="flex items-start justify-between mb-6">
                       <div>
-                        <YummyText className="text-2xl font-bold text-gray-900 mb-1">{selectedApplication.name}</YummyText>
-                        <YummyText className="text-sm text-gray-600">Application ID: {selectedApplication.id}</YummyText>
+                        <YummyText className="text-2xl font-medium text-[#1E1E1E] mb-1">{selectedApplication.name}</YummyText>
+                        <YummyText className="text-sm text-[#717182]">Application ID: {selectedApplication.id}</YummyText>
                       </div>
-                      <span className={`px-3 py-1 rounded-full text-xs font-medium ${selectedApplication.statusColor}`}>
-                        ⏱ Pending Review
+                      <span className={`px-3 py-1 rounded-full text-xs font-medium flex items-center gap-1.5 border ${getStatusDisplay(selectedApplication.status).bgColor} ${getStatusDisplay(selectedApplication.status).textColor} ${getStatusDisplay(selectedApplication.status).borderColor}`}>
+                        {getStatusDisplay(selectedApplication.status).icon}
+                        {selectedApplication.status}
                       </span>
                     </div>
 
                     {/* Tabs */}
-                    <div className="flex gap-2 mb-6 bg-gray-100 p-1 rounded-lg">
+                    <YummyText>
+                    <div className="flex gap-2 mb-6 bg-gray-100 p-1 rounded-full">
                       <button
                         onClick={() => setActiveTab('contact')}
-                        className={`flex-1 px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
-                          activeTab === 'contact' ? 'bg-white text-gray-900 shadow-sm' : 'text-gray-600 hover:text-gray-900'
+                        className={`flex-1 px-4 py-2 rounded-full text-sm font-medium transition-colors ${
+                          activeTab === 'contact' ? 'bg-white text-[#0A0A0A] shadow-sm' : 'text-[#0A0A0A] hover:text-gray-900'
                         }`}
                       >
                         Contact Info
                       </button>
                       <button
                         onClick={() => setActiveTab('identity')}
-                        className={`flex-1 px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
-                          activeTab === 'identity' ? 'bg-white text-gray-900 shadow-sm' : 'text-gray-600 hover:text-gray-900'
+                        className={`flex-1 px-4 py-2 rounded-full text-sm font-medium transition-colors ${
+                          activeTab === 'identity' ? 'bg-white text-[#0A0A0A] shadow-sm' : 'text-[#0A0A0A] hover:text-gray-900'
                         }`}
                       >
                         Identity
                       </button>
                       <button
                         onClick={() => setActiveTab('vehicle')}
-                        className={`flex-1 px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
-                          activeTab === 'vehicle' ? 'bg-white text-gray-900 shadow-sm' : 'text-gray-600 hover:text-gray-900'
+                        className={`flex-1 px-4 py-2 rounded-full text-sm font-medium transition-colors ${
+                          activeTab === 'vehicle' ? 'bg-white text-[#0A0A0A] shadow-sm' : 'text-[#0A0A0A] hover:text-gray-900'
                         }`}
                       >
                         Vehicle
                       </button>
                     </div>
+                    </YummyText>
 
                     {/* Tab Content */}
                     {activeTab === 'contact' && selectedApplication.fullDetails && (
@@ -287,31 +326,31 @@ const KYCApprovals = () => {
                         <div className="grid grid-cols-2 gap-4">
                           <div>
                             <YummyText className="text-xs text-gray-500 mb-1">Email</YummyText>
-                            <YummyText className="text-sm text-gray-900">{selectedApplication.email}</YummyText>
+                            <YummyText className="text-sm text-[#0A0A0A]">{selectedApplication.email}</YummyText>
                           </div>
                           <div>
                             <YummyText className="text-xs text-gray-500 mb-1">Phone</YummyText>
-                            <YummyText className="text-sm text-gray-900">{selectedApplication.phone}</YummyText>
+                            <YummyText className="text-sm text-[#0A0A0A]">{selectedApplication.phone}</YummyText>
                           </div>
                           <div>
                             <YummyText className="text-xs text-gray-500 mb-1">Address</YummyText>
-                            <YummyText className="text-sm text-gray-900">{selectedApplication.fullDetails.address}</YummyText>
+                            <YummyText className="text-sm text-[#0A0A0A]">{selectedApplication.fullDetails.address}</YummyText>
                           </div>
                           <div>
                             <YummyText className="text-xs text-gray-500 mb-1">City, State</YummyText>
-                            <YummyText className="text-sm text-gray-900">{selectedApplication.fullDetails.city}</YummyText>
+                            <YummyText className="text-sm text-[#0A0A0A]">{selectedApplication.fullDetails.city}</YummyText>
                           </div>
                           <div>
                             <YummyText className="text-xs text-gray-500 mb-1">ZIP Code</YummyText>
-                            <YummyText className="text-sm text-gray-900">{selectedApplication.fullDetails.zipCode}</YummyText>
+                            <YummyText className="text-sm text-[#0A0A0A]">{selectedApplication.fullDetails.zipCode}</YummyText>
                           </div>
                           <div>
                             <YummyText className="text-xs text-gray-500 mb-1">Emergency Contact</YummyText>
-                            <YummyText className="text-sm text-gray-900">{selectedApplication.fullDetails.emergencyContact}</YummyText>
+                            <YummyText className="text-sm text-[#0A0A0A]">{selectedApplication.fullDetails.emergencyContact}</YummyText>
                           </div>
                           <div className="col-span-2">
                             <YummyText className="text-xs text-gray-500 mb-1">Emergency Phone</YummyText>
-                            <YummyText className="text-sm text-gray-900">{selectedApplication.fullDetails.emergencyPhone}</YummyText>
+                            <YummyText className="text-sm text-[#0A0A0A]">{selectedApplication.fullDetails.emergencyPhone}</YummyText>
                           </div>
                         </div>
                       </div>
