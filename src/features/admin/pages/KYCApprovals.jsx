@@ -3,6 +3,10 @@ import { IonPage, IonContent } from '@ionic/react';
 import { X, Eye, FileText, Bike, Car } from 'lucide-react';
 import AdminLayout from '../components/AdminLayout';
 import { YummyText } from '../../../components/YummyText';
+import ClockIcon from '../../../icons/Clockicon';
+import CheckCircleIcon from '../../../icons/Circlecheck';
+import CircleXIcon from '../../../icons/Circlexicon';
+import DocumentIcon from '../../../icons/Documenticon';
 
 const KYCApprovals = () => {
   const [selectedApplication, setSelectedApplication] = useState(null);
@@ -10,10 +14,30 @@ const KYCApprovals = () => {
 
   // Stats data
   const stats = [
-    { label: 'Pending Review', value: '18', icon: '⏱', color: 'bg-yellow-50', textColor: 'text-yellow-600' },
-    { label: 'Approved Today', value: '7', icon: '✓', color: 'bg-green-50', textColor: 'text-green-600' },
-    { label: 'Rejected Today', value: '2', icon: '✗', color: 'bg-red-50', textColor: 'text-red-600' },
-    { label: 'Total This Month', value: '156', icon: '📋', color: 'bg-blue-50', textColor: 'text-blue-600' }
+    { 
+      label: 'Pending Review', 
+      value: '18', 
+      icon: <ClockIcon className="w-5 h-5" stroke="#D08700" />, 
+      bgColor: '#FEF9C2'
+    },
+    { 
+      label: 'Approved Today', 
+      value: '7', 
+      icon: <CheckCircleIcon size={18} color="#00A63E" />, 
+      bgColor: '#D1FAE5'
+    },
+    { 
+      label: 'Rejected Today', 
+      value: '2', 
+      icon: <CircleXIcon className="w-5 h-5" stroke="#EF4444" />, 
+      bgColor: '#FFE2E2'
+    },
+    { 
+      label: 'Total This Month', 
+      value: '156', 
+      icon: <DocumentIcon width={18} height={18} stroke="#3B82F6" />, 
+      bgColor: '#DBEAFE'
+    }
   ];
 
   // Applications data
@@ -116,8 +140,16 @@ const KYCApprovals = () => {
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
             {stats.map((stat, index) => (
               <div key={index} className="bg-white rounded-xl p-6 shadow-sm border border-gray-100">
-                <YummyText className="text-sm text-gray-500 mb-2">{stat.label}</YummyText>
-                <YummyText className="text-3xl font-bold text-gray-900">{stat.value}</YummyText>
+                <div className="flex flex-col items-start">
+                  <div
+                    className="p-2 rounded-lg mb-3"
+                    style={{ backgroundColor: stat.bgColor }}
+                  >
+                    {stat.icon}
+                  </div>
+                  <YummyText className="text-sm text-gray-500 -mt-2 -mb-0.5">{stat.label}</YummyText>
+                  <YummyText className="text-3xl font-medium text-[#00A63E]">{stat.value}</YummyText>
+                </div>
               </div>
             ))}
           </div>
