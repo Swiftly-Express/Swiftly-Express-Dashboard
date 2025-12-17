@@ -3,6 +3,10 @@ import { IonPage, IonContent } from '@ionic/react';
 import { Search, Filter, MoreVertical, User, Bike } from 'lucide-react';
 import AdminLayout from '../components/AdminLayout';
 import { YummyText } from '../../../components/YummyText';
+import BlockIcon from '../../../icons/Blockicon';
+import CheckIcon from '../../../icons/Checkicon';
+import ToyBikeIcon from '../../../icons/Toybikeicon';
+import ClockIcon from '../../../icons/Clockicon';
 
 const ManageOrders = () => {
   const [searchQuery, setSearchQuery] = useState('');
@@ -10,10 +14,34 @@ const ManageOrders = () => {
 
   // Stats data
   const stats = [
-    { label: 'Total Orders', value: '12,456', color: 'text-gray-900' },
-    { label: 'Delivered', value: '8,456', color: 'text-green-600' },
-    { label: 'In Transit', value: '2,847', color: 'text-blue-600' },
-    { label: 'Pending', value: '1,023', color: 'text-orange-600' }
+    { 
+      label: 'Total Orders', 
+      value: '12,456', 
+      icon: <BlockIcon className="w-5 h-5" stroke="#1E1E1E" />,
+      bgColor: '#F3F4F6',
+      valueColor: '#1E1E1E'
+    },
+    { 
+      label: 'Delivered', 
+      value: '8,456', 
+      icon: <CheckIcon className="w-5 h-5" stroke="#00A63E" />,
+      bgColor: '#D1FAE5',
+      valueColor: '#00A63E'
+    },
+    { 
+      label: 'In Transit', 
+      value: '2,847', 
+      icon: <ToyBikeIcon className="w-5 h-5" stroke="#3B82F6" />,
+      bgColor: '#DBEAFE',
+      valueColor: '#3B82F6'
+    },
+    { 
+      label: 'Pending', 
+      value: '1,023', 
+      icon: <ClockIcon className="w-5 h-5" stroke="#F59E0B" />,
+      bgColor: '#FEF3C7',
+      valueColor: '#F59E0B'
+    }
   ];
 
   // Orders data
@@ -110,16 +138,24 @@ const ManageOrders = () => {
         <IonContent className="ion-no-padding">
           {/* Header */}
           <div className="mb-8">
-            <YummyText className="text-3xl font-bold text-gray-900 mb-2">Manage Orders</YummyText>
-            <YummyText className="text-gray-500">View and manage all delivery orders</YummyText>
+            <YummyText className="text-3xl font-medium text-[#1E1E1E] mb-2">Manage Orders</YummyText>
+            <YummyText className="text-[#717182]">View and manage all delivery orders</YummyText>
           </div>
 
           {/* Stats Cards */}
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
             {stats.map((stat, index) => (
               <div key={index} className="bg-white rounded-xl p-6 shadow-sm border border-gray-100">
-                <YummyText className="text-sm text-gray-500 mb-2">{stat.label}</YummyText>
-                <YummyText className={`text-3xl font-bold ${stat.color}`}>{stat.value}</YummyText>
+                <div className="flex flex-col items-start">
+                  <div
+                    className="p-2 rounded-lg mb-3"
+                    style={{ backgroundColor: stat.bgColor }}
+                  >
+                    {stat.icon}
+                  </div>
+                  <YummyText className="text-sm text-gray-500 mb-1">{stat.label}</YummyText>
+                  <YummyText className="text-3xl font-medium" style={{ color: stat.valueColor }}>{stat.value}</YummyText>
+                </div>
               </div>
             ))}
           </div>

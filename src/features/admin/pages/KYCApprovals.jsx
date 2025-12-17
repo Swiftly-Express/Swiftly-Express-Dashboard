@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { IonPage, IonContent } from '@ionic/react';
-import { X, Eye, FileText, Bike, Car } from 'lucide-react';
+import { X, Eye, FileText, Bike, Car, Check } from 'lucide-react';
 import AdminLayout from '../components/AdminLayout';
 import { YummyText } from '../../../components/YummyText';
 import ClockIcon from '../../../icons/Clockicon';
@@ -92,7 +92,31 @@ const KYCApprovals = () => {
       identity: 'Passport',
       vehicle: 'Vespa Primavera 150',
       documents: 'All Submitted',
-      status: 'Approved'
+      status: 'Approved',
+      fullDetails: {
+        address: '123 Main Street, Apt 4B',
+        city: 'New York, NY',
+        zipCode: '10001',
+        emergencyContact: 'Jane Chen',
+        emergencyPhone: '+1 (555) 777-8888',
+        fullName: 'Maria Garcia',
+        dob: '1990-05-15',
+        nationality: 'USA',
+        idType: 'Driver\'s License',
+        idNumber: 'DL-654987321',
+        idExpiry: '2027-05-15',
+        vehicleType: 'Motorcycle',
+        makeModel: 'BMW F 750 GS',
+        year: '2023',
+        licensePlate: 'ABC-1234',
+        insurance: '2025-12-01',
+        uploadedDocs: [
+          { name: 'license-front.jpg', type: 'identity' },
+          { name: 'selfie-verification.jpg', type: 'identity' },
+          { name: 'registration.pdf', type: 'vehicle' },
+          { name: 'insurance.pdf', type: 'vehicle' }
+        ]
+      }
     },
     {
       id: 'KYC-003',
@@ -104,7 +128,31 @@ const KYCApprovals = () => {
       identity: 'Driver\'s License',
       vehicle: 'Honda CB500X',
       documents: 'All Submitted',
-      status: 'Rejected'
+      status: 'Rejected',
+      fullDetails: {
+        address: '123 Main Street, Apt 4B',
+        city: 'New York, NY',
+        zipCode: '10001',
+        emergencyContact: 'Jane Chen',
+        emergencyPhone: '+1 (555) 777-8888',
+        fullName: 'Maria Garcia',
+        dob: '1990-05-15',
+        nationality: 'USA',
+        idType: 'Driver\'s License',
+        idNumber: 'DL-654987321',
+        idExpiry: '2027-05-15',
+        vehicleType: 'Motorcycle',
+        makeModel: 'BMW F 750 GS',
+        year: '2023',
+        licensePlate: 'ABC-1234',
+        insurance: '2025-12-01',
+        uploadedDocs: [
+          { name: 'license-front.jpg', type: 'identity' },
+          { name: 'selfie-verification.jpg', type: 'identity' },
+          { name: 'registration.pdf', type: 'vehicle' },
+          { name: 'insurance.pdf', type: 'vehicle' }
+        ]
+      }
     }
   ];
 
@@ -220,7 +268,7 @@ const KYCApprovals = () => {
                     </div>
                     <button
                       onClick={() => openModal(app)}
-                      className="bg-green-500 hover:bg-green-600 text-white px-6 py-2 rounded-full text-sm font-medium transition-colors flex items-center gap-2"
+                      className="bg-[#00A63E] hover:bg-[#007A29] text-white px-6 py-2 rounded-full text-sm font-medium transition-colors flex items-center gap-2"
                     >
                       <Eye className="w-4 h-4" />
                       Review
@@ -385,18 +433,26 @@ const KYCApprovals = () => {
                           </div>
                         </div>
 
+                        <div className="mt-6 border border-gray-200"></div>
+
                         <div className="mt-6">
-                          <YummyText className="text-sm font-medium text-gray-900 mb-3">Uploaded Documents</YummyText>
+                          <YummyText>
+                            <div className="text-sm font-medium text-gray-900 mb-3">Identity Documents</div>
+                          </YummyText>
                           <div className="grid grid-cols-2 gap-4">
                             <div className="border border-gray-200 rounded-lg p-4 text-center hover:border-gray-300 transition-colors">
                               <FileText className="w-8 h-8 text-gray-400 mx-auto mb-2" />
-                              <YummyText className="text-sm text-gray-900 mb-1">license-front.jpg</YummyText>
-                              <button className="text-xs text-blue-600 hover:text-blue-700">View Document</button>
+                              <YummyText>
+                                <div  className="text-sm text-gray-900 mb-1">license-front.jpg</div>
+                                <button className="text-xs text-blue-600 hover:text-blue-700">View Document</button>
+                              </YummyText>
                             </div>
                             <div className="border border-gray-200 rounded-lg p-4 text-center hover:border-gray-300 transition-colors">
                               <FileText className="w-8 h-8 text-gray-400 mx-auto mb-2" />
-                              <YummyText className="text-sm text-gray-900 mb-1">selfie-verification.jpg</YummyText>
-                              <button className="text-xs text-blue-600 hover:text-blue-700">View Document</button>
+                              <YummyText>
+                                <div className="text-sm text-gray-900 mb-1">selfie-verification.jpg</div>
+                                <button className="text-xs text-blue-600 hover:text-blue-700">View Document</button>
+                              </YummyText>
                             </div>
                           </div>
                         </div>
@@ -428,21 +484,25 @@ const KYCApprovals = () => {
                           </div>
                         </div>
 
+                        <div className="mt-6 border border-gray-200"></div>
+
+                        <YummyText>
                         <div className="mt-6">
-                          <YummyText className="text-sm font-medium text-gray-900 mb-3">Vehicle Documents</YummyText>
+                          <div className="text-sm font-medium text-gray-900 mb-3">Vehicle Documents</div>
                           <div className="grid grid-cols-2 gap-4">
                             <div className="border border-gray-200 rounded-lg p-4 text-center hover:border-gray-300 transition-colors">
                               <FileText className="w-8 h-8 text-gray-400 mx-auto mb-2" />
-                              <YummyText className="text-sm text-gray-900 mb-1">registration.pdf</YummyText>
+                              <div className="text-sm text-gray-900 mb-1">registration.pdf</div>
                               <button className="text-xs text-blue-600 hover:text-blue-700">View Document</button>
                             </div>
                             <div className="border border-gray-200 rounded-lg p-4 text-center hover:border-gray-300 transition-colors">
                               <FileText className="w-8 h-8 text-gray-400 mx-auto mb-2" />
-                              <YummyText className="text-sm text-gray-900 mb-1">insurance.pdf</YummyText>
+                              <div className="text-sm text-gray-900 mb-1">insurance.pdf</div>
                               <button className="text-xs text-blue-600 hover:text-blue-700">View Document</button>
                             </div>
                           </div>
                         </div>
+                        </YummyText>
                       </div>
                     )}
                   </div>
@@ -453,16 +513,16 @@ const KYCApprovals = () => {
                   <div className="flex gap-3">
                     <button
                       onClick={handleApprove}
-                      className="flex-1 bg-green-500 hover:bg-green-600 text-white py-3 rounded-lg text-sm font-medium transition-colors flex items-center justify-center gap-2"
+                      className="flex-1 bg-[#00A63E] hover:bg-green-600 text-white py-3 rounded-lg text-sm font-medium transition-colors flex items-center justify-center gap-2"
                     >
-                      <span>✓</span>
+                      <CheckIcon size={16} color="#FFFFFF" />
                       Approve Application
                     </button>
                     <button
                       onClick={handleReject}
-                      className="flex-1 bg-red-500 hover:bg-red-600 text-white py-3 rounded-lg text-sm font-medium transition-colors flex items-center justify-center gap-2"
+                      className="flex-1 bg-[#D4183D] hover:bg-red-600 text-white py-3 rounded-lg text-sm font-medium transition-colors flex items-center justify-center gap-2"
                     >
-                      <span>✗</span>
+                      <CircleXIcon className="w-4 h-4" stroke="#FFFFFF" />
                       Reject Application
                     </button>
                   </div>

@@ -3,6 +3,11 @@ import { IonPage, IonContent } from '@ionic/react';
 import { Search, Filter, MoreVertical, Mail, Phone } from 'lucide-react';
 import AdminLayout from '../components/AdminLayout';
 import { YummyText } from '../../../components/YummyText';
+import ToyBikeIcon from '../../../icons/Toybikeicon';
+import CheckCircleIcon from '../../../icons/Circlecheck';
+import PauseIcon from '../../../icons/Pauseicon';
+import ClockIcon from '../../../icons/Clockicon';
+import BanIcon from '../../../icons/Banicon';
 
 const ManageRiders = () => {
   const [searchQuery, setSearchQuery] = useState('');
@@ -11,11 +16,41 @@ const ManageRiders = () => {
 
   // Stats data
   const stats = [
-    { label: 'Total Riders', value: '486', color: 'text-gray-900' },
-    { label: 'Active', value: '398', color: 'text-green-600' },
-    { label: 'Inactive', value: '67', color: 'text-gray-600' },
-    { label: 'Pending KYC', value: '18', color: 'text-orange-600' },
-    { label: 'Suspended', value: '3', color: 'text-red-600' }
+    { 
+      label: 'Total Riders', 
+      value: '486', 
+      icon: <ToyBikeIcon className="w-5 h-5" stroke="#1E1E1E" />,
+      bgColor: '#F3F4F6',
+      valueColor: '#1E1E1E'
+    },
+    { 
+      label: 'Active', 
+      value: '398', 
+      icon: <CheckCircleIcon size={18} color="#00A63E" />,
+      bgColor: '#D1FAE5',
+      valueColor: '#00A63E'
+    },
+    { 
+      label: 'Inactive', 
+      value: '67', 
+      icon: <PauseIcon className="w-5 h-5" stroke="#6B7280" />,
+      bgColor: '#F3F4F6',
+      valueColor: '#6B7280'
+    },
+    { 
+      label: 'Pending KYC', 
+      value: '18', 
+      icon: <ClockIcon className="w-5 h-5" stroke="#F59E0B" />,
+      bgColor: '#FEF3C7',
+      valueColor: '#F59E0B'
+    },
+    { 
+      label: 'Suspended', 
+      value: '3', 
+      icon: <BanIcon className="w-5 h-5" stroke="#EF4444" />,
+      bgColor: '#FEE2E2',
+      valueColor: '#EF4444'
+    }
   ];
 
   // Riders data
@@ -133,16 +168,24 @@ const ManageRiders = () => {
         <IonContent className="ion-no-padding">
           {/* Header */}
           <div className="mb-8">
-            <YummyText className="text-3xl font-bold text-gray-900 mb-2">Manage Riders</YummyText>
-            <YummyText className="text-gray-500">View and manage all rider accounts</YummyText>
+            <YummyText className="text-3xl font-medium text-[#1E1E1E] mb-2">Manage Riders</YummyText>
+            <YummyText className="text-[#717182]">View and manage all rider accounts</YummyText>
           </div>
 
           {/* Stats Cards */}
           <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-5 gap-6 mb-8">
             {stats.map((stat, index) => (
               <div key={index} className="bg-white rounded-xl p-6 shadow-sm border border-gray-100">
-                <YummyText className="text-sm text-gray-500 mb-2">{stat.label}</YummyText>
-                <YummyText className={`text-3xl font-bold ${stat.color}`}>{stat.value}</YummyText>
+                <div className="flex flex-col items-start">
+                  <div
+                    className="p-2 rounded-lg mb-3"
+                    style={{ backgroundColor: stat.bgColor }}
+                  >
+                    {stat.icon}
+                  </div>
+                  <YummyText className="text-sm text-gray-500 mb-1">{stat.label}</YummyText>
+                  <YummyText className="text-3xl font-medium" style={{ color: stat.valueColor }}>{stat.value}</YummyText>
+                </div>
               </div>
             ))}
           </div>
