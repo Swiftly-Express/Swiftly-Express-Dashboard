@@ -4,6 +4,9 @@ import { Users, Bike, Package, DollarSign, TrendingUp } from 'lucide-react';
 import { LineChart, Line, PieChart, Pie, Cell, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 import AdminLayout from '../components/AdminLayout';
 import { YummyText } from '../../../components/YummyText';
+import ClockIcon from '../../../icons/Clockicon';
+import CheckIcon from '../../../icons/Checkicon';
+import CircleXIcon from '../../../icons/Circlexicon';
 
 const AdminDashboard = () => {
   // Revenue data for line chart
@@ -46,8 +49,8 @@ const AdminDashboard = () => {
         <div className={`${iconBg} p-3 rounded-lg`}>
           <Icon className={`w-5 h-5 ${iconColor}`} />
         </div>
-        <div className="flex items-center text-sm text-green-600">
-          <TrendingUp className="w-4 h-4 mr-1" />
+        <div className="flex items-center text-xs gap-1 py-0.5 px-2 bg-[#F0FDF4] border border-[#B9F8CF] rounded-full text-green-600">
+          <TrendingUp className="w-4 h-4" />
           {change}
         </div>
       </div>
@@ -62,8 +65,8 @@ const AdminDashboard = () => {
         <IonContent className="ion-padding">
           {/* Header */}
           <div className="mb-8">
-            <YummyText className="text-3xl font-bold text-gray-900 mb-2">Admin Dashboard</YummyText>
-            <YummyText className="text-gray-500">Welcome back! Here's what's happening with your platform today.</YummyText>
+            <YummyText className="text-3xl font-medium text-[#1E1E1E] mb-2">Admin Dashboard</YummyText>
+            <YummyText className="text-[#717182]">Welcome back! Here's what's happening with your platform today.</YummyText>
           </div>
 
           {/* Stats Cards */}
@@ -202,16 +205,19 @@ const AdminDashboard = () => {
                         <YummyText className="text-sm text-gray-500">{user.email}</YummyText>
                         <YummyText className="text-xs text-gray-400 mt-1">{user.time}</YummyText>
                       </div>
-                      <span className="px-2 py-1 rounded-full text-xs font-medium bg-yellow-100 text-yellow-800">
-                        ⏱ {user.status}
+                      <span className="px-3 py-1 rounded-full text-xs font-medium flex items-center gap-1.5 border bg-[#FEF9C2] text-[#D08700] border-[#F5E6B3]">
+                        <ClockIcon className="w-3.5 h-3.5" stroke="#D08700" />
+                        {user.status}
                       </span>
                     </div>
                     <div className="flex gap-2">
-                      <button className="flex-1 bg-green-500 hover:bg-green-600 text-white text-sm font-medium py-2 px-4 rounded-lg transition-colors">
-                        ✓ Approve
+                      <button className="flex-1 bg-green-500 hover:bg-green-600 text-white text-sm font-medium py-2 px-4 rounded-lg transition-colors flex items-center justify-center gap-1.5">
+                        <CheckIcon className="w-4 h-4" stroke="#FFFFFF" />
+                        Approve
                       </button>
-                      <button className="flex-1 bg-red-500 hover:bg-red-600 text-white text-sm font-medium py-2 px-4 rounded-lg transition-colors">
-                        ✗ Reject
+                      <button className="flex-1 bg-red-500 hover:bg-red-600 text-white text-sm font-medium py-2 px-4 rounded-lg transition-colors flex items-center justify-center gap-1.5">
+                        <CircleXIcon className="w-4 h-4" stroke="#FFFFFF" />
+                        Reject
                       </button>
                     </div>
                   </div>
