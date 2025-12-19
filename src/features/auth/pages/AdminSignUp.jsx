@@ -3,7 +3,7 @@ import { IonPage, IonContent } from '@ionic/react';
 import { useHistory } from 'react-router-dom';
 import { Eye, EyeOff } from 'lucide-react';
 import { YummyText } from '../../../components/YummyText';
-import { registerAdmin } from '../../../utils/authApi';
+import { registerCustomer } from '../../../utils/authApi';
 
 const AdminSignUp = () => {
   const history = useHistory();
@@ -83,13 +83,14 @@ const AdminSignUp = () => {
         email: formData.email.trim().toLowerCase(),
         password: formData.password,
         confirmPassword: formData.confirmPassword,
-        phone: formData.phone.trim(),
-        role: 'customer' // Register as customer, then backend will upgrade to admin
+        phoneNumber: formData.phone.trim(), // Changed from 'phone' to 'phoneNumber'
+        role: 'customer' // Backend only accepts customer/driver, admin role assigned manually
       };
 
       console.log('Registering admin with payload:', { ...payload, password: '[HIDDEN]', confirmPassword: '[HIDDEN]' });
 
-      const response = await registerAdmin(payload);
+      // Use registerCustomer since backend doesn't have separate admin registration
+      const response = await registerCustomer(payload);
       
       console.log('Admin registration response:', response);
 

@@ -225,12 +225,21 @@ export async function registerCustomer(payload) {
 /**
  * Register admin - DON'T store tokens yet, requires email verification
  */
+/**
+ * Register admin - DON'T store tokens yet, requires email verification
+ * Note: Backend doesn't support 'admin' role in registration, use customer registration
+ * and manually assign admin role through backend
+ */
 export async function registerAdmin(payload) {
   console.log('[authApi] → Registering admin:', payload.email);
+  console.warn('[authApi] ⚠ Admin registration should use registerCustomer - backend only accepts customer/driver roles');
+  
+  // Remove admin role and use customer registration
+  const { role, ...cleanPayload } = payload;
   
   const response = await apiClient.post('/api/auth/register', {
-    ...payload,
-    role: 'admin'
+    ...cleanPayload,
+    role: 'customer' // Backend only accepts customer or driver
   });
   
   console.log('[authApi] ← Admin registration response:', response);
@@ -252,7 +261,7 @@ export async function registerAdmin(payload) {
       setCookie('pendingVerificationEmail', user?.email || payload.email, 1);
     }
     
-    setCookie('pendingVerificationType', 'admin', 1);
+    setCookie('pendingVerificationType', 'customer', 1); // Changed from 'admin' to 'customer'
     
     if (user) {
       setJSONCookie('pending_user_data', user, 1);
