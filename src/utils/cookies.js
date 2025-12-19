@@ -1,9 +1,4 @@
 /**
- * Cookie Utility Functions
- * Handles secure cookie operations for authentication tokens and user data
- */
-
-/**
  * Set a cookie
  * @param {string} name - Cookie name
  * @param {string} value - Cookie value

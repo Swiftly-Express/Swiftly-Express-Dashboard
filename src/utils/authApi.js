@@ -19,15 +19,28 @@ apiClient.interceptors.request.use(
 
     const riderToken = getCookie("rider_token");
     const customerToken = getCookie("customer_token");
+    const adminToken = getCookie("admin_token");
     const authToken = getCookie("auth_token");
     
-    const token = riderToken || customerToken || authToken;
+    const token = adminToken || riderToken || customerToken || authToken;
 
     if (token) {
-      config.headers.Authorization = `Bearer ${token}`;
-      console.log("[authApi] ✓ Token attached →", config.url);
+      // Validate token format before sending
+      if (typeof token === 'string' && token.split('.').length === 3) {
+        config.headers.Authorization = `Bearer ${token}`;
+        console.log("[authApi] ✓ Token attached →", config.url, "(first 20 chars:", token.substring(0, 20) + "...)");
+      } else {
+        console.error("[authApi] Invalid JWT token format:", token);
+        console.error("[authApi] Token type:", typeof token, "Parts:", token?.split('.')?.length);
+      }
     } else {
       console.warn("[authApi] ⚠ No token found for →", config.url);
+      console.warn("[authApi] Available cookies:", {
+        rider: !!riderToken,
+        customer: !!customerToken,
+        admin: !!adminToken,
+        auth: !!authToken
+      });
     }
 
     return config;
@@ -39,7 +52,7 @@ apiClient.interceptors.request.use(
 apiClient.interceptors.response.use(
   (response) => response.data,
   (error) => {
-    console.error("[authApi] ❌ Request failed:", {
+    console.error("[authApi] Request failed:", {
       url: error.config?.url,
       method: error.config?.method,
       status: error.response?.status,
@@ -65,6 +78,8 @@ apiClient.interceptors.response.use(
 const saveAuthData = (response, role) => {
   if (!response) return false;
 
+  console.log('[authApi] Raw response for token extraction:', JSON.stringify(response, null, 2));
+
   // Extract token from various possible locations
   const token = response?.token || 
                 response?.data?.token || 
@@ -81,15 +96,31 @@ const saveAuthData = (response, role) => {
 
   if (!token) {
     console.warn('[authApi] ⚠ No token in response, auth data not stored');
+    console.warn('[authApi] Response keys:', Object.keys(response || {}));
     return false;
   }
 
-  console.log('[authApi] ✓ Storing auth data:', { role, hasToken: !!token, hasUser: !!user });
+  // Validate token is a proper JWT (basic check)
+  if (typeof token !== 'string' || token.split('.').length !== 3) {
+    console.error('[authApi] Invalid JWT token format:', token);
+    return false;
+  }
+
+  console.log('[authApi] ✓ Storing auth data:', { 
+    role, 
+    hasToken: !!token, 
+    hasUser: !!user,
+    tokenPreview: token.substring(0, 20) + '...',
+    tokenParts: token.split('.').length
+  });
 
   // Store role-specific token
   if (role === 'rider' || role === 'driver') {
     setCookie('rider_token', token, 7);
     if (refresh) setCookie('rider_refresh_token', refresh, 7);
+  } else if (role === 'admin') {
+    setCookie('admin_token', token, 7);
+    if (refresh) setCookie('admin_refresh_token', refresh, 7);
   } else {
     setCookie('customer_token', token, 7);
     if (refresh) setCookie('customer_refresh_token', refresh, 7);
@@ -182,6 +213,46 @@ export async function registerCustomer(payload) {
     }
     
     setCookie('pendingVerificationType', 'customer', 1);
+    
+    if (user) {
+      setJSONCookie('pending_user_data', user, 1);
+    }
+  }
+  
+  return response;
+}
+
+/**
+ * Register admin - DON'T store tokens yet, requires email verification
+ */
+export async function registerAdmin(payload) {
+  console.log('[authApi] → Registering admin:', payload.email);
+  
+  const response = await apiClient.post('/api/auth/register', {
+    ...payload,
+    role: 'admin'
+  });
+  
+  console.log('[authApi] ← Admin registration response:', response);
+  
+  if (typeof window !== 'undefined' && response) {
+    const userId = response?.userId || 
+                   response?.data?.userId || 
+                   response?.user?.userId || 
+                   response?.user?.id || 
+                   response?.user?._id;
+    
+    const user = response?.user || response?.data?.user || response?.data;
+    
+    if (userId) {
+      setCookie('pendingVerificationUserId', userId, 1);
+    }
+    
+    if (user?.email || payload.email) {
+      setCookie('pendingVerificationEmail', user?.email || payload.email, 1);
+    }
+    
+    setCookie('pendingVerificationType', 'admin', 1);
     
     if (user) {
       setJSONCookie('pending_user_data', user, 1);
@@ -473,9 +544,11 @@ export async function logout(payload = {}) {
       deleteCookie('auth_token');
       deleteCookie('customer_token');
       deleteCookie('rider_token');
+      deleteCookie('admin_token');
       deleteCookie('refresh_token');
       deleteCookie('customer_refresh_token');
       deleteCookie('rider_refresh_token');
+      deleteCookie('admin_refresh_token');
       deleteCookie('user_data');
       deleteCookie('userRole');
       deleteCookie('user_type');
@@ -503,13 +576,16 @@ export function isAuthenticated(role = null) {
     return !!getCookie('customer_token');
   } else if (role === 'rider' || role === 'driver') {
     return !!getCookie('rider_token');
+  } else if (role === 'admin') {
+    return !!getCookie('admin_token');
   }
 
   const customerToken = getCookie('customer_token');
   const riderToken = getCookie('rider_token');
+  const adminToken = getCookie('admin_token');
   const oldToken = getCookie('auth_token');
   
-  return !!(customerToken || riderToken || oldToken);
+  return !!(customerToken || riderToken || adminToken || oldToken);
 }
 
 export function getAuthToken(role = null) {
@@ -519,6 +595,8 @@ export function getAuthToken(role = null) {
     return getCookie('customer_token');
   } else if (role === 'rider' || role === 'driver') {
     return getCookie('rider_token');
+  } else if (role === 'admin') {
+    return getCookie('admin_token');
   }
   
   const userRole = getCookie('userRole');
@@ -526,6 +604,8 @@ export function getAuthToken(role = null) {
     return getCookie('customer_token');
   } else if (userRole === 'rider' || userRole === 'driver') {
     return getCookie('rider_token');
+  } else if (userRole === 'admin') {
+    return getCookie('admin_token');
   }
   
   return getCookie('auth_token');
@@ -544,6 +624,7 @@ export function getPendingUserData() {
 export default {
   registerRider,
   registerCustomer,
+  registerAdmin,
   verifyEmail,
   resendVerification,
   login,

@@ -1,72 +1,264 @@
-import React from 'react';
-import { IonPage, IonContent } from '@ionic/react';
-import { Users, Bike, Package, DollarSign, TrendingUp } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { IonPage, IonContent, IonSpinner, IonRefresher, IonRefresherContent } from '@ionic/react';
+import { Users, Bike, Package, DollarSign, TrendingUp, RefreshCw, AlertCircle } from 'lucide-react';
 import { LineChart, Line, PieChart, Pie, Cell, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 import AdminLayout from '../components/AdminLayout';
 import { YummyText } from '../../../components/YummyText';
 import ClockIcon from '../../../icons/Clockicon';
 import CheckIcon from '../../../icons/Checkicon';
 import CircleXIcon from '../../../icons/Circlexicon';
+import { 
+  getAnalyticsOverview, 
+  getRevenueAnalytics, 
+  getAllDeliveries, 
+  getPendingVerifications,
+  approveVerification,
+  rejectVerification
+} from '../../../utils/adminApi';
 
 const AdminDashboard = () => {
-  // Revenue data for line chart
-  const revenueData = [
-    { month: 'Jan', value: 45000 },
-    { month: 'Feb', value: 52000 },
-    { month: 'Mar', value: 48000 },
-    { month: 'Apr', value: 61000 },
-    { month: 'May', value: 73000 },
-    { month: 'Jun', value: 71000 }
-  ];
+  // State management
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+  const [refreshing, setRefreshing] = useState(false);
+  const [overview, setOverview] = useState(null);
+  const [revenueData, setRevenueData] = useState([]);
+  const [recentOrders, setRecentOrders] = useState([]);
+  const [kycApprovals, setKycApprovals] = useState([]);
+  const [processingKyc, setProcessingKyc] = useState({});
 
-  // Order status data for pie chart
-  const orderStatusData = [
-    { name: 'Delivered', value: 8458, color: '#10B981' },
-    { name: 'In Transit', value: 2847, color: '#3B82F6' },
-    { name: 'Pending', value: 1023, color: '#F59E0B' },
-    { name: 'Cancelled', value: 152, color: '#EF4444' }
-  ];
+  // Format currency
+  const formatCurrency = (amount) => {
+    if (!amount && amount !== 0) return '₦0';
+    return `₦${Number(amount).toLocaleString('en-NG', { minimumFractionDigits: 0, maximumFractionDigits: 2 })}`;
+  };
 
-  // Recent orders data
-  const recentOrders = [
-    { id: 'ORD-12436', customer: 'Micheal Mike', status: 'Delivered', amount: '₦4,500', time: '2 hrs ago', statusColor: 'bg-green-100 text-green-800' },
-    { id: 'ORD-12435', customer: 'Sarah Johnson × David Lee', status: 'In Transit', amount: '₦2,250', time: '5 hrs ago', statusColor: 'bg-blue-100 text-blue-800' },
-    { id: 'ORD-12434', customer: 'Tom Anderson', status: 'Pending', amount: '₦5,800', time: '12 hrs ago', statusColor: 'bg-yellow-100 text-yellow-800' },
-    { id: 'ORD-12433', customer: 'Emma Davis × Chris Martin', status: 'Delivered', amount: '₦3,125', time: '19 hrs ago', statusColor: 'bg-green-100 text-green-800' },
-    { id: 'ORD-12432', customer: 'James Wilson × Ann Turner', status: 'In Transit', amount: '₦6,780', time: '22 hrs ago', statusColor: 'bg-blue-100 text-blue-800' }
-  ];
+  // Format relative time
+  const formatRelativeTime = (date) => {
+    if (!date) return 'N/A';
+    const now = new Date();
+    const past = new Date(date);
+    const diffMs = now - past;
+    const diffMins = Math.floor(diffMs / 60000);
+    const diffHours = Math.floor(diffMs / 3600000);
+    const diffDays = Math.floor(diffMs / 86400000);
 
-  // Pending KYC approvals
-  const kycApprovals = [
-    { name: 'Robert Chen', email: 'robert.chen@email.com', time: '5 days ago', status: 'Pending' },
-    { name: 'Maria Garcia', email: 'maria.g@email.com', time: '5 hours ago', status: 'Pending' },
-    { name: 'Ahmed Hassan', email: 'ahmed.h@email.com', time: '2 hours ago', status: 'Pending' }
-  ];
+    if (diffMins < 60) return `${diffMins} min${diffMins !== 1 ? 's' : ''} ago`;
+    if (diffHours < 24) return `${diffHours} hr${diffHours !== 1 ? 's' : ''} ago`;
+    return `${diffDays} day${diffDays !== 1 ? 's' : ''} ago`;
+  };
 
-  const StatCard = ({ icon: Icon, title, value, change, iconBg, iconColor }) => (
+  // Get status styling
+  const getStatusStyle = (status) => {
+    const statusMap = {
+      delivered: 'bg-green-100 text-green-800',
+      completed: 'bg-green-100 text-green-800',
+      'in-transit': 'bg-blue-100 text-blue-800',
+      'in transit': 'bg-blue-100 text-blue-800',
+      ongoing: 'bg-blue-100 text-blue-800',
+      pending: 'bg-yellow-100 text-yellow-800',
+      cancelled: 'bg-red-100 text-red-800',
+      canceled: 'bg-red-100 text-red-800',
+      rejected: 'bg-red-100 text-red-800'
+    };
+    return statusMap[status?.toLowerCase()] || 'bg-gray-100 text-gray-800';
+  };
+
+  // Fetch all dashboard data
+  const fetchDashboardData = async () => {
+    try {
+      setError(null);
+      
+      // Fetch all data in parallel
+      const [overviewRes, revenueRes, deliveriesRes, verificationsRes] = await Promise.all([
+        getAnalyticsOverview().catch(err => ({ error: err.message })),
+        getRevenueAnalytics({ period: '6months' }).catch(err => ({ error: err.message })),
+        getAllDeliveries(1, 10).catch(err => ({ error: err.message })),
+        getPendingVerifications(1, 5).catch(err => ({ error: err.message }))
+      ]);
+
+      // Set overview data
+      if (!overviewRes.error) {
+        setOverview(overviewRes.data || overviewRes);
+      }
+
+      // Set revenue chart data
+      if (!revenueRes.error && revenueRes.data?.monthlyRevenue) {
+        setRevenueData(revenueRes.data.monthlyRevenue);
+      } else if (!revenueRes.error && Array.isArray(revenueRes.data)) {
+        setRevenueData(revenueRes.data);
+      }
+
+      // Set recent orders
+      if (!deliveriesRes.error) {
+        const deliveries = deliveriesRes.data?.deliveries || deliveriesRes.deliveries || deliveriesRes.data || [];
+        setRecentOrders(deliveries.slice(0, 10));
+      }
+
+      // Set KYC approvals
+      if (!verificationsRes.error) {
+        const verifications = verificationsRes.data?.verifications || verificationsRes.verifications || verificationsRes.data || [];
+        setKycApprovals(verifications.slice(0, 5));
+      }
+
+    } catch (err) {
+      console.error('Error fetching dashboard data:', err);
+      setError(err.message || 'Failed to load dashboard data');
+    } finally {
+      setLoading(false);
+      setRefreshing(false);
+    }
+  };
+
+  // Handle KYC approval
+  const handleApproveKyc = async (verificationId) => {
+    try {
+      setProcessingKyc(prev => ({ ...prev, [verificationId]: 'approving' }));
+      await approveVerification(verificationId);
+      // Remove from list
+      setKycApprovals(prev => prev.filter(k => k._id !== verificationId && k.id !== verificationId));
+      setProcessingKyc(prev => ({ ...prev, [verificationId]: null }));
+    } catch (err) {
+      console.error('Error approving KYC:', err);
+      alert(err.message || 'Failed to approve verification');
+      setProcessingKyc(prev => ({ ...prev, [verificationId]: null }));
+    }
+  };
+
+  // Handle KYC rejection
+  const handleRejectKyc = async (verificationId) => {
+    const reason = prompt('Please provide a reason for rejection:');
+    if (!reason) return;
+
+    try {
+      setProcessingKyc(prev => ({ ...prev, [verificationId]: 'rejecting' }));
+      await rejectVerification(verificationId, { reason });
+      // Remove from list
+      setKycApprovals(prev => prev.filter(k => k._id !== verificationId && k.id !== verificationId));
+      setProcessingKyc(prev => ({ ...prev, [verificationId]: null }));
+    } catch (err) {
+      console.error('Error rejecting KYC:', err);
+      alert(err.message || 'Failed to reject verification');
+      setProcessingKyc(prev => ({ ...prev, [verificationId]: null }));
+    }
+  };
+
+  // Handle manual refresh
+  const handleRefresh = () => {
+    setRefreshing(true);
+    fetchDashboardData();
+  };
+
+  // Handle ion-refresher
+  const handleIonRefresh = (event) => {
+    fetchDashboardData().finally(() => {
+      event.detail.complete();
+    });
+  };
+
+  // Fetch data on mount
+  useEffect(() => {
+    fetchDashboardData();
+  }, []);
+
+  // Calculate order status data for pie chart
+  const orderStatusData = overview?.ordersByStatus ? [
+    { name: 'Delivered', value: overview.ordersByStatus.delivered || 0, color: '#10B981' },
+    { name: 'In Transit', value: overview.ordersByStatus['in-transit'] || overview.ordersByStatus.ongoing || 0, color: '#3B82F6' },
+    { name: 'Pending', value: overview.ordersByStatus.pending || 0, color: '#F59E0B' },
+    { name: 'Cancelled', value: overview.ordersByStatus.cancelled || overview.ordersByStatus.canceled || 0, color: '#EF4444' }
+  ].filter(item => item.value > 0) : [];
+
+  const StatCard = ({ icon: Icon, title, value, change, iconBg, iconColor, loading }) => (
     <div className="bg-white rounded-xl p-6 shadow-sm border border-gray-100">
       <div className="flex items-start justify-between mb-4">
         <div className={`${iconBg} p-3 rounded-lg`}>
           <Icon className={`w-5 h-5 ${iconColor}`} />
         </div>
-        <div className="flex items-center text-xs gap-1 py-0.5 px-2 bg-[#F0FDF4] border border-[#B9F8CF] rounded-full text-green-600">
-          <TrendingUp className="w-4 h-4" />
-          {change}
-        </div>
+        {change && (
+          <div className="flex items-center text-xs gap-1 py-0.5 px-2 bg-[#F0FDF4] border border-[#B9F8CF] rounded-full text-green-600">
+            <TrendingUp className="w-4 h-4" />
+            {change}
+          </div>
+        )}
       </div>
       <div className="text-gray-500 text-sm mb-1">{title}</div>
-      <div className="text-3xl font-bold text-gray-900">{value}</div>
+      {loading ? (
+        <div className="h-9 flex items-center">
+          <IonSpinner name="dots" />
+        </div>
+      ) : (
+        <div className="text-3xl font-bold text-gray-900">{value}</div>
+      )}
     </div>
   );
+
+  // Loading state
+  if (loading && !overview) {
+    return (
+      <IonPage>
+        <AdminLayout>
+          <IonContent className="ion-padding">
+            <div className="flex items-center justify-center h-full">
+              <div className="text-center">
+                <IonSpinner name="crescent" className="w-12 h-12" />
+                <YummyText className="mt-4 text-gray-600">Loading dashboard...</YummyText>
+              </div>
+            </div>
+          </IonContent>
+        </AdminLayout>
+      </IonPage>
+    );
+  }
+
+  // Error state
+  if (error && !overview) {
+    return (
+      <IonPage>
+        <AdminLayout>
+          <IonContent className="ion-padding">
+            <div className="flex items-center justify-center h-full">
+              <div className="text-center max-w-md">
+                <AlertCircle className="w-16 h-16 text-red-500 mx-auto mb-4" />
+                <YummyText className="text-xl font-semibold text-gray-900 mb-2">Error Loading Dashboard</YummyText>
+                <YummyText className="text-gray-600 mb-4">{error}</YummyText>
+                <button
+                  onClick={handleRefresh}
+                  className="bg-blue-600 hover:bg-blue-700 text-white px-6 py-2 rounded-lg transition-colors flex items-center gap-2 mx-auto"
+                >
+                  <RefreshCw className="w-4 h-4" />
+                  Retry
+                </button>
+              </div>
+            </div>
+          </IonContent>
+        </AdminLayout>
+      </IonPage>
+    );
+  }
 
   return (
     <IonPage>
       <AdminLayout>
         <IonContent className="ion-padding">
+          <IonRefresher slot="fixed" onIonRefresh={handleIonRefresh}>
+            <IonRefresherContent />
+          </IonRefresher>
+
           {/* Header */}
-          <div className="mb-8">
-            <YummyText className="text-3xl font-medium text-[#1E1E1E] mb-2">Admin Dashboard</YummyText>
-            <YummyText className="text-[#717182]">Welcome back! Here's what's happening with your platform today.</YummyText>
+          <div className="mb-8 flex items-center justify-between">
+            <div>
+              <YummyText className="text-3xl font-medium text-[#1E1E1E] mb-2">Admin Dashboard</YummyText>
+              <YummyText className="text-[#717182]">Welcome back! Here's what's happening with your platform today.</YummyText>
+            </div>
+            <button
+              onClick={handleRefresh}
+              disabled={refreshing}
+              className="bg-white hover:bg-gray-50 border border-gray-200 text-gray-700 px-4 py-2 rounded-lg transition-colors flex items-center gap-2 disabled:opacity-50"
+            >
+              <RefreshCw className={`w-4 h-4 ${refreshing ? 'animate-spin' : ''}`} />
+              Refresh
+            </button>
           </div>
 
           {/* Stats Cards */}
@@ -74,34 +266,38 @@ const AdminDashboard = () => {
             <StatCard 
               icon={Users}
               title="Total Users"
-              value="2,847"
-              change="+12.5%"
+              value={overview?.totalUsers?.toLocaleString() || '0'}
+              change={overview?.userGrowth ? `+${overview.userGrowth}%` : null}
               iconBg="bg-blue-50"
               iconColor="text-blue-600"
+              loading={refreshing}
             />
             <StatCard 
               icon={Bike}
               title="Active Riders"
-              value="486"
-              change="+8.1%"
+              value={overview?.activeRiders?.toLocaleString() || overview?.totalRiders?.toLocaleString() || '0'}
+              change={overview?.riderGrowth ? `+${overview.riderGrowth}%` : null}
               iconBg="bg-orange-50"
               iconColor="text-orange-600"
+              loading={refreshing}
             />
             <StatCard 
               icon={Package}
               title="Total Orders"
-              value="12,456"
-              change="+23.1%"
+              value={overview?.totalOrders?.toLocaleString() || '0'}
+              change={overview?.orderGrowth ? `+${overview.orderGrowth}%` : null}
               iconBg="bg-green-50"
               iconColor="text-green-600"
+              loading={refreshing}
             />
             <StatCard 
               icon={DollarSign}
-              title="Revenue"
-              value="₦124,890"
-              change="+18.2%"
+              title="Total Revenue"
+              value={formatCurrency(overview?.totalRevenue || 0)}
+              change={overview?.revenueGrowth ? `+${overview.revenueGrowth}%` : null}
               iconBg="bg-purple-50"
               iconColor="text-purple-600"
+              loading={refreshing}
             />
           </div>
 
@@ -110,58 +306,78 @@ const AdminDashboard = () => {
             {/* Revenue Overview */}
             <div className="lg:col-span-2 bg-white rounded-xl p-6 shadow-sm border border-gray-100">
               <YummyText className="text-lg font-semibold text-gray-900 mb-2">Revenue Overview</YummyText>
-              <YummyText className="text-sm text-gray-500 mb-6">Monthly revenue for the last 6 months</YummyText>
-              <ResponsiveContainer width="100%" height={300}>
-                <LineChart data={revenueData}>
-                  <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
-                  <XAxis dataKey="month" stroke="#94a3b8" />
-                  <YAxis stroke="#94a3b8" />
-                  <Tooltip 
-                    contentStyle={{ backgroundColor: '#fff', border: '1px solid #e5e7eb', borderRadius: '8px' }}
-                    formatter={(value) => `₦${value.toLocaleString()}`}
-                  />
-                  <Line type="monotone" dataKey="value" stroke="#3b82f6" strokeWidth={3} dot={{ fill: '#3b82f6', r: 5 }} />
-                </LineChart>
-              </ResponsiveContainer>
+              <YummyText className="text-sm text-gray-500 mb-6">Monthly revenue trend</YummyText>
+              {revenueData.length > 0 ? (
+                <ResponsiveContainer width="100%" height={300}>
+                  <LineChart data={revenueData}>
+                    <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
+                    <XAxis dataKey="month" stroke="#94a3b8" />
+                    <YAxis stroke="#94a3b8" />
+                    <Tooltip 
+                      contentStyle={{ backgroundColor: '#fff', border: '1px solid #e5e7eb', borderRadius: '8px' }}
+                      formatter={(value) => formatCurrency(value)}
+                    />
+                    <Line type="monotone" dataKey="value" stroke="#3b82f6" strokeWidth={3} dot={{ fill: '#3b82f6', r: 5 }} />
+                  </LineChart>
+                </ResponsiveContainer>
+              ) : (
+                <div className="h-[300px] flex items-center justify-center text-gray-400">
+                  <div className="text-center">
+                    <Package className="w-12 h-12 mx-auto mb-2 opacity-50" />
+                    <p>No revenue data available</p>
+                  </div>
+                </div>
+              )}
             </div>
 
             {/* Order Status */}
             <div className="bg-white rounded-xl p-6 shadow-sm border border-gray-100">
               <YummyText className="text-lg font-semibold text-gray-900 mb-2">Order Status</YummyText>
               <YummyText className="text-sm text-gray-500 mb-6">Distribution of order statuses</YummyText>
-              <ResponsiveContainer width="100%" height={240}>
-                <PieChart>
-                  <Pie
-                    data={orderStatusData}
-                    dataKey="value"
-                    cx="50%"
-                    cy="50%"
-                    outerRadius={95}
-                    stroke="#ffffff"
-                    strokeWidth={2}
-                    isAnimationActive={false}
-                  >
-                    {orderStatusData.map((entry, index) => (
-                      <Cell key={`cell-${index}`} fill={entry.color} />
+              {orderStatusData.length > 0 ? (
+                <>
+                  <ResponsiveContainer width="100%" height={240}>
+                    <PieChart>
+                      <Pie
+                        data={orderStatusData}
+                        dataKey="value"
+                        cx="50%"
+                        cy="50%"
+                        outerRadius={95}
+                        stroke="#ffffff"
+                        strokeWidth={2}
+                        isAnimationActive={false}
+                      >
+                        {orderStatusData.map((entry, index) => (
+                          <Cell key={`cell-${index}`} fill={entry.color} />
+                        ))}
+                      </Pie>
+                    </PieChart>
+                  </ResponsiveContainer>
+                  {/* Legend */}
+                  <div className="mt-6 space-y-1">
+                    {orderStatusData.map((item, index) => (
+                      <div key={index} className="flex items-center justify-between">
+                        <div className="flex items-center">
+                          <span
+                            className="w-3 h-3 rounded-full mr-3"
+                            style={{ backgroundColor: item.color }}
+                          />
+                          <YummyText className="text-sm text-gray-600">{item.name}</YummyText>
+                        </div>
+                        <YummyText className="text-sm font-semibold text-gray-900">{item.value.toLocaleString()}</YummyText>
+                      </div>
                     ))}
-                  </Pie>
-                </PieChart>
-              </ResponsiveContainer>
-              {/* Legend */}
-              <div className="mt-6 space-y-1">
-                {orderStatusData.map((item, index) => (
-                  <div key={index} className="flex items-center justify-between">
-                    <div className="flex items-center">
-                      <span
-                        className="w-3 h-3 rounded-full mr-3"
-                        style={{ backgroundColor: item.color }}
-                      />
-                      <YummyText className="text-sm text-gray-600">{item.name}</YummyText>
-                    </div>
-                    <YummyText className="text-sm font-semibold text-gray-900">{item.value.toLocaleString()}</YummyText>
                   </div>
-                ))}
-              </div>
+                </>
+              ) : (
+                <div className="h-[300px] flex items-center justify-center text-gray-400">
+                  <div className="text-center">
+                    <Package className="w-12 h-12 mx-auto mb-2 opacity-50" />
+                    <p>No order data available</p>
+                  </div>
+                </div>
+              )}
             </div>
           </div>
 
@@ -171,58 +387,107 @@ const AdminDashboard = () => {
             <div className="bg-white rounded-xl p-6 shadow-sm border border-gray-100">
               <YummyText className="text-lg font-semibold text-gray-900 mb-2">Recent Orders</YummyText>
               <YummyText className="text-sm text-gray-500 mb-6">Latest orders from the platform</YummyText>
-              <div className="space-y-4">
-                {recentOrders.map((order, index) => (
-                  <div key={index} className="flex items-center justify-between pb-4 border-b border-gray-100 last:border-0">
-                    <div className="flex-1">
-                      <div className="flex items-center mb-1">
-                        <YummyText className="font-medium text-gray-900 text-sm mr-3">{order.id}</YummyText>
-                        <span className={`px-2 py-1 rounded-full text-xs font-medium ${order.statusColor}`}>
-                          {order.status}
-                        </span>
+              {recentOrders.length > 0 ? (
+                <div className="space-y-4">
+                  {recentOrders.map((order, index) => {
+                    const orderId = order._id || order.id || `ORD-${index}`;
+                    const orderNumber = order.orderNumber || order.trackingNumber || orderId;
+                    const status = order.status || 'pending';
+                    const amount = order.totalCost || order.price || order.amount || 0;
+                    const customerName = order.customer?.name || order.senderName || order.sender?.name || 'N/A';
+                    const receiverName = order.receiver?.name || order.receiverName || null;
+                    const displayName = receiverName ? `${customerName} × ${receiverName}` : customerName;
+                    const createdAt = order.createdAt || order.dateCreated;
+                    
+                    return (
+                      <div key={orderId} className="flex items-center justify-between pb-4 border-b border-gray-100 last:border-0">
+                        <div className="flex-1">
+                          <div className="flex items-center mb-1">
+                            <YummyText className="font-medium text-gray-900 text-sm mr-3">{orderNumber}</YummyText>
+                            <span className={`px-2 py-1 rounded-full text-xs font-medium capitalize ${getStatusStyle(status)}`}>
+                              {status}
+                            </span>
+                          </div>
+                          <YummyText className="text-sm text-gray-500">{displayName}</YummyText>
+                          <YummyText className="text-xs text-gray-400 mt-1">{formatRelativeTime(createdAt)}</YummyText>
+                        </div>
+                        <div className="text-right">
+                          <YummyText className="font-semibold text-gray-900">{formatCurrency(amount)}</YummyText>
+                        </div>
                       </div>
-                      <YummyText className="text-sm text-gray-500">{order.customer}</YummyText>
-                      <YummyText className="text-xs text-gray-400 mt-1">{order.time}</YummyText>
-                    </div>
-                    <div className="text-right">
-                      <YummyText className="font-semibold text-gray-900">{order.amount}</YummyText>
-                    </div>
-                  </div>
-                ))}
-              </div>
+                    );
+                  })}
+                </div>
+              ) : (
+                <div className="py-12 text-center text-gray-400">
+                  <Package className="w-12 h-12 mx-auto mb-2 opacity-50" />
+                  <p>No recent orders</p>
+                </div>
+              )}
             </div>
 
             {/* Pending KYC Approvals */}
             <div className="bg-white rounded-xl p-6 shadow-sm border border-gray-100">
               <YummyText className="text-lg font-semibold text-gray-900 mb-2">Pending KYC Approvals</YummyText>
               <YummyText className="text-sm text-gray-500 mb-6">Users waiting for verification</YummyText>
-              <div className="space-y-4">
-                {kycApprovals.map((user, index) => (
-                  <div key={index} className="pb-4 border-b border-gray-100 last:border-0">
-                    <div className="flex items-start justify-between mb-3">
-                      <div>
-                        <YummyText className="font-medium text-gray-900 text-sm mb-1">{user.name}</YummyText>
-                        <YummyText className="text-sm text-gray-500">{user.email}</YummyText>
-                        <YummyText className="text-xs text-gray-400 mt-1">{user.time}</YummyText>
+              {kycApprovals.length > 0 ? (
+                <div className="space-y-4">
+                  {kycApprovals.map((user, index) => {
+                    const verificationId = user._id || user.id;
+                    const userName = user.driver?.name || user.user?.name || user.name || 'N/A';
+                    const userEmail = user.driver?.email || user.user?.email || user.email || 'N/A';
+                    const submittedAt = user.submittedAt || user.createdAt;
+                    const isProcessing = processingKyc[verificationId];
+                    
+                    return (
+                      <div key={verificationId || index} className="pb-4 border-b border-gray-100 last:border-0">
+                        <div className="flex items-start justify-between mb-3">
+                          <div>
+                            <YummyText className="font-medium text-gray-900 text-sm mb-1">{userName}</YummyText>
+                            <YummyText className="text-sm text-gray-500">{userEmail}</YummyText>
+                            <YummyText className="text-xs text-gray-400 mt-1">{formatRelativeTime(submittedAt)}</YummyText>
+                          </div>
+                          <span className="px-3 py-1 rounded-full text-xs font-medium flex items-center gap-1.5 border bg-[#FEF9C2] text-[#D08700] border-[#F5E6B3]">
+                            <ClockIcon className="w-3.5 h-3.5" stroke="#D08700" />
+                            Pending
+                          </span>
+                        </div>
+                        <div className="flex gap-2">
+                          <button 
+                            onClick={() => handleApproveKyc(verificationId)}
+                            disabled={!!isProcessing}
+                            className="flex-1 bg-green-500 hover:bg-green-600 text-white text-sm font-medium py-2 px-4 rounded-lg transition-colors flex items-center justify-center gap-1.5 disabled:opacity-50 disabled:cursor-not-allowed"
+                          >
+                            {isProcessing === 'approving' ? (
+                              <IonSpinner name="dots" className="w-4 h-4" />
+                            ) : (
+                              <CheckIcon className="w-4 h-4" stroke="#FFFFFF" />
+                            )}
+                            Approve
+                          </button>
+                          <button 
+                            onClick={() => handleRejectKyc(verificationId)}
+                            disabled={!!isProcessing}
+                            className="flex-1 bg-red-500 hover:bg-red-600 text-white text-sm font-medium py-2 px-4 rounded-lg transition-colors flex items-center justify-center gap-1.5 disabled:opacity-50 disabled:cursor-not-allowed"
+                          >
+                            {isProcessing === 'rejecting' ? (
+                              <IonSpinner name="dots" className="w-4 h-4" />
+                            ) : (
+                              <CircleXIcon className="w-4 h-4" stroke="#FFFFFF" />
+                            )}
+                            Reject
+                          </button>
+                        </div>
                       </div>
-                      <span className="px-3 py-1 rounded-full text-xs font-medium flex items-center gap-1.5 border bg-[#FEF9C2] text-[#D08700] border-[#F5E6B3]">
-                        <ClockIcon className="w-3.5 h-3.5" stroke="#D08700" />
-                        {user.status}
-                      </span>
-                    </div>
-                    <div className="flex gap-2">
-                      <button className="flex-1 bg-green-500 hover:bg-green-600 text-white text-sm font-medium py-2 px-4 rounded-lg transition-colors flex items-center justify-center gap-1.5">
-                        <CheckIcon className="w-4 h-4" stroke="#FFFFFF" />
-                        Approve
-                      </button>
-                      <button className="flex-1 bg-red-500 hover:bg-red-600 text-white text-sm font-medium py-2 px-4 rounded-lg transition-colors flex items-center justify-center gap-1.5">
-                        <CircleXIcon className="w-4 h-4" stroke="#FFFFFF" />
-                        Reject
-                      </button>
-                    </div>
-                  </div>
-                ))}
-              </div>
+                    );
+                  })}
+                </div>
+              ) : (
+                <div className="py-12 text-center text-gray-400">
+                  <Users className="w-12 h-12 mx-auto mb-2 opacity-50" />
+                  <p>No pending KYC approvals</p>
+                </div>
+              )}
             </div>
           </div>
             

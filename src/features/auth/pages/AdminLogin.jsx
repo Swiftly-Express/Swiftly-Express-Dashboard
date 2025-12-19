@@ -1,11 +1,13 @@
 import React, { useState } from 'react';
 import { IonPage, IonContent } from '@ionic/react';
 import { useHistory } from 'react-router-dom';
+import { Eye, EyeOff } from 'lucide-react';
 import { YummyText } from '../../../components/YummyText';
-import { setCookie, setJSONCookie } from '../../../utils/cookies';
+import { login } from '../../../utils/authApi';
 
 const AdminLogin = () => {
   const history = useHistory();
+  const [showPassword, setShowPassword] = useState(false);
   const [formData, setFormData] = useState({
     email: '',
     password: ''
@@ -13,32 +15,48 @@ const AdminLogin = () => {
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
 
+  const handleChange = (e) => {
+    setFormData({
+      ...formData,
+      [e.target.name]: e.target.value
+    });
+    setError(''); // Clear error on input change
+  };
+
   const handleSubmit = async (e) => {
     e.preventDefault();
     setError('');
     setLoading(true);
 
     try {
-      // TODO: Replace with actual admin login API
-      // For now, mock login for testing
-      if (formData.email && formData.password) {
-        // Set admin token and user data
-        setCookie('admin_token', 'mock_admin_token_12345', 7);
-        setCookie('auth_token', 'mock_admin_token_12345', 7);
-        setJSONCookie('user_data', {
-          id: 'admin_1',
-          email: formData.email,
-          role: 'admin',
-          fullName: 'Admin User'
-        }, 7);
-
-        history.push('/admin/dashboard');
-      } else {
+      if (!formData.email || !formData.password) {
         setError('Please enter email and password');
+        setLoading(false);
+        return;
       }
+
+      console.log('Admin login attempt:', formData.email);
+
+      const response = await login({
+        email: formData.email,
+        password: formData.password
+      });
+
+      console.log('Admin login response:', response);
+
+      // Check if user is admin
+      const user = response?.user || response?.data?.user || response?.data;
+      if (user?.role !== 'admin') {
+        setError('Unauthorized: Admin access only');
+        setLoading(false);
+        return;
+      }
+
+      // Redirect to admin dashboard
+      history.push('/admin/dashboard');
     } catch (err) {
-      console.error('Login failed:', err);
-      setError(err.message || 'Login failed');
+      console.error('Admin login failed:', err);
+      setError(err.message || 'Login failed. Please check your credentials.');
     } finally {
       setLoading(false);
     }
@@ -62,8 +80,9 @@ const AdminLogin = () => {
                   </label>
                   <input
                     type="email"
+                    name="email"
                     value={formData.email}
-                    onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+                    onChange={handleChange}
                     className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:border-[#00D68F]"
                     placeholder="admin@swiftlyxpress.com"
                     required
@@ -74,14 +93,24 @@ const AdminLogin = () => {
                   <label className="block text-sm font-medium text-[#0F172A] mb-2">
                     Password
                   </label>
-                  <input
-                    type="password"
-                    value={formData.password}
-                    onChange={(e) => setFormData({ ...formData, password: e.target.value })}
-                    className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:border-[#00D68F]"
-                    placeholder="••••••••"
-                    required
-                  />
+                  <div className="relative">
+                    <input
+                      type={showPassword ? 'text' : 'password'}
+                      name="password"
+                      value={formData.password}
+                      onChange={handleChange}
+                      className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:border-[#00D68F] pr-12"
+                      placeholder="••••••••"
+                      required
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setShowPassword(!showPassword)}
+                      className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 hover:text-gray-700"
+                    >
+                      {showPassword ? <EyeOff size={20} /> : <Eye size={20} />}
+                    </button>
+                  </div>
                 </div>
 
                 {error && (
@@ -101,7 +130,13 @@ const AdminLogin = () => {
 
               <div className="mt-6 text-center">
                 <p className="text-sm text-[#64748B]">
-                  For testing: Use any email/password combination
+                  Don't have an admin account?{' '}
+                  <button
+                    onClick={() => history.push('/auth/admin/signup')}
+                    className="text-[#00D68F] hover:text-[#00B75A] font-medium"
+                  >
+                    Register
+                  </button>
                 </p>
               </div>
             </YummyText>
