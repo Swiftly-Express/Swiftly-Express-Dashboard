@@ -4,16 +4,6 @@ import react from '@vitejs/plugin-react'
 // https://vitejs.dev/config/
 export default defineConfig({
   plugins: [react()],
-  define: {
-    // Make React globally available to prevent forwardRef errors in libraries like recharts
-    'global': 'globalThis',
-  },
-  resolve: {
-    alias: {
-      'react': 'react',
-      'react-dom': 'react-dom'
-    }
-  },
   server: {
     // match Ionic's default dev origin (localhost:8100) so requests originate
     // from the same origin while developing. Adjust if you run a different port.
