@@ -5,6 +5,11 @@
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Swiftly Express - Ionic React App</title>
+    <script>
+      // Ensure React is available globally before any modules load
+      window.React = window.React || {};
+      window.ReactDOM = window.ReactDOM || {};
+    </script>
   </head>
   <body>
     <div id="root"></div>
