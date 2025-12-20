@@ -59,9 +59,17 @@ import Analytics from "./features/admin/pages/Analytics";
 import Settings from "./features/admin/pages/Settings";
 import AdminRouteGuard from "./features/admin/components/AdminRouteGuard";
 
-console.log('[App] Initializing Ionic React...');
-setupIonicReact();
-console.log('[App] Ionic React initialized successfully');
+console.log('[App] About to initialize Ionic React...');
+console.log('[App] React available:', typeof React !== 'undefined');
+console.log('[App] window.React available:', typeof window !== 'undefined' && typeof window.React !== 'undefined');
+
+try {
+  setupIonicReact();
+  console.log('[App] ✅ Ionic React initialized successfully');
+} catch (error) {
+  console.error('[App] ❌ Failed to initialize Ionic React:', error);
+  throw error;
+}
 
 const App = () => {
   console.log('[App] App component rendering...');
