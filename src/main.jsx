@@ -1,5 +1,13 @@
 import React from 'react'
 import ReactDOM from 'react-dom/client'
+
+// Make React globally available for Ionic and other libraries
+if (typeof window !== 'undefined') {
+  window.React = React;
+  window.ReactDOM = ReactDOM;
+  console.log('[main.jsx] React attached to window globally');
+}
+
 import App from './App'
 import '@ionic/react/css/core.css';
 import './theme/variable.css';
@@ -7,6 +15,7 @@ import './index.css';
 
 console.log('[main.jsx] Starting app initialization...');
 console.log('[main.jsx] React version:', React.version);
+console.log('[main.jsx] React globally available:', typeof window !== 'undefined' && !!window.React);
 console.log('[main.jsx] Environment:', import.meta.env.MODE);
 
 try {
