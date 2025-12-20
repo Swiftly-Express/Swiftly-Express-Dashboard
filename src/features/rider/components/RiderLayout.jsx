@@ -52,6 +52,15 @@ const RiderLayout = ({ children }) => {
   const [userName, setUserName] = useState('Rider');
   const [isOnline, setIsOnline] = useState(true);
 
+  // Keep a simple cookie copy of the profile image so mobile sidebar can read the same image key
+  useEffect(() => {
+    try {
+      if (profileImage) setCookie('profile_image', profileImage, 7);
+    } catch (e) {
+      // ignore
+    }
+  }, [profileImage]);
+
   useEffect(() => {
     fetchUserProfile();
 
@@ -142,11 +151,43 @@ const RiderLayout = ({ children }) => {
   };
 
   return (
-    <div className="flex h-screen bg-[#f5f5f5]">
+    <div className="flex h-screen bg-[#f5f5f5] overflow-hidden">
       <RiderSidebar />
-      <div className="ml-64 flex-1 flex flex-col min-h-0 bricolage-font bg-white">
-        {/* Fixed Top Header - positioned to respect sidebar width (ml-64) */}
-        <div className="fixed top-0 left-0 right-0 z-40">
+      <div className="md:ml-64 ml-0 flex-1 flex flex-col min-h-0 bricolage-font bg-white">
+        {/* Mobile Header (visible on small screens) */}
+        <div className="md:hidden fixed top-0 left-0 right-0 z-50">
+          <div className="bg-transparent backdrop-blur-sm border-b border-gray-200 py-4">
+            <div className="flex items-center justify-between px-4">
+              <div className="flex items-center">
+                <YummyText className="text-3xl font-semibold text-[#0F172A]">
+                  Swiftly
+                </YummyText>
+              </div>
+
+              <div className="flex items-center gap-3">
+                <button
+                  className="w-10 h-10 rounded-full ring-2 ring-[#00D68F] overflow-hidden flex items-center justify-center"
+                  aria-label="Profile"
+                >
+                  <img src={profileImage} alt={userName} className="w-full h-full object-cover" />
+                </button>
+
+                <button
+                  className="p-2 flex flex-col gap-1 justify-center"
+                  aria-label="menu"
+                  onClick={() => window.dispatchEvent(new CustomEvent('rider:toggleMobileSidebar'))}
+                >
+                  <span className="block w-8 h-1 bg-[#111827] rounded"></span>
+                  <span className="block w-8 h-1 bg-[#111827] rounded"></span>
+                  <span className="block w-8 h-1 bg-[#111827] rounded"></span>
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* Top Header - visible on md+ screens (sticky inside scroll area) */}
+        <div className="hidden md:block fixed top-0 left-0 right-0 z-40">
           <div className="bg-white border-b border-gray-200 py-4 shadow-sm">
             <div className="flex items-center justify-between">
               {/* Left: logo + title */}
@@ -194,11 +235,10 @@ const RiderLayout = ({ children }) => {
           </div>
         </div>
 
-        {/* Main Content (header has fixed position).
-            Allow page scrolling but hide the visible scrollbar using a utility class.
-            Inner sections (with their own overflow-y-auto) will still show scrollbars.
+        {/* Main Content (header is sticky inside the scrollable area).
+            The main scroll container is the parent so the scrollbar starts at the top.
         */}
-        <div className="flex-1 p-8 pt-24 overflow-y-auto no-scrollbar">
+          <div className="flex-1 md:p-8 pt-16 md:pt-24 overflow-y-auto no-scrollbar">
           {children}
         </div>
       </div>

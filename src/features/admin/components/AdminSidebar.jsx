@@ -55,15 +55,19 @@ const AdminSidebar = () => {
   const handleLogout = () => {
     (async () => {
       try {
-        const refreshToken = localStorage.getItem('refresh_token') || '';
+        const refreshToken = getCookie('refresh_token') || getCookie('admin_refresh_token') || ''; // FIXED
         if (refreshToken) await apiLogout({ refreshToken });
       } catch (err) {
         console.error('Logout API failed', err);
       } finally {
-        localStorage.removeItem('auth_token');
-        localStorage.removeItem('refresh_token');
-        localStorage.removeItem('user_type');
-        localStorage.removeItem('user_data');
+        deleteCookie('auth_token');
+        deleteCookie('admin_token');
+        deleteCookie('refresh_token');
+        deleteCookie('admin_refresh_token');
+        deleteCookie('user_type');
+        deleteCookie('user_data');
+        deleteCookie('userRole');
+        
         if (document && document.activeElement) document.activeElement.blur();
         router.push('/auth/admin/login', 'back', 'pop');
       }

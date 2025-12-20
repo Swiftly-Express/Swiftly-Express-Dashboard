@@ -37,7 +37,7 @@ export const markVerificationModalShown = () => {
 };
 
 const StatCard = ({ icon, title, value, subtitle, iconBg }) => (
-  <div className="bg-white rounded-xl p-5" style={sideBottomShadow}>
+  <div className="bg-white rounded-xl p-3 md:p-5" style={sideBottomShadow}>
     <div className="flex items-start justify-between mb-10">
       <div className="text-xs text-[#4A5565] mt-2.5">{title}</div>
       <div className={`w-10 h-10 ${iconBg} rounded-xl flex items-center justify-center`}>
@@ -50,7 +50,7 @@ const StatCard = ({ icon, title, value, subtitle, iconBg }) => (
 );
 
 const DeliveryCard = ({ packageId, status, from, to, customer, price, distance, time, statusColor }) => (
-  <div className="bg-gradient-to-br from-[#EFF6FF] to-[#EDFFF9] rounded-2xl p-6 mb-3">
+  <div className="bg-gradient-to-br from-[#EFF6FF] to-[#EDFFF9] rounded-2xl p-3 md:p-5 mb-4">
     <YummyText>
     <div className="flex items-start justify-between -mb-4">
       <div className="flex items-center gap-3">
@@ -71,14 +71,14 @@ const DeliveryCard = ({ packageId, status, from, to, customer, price, distance, 
       <div className="text-xs text-[#0F172A]">Customer: <span className="text-[#0F172A]">{customer}</span></div>
     </div>
 
-    <div className="flex gap-3">
-      <button className="flex-1 bg-[#00B75A] text-sm hover:bg-[#00B876] text-medium text-white py-2 rounded-xl transition-colors font-[400]">
+    <div className="flex flex-col gap-3 md:flex-row md:items-center">
+      <button className="w-full md:flex-1 bg-[#00B75A] text-sm hover:bg-[#00B876] text-medium text-white py-2 rounded-xl transition-colors font-[400]">
         Navigate
       </button>
-      <button className="flex-1 py-2 bg-white text-sm hover:bg-[#FFFFFF] rounded-xl transition-colors text-[#0A0A0A] font-[400]" style={{border: "1px solid #0000001A"}}>
+      <button className="w-full md:flex-1 py-2 bg-white text-sm hover:bg-[#FFFFFF] rounded-xl transition-colors text-[#0A0A0A] font-[400]" style={{border: "1px solid #0000001A"}}>
         Contact Customer
       </button>
-      <button className="px-3 py-2 bg-white text-sm hover:bg-[#FFFFFF] rounded-xl transition-colors text-[#0A0A0A] font-[400]" style={{border: "1px solid #0000001A"}}>
+      <button className="w-full md:w-auto px-3 py-2 bg-white text-sm hover:bg-[#FFFFFF] rounded-xl transition-colors text-[#0A0A0A] font-[400]" style={{border: "1px solid #0000001A"}}>
         Update Status
       </button>
     </div>
@@ -88,15 +88,15 @@ const DeliveryCard = ({ packageId, status, from, to, customer, price, distance, 
 
 const AvailableOrderCard = ({ packageId, location, distance, price }) => (
   <YummyText>
-  <div className="flex items-center justify-between p-4 bg-white border border-gray-200 rounded-xl mb-3">
-    <div>
+  <div className="flex flex-col md:flex-row items-start md:items-center justify-between p-4 bg-white border border-gray-200 rounded-xl mb-3">
+    <div className="mb-3 md:mb-0">
       <div className="text-base font-normal text-[#0F172A]">{packageId}</div>
       <div className="text-sm text-[#64748B] mb-0.5">{location}</div>
       <div className="text-xs text-[#94A3B8]">{distance}</div>
     </div>
-    <div className="flex items-center gap-3">
+    <div className="w-full md:w-auto flex items-center gap-3 md:gap-4">
       <div className="text-lg font-normal text-[#00A63E]">{price}</div>
-      <button className="bg-[#00B75A] hover:bg-[#00B876] text-white text-sm px-4 py-2.5 rounded-lg transition-colors font-nmedium">
+      <button className="w-full md:w-auto bg-[#00B75A] hover:bg-[#00B876] text-white text-sm px-4 py-2.5 rounded-lg transition-colors font-nmedium">
         Accept
       </button>
     </div>
@@ -275,11 +275,11 @@ const Dashboard = () => {
         <IonContent className="ion-padding">
           {/* Welcome Section */}
           <YummyText>
-            <div className="mb-8 py-2">
-              <div className="text-3xl font-medium text-[#0F172A] mb-2">
+            <div className="mb-6 py-2">
+              <div className="text-2xl md:text-3xl font-medium text-[#0F172A] mb-2">
                 Welcome back, {userName}!
               </div>
-              <div className="text-[#4A5565] text-[15px] font-[400]">
+              <div className="text-[#4A5565] text-[14px] font-[400]">
                 You're doing great today. Keep up the excellent work!
               </div>
             </div>
@@ -287,7 +287,7 @@ const Dashboard = () => {
 
           {/* Stats Grid */}
           <YummyText>
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
+          <div className="grid grid-cols-2 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
             <StatCard
               icon={<BlockIcon width={24} height={24} stroke="#007BFF" />}
               iconBg="bg-[#EFF6FF]"
@@ -324,10 +324,10 @@ const Dashboard = () => {
           </YummyText>
 
           {/* Active Deliveries */}
-          <div className="mb-8 bg-white p-6 rounded-2xl" style={sideBottomShadow}>
+          <div className="mb-8 bg-white p-4 md:p-6 rounded-2xl" style={sideBottomShadow}>
             <YummyText>
             <div className="mb-4">
-              <div className="text-xl font-normal text-[#0F172A] mb-1">
+              <div className="text-xl font-normal text-[#0F172A] mb-0">
                 Active Deliveries
               </div>
               <div className="text-sm text-[#64748B]">
@@ -336,11 +336,11 @@ const Dashboard = () => {
             </div>
             </YummyText>
             
-            <div className="max-h-[600px] overflow-y-auto pr-2">
+            <div className="md:max-h-[600px] md:overflow-y-auto pr-0 md:pr-2">
               {loading ? (
                 <div className="text-center py-8 text-gray-500">Loading active deliveries...</div>
               ) : activeDeliveries.length === 0 ? (
-                <div className="text-center py-8 text-gray-500">No active deliveries at the moment</div>
+                <div className="text-center py-8 text-gray-500 text-sm md:text-medium sm:text-medium">No active deliveries at the moment</div>
               ) : (
                 activeDeliveries.map((delivery) => {
                   const statusColors = {
@@ -368,17 +368,17 @@ const Dashboard = () => {
                 })
               )}
             </div>
-          </div>
+          </div>         
 
           {/* Available Orders Nearby */}
-          <div className="mb-8 bg-white p-6 rounded-2xl" style={sideBottomShadow}>
+          <div className="mb-8 bg-white p-4 md:p-6 rounded-2xl" style={sideBottomShadow}>
             <YummyText>
             <div className="flex items-center justify-between mb-4">
               <div>
                 <div className="text-lg font-medium text-[#0F172A] -mb-1">
                   Available Orders Nearby
                 </div>
-                <div className="text-medium text-gray-500 font-[400]">
+                <div className="text-sm md:text-medium sm:text-medium text-gray-500 font-[400]">
                   Orders you can accept right now
                 </div>
               </div>
@@ -389,11 +389,11 @@ const Dashboard = () => {
             </YummyText>
 
             {/* Make available orders list scrollable independently */}
-            <div className="max-h-[360px] overflow-y-auto pr-2">
+            <div className="md:max-h-[360px] md:overflow-y-auto pr-0 md:pr-2">
               {loading ? (
                 <div className="text-center py-8 text-gray-500">Loading available orders...</div>
               ) : availableOrders.length === 0 ? (
-                <div className="text-center py-8 text-gray-500">No available orders nearby</div>
+                <div className="text-center py-8 text-gray-500 text-sm md:text-medium sm:text-medium">No available orders nearby</div>
               ) : (
                 availableOrders.map((order) => (
                   <AvailableOrderCard
