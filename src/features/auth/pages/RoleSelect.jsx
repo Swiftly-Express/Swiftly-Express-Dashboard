@@ -1,31 +1,48 @@
 import { IonPage, IonContent, useIonRouter } from '@ionic/react';
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import Button from '../../../components/Button';
 import { YummyText } from '../../../components/YummyText';
 
 const RoleSelect = () => {
+  console.log('[RoleSelect] Component mounting...');
+  
   const router = useIonRouter();
   const [selectedRole, setSelectedRole] = useState('customer'); // 'customer' or 'rider'
 
+  useEffect(() => {
+    console.log('[RoleSelect] Component mounted successfully');
+    console.log('[RoleSelect] Router available:', !!router);
+    console.log('[RoleSelect] Selected role:', selectedRole);
+    return () => {
+      console.log('[RoleSelect] Component unmounting');
+    };
+  }, []);
+
   const handleRiderSignup = () => {
+    console.log('[RoleSelect] Rider signup clicked');
     if (document && document.activeElement) document.activeElement.blur();
     router.push('/auth/rider/signup', 'forward', 'push');
   };
 
   const handleCustomerSignup = () => {
+    console.log('[RoleSelect] Customer signup clicked');
     if (document && document.activeElement) document.activeElement.blur();
     router.push('/auth/customer/signup', 'forward', 'push');
   };
 
   const handleRiderSignin = () => {
+    console.log('[RoleSelect] Rider signin clicked');
     if (document && document.activeElement) document.activeElement.blur();
     router.push('/auth/rider/login', 'forward', 'push');
   };
 
   const handleCustomerSignin = () => {
+    console.log('[RoleSelect] Customer signin clicked');
     if (document && document.activeElement) document.activeElement.blur();
     router.push('/auth/customer/login', 'forward', 'push');
   };
+
+  console.log('[RoleSelect] Rendering with role:', selectedRole);
 
   return (
     <IonPage>

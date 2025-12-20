@@ -59,9 +59,13 @@ import Analytics from "./features/admin/pages/Analytics";
 import Settings from "./features/admin/pages/Settings";
 import AdminRouteGuard from "./features/admin/components/AdminRouteGuard";
 
+console.log('[App] Initializing Ionic React...');
 setupIonicReact();
+console.log('[App] Ionic React initialized successfully');
 
-const App = () => (
+const App = () => {
+  console.log('[App] App component rendering...');
+  return (
   <DeliveryProvider>
     <IonApp>
       <IonReactRouter>
@@ -201,6 +205,7 @@ const App = () => (
     </IonReactRouter>
   </IonApp>
   </DeliveryProvider>
-);
+  );
+};
 
 export default App;
