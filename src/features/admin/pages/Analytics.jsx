@@ -1,11 +1,15 @@
 import React, { useState, useEffect } from 'react';
 import { IonPage, IonContent } from '@ionic/react';
 import { DollarSign, Package, Users, Bike, TrendingUp, TrendingDown, Star, RefreshCw, AlertCircle } from 'lucide-react';
-import { LineChart, AreaChart, Area, Line, BarChart, Bar, PieChart, Pie, Cell, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend } from 'recharts';
+import { Line, Bar, Doughnut } from 'react-chartjs-2';
+import { Chart as ChartJS, CategoryScale, LinearScale, PointElement, LineElement, BarElement, ArcElement, Title, Tooltip, Legend, Filler } from 'chart.js';
 import AdminLayout from '../components/AdminLayout';
 import { YummyText } from '../../../components/YummyText';
 import RevenueIcon from '../../../icons/Revenueicon';
 import { getAnalyticsOverview, getRevenueAnalytics, getDriverAnalytics } from '../../../utils/adminApi';
+
+// Register Chart.js components
+ChartJS.register(CategoryScale, LinearScale, PointElement, LineElement, BarElement, ArcElement, Title, Tooltip, Legend, Filler);
 
 // Rider Card Component with Flip Animation
 const RiderCard = ({ rider }) => {
@@ -274,41 +278,6 @@ const AnalyticsReports = () => {
     ];
   };
 
-  const renderLegend = (props) => {
-    const { payload } = props || {};
-
-    const mapLabelToColor = (label = '', entry = {}) => {
-      const l = String(label).toLowerCase();
-      if (l.includes('revenue') || l.includes('customers')) return { colorClass: 'text-blue-600', hex: '#3B82F6' };
-      if (l.includes('orders') || l.includes('riders')) return { colorClass: 'text-orange-500', hex: '#F59E0B' };
-      return { colorClass: 'text-gray-600', hex: entry?.color || '#6B7280' };
-    };
-
-    return (
-      <div className="flex items-center justify-center gap-6 mt-2">
-        {payload && payload.map((entry, index) => {
-          const label = entry.value || entry.payload?.name || entry.name;
-          const { colorClass, hex } = mapLabelToColor(label, entry);
-          const isIconSeries = typeof label === 'string' && (label.toLowerCase().includes('revenue') || label.toLowerCase().includes('orders') || label.toLowerCase().includes('customers') || label.toLowerCase().includes('riders'));
-
-          return (
-            <div key={index} className="flex items-center gap-2">
-              {isIconSeries ? (
-                <RevenueIcon className={`w-4 h-4 ${colorClass}`} />
-              ) : (
-                <span
-                  className="w-3 h-3 rounded-full block"
-                  style={{ backgroundColor: entry.color || hex }}
-                />
-              )}
-              <YummyText className={`text-medium ${colorClass}`}>{label}</YummyText>
-            </div>
-          );
-        })}
-      </div>
-    );
-  };
-
   // Prepare chart data
   const revenueOrdersData = processRevenueOrdersData();
   const orderStatusData = processOrderStatusData();
@@ -521,104 +490,84 @@ const AnalyticsReports = () => {
                 Monthly performance metrics
               </YummyText>
 
-              <ResponsiveContainer width="103%" height={300}>
-                <AreaChart
-                  data={revenueOrdersData}
-                  margin={{ top: 35, right: 0, left: 5, bottom: 0 }}
-                >
-                  {/* Gradients */}
-                  <defs>
-                    {/* Gray revenue background */}
-                    <linearGradient id="revenueGray" x1="0" y1="0" x2="0" y2="1">
-                      <stop offset="0%" stopColor="#6c7179ff" stopOpacity={0.7} />
-                      <stop offset="100%" stopColor="#6c7179ff" stopOpacity={0} />
-                    </linearGradient>
-
-                    {/* Orange orders background */}
-                    <linearGradient id="ordersOrange" x1="0" y1="0" x2="0" y2="1">
-                      <stop offset="0%" stopColor="#fd6b04ff" stopOpacity={0.7} />
-                      <stop offset="100%" stopColor="#fd6b04ff" stopOpacity={0} />
-                    </linearGradient>
-                  </defs>
-
-                  {/* Grid */}
-                  <CartesianGrid
-                    vertical={true}
-                    horizontal={true}
-                    stroke="#E5E7EB"
-                    strokeDasharray="4 4"
-                  />
-
-                  {/* Axes */}
-                  <XAxis
-                    dataKey="month"
-                    axisLine={true}
-                    tickLine={true}
-                    tick={{ fill: '#666666', fontSize: 12 }}
-                  />
-
-                  <YAxis
-                    yAxisId="left"
-                    axisLine={true}
-                    tickLine={true}
-                    tick={{ fill: '#666666', fontSize: 12 }}
-                  />
-
-                  <YAxis
-                    yAxisId="right"
-                    orientation="right"
-                    axisLine={true}
-                    tickLine={true}
-                    tick={{ fill: '#666666', fontSize: 12 }}
-                  />
-
-                  {/* Tooltip */}
-                  <Tooltip
-                    contentStyle={{
-                      backgroundColor: '#fff',
-                      borderRadius: '12px',
-                      border: '1px solid #E5E7EB',
-                      boxShadow: '0 10px 25px rgba(0,0,0,0.05)',
-                    }}
-                    labelStyle={{ fontWeight: 600 }}
-                    formatter={(value, name) => {
-                      if (name === 'Revenue ($)') {
-                        return [formatCurrency(value), name];
+              <div style={{ height: '300px' }}>
+                <Line
+                  data={{
+                    labels: revenueOrdersData.map(d => d.month),
+                    datasets: [
+                      {
+                        label: 'Revenue',
+                        data: revenueOrdersData.map(d => d.revenue),
+                        borderColor: '#6B7280',
+                        backgroundColor: 'rgba(107, 114, 128, 0.1)',
+                        yAxisID: 'y',
+                        tension: 0.4,
+                        fill: true,
+                        borderWidth: 2,
+                      },
+                      {
+                        label: 'Orders',
+                        data: revenueOrdersData.map(d => d.orders),
+                        borderColor: '#F97316',
+                        backgroundColor: 'rgba(249, 115, 22, 0.1)',
+                        yAxisID: 'y1',
+                        tension: 0.4,
+                        fill: true,
+                        borderWidth: 2,
                       }
-                      return [value, name];
-                    }}
-                  />
-
-                  {/* Legend (custom) */}
-                  <Legend verticalAlign="bottom" content={renderLegend} />
-
-                  {/* ORANGE AREA (Orders) */}
-                  <Area
-                    yAxisId="right"
-                    type="monotone"
-                    dataKey="orders"
-                    name="Orders"
-                    stroke="#F97316"
-                    strokeWidth={0.5}
-                    fill="url(#ordersOrange)"
-                    dot={false}
-                    activeDot={{ r: 4 }}
-                  />
-
-                  {/* GRAY AREA (Revenue) */}
-                  <Area
-                    yAxisId="left"
-                    type="monotone"
-                    dataKey="revenue"
-                    name="Revenue ($)"
-                    stroke="#6B7280"
-                    strokeWidth={0.5}
-                    fill="url(#revenueGray)"
-                    dot={false}
-                    activeDot={{ r: 4 }}
-                  />
-                </AreaChart>
-              </ResponsiveContainer>
+                    ]
+                  }}
+                  options={{
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    interaction: {
+                      mode: 'index',
+                      intersect: false,
+                    },
+                    plugins: {
+                      legend: {
+                        position: 'bottom',
+                        labels: { padding: 15, usePointStyle: true }
+                      },
+                      tooltip: {
+                        backgroundColor: '#fff',
+                        titleColor: '#1f2937',
+                        bodyColor: '#1f2937',
+                        borderColor: '#e5e7eb',
+                        borderWidth: 1,
+                        padding: 12,
+                        callbacks: {
+                          label: (context) => {
+                            const label = context.dataset.label || '';
+                            const value = label === 'Revenue' ? formatCurrency(context.parsed.y) : context.parsed.y;
+                            return `${label}: ${value}`;
+                          }
+                        }
+                      }
+                    },
+                    scales: {
+                      y: {
+                        type: 'linear',
+                        display: true,
+                        position: 'left',
+                        grid: { color: '#f0f0f0' },
+                        ticks: { color: '#666666' }
+                      },
+                      y1: {
+                        type: 'linear',
+                        display: true,
+                        position: 'right',
+                        grid: { drawOnChartArea: false },
+                        ticks: { color: '#666666' }
+                      },
+                      x: {
+                        grid: { display: false },
+                        ticks: { color: '#666666' }
+                      }
+                    }
+                  }}
+                />
+              </div>
             </div>
 
 
@@ -628,24 +577,34 @@ const AnalyticsReports = () => {
               <YummyText className="text-sm text-[#717182] mb-6">Distribution by status</YummyText>
               {orderStatusData.length > 0 ? (
                 <>
-                  <ResponsiveContainer width="100%" height={240}>
-                    <PieChart>
-                      <Pie
-                        data={orderStatusData}
-                        dataKey="value"
-                        cx="50%"
-                        cy="50%"
-                        outerRadius={95}
-                        stroke="#ffffff"
-                        strokeWidth={2}
-                        isAnimationActive={false}
-                      >
-                        {orderStatusData.map((entry, index) => (
-                          <Cell key={`cell-${index}`} fill={entry.color} />
-                        ))}
-                      </Pie>
-                    </PieChart>
-                  </ResponsiveContainer>
+                  <div style={{ height: '240px' }}>
+                    <Doughnut
+                      data={{
+                        labels: orderStatusData.map(d => d.name),
+                        datasets: [{
+                          data: orderStatusData.map(d => d.value),
+                          backgroundColor: orderStatusData.map(d => d.color),
+                          borderColor: '#ffffff',
+                          borderWidth: 2,
+                        }]
+                      }}
+                      options={{
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        plugins: {
+                          legend: { display: false },
+                          tooltip: {
+                            backgroundColor: '#fff',
+                            titleColor: '#1f2937',
+                            bodyColor: '#1f2937',
+                            borderColor: '#e5e7eb',
+                            borderWidth: 1,
+                            padding: 12,
+                          }
+                        }
+                      }}
+                    />
+                  </div>
                   {/* Legend */}
                   <div className="mt-6 space-y-1">
                     {orderStatusData.map((item, index) => (
@@ -684,42 +643,64 @@ const AnalyticsReports = () => {
               <YummyText className="text-lg font-medium text-[#0A0A0A] mb-2">User Growth</YummyText>
               <YummyText className="text-sm text-[#717182] mb-6">Customers and riders over time</YummyText>
               {userGrowthData.length > 0 ? (
-                <ResponsiveContainer width="100%" height={250}>
-                  <LineChart data={userGrowthData} margin={{ left: -15, top: 25, right: 0, bottom: 0 }}>
-                    <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
-                    <XAxis 
-                      dataKey="month" 
-                      axisLine={true}
-                      tickLine={true}
-                      tick={{ fill: '#666666', fontSize: 12 }}
-                    />
-                    <YAxis 
-                      axisLine={true}
-                      tickLine={true}
-                      tick={{ fill: '#666666', fontSize: 12 }}
-                    />
-                    <Tooltip 
-                      contentStyle={{ backgroundColor: '#fff', border: '1px solid #e5e7eb', borderRadius: '8px' }}
-                    />
-                    <Legend verticalAlign="bottom" content={renderLegend} />
-                    <Line 
-                      type="monotone" 
-                      dataKey="customers" 
-                      stroke="#3B82F6" 
-                      strokeWidth={1.5}
-                      name="Customers"
-                      dot={{ fill: '#3B82F6', r: 4 }}
-                    />
-                    <Line 
-                      type="monotone" 
-                      dataKey="riders" 
-                      stroke="#F59E0B" 
-                      strokeWidth={1.5}
-                      name="Riders"
-                      dot={{ fill: '#F59E0B', r: 4 }}
-                    />
-                  </LineChart>
-                </ResponsiveContainer>
+                <div style={{ height: '250px' }}>
+                  <Line
+                    data={{
+                      labels: userGrowthData.map(d => d.month),
+                      datasets: [
+                        {
+                          label: 'Customers',
+                          data: userGrowthData.map(d => d.customers),
+                          borderColor: '#3B82F6',
+                          backgroundColor: 'rgba(59, 130, 246, 0.1)',
+                          tension: 0.4,
+                          borderWidth: 2,
+                          pointRadius: 4,
+                          pointBackgroundColor: '#3B82F6',
+                        },
+                        {
+                          label: 'Riders',
+                          data: userGrowthData.map(d => d.riders),
+                          borderColor: '#F59E0B',
+                          backgroundColor: 'rgba(245, 158, 11, 0.1)',
+                          tension: 0.4,
+                          borderWidth: 2,
+                          pointRadius: 4,
+                          pointBackgroundColor: '#F59E0B',
+                        }
+                      ]
+                    }}
+                    options={{
+                      responsive: true,
+                      maintainAspectRatio: false,
+                      plugins: {
+                        legend: {
+                          position: 'bottom',
+                          labels: { padding: 15, usePointStyle: true }
+                        },
+                        tooltip: {
+                          backgroundColor: '#fff',
+                          titleColor: '#1f2937',
+                          bodyColor: '#1f2937',
+                          borderColor: '#e5e7eb',
+                          borderWidth: 1,
+                          padding: 12,
+                        }
+                      },
+                      scales: {
+                        y: {
+                          beginAtZero: true,
+                          grid: { color: '#f0f0f0' },
+                          ticks: { color: '#666666' }
+                        },
+                        x: {
+                          grid: { display: false },
+                          ticks: { color: '#666666' }
+                        }
+                      }
+                    }}
+                  />
+                </div>
               ) : (
                 <div className="flex items-center justify-center h-64 text-gray-400">
                   <div className="text-center">
@@ -735,26 +716,46 @@ const AnalyticsReports = () => {
               <YummyText className="text-lg font-medium text-[#0A0A0A] mb-2">Peak Hours Analysis</YummyText>
               <YummyText className="text-sm text-[#717182] mb-6">Orders by time of day</YummyText>
               {peakHoursData.length > 0 && peakHoursData.some(d => d.orders > 0) ? (
-                <ResponsiveContainer width="100%" height={250}>
-                  <BarChart data={peakHoursData} margin={{ left: -15, top: 25, right: 0, bottom: 0 }}>
-                    <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
-                    <XAxis 
-                      dataKey="time" 
-                      axisLine={true}
-                      tickLine={true}
-                      tick={{ fill: '#666666', fontSize: 12 }}
-                    />
-                    <YAxis 
-                      axisLine={true}
-                      tickLine={true}
-                      tick={{ fill: '#666666', fontSize: 12 }}
-                    />
-                    <Tooltip 
-                      contentStyle={{ backgroundColor: '#fff', border: '1px solid #e5e7eb', borderRadius: '8px' }}
-                    />
-                    <Bar dataKey="orders" fill="#3B82F6" radius={[8, 8, 0, 0]} />
-                  </BarChart>
-                </ResponsiveContainer>
+                <div style={{ height: '250px' }}>
+                  <Bar
+                    data={{
+                      labels: peakHoursData.map(d => d.time),
+                      datasets: [{
+                        label: 'Orders',
+                        data: peakHoursData.map(d => d.orders),
+                        backgroundColor: '#3B82F6',
+                        borderRadius: 8,
+                        barThickness: 24,
+                      }]
+                    }}
+                    options={{
+                      responsive: true,
+                      maintainAspectRatio: false,
+                      plugins: {
+                        legend: { display: false },
+                        tooltip: {
+                          backgroundColor: '#fff',
+                          titleColor: '#1f2937',
+                          bodyColor: '#1f2937',
+                          borderColor: '#e5e7eb',
+                          borderWidth: 1,
+                          padding: 12,
+                        }
+                      },
+                      scales: {
+                        y: {
+                          beginAtZero: true,
+                          grid: { color: '#f0f0f0' },
+                          ticks: { color: '#666666' }
+                        },
+                        x: {
+                          grid: { display: false },
+                          ticks: { color: '#666666' }
+                        }
+                      }
+                    }}
+                  />
+                </div>
               ) : (
                 <div className="flex items-center justify-center h-64 text-gray-400">
                   <div className="text-center">

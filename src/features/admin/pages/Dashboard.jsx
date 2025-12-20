@@ -1,8 +1,12 @@
 import React, { useState, useEffect } from 'react';
 import { IonPage, IonContent, IonSpinner, IonRefresher, IonRefresherContent } from '@ionic/react';
 import { Users, Bike, Package, DollarSign, TrendingUp, RefreshCw, AlertCircle } from 'lucide-react';
-import { LineChart, Line, PieChart, Pie, Cell, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
+import { Line, Doughnut } from 'react-chartjs-2';
+import { Chart as ChartJS, CategoryScale, LinearScale, PointElement, LineElement, ArcElement, Title, Tooltip, Legend } from 'chart.js';
 import AdminLayout from '../components/AdminLayout';
+
+// Register Chart.js components
+ChartJS.register(CategoryScale, LinearScale, PointElement, LineElement, ArcElement, Title, Tooltip, Legend);
 import { YummyText } from '../../../components/YummyText';
 import ClockIcon from '../../../icons/Clockicon';
 import CheckIcon from '../../../icons/Checkicon';
@@ -308,18 +312,53 @@ const AdminDashboard = () => {
               <YummyText className="text-lg font-semibold text-gray-900 mb-2">Revenue Overview</YummyText>
               <YummyText className="text-sm text-gray-500 mb-6">Monthly revenue trend</YummyText>
               {revenueData.length > 0 ? (
-                <ResponsiveContainer width="100%" height={300}>
-                  <LineChart data={revenueData}>
-                    <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
-                    <XAxis dataKey="month" stroke="#94a3b8" />
-                    <YAxis stroke="#94a3b8" />
-                    <Tooltip 
-                      contentStyle={{ backgroundColor: '#fff', border: '1px solid #e5e7eb', borderRadius: '8px' }}
-                      formatter={(value) => formatCurrency(value)}
-                    />
-                    <Line type="monotone" dataKey="value" stroke="#3b82f6" strokeWidth={3} dot={{ fill: '#3b82f6', r: 5 }} />
-                  </LineChart>
-                </ResponsiveContainer>
+                <div style={{ height: '300px' }}>
+                  <Line
+                    data={{
+                      labels: revenueData.map(d => d.month),
+                      datasets: [{
+                        label: 'Revenue',
+                        data: revenueData.map(d => d.value),
+                        borderColor: '#3b82f6',
+                        backgroundColor: 'rgba(59, 130, 246, 0.1)',
+                        tension: 0.4,
+                        borderWidth: 3,
+                        pointRadius: 5,
+                        pointBackgroundColor: '#3b82f6',
+                      }]
+                    }}
+                    options={{
+                      responsive: true,
+                      maintainAspectRatio: false,
+                      plugins: {
+                        legend: { display: false },
+                        tooltip: {
+                          backgroundColor: '#fff',
+                          titleColor: '#1f2937',
+                          bodyColor: '#1f2937',
+                          borderColor: '#e5e7eb',
+                          borderWidth: 1,
+                          padding: 12,
+                          displayColors: false,
+                          callbacks: {
+                            label: (context) => formatCurrency(context.parsed.y)
+                          }
+                        }
+                      },
+                      scales: {
+                        y: {
+                          beginAtZero: true,
+                          grid: { color: '#f0f0f0' },
+                          ticks: { color: '#94a3b8' }
+                        },
+                        x: {
+                          grid: { display: false },
+                          ticks: { color: '#94a3b8' }
+                        }
+                      }
+                    }}
+                  />
+                </div>
               ) : (
                 <div className="h-[300px] flex items-center justify-center text-gray-400">
                   <div className="text-center">
@@ -336,24 +375,34 @@ const AdminDashboard = () => {
               <YummyText className="text-sm text-gray-500 mb-6">Distribution of order statuses</YummyText>
               {orderStatusData.length > 0 ? (
                 <>
-                  <ResponsiveContainer width="100%" height={240}>
-                    <PieChart>
-                      <Pie
-                        data={orderStatusData}
-                        dataKey="value"
-                        cx="50%"
-                        cy="50%"
-                        outerRadius={95}
-                        stroke="#ffffff"
-                        strokeWidth={2}
-                        isAnimationActive={false}
-                      >
-                        {orderStatusData.map((entry, index) => (
-                          <Cell key={`cell-${index}`} fill={entry.color} />
-                        ))}
-                      </Pie>
-                    </PieChart>
-                  </ResponsiveContainer>
+                  <div style={{ height: '240px' }}>
+                    <Doughnut
+                      data={{
+                        labels: orderStatusData.map(d => d.name),
+                        datasets: [{
+                          data: orderStatusData.map(d => d.value),
+                          backgroundColor: orderStatusData.map(d => d.color),
+                          borderColor: '#ffffff',
+                          borderWidth: 2,
+                        }]
+                      }}
+                      options={{
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        plugins: {
+                          legend: { display: false },
+                          tooltip: {
+                            backgroundColor: '#fff',
+                            titleColor: '#1f2937',
+                            bodyColor: '#1f2937',
+                            borderColor: '#e5e7eb',
+                            borderWidth: 1,
+                            padding: 12,
+                          }
+                        }
+                      }}
+                    />
+                  </div>
                   {/* Legend */}
                   <div className="mt-6 space-y-1">
                     {orderStatusData.map((item, index) => (
