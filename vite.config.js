@@ -4,6 +4,10 @@ import react from '@vitejs/plugin-react'
 // https://vitejs.dev/config/
 export default defineConfig({
   plugins: [react()],
+  define: {
+    'window.React': 'React',
+    'window.ReactDOM': 'ReactDOM',
+  },
   server: {
     // match Ionic's default dev origin (localhost:8100) so requests originate
     // from the same origin while developing. Adjust if you run a different port.
