@@ -66,6 +66,20 @@ const Earnings = () => {
   const totalDeliveries = earnings?.totalDeliveries || 0;
   const avgPerDelivery = earnings?.avgPerDelivery || earnings?.average || 'N0.00';
 
+  // Derive payout / balance information from API when available
+  const availableBalance = earnings?.availableBalance || earnings?.available_balance || earnings?.available || earnings?.balance || 0;
+  const nextPayoutObj = earnings?.nextPayout || earnings?.upcomingPayout || earnings?.next_payout || earnings?.upcoming_payout || null;
+  const nextPayoutAmount = nextPayoutObj?.amount || earnings?.upcomingAmount || earnings?.nextPayoutAmount || availableBalance;
+  const nextPayoutDateRaw = nextPayoutObj?.date || nextPayoutObj?.scheduledAt || earnings?.nextPayoutDate || earnings?.upcomingDate || null;
+  const nextPayoutDate = nextPayoutDateRaw ? new Date(nextPayoutDateRaw) : null;
+
+  const formatCurrency = (val) => {
+    if (val === null || val === undefined) return '₦0.00';
+    const num = typeof val === 'string' ? parseFloat(val.replace(/[$,N\s]/g, '')) : Number(val);
+    if (Number.isNaN(num)) return String(val);
+    return `₦${num.toLocaleString('en-NG', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+  };
+
   const totalToday = todayDeliveries.reduce((sum, delivery) => {
     const total = typeof delivery.total === 'string' 
       ? parseFloat(delivery.total.replace('$', ''))
@@ -102,7 +116,7 @@ const Earnings = () => {
               <div className="text-3xl font-medium text-[#0F172A] mb-2">
                 Earnings
               </div>
-              <div className="text-[#4A5565] text-[15px] font-[400]">
+              <div className="text-[#4A5565] text-[13px] sm:text-[16px] md:text-[18px] font-[400]">
                 Track your income and performance
               </div>
             </div>
@@ -112,8 +126,8 @@ const Earnings = () => {
           </div>
           </YummyText>
 
-          {/* Stats Grid */}
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-8">
+          {/* Stats Grid (2x2 layout to match dashboard) */}
+          <div className="grid grid-cols-2 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
             <StatCard
               icon={
                 <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
@@ -209,10 +223,10 @@ const Earnings = () => {
 
           {/* Tab Navigation */}
           <YummyText>
-          <div className="flex items-center gap-2 mb-6 bg-gray-100 p-1 py-1 rounded-full w-fit">
+          <div className="flex items-center gap-2 mb-6 bg-gray-100 p-1 rounded-full w-full md:w-fit">
             <button
               onClick={() => setActiveTab('today')}
-              className={`px-16 py-1 rounded-full text-sm font-normal transition-colors ${
+              className={`flex-1 md:flex-none px-4 md:px-16 py-2 rounded-full text-sm font-normal text-center transition-colors ${
                 activeTab === 'today'
                   ? 'text-[#0F172A] bg-white shadow-sm'
                   : 'text-[#64748B]'
@@ -222,7 +236,7 @@ const Earnings = () => {
             </button>
             <button
               onClick={() => setActiveTab('week')}
-              className={`px-16 py-1 rounded-full text-sm font-normal transition-colors ${
+              className={`flex-1 md:flex-none px-4 md:px-16 py-2 rounded-full text-sm font-normal text-center transition-colors ${
                 activeTab === 'week'
                   ? 'text-[#0F172A] bg-white shadow-sm'
                   : 'text-[#64748B]'
@@ -379,11 +393,13 @@ const Earnings = () => {
             <div className="flex items-end justify-between">
               <div>
                 <div className="text-xs text-[#64748B] mb-1">Available Balance</div>
-                <div className="text-4xl font-normal text-[#00A63E]">$687.25</div>
+                <div className="text-4xl font-normal text-[#00A63E]">{formatCurrency(nextPayoutAmount || availableBalance)}</div>
               </div>
               <div className="text-right">
                 <div className="text-xs text-[#64748B] mb-1">Next Payout Date</div>
-                <div className="text-base font-medium text-[#0F172A]">Friday, Oct 27, 2025</div>
+                <div className="text-base font-medium text-[#0F172A]">
+                  {nextPayoutDate ? nextPayoutDate.toLocaleDateString(undefined, { weekday: 'long', month: 'short', day: 'numeric', year: 'numeric' }) : 'Scheduled automatically'}
+                </div>
               </div>
             </div>
             </YummyText>
