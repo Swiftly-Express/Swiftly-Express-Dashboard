@@ -658,14 +658,16 @@ const RiderProfile = () => {
           </div>
 
           <div className="bg-gradient-to-br from-[#EFF6FF] to-[#EDFFF9] rounded-2xl p-6 mb-8" style={sideBottomShadow}>
-            <div className="flex items-start justify-between">
-              <div className="flex items-start gap-4">
-                <div className="relative">
-                  <img
-                    src={profileImage}
-                    alt={userName}
-                    className="w-24 h-24 rounded-full border-4 border-white shadow-md bg-gray-200 object-cover"
-                  />
+            <div className="flex flex-col md:flex-row items-center md:items-start justify-between w-full">
+              <div className="flex flex-col md:flex-row items-center gap-4 w-full">
+                <div className="relative flex-shrink-0">
+                  <div className="w-20 h-20 md:w-24 md:h-24 rounded-full overflow-hidden border-4 border-white shadow-md bg-gray-200">
+                    <img
+                      src={profileImage}
+                      alt={userName}
+                      className="w-full h-full object-cover"
+                    />
+                  </div>
                   <input
                     ref={profileImageInputRef}
                     type="file"
@@ -675,30 +677,32 @@ const RiderProfile = () => {
                   />
                   <button 
                     onClick={() => profileImageInputRef.current?.click()}
-                    className="absolute bottom-0 right-0 w-8 h-8 bg-[#00B75A] rounded-full flex items-center justify-center hover:bg-[#00B876] transition-colors" 
+                    className="absolute bottom-0 right-0 w-10 h-10 md:w-8 md:h-8 bg-[#00B75A] rounded-full flex items-center justify-center hover:bg-[#00B876] transition-colors" 
                     style={{border: "0.5px solid #FFFF"}}
                   >
-                    <img src="/cameraicon.svg" alt="Edit" className="w-4 h-4" style={{ filter: 'brightness(0) invert(1)' }} />
+                    <img src="/cameraicon.svg" alt="Edit" className="w-4 h-4 md:w-4 md:h-4" style={{ filter: 'brightness(0) invert(1)' }} />
                   </button>
                 </div>
 
-                <div>
-                  <div className="text-xl font-medium text-[#0F172A] mb-1">{userName}</div>
-                  <div className="text-sm text-[#64748B] mb-3">{riderId ? `Rider ID: ${riderId}` : 'Rider'}</div>
-                  
-                  <div className="flex items-center gap-2 mb-3">
-                    <span className="px-3 py-1 bg-green-100 text-green-700 rounded-full text-xs font-medium">
-                      Active Rider
-                    </span>
-                    <span className="px-3 py-1 bg-[#00D68F] text-white rounded-full text-xs font-medium">
+                <div className="flex-1">
+                  <div className="text-2xl md:text-xl font-medium text-[#0F172A] mb-1 text-center md:text-left">{userName}</div>
+                  <div className="text-base md:text-sm text-[#64748B] mb-3 text-center md:text-left">{riderId ? `Rider ID: ${riderId}` : 'Rider'}</div>
+
+                  {/* Desktop inline badges (appear after role) */}
+                  <div className="hidden md:flex md:items-center md:gap-3 md:mt-0">
+                    <span className="px-3 py-1 bg-[#00D68F] text-white rounded-full text-sm md:text-xs font-medium">
                       Top Performer
                     </span>
-                    <span className="px-3 py-1 bg-purple-100 text-purple-700 rounded-full text-xs font-medium">
+                    <span className="px-3 py-1 bg-green-100 text-green-700 rounded-full text-sm md:text-xs font-medium">
+                      Active Rider
+                    </span>
+                    <span className="px-3 py-1 bg-purple-100 text-purple-700 rounded-full text-sm md:text-xs font-medium">
                       {stats.totalDeliveries > 0 ? `${stats.totalDeliveries}+ Deliveries` : 'New Rider'}
                     </span>
                   </div>
 
-                  <div className="flex items-center gap-2 mb-2">
+                  {/* Hide ratings and member-since on mobile */}
+                  <div className="hidden md:flex items-center gap-2 mb-2">
                     <div className="flex items-center gap-">
                       {[1, 2, 3, 4, 5].map((star) => (
                         <svg 
@@ -718,11 +722,30 @@ const RiderProfile = () => {
                     </span>
                   </div>
 
-                  <div className="text-xs text-[#64748B]">Member since {stats.memberSince}</div>
+                  <div className="hidden md:block text-xs text-[#64748B]">Member since {stats.memberSince}</div>
                 </div>
               </div>
 
-              <div className="flex gap-4">
+              {/* Badges row - mobile only (desktop shows inline badges next to role) */}
+              <div className="mt-4 w-full md:hidden">
+                <div className="flex items-center justify-center gap-2">
+                  <span className="px-3 py-1 bg-[#00D68F] text-white rounded-full text-sm md:text-xs font-medium transform -translate-y-3 shadow-sm">
+                    Top Performer
+                  </span>
+                </div>
+
+                <div className="md:mt-2 sm:mt-2 flex justify-center items-center gap-8">
+                  <span className="px-3 py-1 bg-green-100 text-green-700 rounded-full text-sm md:text-xs font-medium">
+                    Active Rider
+                  </span>
+                  <span className="px-3 py-1 bg-purple-100 text-purple-700 rounded-full text-sm md:text-xs font-medium whitespace-nowrap">
+                    {stats.totalDeliveries > 0 ? `${stats.totalDeliveries}+ Deliveries` : 'New Rider'}
+                  </span>
+                </div>
+              </div>
+
+              {/* Stats under badges */}
+              <div className="mt-4 flex gap-4 items-center justify-center w-full md:w-auto">
                 <div className="bg-white rounded-xl p-4 text-center min-w-[120px] shadow-md" style={sideBottomShadow}>
                   <div className="text-2xl font-medium text-[#3B82F6] mb-1">{stats.totalDeliveries}</div>
                   <div className="text-xs text-[#64748B]">Total Deliveries</div>
@@ -737,10 +760,10 @@ const RiderProfile = () => {
           </YummyText>
 
           <YummyText>
-          <div className="flex items-center gap-2 mb-8 bg-gray-100 p-1 py-1 rounded-full w-fit">
+          <div className="flex items-center gap-2 mb-8 bg-gray-100 p-1 py-1 rounded-full overflow-x-auto whitespace-nowrap md:w-fit px-2">
             <button
               onClick={() => setActiveTab('personal')}
-              className={`px-7 py-1 rounded-full text-sm font-normal transition-colors ${
+              className={`px-5 py-2 md:px-7 md:py-1 rounded-full text-base md:text-sm font-normal transition-colors ${
                 activeTab === 'personal'
                   ? 'text-[#0F172A] bg-white shadow-sm'
                   : 'text-[#64748B]'
@@ -750,7 +773,7 @@ const RiderProfile = () => {
             </button>
             <button
               onClick={() => setActiveTab('vehicle')}
-              className={`px-7 py-1 rounded-full text-sm font-normal transition-colors ${
+              className={`px-5 py-2 md:px-7 md:py-1 rounded-full text-base md:text-sm font-normal transition-colors ${
                 activeTab === 'vehicle'
                   ? 'text-[#0F172A] bg-white shadow-sm'
                   : 'text-[#64748B]'
@@ -760,7 +783,7 @@ const RiderProfile = () => {
             </button>
             <button
               onClick={() => setActiveTab('documents')}
-              className={`px-7 py-1 rounded-full text-sm font-normal transition-colors ${
+              className={`px-5 py-2 md:px-7 md:py-1 rounded-full text-base md:text-sm font-normal transition-colors ${
                 activeTab === 'documents'
                   ? 'text-[#0F172A] bg-white shadow-sm'
                   : 'text-[#64748B]'
@@ -782,7 +805,7 @@ const RiderProfile = () => {
               </div>
 
               <div className="space-y-6">
-                <div className="grid grid-cols-2 gap-4">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div>
                     <label className="block text-sm font-medium text-[#0A0A0A] mb-2">First Name</label>
                     <input
@@ -873,7 +896,7 @@ const RiderProfile = () => {
               </div>
 
               <div className="space-y-6">
-                <div className="grid grid-cols-2 gap-4">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div>
                     <label className="block text-sm font-medium text-[#0A0A0A] mb-2">Vehicle Type</label>
                     <input
@@ -896,7 +919,7 @@ const RiderProfile = () => {
                   </div>
                 </div>
 
-                <div className="grid grid-cols-2 gap-4">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div>
                     <label className="block text-sm font-medium text-[#0A0A0A] mb-2">Year</label>
                     <input
