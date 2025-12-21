@@ -51,6 +51,9 @@ const RiderLayout = ({ children }) => {
   });
   const [userName, setUserName] = useState('Rider');
   const [isOnline, setIsOnline] = useState(true);
+  const [showNotifications, setShowNotifications] = useState(false);
+  const [notifications, setNotifications] = useState([]);
+  const [unreadCount, setUnreadCount] = useState(0);
 
   // Keep a simple cookie copy of the profile image so mobile sidebar can read the same image key
   useEffect(() => {
@@ -63,6 +66,7 @@ const RiderLayout = ({ children }) => {
 
   useEffect(() => {
     fetchUserProfile();
+    checkNotifications();
 
     // Listen for profile updates
     const handleProfileUpdate = (event) => {
@@ -145,9 +149,44 @@ const RiderLayout = ({ children }) => {
     }
   };
 
+  const checkNotifications = async () => {
+    try {
+      const response = await getRiderProfile();
+      const profile = response?.data?.driver || response?.driver || response?.data;
+      const notificationsList = [];
+      
+      // Check verification status
+      const verificationStatus = profile?.verificationStatus || getCookie('riderVerificationStatus');
+      if (verificationStatus === 'pending' || getCookie('verificationSubmitted') === 'true') {
+        notificationsList.push({
+          id: 'verification-pending',
+          type: 'warning',
+          title: 'Verification Pending Approval',
+          message: 'Your verification documents are under review. This usually takes 24-48 hours.',
+          timestamp: new Date().toISOString(),
+          read: false
+        });
+      }
+      
+      setNotifications(notificationsList);
+      setUnreadCount(notificationsList.filter(n => !n.read).length);
+    } catch (error) {
+      console.error('[RiderLayout] Failed to check notifications:', error);
+    }
+  };
+
   const handleAvailabilityToggle = () => {
     setIsOnline(!isOnline);
     // TODO: Call updateRiderAvailability API
+  };
+
+  const toggleNotifications = () => {
+    setShowNotifications(!showNotifications);
+    if (!showNotifications) {
+      // Mark all as read when opening
+      setNotifications(prev => prev.map(n => ({ ...n, read: true })));
+      setUnreadCount(0);
+    }
   };
 
   return (
@@ -159,14 +198,27 @@ const RiderLayout = ({ children }) => {
           <div className="bg-transparent backdrop-blur-sm border-b border-gray-200 py-4">
             <div className="flex items-center justify-between px-4">
               <div className="flex items-center">
-                <YummyText className="text-3xl font-semibold text-[#0F172A]">
+                <YummyText className="text-2xl font-semibold text-[#0F172A]">
                   Swiftly
                 </YummyText>
               </div>
 
               <div className="flex items-center gap-3">
                 <button
-                  className="w-10 h-10 rounded-full ring-2 ring-[#00D68F] overflow-hidden flex items-center justify-center"
+                  onClick={toggleNotifications}
+                  className="relative p-2 hover:bg-gray-50 rounded-lg transition-colors"
+                  aria-label="Notifications"
+                >
+                  <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <path d="M12 22c1.1 0 2-.9 2-2h-4c0 1.1.9 2 2 2zm6-6v-5c0-3.07-1.63-5.64-4.5-6.32V4c0-.83-.67-1.5-1.5-1.5s-1.5.67-1.5 1.5v.68C7.64 5.36 6 7.92 6 11v5l-2 2v1h16v-1l-2-2zm-2 1H8v-6c0-2.48 1.51-4.5 4-4.5s4 2.02 4 4.5v6z" fill="#64748B"/>
+                  </svg>
+                  {unreadCount > 0 && (
+                    <span className="absolute top-1 right-1 w-5 h-5 bg-[#FF6B00] text-white text-xs rounded-full flex items-center justify-center font-medium">{unreadCount}</span>
+                  )}
+                </button>
+
+                <button
+                  className="w-8 h-8 rounded-full ring-2 ring-[#00D68F] overflow-hidden flex items-center justify-center"
                   aria-label="Profile"
                 >
                   <img src={profileImage} alt={userName} className="w-full h-full object-cover" />
@@ -216,14 +268,16 @@ const RiderLayout = ({ children }) => {
                   <div className={`w-2 h-2 rounded-full ${isOnline ? 'bg-[#00D68F]' : 'bg-gray-400'}`}></div>
                 </div>
 
-                <button className="relative p-2 hover:bg-gray-50 rounded-lg transition-colors">
+                <button onClick={toggleNotifications} className="relative p-2 hover:bg-gray-50 rounded-lg transition-colors">
                   <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
                     <path d="M12 22c1.1 0 2-.9 2-2h-4c0 1.1.9 2 2 2zm6-6v-5c0-3.07-1.63-5.64-4.5-6.32V4c0-.83-.67-1.5-1.5-1.5s-1.5.67-1.5 1.5v.68C7.64 5.36 6 7.92 6 11v5l-2 2v1h16v-1l-2-2zm-2 1H8v-6c0-2.48 1.51-4.5 4-4.5s4 2.02 4 4.5v6z" fill="#64748B"/>
                   </svg>
-                  <span className="absolute top-1 right-2 w-2 h-2 bg-[#FF6B00] rounded-full"></span>
+                  {unreadCount > 0 && (
+                    <span className="absolute top-1 right-1 w-5 h-5 bg-[#FF6B00] text-white text-xs rounded-full flex items-center justify-center font-medium">{unreadCount}</span>
+                  )}
                 </button>
 
-                <button className="w-10 h-10 rounded-full bg-gradient-to-br from-[#00D68F] to-[#00B876] flex items-center justify-center overflow-hidden">
+                <button className="w-8 h-8 rounded-full bg-gradient-to-br from-[#00D68F] to-[#00B876] flex items-center justify-center overflow-hidden">
                   <img 
                     src={profileImage} 
                     alt={userName} 
@@ -241,6 +295,51 @@ const RiderLayout = ({ children }) => {
           <div className="flex-1 md:p-8 pt-16 md:pt-24 overflow-y-auto no-scrollbar">
           {children}
         </div>
+
+        {/* Notification Dropdown */}
+        {showNotifications && (
+          <>
+            <div className="fixed inset-0 z-[9998]" onClick={() => setShowNotifications(false)} />
+            <div className="fixed top-16 md:top-20 right-4 md:right-8 w-96 max-w-[calc(100vw-2rem)] bg-white rounded-xl shadow-2xl border border-gray-200 z-[9999] max-h-[500px] overflow-hidden">
+              <div className="p-4 border-b border-gray-200">
+                <YummyText className="text-lg font-semibold text-[#0F172A]">Notifications</YummyText>
+              </div>
+              <div className="overflow-y-auto max-h-[420px]">
+                {notifications.length === 0 ? (
+                  <div className="p-8 text-center text-gray-400">
+                    <svg width="48" height="48" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" className="mx-auto mb-3 opacity-50">
+                      <path d="M12 22c1.1 0 2-.9 2-2h-4c0 1.1.9 2 2 2zm6-6v-5c0-3.07-1.63-5.64-4.5-6.32V4c0-.83-.67-1.5-1.5-1.5s-1.5.67-1.5 1.5v.68C7.64 5.36 6 7.92 6 11v5l-2 2v1h16v-1l-2-2z" fill="currentColor"/>
+                    </svg>
+                    <YummyText className="text-sm">No notifications yet</YummyText>
+                  </div>
+                ) : (
+                  <div className="divide-y divide-gray-100">
+                    {notifications.map(notification => (
+                      <div key={notification.id} className={`p-4 hover:bg-gray-50 transition-colors ${
+                        !notification.read ? 'bg-blue-50' : ''
+                      }`}>
+                        <div className="flex items-start gap-3">
+                          <div className={`w-10 h-10 rounded-full flex items-center justify-center flex-shrink-0 ${
+                            notification.type === 'warning' ? 'bg-amber-100' : 'bg-blue-100'
+                          }`}>
+                            {notification.type === 'warning' ? '⏳' : '🔔'}
+                          </div>
+                          <div className="flex-1 min-w-0">
+                            <YummyText className="font-medium text-[#0F172A] text-sm mb-1">{notification.title}</YummyText>
+                            <YummyText className="text-xs text-[#64748B] leading-relaxed">{notification.message}</YummyText>
+                            <YummyText className="text-xs text-gray-400 mt-2">
+                              {new Date(notification.timestamp).toLocaleString()}
+                            </YummyText>
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            </div>
+          </>
+        )}
       </div>
     </div>
   );

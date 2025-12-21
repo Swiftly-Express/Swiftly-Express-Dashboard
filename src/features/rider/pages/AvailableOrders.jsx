@@ -1,7 +1,8 @@
 import React, { useState, useEffect } from 'react';
-import { IonPage, IonContent, IonToast } from '@ionic/react';
+import { IonPage, IonContent, IonToast, IonRefresher, IonRefresherContent } from '@ionic/react';
 import RiderLayout from '../components/RiderLayout';
 import { YummyText } from '../../../components/YummyText';
+import BanIcon from '../../../icons/Banicon';
 import { getAvailableJobs, acceptDeliveryJob, getRiderProfile } from '../../../utils/authApi';
 import { getCookie, getJSONCookie, isRiderVerified, setCookie, setJSONCookie } from '../../../utils/cookies';
 
@@ -342,76 +343,44 @@ const AvailableOrders = () => {
   const expressCount = orders.filter(o => o.priority === 'Express').length;
   const nearbyCount = orders.filter(o => parseFloat(o.distance) <= 2.5).length;
 
+  const handleRefresh = async (event) => {
+    await fetchAvailableJobs();
+    event.detail.complete();
+  };
+
   return (
     <IonPage>
       <RiderLayout>
         <IonContent className="ion-padding">
+          <IonRefresher slot="fixed" onIonRefresh={handleRefresh}>
+            <IonRefresherContent
+              pullingText="Pull to refresh"
+              refreshingText="Refreshing..."
+            />
+          </IonRefresher>
           <YummyText>
             <div className="mb-8 py-2">
-              <div className="flex items-center justify-between mb-2">
-                <div className="text-3xl font-medium text-[#0F172A]">
-                  Available Orders
-                </div>
-                <div className="flex items-center gap-3">
-                  <button
-                    onClick={() => setAutoRefresh(!autoRefresh)}
-                    className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-colors ${
-                      autoRefresh 
-                        ? 'bg-green-50 text-green-600 border border-green-200' 
-                        : 'bg-gray-100 text-gray-600 border border-gray-200'
-                    }`}
-                  >
-                    {autoRefresh ? '🔄 Auto-refresh ON' : 'Auto-refresh OFF'}
-                  </button>
-                  <button
-                    onClick={() => fetchAvailableJobs()}
-                    disabled={loading}
-                    className="px-4 py-1.5 bg-[#00B75A] hover:bg-[#00B876] text-white rounded-lg text-xs font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-                  >
-                    {loading ? 'Refreshing...' : '↻ Refresh'}
-                  </button>
-                </div>
+              <div className="text-3xl font-medium text-[#0F172A] mb-2">
+                Available Orders
               </div>
-              <div className="flex items-center justify-between">
-                <div className="text-[#4A5565] text-[15px] font-[400]">
-                  Accept orders in your area and start earning
-                </div>
-                {lastRefresh && (
-                  <div className="text-xs text-gray-400">
-                    Last updated: {new Date(lastRefresh).toLocaleTimeString()}
-                  </div>
-                )}
+              <div className="text-[#4A5565] text-[15px] font-[400]">
+                Accept orders in your area and start earning
               </div>
             </div>
           </YummyText>
 
           {!isVerified ? (
-            <div className="bg-amber-50 border border-amber-200 rounded-xl p-8 text-center max-w-2xl mx-auto mt-12">
-              <div className="text-amber-600 text-5xl mb-4">
-                {getCookie('verificationSubmitted') === 'true' || getCookie('riderVerificationStatus') === 'pending' ? '⏳' : '⚠️'}
+            <div className="text-center py-20 rounded-2xl px-6" style={sideBottomShadow}>
+              <BanIcon className="w-16 h-16 mx-auto mb-4 text-[#FF6B00]" />
+              <div className="text-xl font-medium text-[#0F172A] mb-3">Verification Required</div>
+              <div className="text-sm text-[#64748B] max-w-md mx-auto mb-6">
+                Please complete your driver verification <br className="sm:hidden md:block" /> to view and accept orders.
               </div>
-              <h3 className="text-xl font-semibold text-amber-900 mb-3">
-                {getCookie('verificationSubmitted') === 'true' || getCookie('riderVerificationStatus') === 'pending' 
-                  ? 'Verification Pending Approval' 
-                  : 'Verification Required'}
-              </h3>
-              <p className="text-sm text-amber-700 mb-4">
-                {getCookie('verificationSubmitted') === 'true' || getCookie('riderVerificationStatus') === 'pending'
-                  ? 'Your verification documents have been submitted and are under review by our admin team.'
-                  : 'Please complete your driver verification to view and accept orders.'}
-              </p>
-              <p className="text-xs text-amber-600 mb-6">
-                {getCookie('verificationSubmitted') === 'true' || getCookie('riderVerificationStatus') === 'pending'
-                  ? 'You will be notified once your account is approved. This usually takes 24-48 hours.'
-                  : 'Go to Dashboard to complete your verification.'}
-              </p>
               <button
                 onClick={() => window.location.href = '/rider/dashboard'}
-                className="bg-amber-600 hover:bg-amber-700 text-white px-6 py-3 rounded-lg font-medium transition-colors"
+                className="bg-[#00B75A] hover:bg-[#00B876] text-white px-6 py-3 rounded-full font-medium transition-colors"
               >
-                {getCookie('verificationSubmitted') === 'true' || getCookie('riderVerificationStatus') === 'pending'
-                  ? 'View Dashboard'
-                  : 'Go to Dashboard'}
+                Go to Dashboard
               </button>
             </div>
           ) : (

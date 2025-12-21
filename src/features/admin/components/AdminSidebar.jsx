@@ -55,7 +55,7 @@ const AdminSidebar = () => {
   const handleLogout = () => {
     (async () => {
       try {
-        const refreshToken = getCookie('refresh_token') || getCookie('admin_refresh_token') || ''; // FIXED
+        const refreshToken = getCookie('refresh_token') || getCookie('admin_refresh_token') || '';
         if (refreshToken) await apiLogout({ refreshToken });
       } catch (err) {
         console.error('Logout API failed', err);

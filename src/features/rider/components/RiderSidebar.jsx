@@ -159,13 +159,13 @@ const RiderSidebar = () => {
           <div className="absolute inset-0 bg-black/30" onClick={closeMobile} />
           <div className="relative inset-0 w-full h-full bg-white shadow-xl p-5 overflow-auto">
             <div className="flex items-center justify-between mb-6">
-              <YummyText className="text-lg font-medium">Swiftly</YummyText>
+              <YummyText className="text-3xl font-medium">Swiftly</YummyText>
               <div className="flex items-center gap-3">
-                <button className="w-10 h-10 rounded-full ring-2 ring-[#00D68F] overflow-hidden flex items-center justify-center">
+                <button className="w-12 h-12 rounded-full ring-2 ring-[#00D68F] overflow-hidden flex items-center justify-center">
                   <img src={getCookie('profile_image') || '/vanicon-white.svg'} alt="profile" className="w-full h-full object-cover" />
                 </button>
                 <button onClick={closeMobile} aria-label="Close" className="p-2">
-                  <svg width="28" height="28" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                  <svg width="32" height="32" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
                     <path d="M18 6L6 18M6 6l12 12" stroke="#111827" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"/>
                   </svg>
                 </button>
@@ -185,14 +185,14 @@ const RiderSidebar = () => {
                   className={`w-full text-left`}
                 >
                   <div
-                    className={`flex items-center gap-3 px-3 py-3 rounded-xl transition-colors w-full ${
+                    className={`flex items-center gap-4 px-4 py-4 rounded-xl transition-colors w-full ${
                       location.pathname === item.to ? 'bg-[#00B75A] text-white' : 'text-[#64748B] hover:bg-gray-50'
                     }`}
                   >
-                    <img src={item.icon} alt={item.label} className="w-5 h-5" style={{ filter: location.pathname === item.to ? 'brightness(0) invert(1)' : 'brightness(0)' }} />
-                    <YummyText className="flex-1 text-left text-[15px]">{item.label}</YummyText>
+                    <img src={item.icon} alt={item.label} className="w-7 h-7" style={{ filter: location.pathname === item.to ? 'brightness(0) invert(1)' : 'brightness(0)' }} />
+                    <YummyText className="flex-1 text-left text-[20px] font-medium">{item.label}</YummyText>
                     {item.count !== undefined && (
-                      <span className="bg-[#FF6B00] text-white text-xs font-medium px-2 py-0.5 rounded-full min-w-[24px] text-center">
+                      <span className="bg-[#FF6B00] text-white text-sm font-medium px-2.5 py-1 rounded-full min-w-[28px] text-center">
                         {item.count}
                       </span>
                     )}
@@ -203,19 +203,19 @@ const RiderSidebar = () => {
 
             <div className="mt-6 border-t pt-6">
               <div className="flex items-center justify-between mb-4">
-                <div className="text-sm text-[#64748B]">Online</div>
-                <label className="relative inline-block w-12 h-6">
+                <div className="text-base font-medium text-[#64748B]">Online</div>
+                <label className="relative inline-block w-14 h-7">
                   <input type="checkbox" className="sr-only peer" defaultChecked />
-                  <div className="w-12 h-6 bg-gray-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-[#00D68F]"></div>
+                  <div className="w-14 h-7 bg-gray-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:rounded-full after:h-6 after:w-6 after:transition-all peer-checked:bg-[#00D68F]"></div>
                 </label>
               </div>
 
               <div>
-                <button onClick={() => { closeMobile(); (async () => { try { const refreshToken = getCookie('refresh_token') || ''; if (refreshToken) await apiLogout({ refreshToken }); } catch (err) { console.error('Logout API failed', err); } finally { deleteCookie('auth_token'); deleteCookie('rider_token'); deleteCookie('customer_token'); deleteCookie('refresh_token'); deleteCookie('rider_refresh_token'); deleteCookie('customer_refresh_token'); deleteCookie('user_type'); deleteCookie('user_data'); deleteCookie('userRole'); window.location.href = '/auth/rider/login'; } })(); }} className="w-full flex items-center gap-3 text-[#EF4444] hover:bg-red-50 transition-colors px-3 py-2 rounded-lg">
-                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <button onClick={() => { closeMobile(); (async () => { try { const refreshToken = getCookie('refresh_token') || ''; if (refreshToken) await apiLogout({ refreshToken }); } catch (err) { console.error('Logout API failed', err); } finally { deleteCookie('auth_token'); deleteCookie('rider_token'); deleteCookie('customer_token'); deleteCookie('refresh_token'); deleteCookie('rider_refresh_token'); deleteCookie('customer_refresh_token'); deleteCookie('user_type'); deleteCookie('user_data'); deleteCookie('userRole'); window.location.href = '/auth/rider/login'; } })(); }} className="w-full flex items-center gap-4 text-[#EF4444] hover:bg-red-50 transition-colors px-4 py-3 rounded-lg">
+                  <svg width="32" height="32" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
                     <path d="M17 7l-1.41 1.41L18.17 11H8v2h10.17l-2.58 2.58L17 17l5-5zM4 5h8V3H4c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h8v-2H4V5z" fill="currentColor"/>
                   </svg>
-                  <YummyText className="text-[15px]">Logout</YummyText>
+                  <YummyText className="text-[20px] font-medium">Logout</YummyText>
                 </button>
               </div>
             </div>

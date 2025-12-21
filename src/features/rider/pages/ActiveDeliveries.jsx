@@ -5,13 +5,14 @@ import { YummyText } from '../../../components/YummyText';
 import TelephoneIcon from "../../../icons/Telephoneicon";
 import ChatIcon from "../../../icons/Chaticon";
 import MapboxMap from '../../../components/MapboxMap';
+import BanIcon from '../../../icons/Banicon';
 import { useDelivery } from '../../../contexts/DeliveryContext';
 import { getRiderDeliveries, updateDeliveryStatus, uploadDeliveryProof } from '../../../utils/authApi';
 import './ActiveDeliveries.css';
 
 // Shadow only on left, right and bottom
 const sideBottomShadow = {
-  boxShadow: '2px 4px 4px rgba(0,0,0,0.06), -2px 4px 4px rgba(0,0,0,0.06), 0 4px 8px rgba(0,0,0,0.08)'
+  boxShadow: '0.5px 1.5px 2px rgba(0, 0, 0, 0.05), -0.5px 1.5px 2px rgba(0, 0, 0, 0.05), 0 1.5px 3px rgba(0, 0, 0, 0.07)'
 };
 
 const DeliveryCard = ({ 
@@ -357,15 +358,15 @@ const ActiveDeliveries = () => {
                 );
               })
             ) : (
-              <div className="text-center py-20">
-                <div className="text-6xl mb-6">📦</div>
+              <div className="text-center py-20 rounded-2xl px-6" style={sideBottomShadow}>
+                <BanIcon className="w-16 h-16 mx-auto mb-4 text-[#FF6B00]" />
                 <div className="text-xl font-medium text-[#0F172A] mb-3">No Active Deliveries Yet</div>
                 <div className="text-sm text-[#64748B] mb-6 max-w-md mx-auto">
                   You don't have any active deliveries at the moment. Head over to the Available Orders page to accept new delivery requests.
                 </div>
                 <button
                   onClick={() => window.location.href = '/rider/available-orders'}
-                  className="bg-[#00B75A] hover:bg-[#00B876] text-white px-6 py-3 rounded-xl transition-colors font-medium"
+                  className="bg-[#00B75A] hover:bg-[#00B876] text-white px-6 py-3 rounded-full transition-colors font-medium"
                 >
                   View Available Orders
                 </button>

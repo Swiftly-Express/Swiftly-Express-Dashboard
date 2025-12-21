@@ -106,7 +106,7 @@ const Earnings = () => {
                 Track your income and performance
               </div>
             </div>
-            <button className="bg-[#00B75A] hover:bg-[#00B876]  text-sm text-white px-3 py-2 rounded-xl transition-colors font-[400]">
+            <button className="bg-[#00B75A] hover:bg-[#00B876] whitespace-nowrap text-sm text-white px-3 py-2 rounded-full transition-colors font-[400]">
               Request Payout
             </button>
           </div>
