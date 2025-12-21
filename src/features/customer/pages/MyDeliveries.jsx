@@ -3,6 +3,7 @@ import { IonContent, IonPage, IonIcon, IonToast } from '@ionic/react';
 import { eye, eyeOff, arrowForward, copy } from 'ionicons/icons';
 import CustomerLayout from '../components/CustomerLayout';
 import { YummyText } from '../../../components/YummyText';
+import Loader from '../../../components/Loader';
 import { getCustomerDeliveries } from '../../../utils/authApi';
 
 const sideBottomShadow = {
@@ -95,6 +96,24 @@ const DeliveryCard = ({ delivery }) => {
       console.error('Failed to copy:', err);
     }
   };
+
+  const [loading, setLoading] = useState(false);
+  if (loading) {
+    return (
+      <IonPage>
+        <CustomerLayout>
+          <IonContent className="ion-padding">
+            <div className="flex items-center justify-center h-full">
+              <div className="text-center">
+                <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-[#00D68F] mx-auto mb-4"></div>
+                <p className="text-[#64748B]">Loading profile...</p>
+              </div>
+            </div>
+          </IonContent>
+        </CustomerLayout>
+      </IonPage>
+    );
+  }
   
   return (
     <div className="bg-white rounded-2xl p-6 mb-4" style={sideBottomShadow}>
@@ -424,11 +443,11 @@ const MyDeliveries = () => {
         <IonContent className="ion-padding">
           {/* Header */}
           <div className="mb-8">
-            <YummyText className="text-3xl font-medium text-[#0F172A] mb-2">
-              My Deliveries
+            <YummyText>
+              <div className="text-3xl font-medium text-[#0F172A] mb-2 text-center md:text-left">My Deliveries</div>
             </YummyText>
-            <YummyText className="text-[#4A5565] text-[15px] font-[400]">
-              View and manage all your shipments
+            <YummyText>
+              <div className="text-[#4A5565] text-[15px] font-[400] text-center md:text-left">View and manage all your shipments</div>
             </YummyText>
           </div>
 
@@ -465,9 +484,8 @@ const MyDeliveries = () => {
 
           {/* Loading State */}
           {loading && (
-            <div className="text-center py-12">
-              <div className="inline-block animate-spin rounded-full h-8 w-8 border-4 border-gray-300 border-t-[#00B75A]"></div>
-              <p className="mt-4 text-[#64748B]">Loading deliveries...</p>
+            <div className="py-6">
+              <Loader message="Loading deliveries..." />
             </div>
           )}
 

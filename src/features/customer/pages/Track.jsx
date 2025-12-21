@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { IonPage, IonContent, IonToast } from '@ionic/react';
 import CustomerLayout from '../components/CustomerLayout';
 import { YummyText } from '../../../components/YummyText';
+import Loader from '../../../components/Loader';
 import { getDeliveryByTracking } from '../../../utils/authApi';
 import BlockIcon from '../../../icons/Blockicon';
 import CheckIcon from '../../../icons/Checkicon';
@@ -113,10 +114,10 @@ const Track = () => {
           {/* Header */}
           <div className="mb-8">
             <YummyText>
-              <div className="text-3xl font-medium text-[#0F172A] mb-2">
+              <div className="text-3xl font-medium text-[#0F172A] mb-2 text-center md:text-left">
                 Track Your Delivery
               </div>
-              <div className="text-[#4A5565] text-[15px] font-[400]">
+              <div className="text-[#4A5565] text-[15px] font-[400] text-center md:text-left">
                 Enter your tracking number to see real-time updates
               </div>
             </YummyText>
@@ -156,9 +157,8 @@ const Track = () => {
 
           {/* Loading State */}
           {loading && (
-            <div className="text-center py-12">
-              <div className="inline-block animate-spin rounded-full h-8 w-8 border-4 border-gray-300 border-t-[#00B75A]"></div>
-              <p className="mt-4 text-[#64748B]">Tracking package...</p>
+            <div className="py-6">
+              <Loader message="Tracking package..." />
             </div>
           )}
 

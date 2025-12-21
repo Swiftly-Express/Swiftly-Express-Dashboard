@@ -296,16 +296,18 @@ const CustomerDashboard = () => {
     return 10;
   };
 
+  
+
   return (
     <IonPage>
       <CustomerLayout>
         <IonContent className="ion-padding">
           {/* Welcome Section */}
           <div className="mb-8">
-            <YummyText className="text-3xl font-medium text-[#0F172A] mb-2">
+            <YummyText className="text-3xl font-medium text-[#0F172A] mb-2 text-center md:text-left">
               Welcome back, {userName}
             </YummyText>
-            <YummyText className="text-[#4A5565] text-[15px] font-[400]">
+            <YummyText className="text-[#4A5565] text-[15px] font-[400] text-center md:text-left">
               Here's what's happening with your deliveries today.
             </YummyText>
           </div>

@@ -175,10 +175,10 @@ const Book = () => {
           {/* Header */}
           <YummyText>
             <div className="mb-8">
-              <div className="text-3xl font-medium text-[#0F172A] mb-2">
+              <div className="text-3xl font-medium text-[#0F172A] mb-2 text-center md:text-left">
                 Book a Delivery
               </div>
-              <div className="text-[#4A5565] text-[15px] font-[400]">
+              <div className="text-[#4A5565] text-[15px] font-[400] text-center md:text-left">
                 Schedule a new shipment with ease
               </div>
             </div>
