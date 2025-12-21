@@ -760,10 +760,10 @@ const RiderProfile = () => {
           </YummyText>
 
           <YummyText>
-          <div className="flex items-center gap-2 mb-8 bg-gray-100 p-1 py-1 rounded-full overflow-x-auto whitespace-nowrap md:w-fit px-2">
+          <div className="flex items-center gap-2 mb-8 bg-gray-100 p-1 py-1 rounded-full overflow-x-auto whitespace-nowrap md:w-fit px-1 md:px-2 sm:px-2">
             <button
               onClick={() => setActiveTab('personal')}
-              className={`px-5 py-2 md:px-7 md:py-1 rounded-full text-base md:text-sm font-normal transition-colors ${
+              className={`px-4 py-2 md:px-7 md:py-1 rounded-full text-sm md:text-sm font-normal transition-colors ${
                 activeTab === 'personal'
                   ? 'text-[#0F172A] bg-white shadow-sm'
                   : 'text-[#64748B]'
@@ -773,7 +773,7 @@ const RiderProfile = () => {
             </button>
             <button
               onClick={() => setActiveTab('vehicle')}
-              className={`px-5 py-2 md:px-7 md:py-1 rounded-full text-base md:text-sm font-normal transition-colors ${
+              className={`px-5 py-2 md:px-7 md:py-1 rounded-full text-sm md:text-sm font-normal transition-colors ${
                 activeTab === 'vehicle'
                   ? 'text-[#0F172A] bg-white shadow-sm'
                   : 'text-[#64748B]'
@@ -783,7 +783,7 @@ const RiderProfile = () => {
             </button>
             <button
               onClick={() => setActiveTab('documents')}
-              className={`px-5 py-2 md:px-7 md:py-1 rounded-full text-base md:text-sm font-normal transition-colors ${
+              className={`px-5 py-2 md:px-7 md:py-1 rounded-full text-sm md:text-sm font-normal transition-colors ${
                 activeTab === 'documents'
                   ? 'text-[#0F172A] bg-white shadow-sm'
                   : 'text-[#64748B]'
