@@ -6,6 +6,8 @@ import { YummyText } from '../../../components/YummyText';
 import { getCustomerDeliveries } from '../../../utils/authApi';
 import BlockIcon from '../../../icons/Blockicon';
 import CheckIcon from '../../../icons/Checkicon';
+import ClockIcon from '../../../icons/Clockicon';
+import RevenueIcon from '../../../icons/Revenueicon';
 
 const sideBottomShadow = {
   boxShadow: '2px 4px 4px rgba(0,0,0,0.06), -2px 4px 4px rgba(0,0,0,0.06), 0 4px 8px rgba(0,0,0,0.08)'
@@ -326,7 +328,7 @@ const CustomerDashboard = () => {
             />
             <StatCard
               icon={
-                <img src="/clockicon.svg" alt="In Transit" className="w-5 h-5" />
+                <ClockIcon width={20} height={20} stroke="#F97316" />
               }
               iconBg="bg-[#FFF7ED]"
               title="In Transit"
@@ -346,7 +348,7 @@ const CustomerDashboard = () => {
             />
             <StatCard
               icon={
-                <img src="/success-rate.svg" alt="Success Rate" className="w-5 h-5" />
+                <RevenueIcon width={20} height={20} stroke="#7C3AED" />
               }
               iconBg="bg-purple-50"
               title="Success Rate"
