@@ -12,7 +12,7 @@ const sideBottomShadow = {
 };
 
 const StatCard = ({ icon, iconBg, title, value, subtitle, subtitleColor }) => (
-  <div className="bg-white rounded-xl p-3 md:p-5" style={sideBottomShadow}>
+  <div className="bg-white rounded-xl p-4 md:p-5" style={sideBottomShadow}>
     <div className="flex items-start justify-between mb-6">
       <YummyText className="text-sm text-[#4A5565] mt-2">{title}</YummyText>
       <div className={`w-9 h-9 ${iconBg} rounded-lg flex items-center justify-center`}>

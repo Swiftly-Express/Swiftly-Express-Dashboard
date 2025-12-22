@@ -109,8 +109,10 @@ const CustomerLayout = ({ children }) => {
           </div>
         </div>
 
-        {/* Main Content (header has fixed position). */}
-        <div className="flex-1 p-8 pt-24 overflow-y-auto no-scrollbar">
+        {/* Main Content (header is sticky inside the scrollable area).
+            The main scroll container is the parent so the scrollbar starts at the top.
+        */}
+        <div className="flex-1 md:p-8 pt-16 md:pt-24 overflow-y-auto no-scrollbar">
           {children}
         </div>
       </div>
