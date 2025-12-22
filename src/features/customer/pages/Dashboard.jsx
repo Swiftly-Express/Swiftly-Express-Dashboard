@@ -12,7 +12,7 @@ const sideBottomShadow = {
 };
 
 const StatCard = ({ icon, iconBg, title, value, subtitle, subtitleColor }) => (
-  <div className="bg-white rounded-xl p-5" style={sideBottomShadow}>
+  <div className="bg-white rounded-xl p-3 md:p-5" style={sideBottomShadow}>
     <div className="flex items-start justify-between mb-6">
       <YummyText className="text-sm text-[#4A5565] mt-2">{title}</YummyText>
       <div className={`w-9 h-9 ${iconBg} rounded-lg flex items-center justify-center`}>
@@ -303,17 +303,17 @@ const CustomerDashboard = () => {
       <CustomerLayout>
         <IonContent className="ion-padding">
           {/* Welcome Section */}
-          <div className="mb-8">
-            <YummyText className="text-3xl font-medium text-[#0F172A] mb-2 text-center md:text-left">
+          <div className="mb-6 py-2">
+            <YummyText className="text-2xl md:text-3xl font-medium text-[#0F172A] mb-2">
               Welcome back, {userName}
             </YummyText>
-            <YummyText className="text-[#4A5565] text-[15px] font-[400] text-center md:text-left">
+            <YummyText className="text-[#4A5565] text-[14px] font-[400]">
               Here's what's happening with your deliveries today.
             </YummyText>
           </div>
 
           {/* Stats Grid */}
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-8">
+          <div className="grid grid-cols-2 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
             <StatCard
               icon={
                 <BlockIcon width={24} height={24} stroke="#007BFF" />
@@ -357,7 +357,7 @@ const CustomerDashboard = () => {
           </div>
 
           {/* Recent Deliveries */}
-          <div className="bg-white rounded-2xl p-6" style={sideBottomShadow}>
+          <div className="bg-white rounded-2xl p-6 md:p-6 sm:p-6 lg:p-6" style={sideBottomShadow}>
             <div className="mb-6 flex items-start justify-between">
               <div>
                 <YummyText className="text-xl font-semibold text-[#0F172A] mb-1">
