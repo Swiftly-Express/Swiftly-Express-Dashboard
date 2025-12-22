@@ -112,20 +112,20 @@ const Track = () => {
           />
 
           {/* Header */}
-          <div className="mb-8">
+          <div className="mb-4">
             <YummyText>
-              <div className="text-3xl font-medium text-[#0F172A] mb-2 text-center md:text-left">
+              <div className="text-3xl font-medium text-[#0F172A] mb-2 mt-3 text-left md:text-left">
                 Track Your Delivery
               </div>
-              <div className="text-[#4A5565] text-[15px] font-[400] text-center md:text-left">
-                Enter your tracking number to see real-time updates
+              <div className="text-[#4A5565] text-[15px] font-[400] text-left sm:text-left md:text-left">
+                Enter your tracking number to see <br className="sm:hidden md:hidden lg:block" /> real-time updates
               </div>
             </YummyText>
           </div>
 
           {/* Tracking Input */}
           <YummyText>
-          <div className="bg-white p-4 rounded-full mb-8" style={sideBottomShadow}>
+          <div className="bg-white p-2 rounded-full mb-8" style={sideBottomShadow}>
             <form onSubmit={handleTrack} className="flex gap-3">
               <input
                 type="text"
@@ -138,20 +138,12 @@ const Track = () => {
               <button
                 type="submit"
                 disabled={loading}
-                className={`px-8 py-3 bg-[#00B75A] ${loading ? 'opacity-50 cursor-not-allowed' : 'hover:bg-[#00a352]'} text-white rounded-full transition-colors font-normal flex items-center gap-2`}
+                className={`px-3 md:px-8 sm:px-8 py-3 md:py-3 sm:py-3 bg-[#00B75A] ${loading ? 'opacity-50 cursor-not-allowed' : 'hover:bg-[#00a352]'} text-white rounded-full transition-colors font-medium flex items-center gap-1`}
               >
-                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                  <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z" fill="currentColor"/>
-                  <circle cx="12" cy="10" r="3" fill="white"/>
-                </svg>
-                {loading ? 'Tracking...' : 'Track'}
+                <LocationIcon width={20} height={20} stroke="#FFFFFF" />
+                {loading ? 'Tracking' : 'Track'}
               </button>
             </form>
-            {/* <YummyText>
-              <div className="text-xs text-[#94A3B8] mt-3">
-                Tip: Enter "PKG-2401" to see demo tracking data
-              </div>
-            </YummyText> */}
           </div>
           </YummyText>
 

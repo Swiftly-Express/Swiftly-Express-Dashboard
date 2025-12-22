@@ -442,12 +442,12 @@ const MyDeliveries = () => {
       <CustomerLayout>
         <IonContent className="ion-padding">
           {/* Header */}
-          <div className="mb-8">
+          <div className="mb-5">
             <YummyText>
-              <div className="text-3xl font-medium text-[#0F172A] mb-2 text-center md:text-left">My Deliveries</div>
+              <div className="text-3xl font-medium text-[#0F172A] mt-4 text-left md:text-left">My Deliveries</div>
             </YummyText>
             <YummyText>
-              <div className="text-[#4A5565] text-[15px] font-[400] text-center md:text-left">View and manage all your shipments</div>
+              <div className="text-[#4A5565] text-[15px] font-[400] text-left md:text-left">View and manage all your shipments</div>
             </YummyText>
           </div>
 
@@ -462,7 +462,7 @@ const MyDeliveries = () => {
           <div className="flex items-center gap-2 mb-8 bg-gray-100 p-1 rounded-full w-fit">
             <button
               onClick={() => setActiveTab('active')}
-              className={`px-14 py-2 rounded-full text-sm font-normal transition-colors ${
+              className={`px-12 md:px-14 sm:px-14 py-3 md:py-2 sm:py-2 whitespace-nowrap rounded-full text-sm font-normal transition-colors ${
                 activeTab === 'active'
                   ? 'text-[#0F172A] bg-white shadow-sm'
                   : 'text-[#64748B]'
@@ -472,7 +472,7 @@ const MyDeliveries = () => {
             </button>
             <button
               onClick={() => setActiveTab('completed')}
-              className={`px-14 py-2 rounded-full text-sm font-normal transition-colors ${
+              className={`px-12 md:px-14 sm:px-14 py-3 md:py-2 sm:py-2 whitespace-nowrap rounded-full text-sm font-normal transition-colors ${
                 activeTab === 'completed'
                   ? 'text-[#0F172A] bg-white shadow-sm'
                   : 'text-[#64748B]'

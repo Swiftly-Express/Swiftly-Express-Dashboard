@@ -362,19 +362,21 @@ const CustomerDashboard = () => {
           <div className="bg-white rounded-2xl p-6 md:p-6 sm:p-6 lg:p-6" style={sideBottomShadow}>
             <div className="mb-6 flex items-start justify-between">
               <div>
-                <YummyText className="text-xl font-semibold text-[#0F172A] mb-1">
+                <YummyText className="text-lg md:text-xl sm:text-xl lg:text-xl font-semibold text-[#0F172A] mb-1">
                   Recent Deliveries
                 </YummyText>
-                <YummyText className="text-xl font-[400] text-[#717182]">
+                <YummyText className="text-sm md:text-xl sm:text-xl lg:text-xl font-[400] text-[#717182]">
                   Track your latest shipments
                 </YummyText>
               </div>
+              <YummyText>
               <button
                 onClick={() => window.location.href = '/customer/deliveries'}
-                className="px-4 py-2 text-sm font-medium text-[#00B75A] hover:text-[#009647] transition-colors border border-[#00B75A] hover:border-[#009647] rounded-lg"
+                className="px-4 py-2 whitespace-nowrap text-sm md:text-xs sm:text-sm lg:text-sm font-medium text-[#00B75A] hover:text-[#009647] transition-colors border border-[#00B75A] hover:border-[#009647] rounded-lg"
               >
                 View All
               </button>
+              </YummyText>
             </div>
 
             <div>
