@@ -139,7 +139,7 @@ const RiderSignup = () => {
                     value={formData.fullName}
                     onChange={(e) => handleChange('fullName', e.target.value)}
                     placeholder="John Doe"
-                    className="w-full px-4 py-3 bg-[#F3F4F6] rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-green-500 placeholder-[#717182]"
+                    className="w-full px-4 py-3 bg-[#F3F4F6] rounded-full text-sm focus:outline-none focus:ring-2 focus:ring-green-500 placeholder-[#717182]"
                   />
                 </div>
 
@@ -153,7 +153,7 @@ const RiderSignup = () => {
                     value={formData.email}
                     onChange={(e) => handleChange('email', e.target.value)}
                     placeholder="you@example.com"
-                    className="w-full px-4 py-3 bg-[#F3F4F6] rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-green-500 placeholder-[#717182]"
+                    className="w-full px-4 py-3 bg-[#F3F4F6] rounded-full text-sm focus:outline-none focus:ring-2 focus:ring-green-500 placeholder-[#717182]"
                   />
                 </div>
 
@@ -168,7 +168,7 @@ const RiderSignup = () => {
                     value={formData.password}
                     onChange={(e) => handleChange('password', e.target.value)}
                     placeholder="••••••••"
-                    className="w-full px-4 py-3 bg-[#F3F4F6] rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-green-500 placeholder-[#717182]"
+                    className="w-full px-4 py-3 bg-[#F3F4F6] rounded-full text-sm focus:outline-none focus:ring-2 focus:ring-green-500 placeholder-[#717182]"
                   />
                   <button
                     type="button"
@@ -191,7 +191,7 @@ const RiderSignup = () => {
                     value={formData.confirmPassword}
                     onChange={(e) => handleChange('confirmPassword', e.target.value)}
                     placeholder="••••••••"
-                    className="w-full px-4 py-3 bg-[#F3F4F6] rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-green-500 placeholder-[#717182]"
+                    className="w-full px-4 py-3 bg-[#F3F4F6] rounded-full text-sm focus:outline-none focus:ring-2 focus:ring-green-500 placeholder-[#717182]"
                   />
                   <button
                     type="button"
@@ -227,7 +227,7 @@ const RiderSignup = () => {
                 <Button
                   variant="primary"
                   onClick={handleSubmit}
-                  className={`!w-full !py-3 !bg-[#00B75A] text-sm !text-white rounded-lg transition-all duration-300 ${formData.agreeToTerms ? 'hover:!bg-[#00D68F] opacity-100' : 'opacity-50 cursor-not-allowed'}`}
+                  className={`!w-full !py-3 !bg-[#00B75A] text-sm !text-white rounded-full transition-all duration-300 ${formData.agreeToTerms ? 'hover:!bg-[#00D68F] opacity-100' : 'opacity-50 cursor-not-allowed'}`}
                   disabled={!formData.agreeToTerms}
                 >
                   <YummyText>Create Account</YummyText>
@@ -246,7 +246,7 @@ const RiderSignup = () => {
                 </div>
 
                 {/* Google Button */}
-                <div className="border border-gray-300 rounded-lg [&>button]:border-0">
+                <div className="border border-gray-300 rounded-full [&>button]:border-0">
                   <button className="w-full flex items-center justify-center gap-3 py-3">
                     <svg className="w-5 h-5" viewBox="0 0 24 24">
                         <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/>
@@ -258,7 +258,7 @@ const RiderSignup = () => {
                   </button>
                 </div>
                 {/* Apple Button */}
-                <div className="border border-gray-300 rounded-lg [&>button]:border-0">
+                <div className="border border-gray-300 rounded-full [&>button]:border-0">
                   <button className="w-full flex items-center justify-center gap-3 py-3">
                     <svg className="w-5 h-5" viewBox="0 0 24 24" fill="currentColor">
                         <path d="M17.05 20.28c-.98.95-2.05.8-3.08.35-1.09-.46-2.09-.48-3.24 0-1.44.62-2.2.44-3.06-.35C2.79 15.25 3.51 7.59 9.05 7.31c1.35.07 2.29.74 3.08.8 1.18-.24 2.31-.93 3.57-.84 1.51.12 2.65.72 3.4 1.8-3.12 1.87-2.38 5.98.48 7.13-.57 1.5-1.31 2.99-2.54 4.09l.01-.01zM12.03 7.25c-.15-2.23 1.66-4.07 3.74-4.25.29 2.58-2.34 4.5-3.74 4.25z"/>

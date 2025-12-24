@@ -194,7 +194,7 @@ const CustomerLogin = () => {
                     value={formData.email}
                     onChange={(e) => handleChange('email', e.target.value)}
                     placeholder="Enter your email"
-                    className="w-full px-4 py-3 bg-[#F3F4F6] text-xs rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500 placeholder-[#9CA3AF]"
+                    className="w-full px-4 py-3 bg-[#F3F4F6] text-xs rounded-full focus:outline-none focus:ring-2 focus:ring-green-500 placeholder-[#9CA3AF]"
                     style={{ fontFamily: 'inherit' }}
                   />
                 </div>
@@ -210,7 +210,7 @@ const CustomerLogin = () => {
                     value={formData.password}
                     onChange={(e) => handleChange(e)}
                     placeholder="***********"
-                    className="w-full px-4 py-3 bg-[#F3F4F6] rounded-lg focus:outline-none focus:ring focus:ring-green-500 placeholder-[#9CA3AF]"
+                    className="w-full px-4 py-3 bg-[#F3F4F6] rounded-full focus:outline-none focus:ring focus:ring-green-500 placeholder-[#9CA3AF]"
                     style={{ fontFamily: 'inherit' }}
                   />
                   <button

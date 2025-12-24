@@ -153,7 +153,7 @@ const CustomerSignUp = () => {
                     value={formData.fullName}
                     onChange={(e) => handleChange('fullName', e.target.value)}
                     placeholder="John Doe"
-                    className="w-full px-4 py-3 bg-[#F3F4F6] rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-green-500 placeholder-[#717182]"
+                    className="w-full px-4 py-3 bg-[#F3F4F6] rounded-full text-sm focus:outline-none focus:ring-2 focus:ring-green-500 placeholder-[#717182]"
                   />
                 </div>
 
@@ -167,7 +167,7 @@ const CustomerSignUp = () => {
                     value={formData.email}
                     onChange={(e) => handleChange('email', e.target.value)}
                     placeholder="you@example.com"
-                    className="w-full px-4 py-3 bg-[#F3F4F6] rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-green-500 placeholder-[#717182]"
+                    className="w-full px-4 py-3 bg-[#F3F4F6] rounded-full text-sm focus:outline-none focus:ring-2 focus:ring-green-500 placeholder-[#717182]"
                   />
                 </div>
 
@@ -182,7 +182,7 @@ const CustomerSignUp = () => {
                     value={formData.password}
                     onChange={(e) => handleChange('password', e.target.value)}
                     placeholder="••••••••"
-                    className="w-full px-4 py-3 bg-[#F3F4F6] rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-green-500 placeholder-[#717182]"
+                    className="w-full px-4 py-3 bg-[#F3F4F6] rounded-full text-sm focus:outline-none focus:ring-2 focus:ring-green-500 placeholder-[#717182]"
                   />
                   <button
                     type="button"
@@ -205,7 +205,7 @@ const CustomerSignUp = () => {
                     value={formData.confirmPassword}
                     onChange={(e) => handleChange('confirmPassword', e.target.value)}
                     placeholder="••••••••"
-                    className="w-full px-4 py-3 bg-[#F3F4F6] rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-green-500 placeholder-[#717182]"
+                    className="w-full px-4 py-3 bg-[#F3F4F6] rounded-full text-sm focus:outline-none focus:ring-2 focus:ring-green-500 placeholder-[#717182]"
                   />
                   <button
                     type="button"
@@ -295,7 +295,7 @@ const CustomerSignUp = () => {
           </div>
 
           {/* Right Side - Image */}
-          <div className=" relative bg-[#00B75A] rounded-[32px] p-12 flex flex-col justify-between overflow-hidden">
+          <div className="hidden relative bg-[#00B75A] rounded-[32px] p-12 flex flex-col justify-between overflow-hidden">
             {/* Text Content at Top */}
             <div className="relative z-10 mt-2">
               <YummyText className="text-lg text-white mb-4 opacity-90 leading-[1.3] font-[400]">
