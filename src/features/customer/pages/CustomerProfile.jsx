@@ -3,10 +3,10 @@ import { IonPage, IonContent, IonToast } from '@ionic/react';
 import CustomerLayout from '../components/CustomerLayout';
 import { YummyText } from '../../../components/YummyText';
 import Loader from '../../../components/Loader';
-import { 
-  getCustomerProfile, 
-  updateCustomerProfile, 
-  uploadProfileImage 
+import {
+  getCustomerProfile,
+  updateCustomerProfile,
+  uploadProfileImage
 } from '../../../utils/authApi';
 
 const sideBottomShadow = {
@@ -20,7 +20,7 @@ const CustomerProfile = () => {
   const [uploading, setUploading] = useState(false);
   const [toastMsg, setToastMsg] = useState('');
   const [showToast, setShowToast] = useState(false);
-  
+
   const [formData, setFormData] = useState({
     fullName: '',
     email: '',
@@ -31,13 +31,13 @@ const CustomerProfile = () => {
     zipCode: '',
     country: 'Nigeria'
   });
-  
+
   const [passwordData, setPasswordData] = useState({
     currentPassword: '',
     newPassword: '',
     confirmPassword: ''
   });
-  
+
   const [notifications, setNotifications] = useState({
     emailNotifications: true,
     smsNotifications: true,
@@ -57,12 +57,12 @@ const CustomerProfile = () => {
       // First, load from localStorage for immediate display
       const cachedUserData = localStorage.getItem('user_data');
       const cachedProfileImage = localStorage.getItem('profile_image');
-      
+
       if (cachedUserData) {
         try {
           const userData = JSON.parse(cachedUserData);
           console.log('[Profile] Loading cached user data:', userData);
-          
+
           setFormData({
             fullName: userData?.fullName || userData?.name || '',
             email: userData?.email || '',
@@ -77,20 +77,20 @@ const CustomerProfile = () => {
           console.warn('[Profile] Failed to parse cached user data:', e);
         }
       }
-      
+
       if (cachedProfileImage) {
         setProfileImage(cachedProfileImage);
         console.log('[Profile] Loaded cached profile image');
       }
-      
+
       // Then fetch from server and update
       console.log('[Profile] Fetching customer profile from server...');
       const profile = await getCustomerProfile();
       console.log('[Profile] Profile data from server:', profile);
-      
+
       // Handle different response structures
       const data = profile?.data || profile;
-      
+
       setFormData({
         fullName: data?.fullName || data?.full_name || data?.name || '',
         email: data?.email || '',
@@ -101,14 +101,14 @@ const CustomerProfile = () => {
         zipCode: data?.address?.zipCode || data?.address?.zip_code || '',
         country: data?.address?.country || 'Nigeria'
       });
-      
+
       // Set profile image if available from server, otherwise keep cached
       const serverImage = data?.profileImage || data?.profile_image || data?.avatar;
       if (serverImage) {
         setProfileImage(serverImage);
         localStorage.setItem('profile_image', serverImage);
       }
-      
+
       // Set notification preferences if available
       if (data?.notificationPreferences || data?.notification_preferences) {
         const prefs = data.notificationPreferences || data.notification_preferences;
@@ -120,7 +120,7 @@ const CustomerProfile = () => {
           newsletter: prefs.newsletter ?? false
         });
       }
-      
+
     } catch (err) {
       console.error('[Profile] Failed to fetch profile:', err);
       setToastMsg(err?.message || 'Failed to load profile');
@@ -154,7 +154,7 @@ const CustomerProfile = () => {
   const handlePhotoChange = async (e) => {
     const file = e.target.files[0];
     if (!file) return;
-    
+
     // Validate file type
     const validTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/gif'];
     if (!validTypes.includes(file.type)) {
@@ -162,7 +162,7 @@ const CustomerProfile = () => {
       setShowToast(true);
       return;
     }
-    
+
     // Validate file size (max 2MB)
     if (file.size > 2 * 1024 * 1024) {
       setToastMsg('File size must be less than 2MB');
@@ -171,32 +171,32 @@ const CustomerProfile = () => {
     }
 
     setUploading(true);
-    
+
     try {
       console.log('[Profile] Uploading profile image...');
-      
+
       // Create FormData
       const formData = new FormData();
       formData.append('image', file);
-      
+
       const response = await uploadProfileImage(formData);
       console.log('[Profile] Upload response:', response);
-      
+
       // Update profile image
       const imageUrl = response?.imageUrl || response?.data?.imageUrl || response?.url || response?.data?.url;
-      
+
       if (imageUrl) {
         setProfileImage(imageUrl);
         // Persist to localStorage
         localStorage.setItem('profile_image', imageUrl);
         console.log('[Profile] Saved profile image to localStorage:', imageUrl);
-        
+
         // Dispatch event to notify other components (like CustomerLayout)
         window.dispatchEvent(new CustomEvent('profile:updated', {
           detail: { profileImage: imageUrl }
         }));
         console.log('[Profile] Dispatched profile:updated event for image');
-        
+
         setToastMsg('Profile photo updated successfully!');
       } else {
         // If no URL returned, create preview
@@ -206,7 +206,7 @@ const CustomerProfile = () => {
           // Persist to localStorage
           localStorage.setItem('profile_image', reader.result);
           console.log('[Profile] Saved preview image to localStorage');
-          
+
           // Dispatch event to notify other components
           window.dispatchEvent(new CustomEvent('profile:updated', {
             detail: { profileImage: reader.result }
@@ -216,9 +216,9 @@ const CustomerProfile = () => {
         reader.readAsDataURL(file);
         setToastMsg('Profile photo updated!');
       }
-      
+
       setShowToast(true);
-      
+
     } catch (err) {
       console.error('[Profile] Failed to upload image:', err);
       setToastMsg(err?.message || 'Failed to upload image');
@@ -231,10 +231,10 @@ const CustomerProfile = () => {
   const handleSubmit = async (e) => {
     e.preventDefault();
     setLoading(true);
-    
+
     try {
       console.log('[Profile] Updating profile:', formData);
-      
+
       // Prepare payload - exclude email and format address as object
       // Backend doesn't accept 'country' or 'coordinates' in address
       const payload = {
@@ -247,19 +247,19 @@ const CustomerProfile = () => {
           zipCode: formData.zipCode
         }
       };
-      
+
       console.log('[Profile] Payload:', payload);
-      
+
       const response = await updateCustomerProfile(payload);
       console.log('[Profile] Update response:', response);
-      
+
       // Refetch profile to get the latest data from backend
       try {
         const updatedProfile = await getCustomerProfile();
         const data = updatedProfile?.data || updatedProfile;
-        
+
         console.log('[Profile] Refetched profile after update:', data);
-        
+
         // Update localStorage with fresh data from server
         const existingData = JSON.parse(localStorage.getItem('user_data') || '{}');
         const updatedUserData = {
@@ -277,13 +277,13 @@ const CustomerProfile = () => {
         };
         localStorage.setItem('user_data', JSON.stringify(updatedUserData));
         console.log('[Profile] Updated localStorage with fresh profile data:', updatedUserData);
-        
+
         // Dispatch event to notify other components (like Dashboard) of profile update
         window.dispatchEvent(new CustomEvent('profile:updated', {
           detail: updatedUserData
         }));
         console.log('[Profile] Dispatched profile:updated event');
-        
+
         // Update form with fresh data
         setFormData({
           fullName: data?.fullName || data?.full_name || data?.name || formData.fullName,
@@ -312,16 +312,16 @@ const CustomerProfile = () => {
           }
         };
         localStorage.setItem('user_data', JSON.stringify(updatedUserData));
-        
+
         // Dispatch event to notify other components
         window.dispatchEvent(new CustomEvent('profile:updated', {
           detail: updatedUserData
         }));
       }
-      
+
       setToastMsg('Profile updated successfully!');
       setShowToast(true);
-      
+
     } catch (err) {
       console.error('[Profile] Failed to update profile:', err);
       setToastMsg(err?.message || 'Failed to update profile');
@@ -333,42 +333,42 @@ const CustomerProfile = () => {
 
   const handlePasswordSubmit = async (e) => {
     e.preventDefault();
-    
+
     // Validate passwords
     if (passwordData.newPassword !== passwordData.confirmPassword) {
       setToastMsg('New passwords do not match');
       setShowToast(true);
       return;
     }
-    
+
     if (passwordData.newPassword.length < 6) {
       setToastMsg('Password must be at least 6 characters');
       setShowToast(true);
       return;
     }
-    
+
     setLoading(true);
-    
+
     try {
       console.log('[Profile] Updating password...');
-      
+
       const response = await updateCustomerProfile({
         currentPassword: passwordData.currentPassword,
         newPassword: passwordData.newPassword
       });
-      
+
       console.log('[Profile] Password update response:', response);
-      
+
       setToastMsg('Password updated successfully!');
       setShowToast(true);
-      
+
       // Clear password fields
       setPasswordData({
         currentPassword: '',
         newPassword: '',
         confirmPassword: ''
       });
-      
+
     } catch (err) {
       console.error('[Profile] Failed to update password:', err);
       setToastMsg(err?.message || 'Failed to update password');
@@ -381,19 +381,19 @@ const CustomerProfile = () => {
   const handleNotificationSubmit = async (e) => {
     e.preventDefault();
     setLoading(true);
-    
+
     try {
       console.log('[Profile] Saving notification preferences:', notifications);
-      
+
       const response = await updateCustomerProfile({
         notificationPreferences: notifications
       });
-      
+
       console.log('[Profile] Preferences update response:', response);
-      
+
       setToastMsg('Preferences saved successfully!');
       setShowToast(true);
-      
+
     } catch (err) {
       console.error('[Profile] Failed to save preferences:', err);
       setToastMsg(err?.message || 'Failed to save preferences');
@@ -416,47 +416,44 @@ const CustomerProfile = () => {
           />
 
           {/* Header */}
-          <div className="mb-8">
+          <div className="mb-4 mt-4 md:mt-0 sm:mt-0">
             <YummyText>
-              <div className="text-3xl font-medium text-[#0F172A] mb-2 text-center md:text-left">
+              <div className="text-2xl sm:text-3xl font-medium text-[#0F172A] mb-0 text-left md:text-left">
                 Profile Settings
               </div>
-              <div className="text-[#4A5565] text-[15px] font-[400] text-center md:text-left">
+              <div className="text-[#4A5565] text-sm sm:text-[15px] font-[400] text-left md:text-left">
                 Manage your account and preferences
               </div>
             </YummyText>
           </div>
 
           {/* Tab Navigation */}
-          <div className="flex items-center gap-2 mb-8 bg-gray-100 p-1 rounded-full w-fit">
+          <div className="flex items-center gap-2 mb-8 bg-gray-100 p-1 px-1.5 md:px-0 rounded-full w-full md:w-fit overflow-x-auto md:overflow-visible">
             <YummyText>
               <button
                 onClick={() => setActiveTab('personal')}
-                className={`px-12 py-2 rounded-full text-sm font-normal transition-colors ${
-                  activeTab === 'personal'
+                className={`px-6 md:px-12 py-2 rounded-full text-xs md:text-sm font-normal transition-colors whitespace-nowrap flex-shrink-0 md:flex-shrink ${activeTab === 'personal'
                     ? 'text-[#0F172A] bg-white shadow-sm'
                     : 'text-[#64748B]'
-                }`}
+                  }`}
               >
                 Personal
               </button>
               <button
                 onClick={() => setActiveTab('security')}
-                className={`px-12 py-2 rounded-full text-sm font-normal transition-colors ${
-                  activeTab === 'security'
+                className={`px-6 md:px-12 py-2 rounded-full text-xs md:text-sm font-normal transition-colors whitespace-nowrap flex-shrink-0 md:flex-shrink ${activeTab === 'security'
                     ? 'text-[#0F172A] bg-white shadow-sm'
                     : 'text-[#64748B]'
-                }`}
+                  }`}
               >
                 Security
               </button>
               <button
                 onClick={() => setActiveTab('notifications')}
-                className={`px-12 py-2 rounded-full text-sm font-normal transition-colors ${
-                  activeTab === 'notifications'
+                className={`px-8 md:px-12 py-2 rounded-full text-xs md:text-sm font-normal transition-colors whitespace-nowrap flex-shrink-0 md:flex-shrink ${activeTab === 'notifications'
                     ? 'text-[#0F172A] bg-white shadow-sm'
                     : 'text-[#64748B]'
-                }`}
+                  }`}
               >
                 Notifications
               </button>
@@ -472,7 +469,7 @@ const CustomerProfile = () => {
 
           {/* Personal Tab */}
           {activeTab === 'personal' && !loading && (
-            <div className="bg-white rounded-2xl p-6" style={sideBottomShadow}>
+            <div className="bg-white rounded-2xl p-4 sm:p-6" style={sideBottomShadow}>
               <div className="mb-6">
                 <YummyText>
                   <div className="text-lg font-normal text-[#0F172A]">
@@ -486,7 +483,7 @@ const CustomerProfile = () => {
 
               {/* Profile Photo */}
               <div className="mb-8">
-                <div className="flex items-center gap-4">
+                <div className="flex flex-col items-center gap-3">
                   <div className="relative">
                     <img
                       src={profileImage}
@@ -499,7 +496,7 @@ const CustomerProfile = () => {
                       </div>
                     )}
                   </div>
-                  <div>
+                  <div className="text-center">
                     <YummyText>
                       <input
                         type="file"
@@ -509,15 +506,15 @@ const CustomerProfile = () => {
                         disabled={uploading}
                         className="hidden"
                       />
-                      <label 
+                      <label
                         htmlFor="profilePhotoInput"
-                        className={`flex items-center gap-2 shadow-sm py-2 px-4 rounded-xl text-sm ${uploading ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer hover:text-[#00D68F]'} text-[#0F172A] transition-colors mb-1`}
-                        style={{border: "1px solid #64748B"}}
+                        className={`inline-flex items-center gap-2 shadow-sm py-2 px-4 rounded-xl text-sm ${uploading ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer hover:text-[#00D68F]'} text-[#0F172A] transition-colors mb-1`}
+                        style={{ border: "1px solid #64748B" }}
                       >
                         <img src="/cameraicon.svg" alt="Change" className="w-4 h-4" />
                         {uploading ? 'Uploading...' : 'Change Photo'}
                       </label>
-                      <div className="text-xs text-[#64748B]">
+                      <div className="text-xs text-[#64748B] mt-1">
                         JPG, PNG or GIF. Max 2MB
                       </div>
                     </YummyText>
@@ -591,7 +588,7 @@ const CustomerProfile = () => {
                     </div>
 
                     {/* City and State */}
-                    <div className="grid grid-cols-2 gap-4">
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                       <div>
                         <label className="block text-sm font-medium text-[#0F172A] mb-2">
                           City
@@ -654,7 +651,7 @@ const CustomerProfile = () => {
           {activeTab === 'security' && (
             <div className="space-y-6">
               {/* Change Password */}
-              <div className="bg-white rounded-2xl p-6" style={sideBottomShadow}>
+              <div className="bg-white rounded-2xl p-4 sm:p-6" style={sideBottomShadow}>
                 <YummyText>
                   <div className="mb-6">
                     <div className="text-xl font-normal text-[#0F172A] mb-1">
@@ -722,7 +719,7 @@ const CustomerProfile = () => {
               </div>
 
               {/* Two-Factor Authentication */}
-              <div className="bg-white rounded-2xl p-6" style={sideBottomShadow}>
+              <div className="bg-white rounded-2xl p-4 sm:p-6" style={sideBottomShadow}>
                 <YummyText>
                   <div className="mb-6">
                     <div className="text-xl font-normal text-[#0F172A] mb-1">
@@ -752,7 +749,7 @@ const CustomerProfile = () => {
 
           {/* Notifications Tab */}
           {activeTab === 'notifications' && (
-            <div className="bg-white rounded-2xl p-6" style={sideBottomShadow}>
+            <div className="bg-white rounded-2xl p-4 sm:p-6" style={sideBottomShadow}>
               <YummyText>
                 <div className="mb-6">
                   <div className="text-xl font-normal text-[#0F172A] mb-1">
@@ -766,7 +763,7 @@ const CustomerProfile = () => {
 
               <form onSubmit={handleNotificationSubmit}>
                 <div className="space-y-6">
-                  <YummyText> 
+                  <YummyText>
                     {/* Email Notifications */}
                     <div className="flex items-center justify-between py-4 border-b border-gray-100">
                       <div>
@@ -774,9 +771,9 @@ const CustomerProfile = () => {
                         <div className="text-xs text-[#64748B]">Receive delivery updates via email</div>
                       </div>
                       <label className="relative inline-block w-12 h-6">
-                        <input 
-                          type="checkbox" 
-                          className="sr-only peer" 
+                        <input
+                          type="checkbox"
+                          className="sr-only peer"
                           checked={notifications.emailNotifications}
                           onChange={() => handleNotificationToggle('emailNotifications')}
                         />
@@ -791,9 +788,9 @@ const CustomerProfile = () => {
                         <div className="text-xs text-[#64748B]">Get text messages for important updates</div>
                       </div>
                       <label className="relative inline-block w-12 h-6">
-                        <input 
-                          type="checkbox" 
-                          className="sr-only peer" 
+                        <input
+                          type="checkbox"
+                          className="sr-only peer"
                           checked={notifications.smsNotifications}
                           onChange={() => handleNotificationToggle('smsNotifications')}
                         />
@@ -808,9 +805,9 @@ const CustomerProfile = () => {
                         <div className="text-xs text-[#64748B]">Mobile app notifications</div>
                       </div>
                       <label className="relative inline-block w-12 h-6">
-                        <input 
-                          type="checkbox" 
-                          className="sr-only peer" 
+                        <input
+                          type="checkbox"
+                          className="sr-only peer"
                           checked={notifications.pushNotifications}
                           onChange={() => handleNotificationToggle('pushNotifications')}
                         />
@@ -825,9 +822,9 @@ const CustomerProfile = () => {
                         <div className="text-xs text-[#64748B]">Promotions and special offers</div>
                       </div>
                       <label className="relative inline-block w-12 h-6">
-                        <input 
-                          type="checkbox" 
-                          className="sr-only peer" 
+                        <input
+                          type="checkbox"
+                          className="sr-only peer"
                           checked={notifications.marketingEmails}
                           onChange={() => handleNotificationToggle('marketingEmails')}
                         />
@@ -842,9 +839,9 @@ const CustomerProfile = () => {
                         <div className="text-xs text-[#64748B]">Monthly updates and news</div>
                       </div>
                       <label className="relative inline-block w-12 h-6">
-                        <input 
-                          type="checkbox" 
-                          className="sr-only peer" 
+                        <input
+                          type="checkbox"
+                          className="sr-only peer"
                           checked={notifications.newsletter}
                           onChange={() => handleNotificationToggle('newsletter')}
                         />
