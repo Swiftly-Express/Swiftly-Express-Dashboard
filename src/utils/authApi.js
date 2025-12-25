@@ -9,7 +9,7 @@ const apiClient = axios.create({
     'Content-Type': 'application/json',
     Accept: 'application/json'
   },
-  withCredentials: false 
+  withCredentials: false
 });
 
 // Request interceptor
@@ -21,7 +21,7 @@ apiClient.interceptors.request.use(
     const customerToken = getCookie("customer_token");
     const adminToken = getCookie("admin_token");
     const authToken = getCookie("auth_token");
-    
+
     const token = adminToken || riderToken || customerToken || authToken;
 
     if (token) {
@@ -81,18 +81,18 @@ const saveAuthData = (response, role) => {
   console.log('[authApi] Raw response for token extraction:', JSON.stringify(response, null, 2));
 
   // Extract token from various possible locations
-  const token = response?.token || 
-                response?.data?.token || 
-                response?.accessToken || 
-                response?.data?.accessToken;
-  
-  const refresh = response?.refreshToken || 
-                  response?.refresh_token || 
-                  response?.data?.refreshToken;
-  
-  const user = response?.user || 
-               response?.data?.user || 
-               response?.data;
+  const token = response?.token ||
+    response?.data?.token ||
+    response?.accessToken ||
+    response?.data?.accessToken;
+
+  const refresh = response?.refreshToken ||
+    response?.refresh_token ||
+    response?.data?.refreshToken;
+
+  const user = response?.user ||
+    response?.data?.user ||
+    response?.data;
 
   if (!token) {
     console.warn('[authApi] ⚠ No token in response, auth data not stored');
@@ -106,9 +106,9 @@ const saveAuthData = (response, role) => {
     return false;
   }
 
-  console.log('[authApi] ✓ Storing auth data:', { 
-    role, 
-    hasToken: !!token, 
+  console.log('[authApi] ✓ Storing auth data:', {
+    role,
+    hasToken: !!token,
     hasUser: !!user,
     tokenPreview: token.substring(0, 20) + '...',
     tokenParts: token.split('.').length
@@ -151,40 +151,40 @@ const saveAuthData = (response, role) => {
  */
 export async function registerRider(payload) {
   console.log('[authApi] → Registering rider:', payload.email);
-  
+
   const response = await apiClient.post('/api/auth/register', {
     ...payload,
     role: payload.role || 'driver'
   });
-  
+
   console.log('[authApi] ← Registration response:', response);
-  
+
   if (typeof window !== 'undefined' && response) {
-    const userId = response?.userId || 
-                   response?.data?.userId || 
-                   response?.user?.userId || 
-                   response?.user?.id || 
-                   response?.user?._id;
-    
+    const userId = response?.userId ||
+      response?.data?.userId ||
+      response?.user?.userId ||
+      response?.user?.id ||
+      response?.user?._id;
+
     const user = response?.user || response?.data?.user || response?.data;
-    
+
     // Store pending data only
     if (userId) {
       setCookie('pendingVerificationUserId', userId, 1);
       console.log('[authApi] ✓ Stored userId for verification:', userId);
     }
-    
+
     if (user?.email || payload.email) {
       setCookie('pendingVerificationEmail', user?.email || payload.email, 1);
     }
-    
+
     setCookie('pendingVerificationType', 'rider', 1);
-    
+
     if (user) {
       setJSONCookie('pending_user_data', user, 1);
     }
   }
-  
+
   return response;
 }
 
@@ -193,38 +193,38 @@ export async function registerRider(payload) {
  */
 export async function registerCustomer(payload) {
   console.log('[authApi] → Registering customer:', payload.email);
-  
+
   const response = await apiClient.post('/api/auth/register', {
     ...payload,
     role: payload.role || 'customer'
   });
-  
+
   console.log('[authApi] ← Registration response:', response);
-  
+
   if (typeof window !== 'undefined' && response) {
-    const userId = response?.userId || 
-                   response?.data?.userId || 
-                   response?.user?.userId || 
-                   response?.user?.id || 
-                   response?.user?._id;
-    
+    const userId = response?.userId ||
+      response?.data?.userId ||
+      response?.user?.userId ||
+      response?.user?.id ||
+      response?.user?._id;
+
     const user = response?.user || response?.data?.user || response?.data;
-    
+
     if (userId) {
       setCookie('pendingVerificationUserId', userId, 1);
     }
-    
+
     if (user?.email || payload.email) {
       setCookie('pendingVerificationEmail', user?.email || payload.email, 1);
     }
-    
+
     setCookie('pendingVerificationType', 'customer', 1);
-    
+
     if (user) {
       setJSONCookie('pending_user_data', user, 1);
     }
   }
-  
+
   return response;
 }
 
@@ -239,41 +239,41 @@ export async function registerCustomer(payload) {
 export async function registerAdmin(payload) {
   console.log('[authApi] → Registering admin:', payload.email);
   console.warn('[authApi] ⚠ Admin registration should use registerCustomer - backend only accepts customer/driver roles');
-  
+
   // Remove admin role and use customer registration
   const { role, ...cleanPayload } = payload;
-  
+
   const response = await apiClient.post('/api/auth/register', {
     ...cleanPayload,
     role: 'customer' // Backend only accepts customer or driver
   });
-  
+
   console.log('[authApi] ← Admin registration response:', response);
-  
+
   if (typeof window !== 'undefined' && response) {
-    const userId = response?.userId || 
-                   response?.data?.userId || 
-                   response?.user?.userId || 
-                   response?.user?.id || 
-                   response?.user?._id;
-    
+    const userId = response?.userId ||
+      response?.data?.userId ||
+      response?.user?.userId ||
+      response?.user?.id ||
+      response?.user?._id;
+
     const user = response?.user || response?.data?.user || response?.data;
-    
+
     if (userId) {
       setCookie('pendingVerificationUserId', userId, 1);
     }
-    
+
     if (user?.email || payload.email) {
       setCookie('pendingVerificationEmail', user?.email || payload.email, 1);
     }
-    
+
     setCookie('pendingVerificationType', 'customer', 1); // Changed from 'admin' to 'customer'
-    
+
     if (user) {
       setJSONCookie('pending_user_data', user, 1);
     }
   }
-  
+
   return response;
 }
 
@@ -283,15 +283,15 @@ export async function registerAdmin(payload) {
  */
 export async function verifyEmail(payload) {
   const { userId, ...body } = payload;
-  
-  const effectiveUserId = userId || 
-                          getCookie('pendingVerificationUserId') || 
-                          getCookie('pending_user_id');
-  
+
+  const effectiveUserId = userId ||
+    getCookie('pendingVerificationUserId') ||
+    getCookie('pending_user_id');
+
   console.log('[authApi] → Verifying email with userId:', effectiveUserId);
-  
+
   let response;
-  
+
   if (!effectiveUserId) {
     const email = body.email || getCookie('pendingVerificationEmail');
     if (!email) {
@@ -301,56 +301,56 @@ export async function verifyEmail(payload) {
   } else {
     response = await apiClient.post(`/api/auth/verify-email/${effectiveUserId}`, body);
   }
-  
+
   console.log('[authApi] ← Verification response:', response);
   console.log('[authApi] Response structure:', Object.keys(response || {}));
-  
+
   if (typeof window !== 'undefined' && response) {
     const userType = getCookie('pendingVerificationType') || 'customer';
-    
+
     // Try to store tokens if available
     const tokenStored = saveAuthData(response, userType);
-    
+
     if (tokenStored) {
       console.log('[authApi] ✓ Tokens stored - user is authenticated');
-      
+
       // Mark as verified and authenticated
       if (userType === 'rider' || userType === 'driver') {
         setCookie('riderEmailVerified', 'true', 7);
       }
-      
+
       // Clean up pending data
       deleteCookie('pending_user_data');
       deleteCookie('pending_user_id');
       deleteCookie('pendingVerificationUserId');
       deleteCookie('pendingVerificationEmail');
       deleteCookie('pendingVerificationType');
-      
+
       // Return success with authentication
       return { ...response, authenticated: true };
     } else {
       console.warn('[authApi] ⚠ No token in response - backend requires manual login');
-      
+
       // Email is verified but user must login
       // Store verification success flag
       setCookie('emailVerifiedNeedsLogin', 'true', 1);
-      
+
       // Keep pending email for login form
       const email = body.email || getCookie('pendingVerificationEmail');
       if (email) {
         setCookie('verifiedEmail', email, 1);
       }
-      
+
       // Mark email as verified
       if (userType === 'rider' || userType === 'driver') {
         setCookie('riderEmailVerified', 'true', 7);
       }
-      
+
       // Return success WITHOUT authentication
       return { ...response, authenticated: false, requiresLogin: true };
     }
   }
-  
+
   return response;
 }
 
@@ -359,20 +359,20 @@ export async function verifyEmail(payload) {
  */
 export async function login(payload) {
   console.log('[authApi] → Logging in:', payload.email);
-  
+
   // Remove role from payload - backend determines it from email
   const { role, ...loginData } = payload;
-  
+
   const response = await apiClient.post('/api/auth/login', loginData);
-  
+
   console.log('[authApi] ← Login response:', response);
-  
+
   if (typeof window !== 'undefined' && response) {
     const user = response?.user || response?.data?.user || response?.data;
     const userRole = user?.role || 'customer';
-    
+
     const tokenStored = saveAuthData(response, userRole);
-    
+
     if (tokenStored) {
       // Clear any verification flags
       deleteCookie('emailVerifiedNeedsLogin');
@@ -391,19 +391,19 @@ export async function login(payload) {
  */
 export async function submitRiderVerification(verificationData) {
   console.log('[authApi] → Submitting rider verification...');
-  
+
   // Verify token exists
-  const token = getCookie('rider_token') || 
-                getCookie('auth_token') || 
-                getCookie('customer_token');
-  
+  const token = getCookie('rider_token') ||
+    getCookie('auth_token') ||
+    getCookie('customer_token');
+
   if (!token) {
     console.error('[authApi] ❌ NO TOKEN FOUND!');
     throw new Error('You must be logged in to submit verification. Please log in and try again.');
   }
-  
+
   console.log('[authApi] ✓ Token found');
-  
+
   if (verificationData instanceof FormData) {
     console.log('[authApi] FormData entries:');
     for (let [key, value] of verificationData.entries()) {
@@ -414,7 +414,7 @@ export async function submitRiderVerification(verificationData) {
       }
     }
   }
-  
+
   return apiClient.post('/api/driver/verification', verificationData, {
     headers: {
       'Content-Type': 'multipart/form-data'
@@ -484,7 +484,7 @@ export async function uploadRiderProfileImage(file) {
   if (!(file instanceof FormData)) {
     formData.append('image', file);
   }
-  
+
   return apiClient.post('/api/driver/profile/upload-image', formData, {
     headers: { 'Content-Type': 'multipart/form-data' }
   });
@@ -527,7 +527,7 @@ export async function uploadProfileImage(file) {
   if (!(file instanceof FormData)) {
     formData.append('image', file);
   }
-  
+
   return apiClient.post('/api/customer/profile/upload-image', formData, {
     headers: { 'Content-Type': 'multipart/form-data' }
   });
@@ -599,13 +599,13 @@ export function isAuthenticated(role = null) {
   const riderToken = getCookie('rider_token');
   const adminToken = getCookie('admin_token');
   const oldToken = getCookie('auth_token');
-  
+
   return !!(customerToken || riderToken || adminToken || oldToken);
 }
 
 export function getAuthToken(role = null) {
   if (typeof window === 'undefined') return null;
-  
+
   if (role === 'customer') {
     return getCookie('customer_token');
   } else if (role === 'rider' || role === 'driver') {
@@ -613,7 +613,7 @@ export function getAuthToken(role = null) {
   } else if (role === 'admin') {
     return getCookie('admin_token');
   }
-  
+
   const userRole = getCookie('userRole');
   if (userRole === 'customer') {
     return getCookie('customer_token');
@@ -622,7 +622,7 @@ export function getAuthToken(role = null) {
   } else if (userRole === 'admin') {
     return getCookie('admin_token');
   }
-  
+
   return getCookie('auth_token');
 }
 

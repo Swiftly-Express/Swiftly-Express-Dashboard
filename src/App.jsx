@@ -76,169 +76,169 @@ try {
 const App = () => {
   console.log('[App] App component rendering...');
   return (
-  <DeliveryProvider>
-    <IonApp>
-      <IonReactRouter>
-        <ErrorBoundary>
-          <IonRouterOutlet>
+    <DeliveryProvider>
+      <IonApp>
+        <IonReactRouter>
+          <ErrorBoundary>
+            <IonRouterOutlet>
 
-        {/* Auth Routes */}
-        <Route exact path="/auth/role-select">
-          <RoleSelect />
-        </Route>
+              {/* Auth Routes */}
+              <Route exact path="/auth/role-select">
+                <RoleSelect />
+              </Route>
 
-        {/* Customer Auth */}
-        <Route exact path="/auth/customer/login">
-          <CustomerLogin />
-        </Route>
-        <Route exact path="/auth/customer/signup">
-          <CustomerSignUp />
-        </Route>
+              {/* Customer Auth */}
+              <Route exact path="/auth/customer/login">
+                <CustomerLogin />
+              </Route>
+              <Route exact path="/auth/customer/signup">
+                <CustomerSignUp />
+              </Route>
 
-        {/* Rider Auth */}
-        <Route exact path="/auth/rider/login">
-          <RiderLogin />
-        </Route>
-        <Route exact path="/auth/rider/signup">
-          <RiderSignUp />
-        </Route>
+              {/* Rider Auth */}
+              <Route exact path="/auth/rider/login">
+                <RiderLogin />
+              </Route>
+              <Route exact path="/auth/rider/signup">
+                <RiderSignUp />
+              </Route>
 
-        {/* Email Verification */}
-        <Route exact path="/auth/verify-email">
-          <VerifyEmail />
-        </Route>
+              {/* Email Verification */}
+              <Route exact path="/auth/verify-email">
+                <VerifyEmail />
+              </Route>
 
-        {/* Admin Auth */}
-        <Route exact path="/auth/admin/login">
-          <AdminLogin />
-        </Route>
-        <Route exact path="/auth/admin/signup">
-          <AdminSignUp />
-        </Route>
-        <Route exact path="/admin/login">
-          <AdminLogin />
-        </Route>
-        <Route exact path="/admin/signup">
-          <AdminSignUp />
-        </Route>
+              {/* Admin Auth */}
+              <Route exact path="/auth/admin/login">
+                <AdminLogin />
+              </Route>
+              <Route exact path="/auth/admin/signup">
+                <AdminSignUp />
+              </Route>
+              <Route exact path="/admin/login">
+                <AdminLogin />
+              </Route>
+              <Route exact path="/admin/signup">
+                <AdminSignUp />
+              </Route>
 
-        {/* Protected Dashboard Routes - Customer */}
-        <Route exact path="/customer/dashboard">
-          <CustomerRouteGuard>
-            <CustomerDashboard />
-          </CustomerRouteGuard>
-        </Route>
-        <Route exact path="/customer/track">
-          <CustomerRouteGuard>
-            <Track />
-          </CustomerRouteGuard>
-        </Route>
-        <Route exact path="/customer/deliveries">
-          <CustomerRouteGuard>
-            <MyDeliveries />
-          </CustomerRouteGuard>
-        </Route>
-        <Route exact path="/customer/book">
-          <CustomerRouteGuard>
-            <Book />
-          </CustomerRouteGuard>
-        </Route>
-        <Route exact path="/customer/profile">
-          <CustomerRouteGuard>
-            <CustomerProfile />
-          </CustomerRouteGuard>
-        </Route>
-        <Route exact path="/customer/support">
-          <CustomerRouteGuard>
-            <CustomerSupport />
-          </CustomerRouteGuard>
-        </Route>
-        
-        {/* Protected Dashboard Routes - Rider */}
-        <Route exact path="/rider/dashboard">
-          <RiderRouteGuard>
-            <RiderDashboard />
-          </RiderRouteGuard>
-        </Route>
-        {/* <Route exact path="/rider/verify-account">
+              {/* Protected Dashboard Routes - Customer */}
+              <Route exact path="/customer/dashboard">
+                <CustomerRouteGuard>
+                  <CustomerDashboard />
+                </CustomerRouteGuard>
+              </Route>
+              <Route exact path="/customer/track">
+                <CustomerRouteGuard>
+                  <Track />
+                </CustomerRouteGuard>
+              </Route>
+              <Route exact path="/customer/deliveries">
+                <CustomerRouteGuard>
+                  <MyDeliveries />
+                </CustomerRouteGuard>
+              </Route>
+              <Route exact path="/customer/book">
+                <CustomerRouteGuard>
+                  <Book />
+                </CustomerRouteGuard>
+              </Route>
+              <Route exact path="/customer/profile">
+                <CustomerRouteGuard>
+                  <CustomerProfile />
+                </CustomerRouteGuard>
+              </Route>
+              <Route exact path="/customer/support">
+                <CustomerRouteGuard>
+                  <CustomerSupport />
+                </CustomerRouteGuard>
+              </Route>
+
+              {/* Protected Dashboard Routes - Rider */}
+              <Route exact path="/rider/dashboard">
+                <RiderRouteGuard>
+                  <RiderDashboard />
+                </RiderRouteGuard>
+              </Route>
+              {/* <Route exact path="/rider/verify-account">
           <VerifyAccount />
         </Route> */}
-        <Route exact path="/rider/available">
-          <RiderRouteGuard>
-            <AvailableOrders />
-          </RiderRouteGuard>
-        </Route>
-        <Route exact path="/rider/active">
-          <RiderRouteGuard>
-            <ActiveDeliveries />
-          </RiderRouteGuard>
-        </Route>
-        <Route exact path="/rider/earnings">
-          <RiderRouteGuard>
-            <Earnings />
-          </RiderRouteGuard>
-        </Route>
-        <Route exact path="/rider/profile">
-          <RiderRouteGuard>
-            <Profile />
-          </RiderRouteGuard>
-        </Route>
-        <Route exact path="/rider/support">
-          <RiderRouteGuard>
-            <Support />
-          </RiderRouteGuard>
-        </Route>
+              <Route exact path="/rider/available">
+                <RiderRouteGuard>
+                  <AvailableOrders />
+                </RiderRouteGuard>
+              </Route>
+              <Route exact path="/rider/active">
+                <RiderRouteGuard>
+                  <ActiveDeliveries />
+                </RiderRouteGuard>
+              </Route>
+              <Route exact path="/rider/earnings">
+                <RiderRouteGuard>
+                  <Earnings />
+                </RiderRouteGuard>
+              </Route>
+              <Route exact path="/rider/profile">
+                <RiderRouteGuard>
+                  <Profile />
+                </RiderRouteGuard>
+              </Route>
+              <Route exact path="/rider/support">
+                <RiderRouteGuard>
+                  <Support />
+                </RiderRouteGuard>
+              </Route>
 
-        {/* Protected Dashboard Routes - Admin */}
-        <Route exact path="/admin/dashboard">
-          <AdminRouteGuard>
-            <AdminDashboard />
-          </AdminRouteGuard>
-        </Route>
-        <Route exact path="/admin/users">
-          <AdminRouteGuard>
-            <ManageUsers />
-          </AdminRouteGuard>
-        </Route>
-        <Route exact path="/admin/riders">
-          <AdminRouteGuard>
-            <ManageRiders />
-          </AdminRouteGuard>
-        </Route>
-        <Route exact path="/admin/orders">
-          <AdminRouteGuard>
-            <ManageOrders />
-          </AdminRouteGuard>
-        </Route>
-        <Route exact path="/admin/kyc">
-          <AdminRouteGuard>
-            <KYCApprovals />
-          </AdminRouteGuard>
-        </Route>
-        <Route exact path="/admin/analytics">
-          <AdminRouteGuard>
-            <Analytics />
-          </AdminRouteGuard>
-        </Route>
-        <Route exact path="/admin/settings">
-          <AdminRouteGuard>
-            <Settings />
-          </AdminRouteGuard>
-        </Route>
+              {/* Protected Dashboard Routes - Admin */}
+              <Route exact path="/admin/dashboard">
+                <AdminRouteGuard>
+                  <AdminDashboard />
+                </AdminRouteGuard>
+              </Route>
+              <Route exact path="/admin/users">
+                <AdminRouteGuard>
+                  <ManageUsers />
+                </AdminRouteGuard>
+              </Route>
+              <Route exact path="/admin/riders">
+                <AdminRouteGuard>
+                  <ManageRiders />
+                </AdminRouteGuard>
+              </Route>
+              <Route exact path="/admin/orders">
+                <AdminRouteGuard>
+                  <ManageOrders />
+                </AdminRouteGuard>
+              </Route>
+              <Route exact path="/admin/kyc">
+                <AdminRouteGuard>
+                  <KYCApprovals />
+                </AdminRouteGuard>
+              </Route>
+              <Route exact path="/admin/analytics">
+                <AdminRouteGuard>
+                  <Analytics />
+                </AdminRouteGuard>
+              </Route>
+              <Route exact path="/admin/settings">
+                <AdminRouteGuard>
+                  <Settings />
+                </AdminRouteGuard>
+              </Route>
 
-        {/* Public page routes removed — archived */}
-        <Route exact path="/forgot-password">
-          <ForgotPassword />
-        </Route>
+              {/* Public page routes removed — archived */}
+              <Route exact path="/forgot-password">
+                <ForgotPassword />
+              </Route>
 
-        <Route exact path="/">
-          <Redirect to="/auth/role-select" />
-        </Route>
-        </IonRouterOutlet>
-      </ErrorBoundary>
-    </IonReactRouter>
-  </IonApp>
-  </DeliveryProvider>
+              <Route exact path="/">
+                <Redirect to="/auth/role-select" />
+              </Route>
+            </IonRouterOutlet>
+          </ErrorBoundary>
+        </IonReactRouter>
+      </IonApp>
+    </DeliveryProvider>
   );
 };
 
