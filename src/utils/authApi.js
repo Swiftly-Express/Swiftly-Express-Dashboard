@@ -371,13 +371,13 @@ export async function login(payload) {
 
   if (typeof window !== 'undefined' && response) {
     // Extract user from various possible locations
-    const user = response?.user || 
-                 response?.data?.user || 
-                 response?.data;
-    
+    const user = response?.user ||
+      response?.data?.user ||
+      response?.data;
+
     // Get role from user object, fallback to 'customer'
     let userRole = user?.role || user?.userRole || response?.role;
-    
+
     // If still no role, default to customer
     if (!userRole) {
       userRole = 'customer';
