@@ -58,6 +58,8 @@ import KYCApprovals from "./features/admin/pages/KYCApprovals";
 import Analytics from "./features/admin/pages/Analytics";
 import Settings from "./features/admin/pages/Settings";
 import AdminRouteGuard from "./features/admin/components/AdminRouteGuard";
+import CustomerRouteGuard from "./features/customer/components/CustomerRouteGuard";
+import RiderRouteGuard from "./features/rider/components/RiderRouteGuard";
 
 console.log('[App] About to initialize Ionic React...');
 console.log('[App] React available:', typeof React !== 'undefined');
@@ -122,45 +124,69 @@ const App = () => {
 
         {/* Protected Dashboard Routes - Customer */}
         <Route exact path="/customer/dashboard">
-          <CustomerDashboard />
+          <CustomerRouteGuard>
+            <CustomerDashboard />
+          </CustomerRouteGuard>
         </Route>
         <Route exact path="/customer/track">
-          <Track />
+          <CustomerRouteGuard>
+            <Track />
+          </CustomerRouteGuard>
         </Route>
         <Route exact path="/customer/deliveries">
-          <MyDeliveries />
+          <CustomerRouteGuard>
+            <MyDeliveries />
+          </CustomerRouteGuard>
         </Route>
         <Route exact path="/customer/book">
-          <Book />
+          <CustomerRouteGuard>
+            <Book />
+          </CustomerRouteGuard>
         </Route>
         <Route exact path="/customer/profile">
-          <CustomerProfile />
+          <CustomerRouteGuard>
+            <CustomerProfile />
+          </CustomerRouteGuard>
         </Route>
         <Route exact path="/customer/support">
-          <CustomerSupport />
+          <CustomerRouteGuard>
+            <CustomerSupport />
+          </CustomerRouteGuard>
         </Route>
         
         {/* Protected Dashboard Routes - Rider */}
         <Route exact path="/rider/dashboard">
-          <RiderDashboard />
+          <RiderRouteGuard>
+            <RiderDashboard />
+          </RiderRouteGuard>
         </Route>
         {/* <Route exact path="/rider/verify-account">
           <VerifyAccount />
         </Route> */}
         <Route exact path="/rider/available">
-          <AvailableOrders />
+          <RiderRouteGuard>
+            <AvailableOrders />
+          </RiderRouteGuard>
         </Route>
         <Route exact path="/rider/active">
-          <ActiveDeliveries />
+          <RiderRouteGuard>
+            <ActiveDeliveries />
+          </RiderRouteGuard>
         </Route>
         <Route exact path="/rider/earnings">
-          <Earnings />
+          <RiderRouteGuard>
+            <Earnings />
+          </RiderRouteGuard>
         </Route>
         <Route exact path="/rider/profile">
-          <Profile />
+          <RiderRouteGuard>
+            <Profile />
+          </RiderRouteGuard>
         </Route>
         <Route exact path="/rider/support">
-          <Support />
+          <RiderRouteGuard>
+            <Support />
+          </RiderRouteGuard>
         </Route>
 
         {/* Protected Dashboard Routes - Admin */}

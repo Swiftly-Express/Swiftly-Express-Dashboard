@@ -132,9 +132,15 @@ const saveAuthData = (response, role) => {
 
   // Store user data
   if (user) {
-    setJSONCookie('user_data', user, 7);
-    setCookie('userRole', role === 'driver' ? 'rider' : role, 7);
-    setCookie('user_type', user?.role || role, 7);
+    // Normalize role in user object (driver -> rider)
+    const normalizedRole = role === 'driver' ? 'rider' : role;
+    const userWithNormalizedRole = {
+      ...user,
+      role: normalizedRole
+    };
+    setJSONCookie('user_data', userWithNormalizedRole, 7);
+    setCookie('userRole', normalizedRole, 7);
+    setCookie('user_type', normalizedRole, 7);
   }
 
   return true;
