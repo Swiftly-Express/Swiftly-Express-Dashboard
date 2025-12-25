@@ -366,20 +366,40 @@ export async function login(payload) {
   const response = await apiClient.post('/api/auth/login', loginData);
 
   console.log('[authApi] ← Login response:', response);
+  console.log('[authApi] Response type:', typeof response);
+  console.log('[authApi] Response keys:', Object.keys(response || {}));
 
   if (typeof window !== 'undefined' && response) {
-    const user = response?.user || response?.data?.user || response?.data;
-    const userRole = user?.role || 'customer';
+    // Extract user from various possible locations
+    const user = response?.user || 
+                 response?.data?.user || 
+                 response?.data;
+    
+    // Get role from user object, fallback to 'customer'
+    let userRole = user?.role || user?.userRole || response?.role;
+    
+    // If still no role, default to customer
+    if (!userRole) {
+      userRole = 'customer';
+    }
+
+    console.log('[authApi] ✓ Login successful');
+    console.log('[authApi] Extracted user object:', user);
+    console.log('[authApi] Extracted role from user.role:', user?.role);
+    console.log('[authApi] Final role being stored:', userRole);
 
     const tokenStored = saveAuthData(response, userRole);
 
     if (tokenStored) {
+      console.log('[authApi] ✓ Auth data stored with role:', userRole);
       // Clear any verification flags
       deleteCookie('emailVerifiedNeedsLogin');
       deleteCookie('verifiedEmail');
       deleteCookie('pendingVerificationEmail');
       deleteCookie('pendingVerificationType');
       deleteCookie('pendingVerificationUserId');
+    } else {
+      console.warn('[authApi] ⚠ Failed to store auth data');
     }
   }
 

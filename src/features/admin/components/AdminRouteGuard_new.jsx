@@ -16,12 +16,12 @@ const AdminRouteGuard = ({ children }) => {
 
   // Check if user is logged in as admin
   const isAdmin = !!adminToken || (!!authToken && userData?.role === 'admin');
-  
+
   if (!isAdmin) {
     console.warn('[AdminRouteGuard] Access denied - not an admin');
     return <Redirect to="/auth/role-select" />;
   }
-  
+
   return <>{children}</>;
 };
 

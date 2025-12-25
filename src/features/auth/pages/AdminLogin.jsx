@@ -4,6 +4,7 @@ import { useHistory } from 'react-router-dom';
 import { Eye, EyeOff } from 'lucide-react';
 import { YummyText } from '../../../components/YummyText';
 import { login } from '../../../utils/authApi';
+import { getCookie, getJSONCookie } from '../../../utils/cookies';
 
 const AdminLogin = () => {
   const history = useHistory();
@@ -35,27 +36,52 @@ const AdminLogin = () => {
         return;
       }
 
-      console.log('Admin login attempt:', formData.email);
+      console.log('[AdminLogin] Login attempt:', formData.email);
 
       const response = await login({
         email: formData.email,
         password: formData.password
       });
 
-      console.log('Admin login response:', response);
+      console.log('[AdminLogin] Login response:', response);
 
-      // Check if user is admin
-      const user = response?.user || response?.data?.user || response?.data;
-      if (user?.role !== 'admin') {
-        setError('Unauthorized: Admin access only');
+      // Check the stored user data
+      const storedUser = getJSONCookie('user_data');
+      const authToken = getCookie('auth_token');
+      const adminToken = getCookie('admin_token');
+
+      console.log('[AdminLogin] After login - Stored user data:', storedUser);
+      console.log('[AdminLogin] Auth token exists:', !!authToken);
+      console.log('[AdminLogin] Admin token exists:', !!adminToken);
+      console.log('[AdminLogin] User role:', storedUser?.role);
+
+      // Allow redirect if we have valid auth data
+      if (!response || Object.keys(response).length === 0) {
+        setError('No response from server');
         setLoading(false);
         return;
       }
 
-      // Redirect to admin dashboard
-      history.push('/admin/dashboard');
+      // Validate that admin credentials were stored before redirecting
+      const finalStoredUser = getJSONCookie('user_data');
+      const finalAuthToken = getCookie('auth_token');
+      const finalAdminToken = getCookie('admin_token');
+
+      const isAdminNow = !!finalAdminToken || (!!finalAuthToken && finalStoredUser?.role === 'admin');
+
+      console.log('[AdminLogin] Final check before redirect:', {
+        finalAdminToken: !!finalAdminToken,
+        finalAuthToken: !!finalAuthToken,
+        finalStoredUser
+      });
+
+      if (isAdminNow) {
+        history.push('/admin/dashboard');
+      } else {
+        setError('Unauthorized: Admin access only. Please verify credentials or check backend response.');
+      }
     } catch (err) {
-      console.error('Admin login failed:', err);
+      console.error('[AdminLogin] Login failed:', err);
       setError(err.message || 'Login failed. Please check your credentials.');
     } finally {
       setLoading(false);
@@ -130,13 +156,7 @@ const AdminLogin = () => {
 
               <div className="mt-6 text-center">
                 <p className="text-sm text-[#64748B]">
-                  Don't have an admin account?{' '}
-                  <button
-                    onClick={() => history.push('/auth/admin/signup')}
-                    className="text-[#00D68F] hover:text-[#00B75A] font-medium"
-                  >
-                    Register
-                  </button>
+                  Contact your administrator for access
                 </p>
               </div>
             </YummyText>

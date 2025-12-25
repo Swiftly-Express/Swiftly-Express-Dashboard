@@ -6,16 +6,9 @@ const AdminRouteGuard = ({ children }) => {
   const adminToken = getCookie('admin_token');
   const authToken = getCookie('auth_token');
   const userData = getJSONCookie('user_data');
-
-  // Debugging: log cookie / user state when guard runs
-  console.log('[AdminRouteGuard] Checking auth state:', {
-    adminToken: !!adminToken,
-    authToken: !!authToken,
-    userData
-  });
-
+  
   // Check if user is logged in as admin
-  const isAdmin = !!adminToken || (!!authToken && userData?.role === 'admin');
+  const isAdmin = adminToken || (authToken && userData?.role === 'admin');
   
   if (!isAdmin) {
     console.warn('[AdminRouteGuard] Access denied - not an admin');

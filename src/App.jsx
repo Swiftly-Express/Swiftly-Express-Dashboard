@@ -30,7 +30,6 @@ import RiderSignUp from "./features/auth/pages/RiderSignUp";
 import VerifyEmail from "./features/auth/pages/VerifyEmail";
 import ForgotPassword from "./features/auth/pages/ForgotPassword";
 import AdminLogin from "./features/auth/pages/AdminLogin";
-import AdminSignUp from "./features/auth/pages/AdminSignUp";
 
 /* Customer Dashboard pages */
 import CustomerDashboard from "./features/customer/pages/Dashboard";
@@ -112,14 +111,8 @@ const App = () => {
               <Route exact path="/auth/admin/login">
                 <AdminLogin />
               </Route>
-              <Route exact path="/auth/admin/signup">
-                <AdminSignUp />
-              </Route>
               <Route exact path="/admin/login">
                 <AdminLogin />
-              </Route>
-              <Route exact path="/admin/signup">
-                <AdminSignUp />
               </Route>
 
               {/* Protected Dashboard Routes - Customer */}
