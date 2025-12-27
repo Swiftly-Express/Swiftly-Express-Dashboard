@@ -194,9 +194,8 @@ const AdminSidebar = () => {
                   className={`w-full text-left`}
                 >
                   <div
-                    className={`flex items-center gap-4 px-4 py-4 rounded-xl transition-colors w-full ${
-                      location.pathname === item.to ? 'bg-[#00A63E] text-white' : 'text-[#64748B] hover:bg-gray-50'
-                    }`}
+                    className={`flex items-center gap-4 px-4 py-4 rounded-xl transition-colors w-full ${location.pathname === item.to ? 'bg-[#00A63E] text-white' : 'text-[#64748B] hover:bg-gray-50'
+                      }`}
                   >
                     {typeof item.icon === 'string' ? (
                       <img src={item.icon} alt={`${item.label} icon`} className="w-7 h-7" />
