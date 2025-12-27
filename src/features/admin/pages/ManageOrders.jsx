@@ -8,6 +8,7 @@ import CheckIcon from '../../../icons/Checkicon';
 import ToyBikeIcon from '../../../icons/Toybikeicon';
 import ClockIcon from '../../../icons/Clockicon';
 import { getAllDeliveries } from '../../../utils/adminApi';
+import { formatAddress } from '../../../utils/formatters';
 
 const ManageOrders = () => {
   const [searchQuery, setSearchQuery] = useState('');
@@ -31,22 +32,22 @@ const ManageOrders = () => {
     try {
       setLoading(true);
       setError('');
-      
+
       console.log(`Fetching deliveries page ${page}...`);
       const response = await getAllDeliveries(page, limit);
-      
+
       console.log('Deliveries API response:', response);
-      
+
       const deliveriesData = response?.data?.deliveries || response?.deliveries || response?.data || [];
       const pagination = response?.data?.pagination || response?.pagination || {};
-      
+
       setOrders(deliveriesData);
       setTotalOrders(pagination.total || deliveriesData.length);
       setTotalPages(pagination.totalPages || Math.ceil((pagination.total || deliveriesData.length) / limit));
       setCurrentPage(pagination.currentPage || page);
-      
+
       calculateStats(deliveriesData);
-      
+
     } catch (err) {
       console.error('Error fetching deliveries:', err);
       setError(err.message || 'Failed to load deliveries');
@@ -57,16 +58,16 @@ const ManageOrders = () => {
 
   const calculateStats = (deliveriesData) => {
     const total = deliveriesData.length;
-    const delivered = deliveriesData.filter(d => 
+    const delivered = deliveriesData.filter(d =>
       d.status === 'delivered' || d.status === 'completed'
     ).length;
-    const inTransit = deliveriesData.filter(d => 
+    const inTransit = deliveriesData.filter(d =>
       d.status === 'in_transit' || d.status === 'in-transit' || d.status === 'picked_up'
     ).length;
-    const pending = deliveriesData.filter(d => 
+    const pending = deliveriesData.filter(d =>
       d.status === 'pending' || d.status === 'awaiting_pickup'
     ).length;
-    
+
     setStats({ total, delivered, inTransit, pending });
   };
 
@@ -75,30 +76,30 @@ const ManageOrders = () => {
   }, []);
 
   const statsCards = [
-    { 
-      label: 'Total Orders', 
-      value: totalOrders.toLocaleString(), 
+    {
+      label: 'Total Orders',
+      value: totalOrders.toLocaleString(),
       icon: <BlockIcon className="w-5 h-5" stroke="#1E1E1E" />,
       bgColor: '#F3F4F6',
       valueColor: '#1E1E1E'
     },
-    { 
-      label: 'Delivered', 
-      value: stats.delivered.toLocaleString(), 
+    {
+      label: 'Delivered',
+      value: stats.delivered.toLocaleString(),
       icon: <CheckIcon className="w-5 h-5" stroke="#00A63E" />,
       bgColor: '#D1FAE5',
       valueColor: '#00A63E'
     },
-    { 
-      label: 'In Transit', 
-      value: stats.inTransit.toLocaleString(), 
+    {
+      label: 'In Transit',
+      value: stats.inTransit.toLocaleString(),
       icon: <ToyBikeIcon className="w-5 h-5" stroke="#3B82F6" />,
       bgColor: '#DBEAFE',
       valueColor: '#3B82F6'
     },
-    { 
-      label: 'Pending', 
-      value: stats.pending.toLocaleString(), 
+    {
+      label: 'Pending',
+      value: stats.pending.toLocaleString(),
       icon: <ClockIcon className="w-5 h-5" stroke="#F59E0B" />,
       bgColor: '#FEF3C7',
       valueColor: '#F59E0B'
@@ -109,22 +110,22 @@ const ManageOrders = () => {
     const orderId = order.deliveryId || order._id || order.id || '';
     const customerName = order.customer?.name || order.customerName || '';
     const driverName = order.driver?.name || order.driverName || order.rider?.name || '';
-    
-    const matchesSearch = !searchQuery || 
+
+    const matchesSearch = !searchQuery ||
       orderId.toLowerCase().includes(searchQuery.toLowerCase()) ||
       customerName.toLowerCase().includes(searchQuery.toLowerCase()) ||
       driverName.toLowerCase().includes(searchQuery.toLowerCase());
-    
+
     const orderStatus = (order.status || '').toLowerCase().replace('_', ' ').replace('-', ' ');
-    const matchesStatus = statusFilter === 'All Status' || 
+    const matchesStatus = statusFilter === 'All Status' ||
       orderStatus === statusFilter.toLowerCase();
-    
+
     return matchesSearch && matchesStatus;
   });
 
   const getDeliveryStatus = (order) => {
     const status = (order.status || 'pending').toLowerCase();
-    
+
     if (status === 'delivered' || status === 'completed') {
       return { status: 'Delivered', color: 'bg-green-100 text-green-800' };
     }
@@ -137,24 +138,24 @@ const ManageOrders = () => {
     if (status === 'cancelled' || status === 'canceled') {
       return { status: 'Cancelled', color: 'bg-red-100 text-red-800' };
     }
-    return { 
-      status: status.charAt(0).toUpperCase() + status.slice(1).replace('_', ' '), 
-      color: 'bg-gray-100 text-gray-800' 
+    return {
+      status: status.charAt(0).toUpperCase() + status.slice(1).replace('_', ' '),
+      color: 'bg-gray-100 text-gray-800'
     };
   };
 
   const formatDateTime = (dateString) => {
     if (!dateString) return { date: 'N/A', time: '' };
-    
+
     try {
       const date = new Date(dateString);
-      const dateStr = date.toLocaleDateString('en-US', { 
-        year: 'numeric', 
-        month: '2-digit', 
-        day: '2-digit' 
+      const dateStr = date.toLocaleDateString('en-US', {
+        year: 'numeric',
+        month: '2-digit',
+        day: '2-digit'
       });
-      const timeStr = date.toLocaleTimeString('en-US', { 
-        hour: '2-digit', 
+      const timeStr = date.toLocaleTimeString('en-US', {
+        hour: '2-digit',
         minute: '2-digit',
         hour12: false
       });
@@ -193,7 +194,7 @@ const ManageOrders = () => {
   const getPageNumbers = () => {
     const pages = [];
     const maxVisible = 5;
-    
+
     if (totalPages <= maxVisible) {
       for (let i = 1; i <= totalPages; i++) {
         pages.push(i);
@@ -217,7 +218,7 @@ const ManageOrders = () => {
         pages.push(totalPages);
       }
     }
-    
+
     return pages;
   };
 
@@ -250,7 +251,7 @@ const ManageOrders = () => {
           {error && (
             <div className="mb-4 p-4 bg-red-50 border border-red-200 rounded-lg">
               <p className="text-sm text-red-600">{error}</p>
-              <button 
+              <button
                 onClick={() => fetchDeliveries(currentPage)}
                 className="mt-2 text-sm text-red-700 hover:text-red-800 font-medium"
               >
@@ -279,7 +280,7 @@ const ManageOrders = () => {
                       className="pl-10 pr-4 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                     />
                   </div>
-                  <select 
+                  <select
                     value={statusFilter}
                     onChange={(e) => setStatusFilter(e.target.value)}
                     className="px-4 py-2 border border-gray-200 rounded-lg text-sm text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-blue-500"
@@ -344,13 +345,15 @@ const ManageOrders = () => {
                           const customerId = order.customer?.id || order.customerId || '';
                           const driverName = order.driver?.name || order.driverName || order.rider?.name || 'Unassigned';
                           const driverId = order.driver?.id || order.driverId || order.riderId || '';
-                          const pickupAddress = order.pickupLocation?.address || order.pickupAddress || order.from || 'N/A';
-                          const deliveryAddress = order.deliveryLocation?.address || order.deliveryAddress || order.to || 'N/A';
+                          const pickupAddressRaw = order.pickupLocation?.address || order.pickupAddress || order.from || '';
+                          const deliveryAddressRaw = order.deliveryLocation?.address || order.deliveryAddress || order.to || '';
+                          const pickupAddress = formatAddress(pickupAddressRaw) || 'N/A';
+                          const deliveryAddress = formatAddress(deliveryAddressRaw) || 'N/A';
                           const distance = order.distance || 0;
                           const amount = order.price || order.amount || order.totalAmount || 0;
                           const deliveryStatus = getDeliveryStatus(order);
                           const dateTime = formatDateTime(order.createdAt || order.created_at || order.dateTime);
-                          
+
                           return (
                             <tr key={order._id || order.id || index} className="hover:bg-gray-50 transition-colors">
                               <td className="w-[9%] px-2 py-4 whitespace-nowrap">
@@ -438,11 +441,10 @@ const ManageOrders = () => {
                     <button
                       onClick={handlePreviousPage}
                       disabled={currentPage === 1}
-                      className={`p-2 rounded-lg border ${
-                        currentPage === 1
+                      className={`p-2 rounded-lg border ${currentPage === 1
                           ? 'border-gray-200 text-gray-400 cursor-not-allowed'
                           : 'border-gray-300 text-gray-700 hover:bg-gray-50'
-                      }`}
+                        }`}
                     >
                       <ChevronLeft className="w-4 h-4" />
                     </button>
@@ -457,11 +459,10 @@ const ManageOrders = () => {
                           <button
                             key={page}
                             onClick={() => handlePageClick(page)}
-                            className={`px-3 py-1 rounded-lg text-sm ${
-                              currentPage === page
+                            className={`px-3 py-1 rounded-lg text-sm ${currentPage === page
                                 ? 'bg-blue-600 text-white'
                                 : 'text-gray-700 hover:bg-gray-100'
-                            }`}
+                              }`}
                           >
                             {page}
                           </button>
@@ -472,11 +473,10 @@ const ManageOrders = () => {
                     <button
                       onClick={handleNextPage}
                       disabled={currentPage === totalPages}
-                      className={`p-2 rounded-lg border ${
-                        currentPage === totalPages
+                      className={`p-2 rounded-lg border ${currentPage === totalPages
                           ? 'border-gray-200 text-gray-400 cursor-not-allowed'
                           : 'border-gray-300 text-gray-700 hover:bg-gray-50'
-                      }`}
+                        }`}
                     >
                       <ChevronRight className="w-4 h-4" />
                     </button>

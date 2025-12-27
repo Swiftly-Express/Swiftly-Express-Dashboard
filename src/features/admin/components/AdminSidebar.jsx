@@ -2,6 +2,7 @@ import { useLocation } from 'react-router-dom';
 import { useIonRouter } from '@ionic/react';
 import { YummyText } from '../../../components/YummyText';
 import { logout as apiLogout } from '../../../utils/authApi';
+import { getCookie, deleteCookie } from '../../../utils/cookies';
 import React from 'react';
 import BlockIcon from '../../../icons/Blockicon';
 import DashboardIcon from '../../../icons/Dashboardicon';
