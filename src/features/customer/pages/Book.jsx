@@ -93,14 +93,14 @@ const Book = () => {
           dimensions: `${formData.length}x${formData.width}x0`
         }
       };
-      
+
       const response = await createDelivery(payload);
-      
+
       window.dispatchEvent(new Event('deliveries:refresh'));
-      window.dispatchEvent(new CustomEvent('delivery:created', { 
-        detail: response?.data || response 
+      window.dispatchEvent(new CustomEvent('delivery:created', {
+        detail: response?.data || response
       }));
-      
+
       setToastMsg('Delivery booked successfully!');
       setShowToast(true);
       setTimeout(() => {
@@ -124,10 +124,10 @@ const Book = () => {
     try {
       const draftsRaw = localStorage.getItem('delivery_drafts');
       const drafts = draftsRaw ? JSON.parse(draftsRaw) : [];
-      drafts.push({ 
-        id: `draft-${Date.now()}`, 
-        data: formData, 
-        createdAt: new Date().toISOString() 
+      drafts.push({
+        id: `draft-${Date.now()}`,
+        data: formData,
+        createdAt: new Date().toISOString()
       });
       localStorage.setItem('delivery_drafts', JSON.stringify(drafts));
       setToastMsg('Draft saved locally');
@@ -147,7 +147,7 @@ const Book = () => {
   };
 
   const getBaseRate = () => {
-    switch(formData.deliveryType) {
+    switch (formData.deliveryType) {
       case 'express':
         return 2500;
       case 'standard':
@@ -537,7 +537,7 @@ const Book = () => {
                     <span className="text-sm md:text-base">Insurance (1%)</span>
                     <span className="text-sm md:text-base font-medium">₦{getInsurance().toLocaleString('en-NG', { minimumFractionDigits: 2 })}</span>
                   </div>
-                  
+
                   <div className="border-t border-gray-300 pt-3 mt-3">
                     <div className="flex justify-between items-center">
                       <span className="text-base md:text-lg font-medium text-[#0F172A]">Total</span>
