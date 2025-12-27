@@ -41,14 +41,12 @@ const SettingsPage = () => {
   const Toggle = ({ checked, onChange }) => (
     <button
       onClick={onChange}
-      className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
-        checked ? 'bg-green-500' : 'bg-gray-300'
-      }`}
+      className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${checked ? 'bg-green-500' : 'bg-gray-300'
+        }`}
     >
       <span
-        className={`inline-block h-5 w-5 transform rounded-full bg-white transition-transform ${
-          checked ? 'translate-x-6' : 'translate-x-1'
-        }`}
+        className={`inline-block h-5 w-5 transform rounded-full bg-white transition-transform ${checked ? 'translate-x-6' : 'translate-x-1'
+          }`}
       />
     </button>
   );
@@ -70,16 +68,16 @@ const SettingsPage = () => {
                 <StyledDropdown
                   value={
                     activeTab === 'general' ? 'General' :
-                    activeTab === 'pricing' ? 'Pricing' :
-                    activeTab === 'notifications' ? 'Notifications' :
-                    activeTab === 'security' ? 'Security' :
-                    'System'
+                      activeTab === 'pricing' ? 'Pricing' :
+                        activeTab === 'notifications' ? 'Notifications' :
+                          activeTab === 'security' ? 'Security' :
+                            'System'
                   }
                   onChange={(v) => {
                     const map = { General: 'general', Pricing: 'pricing', Notifications: 'notifications', Security: 'security', System: 'system' };
                     setActiveTab(map[v]);
                   }}
-                  options={["General","Pricing","Notifications","Security","System"]}
+                  options={["General", "Pricing", "Notifications", "Security", "System"]}
                   className={'w-full border-[2.5px] border-gray-200 rounded-full'}
                   width={'w-full'}
                 />
@@ -88,41 +86,36 @@ const SettingsPage = () => {
               <div className="mb-8 bg-gray-200 rounded-full p-1 inline-flex">
                 <button
                   onClick={() => setActiveTab('general')}
-                  className={`px-8 py-2 rounded-full text-sm font-medium transition-all ${
-                    activeTab === 'general' ? 'bg-white text-gray-900 shadow-sm' : 'text-gray-600'
-                  }`}
+                  className={`px-8 py-2 rounded-full text-sm font-medium transition-all ${activeTab === 'general' ? 'bg-white text-gray-900 shadow-sm' : 'text-gray-600'
+                    }`}
                 >
                   General
                 </button>
                 <button
                   onClick={() => setActiveTab('pricing')}
-                  className={`px-8 py-2 rounded-full text-sm font-medium transition-all ${
-                    activeTab === 'pricing' ? 'bg-white text-gray-900 shadow-sm' : 'text-gray-600'
-                  }`}
+                  className={`px-8 py-2 rounded-full text-sm font-medium transition-all ${activeTab === 'pricing' ? 'bg-white text-gray-900 shadow-sm' : 'text-gray-600'
+                    }`}
                 >
                   Pricing
                 </button>
                 <button
                   onClick={() => setActiveTab('notifications')}
-                  className={`px-8 py-2 rounded-full text-sm font-medium transition-all ${
-                    activeTab === 'notifications' ? 'bg-white text-gray-900 shadow-sm' : 'text-gray-600'
-                  }`}
+                  className={`px-8 py-2 rounded-full text-sm font-medium transition-all ${activeTab === 'notifications' ? 'bg-white text-gray-900 shadow-sm' : 'text-gray-600'
+                    }`}
                 >
                   Notifications
                 </button>
                 <button
                   onClick={() => setActiveTab('security')}
-                  className={`px-8 py-2 rounded-full text-sm font-medium transition-all ${
-                    activeTab === 'security' ? 'bg-white text-gray-900 shadow-sm' : 'text-gray-600'
-                  }`}
+                  className={`px-8 py-2 rounded-full text-sm font-medium transition-all ${activeTab === 'security' ? 'bg-white text-gray-900 shadow-sm' : 'text-gray-600'
+                    }`}
                 >
                   Security
                 </button>
                 <button
                   onClick={() => setActiveTab('system')}
-                  className={`px-8 py-2 rounded-full text-sm font-medium transition-all ${
-                    activeTab === 'system' ? 'bg-white text-gray-900 shadow-sm' : 'text-gray-600'
-                  }`}
+                  className={`px-8 py-2 rounded-full text-sm font-medium transition-all ${activeTab === 'system' ? 'bg-white text-gray-900 shadow-sm' : 'text-gray-600'
+                    }`}
                 >
                   System
                 </button>
