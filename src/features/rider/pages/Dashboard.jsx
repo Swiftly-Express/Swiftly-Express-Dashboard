@@ -266,7 +266,7 @@ const Dashboard = () => {
   };
 
   const handleCloseModal = () => {
-    setShowVerificationModal(false);
+    setShowVerificationModal(true);
   };
 
   return (
