@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { IonPage, IonContent } from '@ionic/react';
 import { Settings, DollarSign, Bell, Shield, Globe } from 'lucide-react';
 import AdminLayout from '../components/AdminLayout';
+import StyledDropdown from '../../../components/StyledDropdown';
 import { YummyText } from '../../../components/YummyText';
 
 const SettingsPage = () => {
@@ -63,51 +64,74 @@ const SettingsPage = () => {
           </div>
 
           {/* Tab Navigation */}
-          <div className="mb-8 bg-gray-200 rounded-full p-1 inline-flex">
-            <button
-              onClick={() => setActiveTab('general')}
-              className={`px-8 py-2 rounded-full text-sm font-medium transition-all ${
-                activeTab === 'general' ? 'bg-white text-gray-900 shadow-sm' : 'text-gray-600'
-              }`}
-            >
-              General
-            </button>
-            <button
-              onClick={() => setActiveTab('pricing')}
-              className={`px-8 py-2 rounded-full text-sm font-medium transition-all ${
-                activeTab === 'pricing' ? 'bg-white text-gray-900 shadow-sm' : 'text-gray-600'
-              }`}
-            >
-              Pricing
-            </button>
-            <button
-              onClick={() => setActiveTab('notifications')}
-              className={`px-8 py-2 rounded-full text-sm font-medium transition-all ${
-                activeTab === 'notifications' ? 'bg-white text-gray-900 shadow-sm' : 'text-gray-600'
-              }`}
-            >
-              Notifications
-            </button>
-            <button
-              onClick={() => setActiveTab('security')}
-              className={`px-8 py-2 rounded-full text-sm font-medium transition-all ${
-                activeTab === 'security' ? 'bg-white text-gray-900 shadow-sm' : 'text-gray-600'
-              }`}
-            >
-              Security
-            </button>
-            <button
-              onClick={() => setActiveTab('system')}
-              className={`px-8 py-2 rounded-full text-sm font-medium transition-all ${
-                activeTab === 'system' ? 'bg-white text-gray-900 shadow-sm' : 'text-gray-600'
-              }`}
-            >
-              System
-            </button>
+          <div className="mb-8">
+            {isMobile ? (
+              <div className="mb-4">
+                <StyledDropdown
+                  value={
+                    activeTab === 'general' ? 'General' :
+                    activeTab === 'pricing' ? 'Pricing' :
+                    activeTab === 'notifications' ? 'Notifications' :
+                    activeTab === 'security' ? 'Security' :
+                    'System'
+                  }
+                  onChange={(v) => {
+                    const map = { General: 'general', Pricing: 'pricing', Notifications: 'notifications', Security: 'security', System: 'system' };
+                    setActiveTab(map[v]);
+                  }}
+                  options={["General","Pricing","Notifications","Security","System"]}
+                  className={'w-full border-[2.5px] border-gray-200 rounded-full'}
+                  width={'w-full'}
+                />
+              </div>
+            ) : (
+              <div className="mb-8 bg-gray-200 rounded-full p-1 inline-flex">
+                <button
+                  onClick={() => setActiveTab('general')}
+                  className={`px-8 py-2 rounded-full text-sm font-medium transition-all ${
+                    activeTab === 'general' ? 'bg-white text-gray-900 shadow-sm' : 'text-gray-600'
+                  }`}
+                >
+                  General
+                </button>
+                <button
+                  onClick={() => setActiveTab('pricing')}
+                  className={`px-8 py-2 rounded-full text-sm font-medium transition-all ${
+                    activeTab === 'pricing' ? 'bg-white text-gray-900 shadow-sm' : 'text-gray-600'
+                  }`}
+                >
+                  Pricing
+                </button>
+                <button
+                  onClick={() => setActiveTab('notifications')}
+                  className={`px-8 py-2 rounded-full text-sm font-medium transition-all ${
+                    activeTab === 'notifications' ? 'bg-white text-gray-900 shadow-sm' : 'text-gray-600'
+                  }`}
+                >
+                  Notifications
+                </button>
+                <button
+                  onClick={() => setActiveTab('security')}
+                  className={`px-8 py-2 rounded-full text-sm font-medium transition-all ${
+                    activeTab === 'security' ? 'bg-white text-gray-900 shadow-sm' : 'text-gray-600'
+                  }`}
+                >
+                  Security
+                </button>
+                <button
+                  onClick={() => setActiveTab('system')}
+                  className={`px-8 py-2 rounded-full text-sm font-medium transition-all ${
+                    activeTab === 'system' ? 'bg-white text-gray-900 shadow-sm' : 'text-gray-600'
+                  }`}
+                >
+                  System
+                </button>
+              </div>
+            )}
           </div>
 
           {/* Tab Content */}
-          <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-8">
+          <div className={`bg-white rounded-xl shadow-sm border border-gray-100 ${isMobile ? 'p-4' : 'p-8'}`}>
             {/* General Tab */}
             {activeTab === 'general' && (
               <div>
@@ -181,7 +205,7 @@ const SettingsPage = () => {
                   </div>
                 </div>
 
-                <button className="mt-8 bg-green-500 hover:bg-green-600 text-white px-6 py-3 rounded-lg text-sm font-medium transition-colors">
+                <button className={`mt-8 bg-green-500 hover:bg-green-600 text-white px-6 py-3 rounded-lg text-sm font-medium transition-colors ${isMobile ? 'w-full' : ''}`}>
                   Save Changes
                 </button>
               </div>
@@ -266,7 +290,7 @@ const SettingsPage = () => {
                   </div>
                 </div>
 
-                <button className="mt-8 bg-green-500 hover:bg-green-600 text-white px-6 py-3 rounded-lg text-sm font-medium transition-colors">
+                <button className={`mt-8 bg-green-500 hover:bg-green-600 text-white px-6 py-3 rounded-lg text-sm font-medium transition-colors ${isMobile ? 'w-full' : ''}`}>
                   Save Changes
                 </button>
               </div>
@@ -340,7 +364,7 @@ const SettingsPage = () => {
                   </div>
                 </div>
 
-                <button className="mt-8 bg-green-500 hover:bg-green-600 text-white px-6 py-3 rounded-lg text-sm font-medium transition-colors">
+                <button className={`mt-8 bg-green-500 hover:bg-green-600 text-white px-6 py-3 rounded-lg text-sm font-medium transition-colors ${isMobile ? 'w-full' : ''}`}>
                   Save Changes
                 </button>
               </div>
@@ -479,7 +503,7 @@ const SettingsPage = () => {
                   </div>
                 </div>
 
-                <button className="mt-8 w-full bg-green-500 hover:bg-green-600 text-white px-6 py-3 rounded-lg text-sm font-medium transition-colors">
+                <button className={`mt-8 w-full bg-green-500 hover:bg-green-600 text-white px-6 py-3 rounded-lg text-sm font-medium transition-colors ${isMobile ? '' : ''}`}>
                   Save Changes
                 </button>
               </div>
