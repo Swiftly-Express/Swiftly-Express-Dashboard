@@ -29,6 +29,14 @@ const SettingsPage = () => {
     setSettings(prev => ({ ...prev, [key]: !prev[key] }));
   };
 
+  const [isMobile, setIsMobile] = useState(typeof window !== 'undefined' ? window.innerWidth < 768 : false);
+
+  React.useEffect(() => {
+    const handleResize = () => setIsMobile(window.innerWidth < 768);
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
+
   const Toggle = ({ checked, onChange }) => (
     <button
       onClick={onChange}
@@ -47,7 +55,7 @@ const SettingsPage = () => {
   return (
     <IonPage>
       <AdminLayout>
-        <IonContent className="ion-padding">
+        <IonContent className={isMobile ? 'ion-padding' : 'ion-no-padding'}>
           {/* Header */}
           <div className="mb-8">
             <YummyText className="text-3xl font-bold text-gray-900 mb-2">Settings</YummyText>

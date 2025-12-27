@@ -19,6 +19,7 @@ const ManageRiders = () => {
   const [ridersData, setRidersData] = useState([]);
   const [currentPage, setCurrentPage] = useState(1);
   const [itemsPerPage] = useState(10);
+  const [isMobile, setIsMobile] = useState(typeof window !== 'undefined' ? window.innerWidth < 768 : false);
 
   // Fetch riders data
   useEffect(() => {
@@ -27,7 +28,7 @@ const ManageRiders = () => {
         setLoading(true);
         setError(null);
         const response = await getDriverAnalytics();
-        
+
         // Handle different response structures
         const drivers = response?.data?.drivers || response?.drivers || response?.data || [];
         setRidersData(Array.isArray(drivers) ? drivers : []);
@@ -41,13 +42,16 @@ const ManageRiders = () => {
     };
 
     fetchRiders();
+    const handleResize = () => setIsMobile(window.innerWidth < 768);
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
   }, []);
 
   // Helper function to get KYC status from verification data
   const getKycStatus = (rider) => {
     const verification = rider.verification || rider.kyc || {};
     const status = verification.status || verification.verificationStatus || 'pending';
-    
+
     // Normalize status to match our UI expectations
     if (status === 'approved' || status === 'verified') return 'Approved';
     if (status === 'rejected' || status === 'declined') return 'Rejected';
@@ -90,20 +94,20 @@ const ManageRiders = () => {
     return ridersData.map(rider => {
       const kycStatus = getKycStatus(rider);
       const riderStatus = getRiderStatus(rider);
-      
+
       // Get KYC status color
-      const kycColor = kycStatus === 'Approved' 
+      const kycColor = kycStatus === 'Approved'
         ? 'bg-green-100 text-green-800'
         : kycStatus === 'Rejected'
-        ? 'bg-red-100 text-red-800'
-        : 'bg-yellow-100 text-yellow-800';
+          ? 'bg-red-100 text-red-800'
+          : 'bg-yellow-100 text-yellow-800';
 
       // Get status color
       const statusColor = riderStatus === 'Active'
         ? 'bg-green-100 text-green-800'
         : riderStatus === 'Suspended'
-        ? 'bg-red-100 text-red-800'
-        : 'bg-gray-100 text-gray-800';
+          ? 'bg-red-100 text-red-800'
+          : 'bg-gray-100 text-gray-800';
 
       return {
         id: rider.riderId || rider.driverId || rider.id || 'N/A',
@@ -129,7 +133,7 @@ const ManageRiders = () => {
     return transformedRiders.filter(rider => {
       // Search filter
       const searchLower = searchQuery.toLowerCase();
-      const matchesSearch = !searchQuery || 
+      const matchesSearch = !searchQuery ||
         rider.name.toLowerCase().includes(searchLower) ||
         rider.email.toLowerCase().includes(searchLower) ||
         rider.phone.toLowerCase().includes(searchLower) ||
@@ -154,37 +158,37 @@ const ManageRiders = () => {
     const suspendedCount = transformedRiders.filter(r => r.status === 'Suspended').length;
 
     return [
-      { 
-        label: 'Total Riders', 
-        value: formatNumber(totalRiders), 
+      {
+        label: 'Total Riders',
+        value: formatNumber(totalRiders),
         icon: <ToyBikeIcon className="w-5 h-5" stroke="#1E1E1E" />,
         bgColor: '#F3F4F6',
         valueColor: '#1E1E1E'
       },
-      { 
-        label: 'Active', 
-        value: formatNumber(activeCount), 
+      {
+        label: 'Active',
+        value: formatNumber(activeCount),
         icon: <CheckCircleIcon size={18} color="#00A63E" />,
         bgColor: '#D1FAE5',
         valueColor: '#00A63E'
       },
-      { 
-        label: 'Inactive', 
-        value: formatNumber(inactiveCount), 
+      {
+        label: 'Inactive',
+        value: formatNumber(inactiveCount),
         icon: <PauseIcon className="w-5 h-5" stroke="#6B7280" />,
         bgColor: '#F3F4F6',
         valueColor: '#6B7280'
       },
-      { 
-        label: 'Pending KYC', 
-        value: formatNumber(pendingKycCount), 
+      {
+        label: 'Pending KYC',
+        value: formatNumber(pendingKycCount),
         icon: <ClockIcon className="w-5 h-5" stroke="#F59E0B" />,
         bgColor: '#FEF3C7',
         valueColor: '#F59E0B'
       },
-      { 
-        label: 'Suspended', 
-        value: formatNumber(suspendedCount), 
+      {
+        label: 'Suspended',
+        value: formatNumber(suspendedCount),
         icon: <BanIcon className="w-5 h-5" stroke="#EF4444" />,
         bgColor: '#FEE2E2',
         valueColor: '#EF4444'
@@ -210,7 +214,7 @@ const ManageRiders = () => {
   return (
     <IonPage>
       <AdminLayout>
-        <IonContent className="ion-no-padding">
+        <IonContent className={isMobile ? 'ion-padding' : 'ion-no-padding'}>
           {/* Header */}
           <div className="mb-8">
             <YummyText className="text-3xl font-medium text-[#1E1E1E] mb-2">Manage Riders</YummyText>
@@ -250,9 +254,9 @@ const ManageRiders = () => {
           {!loading && !error && (
             <>
               {/* Stats Cards */}
-              <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-5 gap-6 mb-8">
+              <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4 mb-8">
                 {stats.map((stat, index) => (
-                  <div key={index} className="bg-white rounded-xl p-6 shadow-sm border border-gray-100">
+                  <div key={index} className="bg-white rounded-xl p-3 md:p-5 shadow-sm border border-gray-100">
                     <div className="flex flex-col items-start">
                       <div
                         className="p-2 rounded-lg mb-3"
@@ -271,19 +275,18 @@ const ManageRiders = () => {
               <div className="bg-white rounded-xl shadow-sm border border-gray-100">
                 {/* Table Header */}
                 <div className="p-3 border-b border-gray-100">
-                  <div className="flex items-center justify-between">
+                  <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-3">
                     <div>
                       <YummyText className="text-medium font-medium text-gray-900">All Riders</YummyText>
                       <YummyText className="text-xs text-gray-500">
                         Showing {paginatedRiders.length} of {filteredRiders.length} riders
-                        {searchQuery || statusFilter !== 'All Status' || kycFilter !== 'All KYC' 
+                        {searchQuery || statusFilter !== 'All Status' || kycFilter !== 'All KYC'
                           ? ` (filtered from ${transformedRiders.length} total)`
                           : ''}
                       </YummyText>
                     </div>
-                    <div className="flex items-center gap-3">
-                      {/* Search */}
-                      <div className="relative">
+                    <div className="flex flex-col md:flex-row items-stretch md:items-center gap-3 w-full md:w-auto">
+                      <div className="relative w-full md:w-auto">
                         <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400" />
                         <input
                           type="text"
@@ -291,33 +294,31 @@ const ManageRiders = () => {
                           value={searchQuery}
                           onChange={(e) => {
                             setSearchQuery(e.target.value);
-                            setCurrentPage(1); // Reset to first page on search
+                            setCurrentPage(1);
                           }}
-                          className="pl-10 pr-4 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent w-64"
+                          className="w-full pl-10 pr-4 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                         />
                       </div>
-                      {/* Status Filter */}
                       <select
                         value={statusFilter}
                         onChange={(e) => {
                           setStatusFilter(e.target.value);
-                          setCurrentPage(1); // Reset to first page on filter
+                          setCurrentPage(1);
                         }}
-                        className="flex items-center gap-2 px-4 py-2 border border-gray-200 rounded-lg text-sm text-gray-700 hover:bg-gray-50 cursor-pointer focus:outline-none focus:ring-2 focus:ring-blue-500"
+                        className="w-full md:w-auto flex items-center gap-2 px-4 py-2 border border-gray-200 rounded-lg text-sm text-gray-700 hover:bg-gray-50 cursor-pointer focus:outline-none focus:ring-2 focus:ring-blue-500"
                       >
                         <option value="All Status">All Status</option>
                         <option value="Active">Active</option>
                         <option value="Inactive">Inactive</option>
                         <option value="Suspended">Suspended</option>
                       </select>
-                      {/* KYC Filter */}
                       <select
                         value={kycFilter}
                         onChange={(e) => {
                           setKycFilter(e.target.value);
-                          setCurrentPage(1); // Reset to first page on filter
+                          setCurrentPage(1);
                         }}
-                        className="flex items-center gap-2 px-4 py-2 border border-gray-200 rounded-lg text-sm text-gray-700 hover:bg-gray-50 cursor-pointer focus:outline-none focus:ring-2 focus:ring-blue-500"
+                        className="w-full md:w-auto flex items-center gap-2 px-4 py-2 border border-gray-200 rounded-lg text-sm text-gray-700 hover:bg-gray-50 cursor-pointer focus:outline-none focus:ring-2 focus:ring-blue-500"
                       >
                         <option value="All KYC">All KYC</option>
                         <option value="Approved">Approved</option>
@@ -330,115 +331,150 @@ const ManageRiders = () => {
 
                 {/* Table */}
                 <YummyText>
-                  <div className="overflow-hidden">
-                    <div className="overflow-x-auto">
-                      <table className="w-full table-fixed">
-                        <thead className="border-b border-gray-100 sticky top-0 z-10 bg-white">
-                          <tr>
-                            <th className="w-[8%] px-1 py-3 text-left text-[10.5px] font-[500] text-[#0A0A0A] uppercase tracking-wider">
-                              Rider ID
-                            </th>
-                            <th className="w-[12%] px-1 py-3 text-left text-[10.5px] font-[500] text-[#0A0A0A] uppercase tracking-wider">
-                              Name
-                            </th>
-                            <th className="w-[18%] px-1 py-3 text-left text-[10.5px] font-[500] text-[#0A0A0A] uppercase tracking-wider">
-                              Contact
-                            </th>
-                            <th className="w-[20%] px-1 py-3 text-left text-[10.5px] font-medium text-[#0A0A0A] uppercase tracking-wider">
-                              Vehicle
-                            </th>
-                            <th className="w-[10%] px-1 py-3 text-left text-[10.5px] font-[500] text-[#0A0A0A] uppercase tracking-wider">
-                              Deliveries
-                            </th>
-                            <th className="w-[10%] px-1 py-3 text-left text-[10.5px] font-[500] text-[#0A0A0A] uppercase tracking-wider">
-                              Earnings
-                            </th>
-                            <th className="w-[8%] px-1 py-3 text-left text-[10.5px] font-[500] text-[#0A0A0A] uppercase tracking-wider">
-                              KYC
-                            </th>
-                            <th className="w-[8%] px-1 py-3 text-left text-[10.5px] font-[500] text-[#0A0A0A] uppercase tracking-wider">
-                              Status
-                            </th>
-                            <th className="w-[6%] px-1 py-3 text-left text-[10.5px] font-[500] text-[#0A0A0A] uppercase tracking-wider">
-                              Actions
-                            </th>
-                          </tr>
-                        </thead>
-                      </table>
+                  {isMobile ? (
+                    <div className="space-y-4 p-4">
+                      {paginatedRiders.length === 0 ? (
+                        <div className="p-8 text-center">
+                          <p className="text-gray-500">No riders found</p>
+                        </div>
+                      ) : (
+                        paginatedRiders.map((rider, idx) => (
+                          <div key={rider.id || idx} className="bg-white rounded-lg p-4 border border-gray-100 shadow-sm">
+                            <div className="flex items-start justify-between">
+                              <div className="flex-1 pr-3">
+                                <YummyText className="text-sm font-medium text-gray-900 truncate">{rider.name}</YummyText>
+                                <div className="text-xs text-gray-600 truncate mt-1">{rider.email}</div>
+                                <div className="text-xs text-gray-600 truncate mt-1">{rider.phone}</div>
+                                <div className="text-xs text-gray-600 truncate mt-1">{rider.vehicle}</div>
+                              </div>
+                              <div className="text-right flex-shrink-0">
+                                <YummyText className="text-sm text-gray-600">{rider.id}</YummyText>
+                                <YummyText className="text-xs text-gray-400">{rider.joined}</YummyText>
+                                <div className="mt-2">
+                                  <span className={`inline-block px-2 py-1 rounded-full text-xs font-medium ${rider.statusColor}`}>{rider.status}</span>
+                                </div>
+                              </div>
+                            </div>
+                            <div className="mt-3 flex items-center justify-end gap-2">
+                              <button className="text-[#0A0A0A] hover:text-gray-600">
+                                <MoreVertical className="w-5 h-5" />
+                              </button>
+                            </div>
+                          </div>
+                        ))
+                      )}
                     </div>
-                    <div className="overflow-y-auto max-h-[500px]">
-                      <table className="w-full table-fixed">
-                        <tbody className="bg-white divide-y divide-gray-200">
-                          {paginatedRiders.length === 0 ? (
+                  ) : (
+                    <div className="overflow-hidden">
+                      <div className="overflow-x-auto">
+                        <table className="w-full table-fixed">
+                          <thead className="border-b border-gray-100 sticky top-0 z-10 bg-white">
                             <tr>
-                              <td colSpan="9" className="px-6 py-12 text-center">
-                                <YummyText className="text-gray-500">
-                                  {searchQuery || statusFilter !== 'All Status' || kycFilter !== 'All KYC'
-                                    ? 'No riders match your search criteria'
-                                    : 'No riders found'}
-                                </YummyText>
-                              </td>
+                              <th className="w-[8%] px-1 py-3 text-left text-[10.5px] font-[500] text-[#0A0A0A] uppercase tracking-wider">
+                                Rider ID
+                              </th>
+                              <th className="w-[12%] px-1 py-3 text-left text-[10.5px] font-[500] text-[#0A0A0A] uppercase tracking-wider">
+                                Name
+                              </th>
+                              <th className="w-[18%] px-1 py-3 text-left text-[10.5px] font-[500] text-[#0A0A0A] uppercase tracking-wider">
+                                Contact
+                              </th>
+                              <th className="w-[20%] px-1 py-3 text-left text-[10.5px] font-medium text-[#0A0A0A] uppercase tracking-wider">
+                                Vehicle
+                              </th>
+                              <th className="w-[10%] px-1 py-3 text-left text-[10.5px] font-[500] text-[#0A0A0A] uppercase tracking-wider">
+                                Deliveries
+                              </th>
+                              <th className="w-[10%] px-1 py-3 text-left text-[10.5px] font-[500] text-[#0A0A0A] uppercase tracking-wider">
+                                Earnings
+                              </th>
+                              <th className="w-[8%] px-1 py-3 text-left text-[10.5px] font-[500] text-[#0A0A0A] uppercase tracking-wider">
+                                KYC
+                              </th>
+                              <th className="w-[8%] px-1 py-3 text-left text-[10.5px] font-[500] text-[#0A0A0A] uppercase tracking-wider">
+                                Status
+                              </th>
+                              <th className="w-[6%] px-1 py-3 text-left text-[10.5px] font-[500] text-[#0A0A0A] uppercase tracking-wider">
+                                Actions
+                              </th>
                             </tr>
-                          ) : (
-                            paginatedRiders.map((rider, index) => (
-                              <tr key={index} className="hover:bg-gray-50 transition-colors">
-                                <td className="w-[8%] px-1 py-4 whitespace-nowrap">
-                                  <YummyText className="text-[12px] font-medium text-gray-900">{rider.id}</YummyText>
-                                </td>
-                                <td className="w-[12%] px-1 py-4 whitespace-nowrap">
-                                  <div>
-                                    <YummyText className="text-xs font-medium text-gray-900 truncate">{rider.name}</YummyText>
-                                    <YummyText className="text-xs text-gray-500 truncate">{rider.joined}</YummyText>
-                                  </div>
-                                </td>
-                                <td className="w-[18%] px-1 py-4 whitespace-nowrap">
-                                  <div className="space-y-1">
-                                    <div className="flex items-center text-xs text-gray-600">
-                                      <Mail className="w-3 h-3 mr-1 text-gray-400 flex-shrink-0" />
-                                      <span className="truncate">{rider.email}</span>
-                                    </div>
-                                    <div className="flex items-center text-xs text-gray-600">
-                                      <Phone className="w-3 h-3 mr-1 text-gray-400 flex-shrink-0" />
-                                      <span className="truncate">{rider.phone}</span>
-                                    </div>
-                                  </div>
-                                </td>
-                                <td className="w-[20%] px-1 py-4">
-                                  <div>
-                                    <div className="flex items-center text-xs text-gray-900 font-medium">
-                                      <span className="truncate">{rider.vehicle}</span>
-                                    </div>
-                                    <YummyText className="text-xs text-gray-500 truncate">{rider.license}</YummyText>
-                                  </div>
-                                </td>
-                                <td className="w-[10%] px-5 py-4 whitespace-nowrap">
-                                  <YummyText className="text-xs text-gray-900">{rider.deliveries}</YummyText>
-                                </td>
-                                <td className="w-[10%] px-1 py-4 whitespace-nowrap">
-                                  <YummyText className="text-xs font-medium text-gray-900">{rider.earnings}</YummyText>
-                                </td>
-                                <td className="w-[8%] px-1 py-4 whitespace-nowrap">
-                                  <span className={`px-2 py-1 rounded-full text-[11px] font-medium ${rider.kycColor}`}>
-                                    {rider.kyc}
-                                  </span>
-                                </td>
-                                <td className="w-[8%] px-1 py-4 whitespace-nowrap">
-                                  <span className={`px-2 py-1 rounded-full text-[11px] font-medium ${rider.statusColor}`}>
-                                    {rider.status}
-                                  </span>
-                                </td>
-                                <td className="w-[6%] px-1 py-4 whitespace-nowrap text-center">
-                                  <button className="text-[#0A0A0A] hover:text-gray-600">
-                                    <MoreVertical className="w-5 h-5" />
-                                  </button>
+                          </thead>
+                        </table>
+                      </div>
+                      <div className="overflow-y-auto max-h-[500px]">
+                        <table className="w-full table-fixed">
+                          <tbody className="bg-white divide-y divide-gray-200">
+                            {paginatedRiders.length === 0 ? (
+                              <tr>
+                                <td colSpan="9" className="px-6 py-12 text-center">
+                                  <YummyText className="text-gray-500">
+                                    {searchQuery || statusFilter !== 'All Status' || kycFilter !== 'All KYC'
+                                      ? 'No riders match your search criteria'
+                                      : 'No riders found'}
+                                  </YummyText>
                                 </td>
                               </tr>
-                            ))
-                          )}
-                        </tbody>
-                      </table>
+                            ) : (
+                              paginatedRiders.map((rider, index) => (
+                                <tr key={index} className="hover:bg-gray-50 transition-colors">
+                                  <td className="w-[8%] px-1 py-4 whitespace-nowrap">
+                                    <YummyText className="text-[12px] font-medium text-gray-900">{rider.id}</YummyText>
+                                  </td>
+                                  <td className="w-[12%] px-1 py-4 whitespace-nowrap">
+                                    <div>
+                                      <YummyText className="text-xs font-medium text-gray-900 truncate">{rider.name}</YummyText>
+                                      <YummyText className="text-xs text-gray-500 truncate">{rider.joined}</YummyText>
+                                    </div>
+                                  </td>
+                                  <td className="w-[18%] px-1 py-4 whitespace-nowrap">
+                                    <div className="space-y-1">
+                                      <div className="flex items-center text-xs text-gray-600">
+                                        <Mail className="w-3 h-3 mr-1 text-gray-400 flex-shrink-0" />
+                                        <span className="truncate">{rider.email}</span>
+                                      </div>
+                                      <div className="flex items-center text-xs text-gray-600">
+                                        <Phone className="w-3 h-3 mr-1 text-gray-400 flex-shrink-0" />
+                                        <span className="truncate">{rider.phone}</span>
+                                      </div>
+                                    </div>
+                                  </td>
+                                  <td className="w-[20%] px-1 py-4">
+                                    <div>
+                                      <div className="flex items-center text-xs text-gray-900 font-medium">
+                                        <span className="truncate">{rider.vehicle}</span>
+                                      </div>
+                                      <YummyText className="text-xs text-gray-500 truncate">{rider.license}</YummyText>
+                                    </div>
+                                  </td>
+                                  <td className="w-[10%] px-5 py-4 whitespace-nowrap">
+                                    <YummyText className="text-xs text-gray-900">{rider.deliveries}</YummyText>
+                                  </td>
+                                  <td className="w-[10%] px-1 py-4 whitespace-nowrap">
+                                    <YummyText className="text-xs font-medium text-gray-900">{rider.earnings}</YummyText>
+                                  </td>
+                                  <td className="w-[8%] px-1 py-4 whitespace-nowrap">
+                                    <span className={`px-2 py-1 rounded-full text-[11px] font-medium ${rider.kycColor}`}>
+                                      {rider.kyc}
+                                    </span>
+                                  </td>
+                                  <td className="w-[8%] px-1 py-4 whitespace-nowrap">
+                                    <span className={`px-2 py-1 rounded-full text-[11px] font-medium ${rider.statusColor}`}>
+                                      {rider.status}
+                                    </span>
+                                  </td>
+                                  <td className="w-[6%] px-1 py-4 whitespace-nowrap text-center">
+                                    <button className="text-[#0A0A0A] hover:text-gray-600">
+                                      <MoreVertical className="w-5 h-5" />
+                                    </button>
+                                  </td>
+                                </tr>
+                              ))
+                            )}
+                          </tbody>
+                        </table>
+                      </div>
                     </div>
-                  </div>
+                  )}
                 </YummyText>
 
                 {/* Pagination */}
@@ -455,7 +491,7 @@ const ManageRiders = () => {
                       >
                         Previous
                       </button>
-                      
+
                       {/* Page numbers */}
                       <div className="flex items-center gap-1">
                         {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
@@ -469,16 +505,15 @@ const ManageRiders = () => {
                           } else {
                             pageNum = currentPage - 2 + i;
                           }
-                          
+
                           return (
                             <button
                               key={pageNum}
                               onClick={() => handlePageChange(pageNum)}
-                              className={`px-3 py-1 rounded-lg text-sm transition-colors ${
-                                currentPage === pageNum
+                              className={`px-3 py-1 rounded-lg text-sm transition-colors ${currentPage === pageNum
                                   ? 'bg-blue-600 text-white'
                                   : 'text-gray-700 hover:bg-gray-100'
-                              }`}
+                                }`}
                             >
                               {pageNum}
                             </button>

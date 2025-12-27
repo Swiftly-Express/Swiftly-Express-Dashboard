@@ -105,6 +105,7 @@ const AnalyticsReports = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [refreshing, setRefreshing] = useState(false);
+  const [isMobile, setIsMobile] = useState(typeof window !== 'undefined' ? window.innerWidth < 768 : false);
   
   // State for API data
   const [overviewData, setOverviewData] = useState(null);
@@ -171,6 +172,9 @@ const AnalyticsReports = () => {
   // Fetch data on mount and when time period changes
   useEffect(() => {
     fetchAnalyticsData();
+    const handleResize = () => setIsMobile(window.innerWidth < 768);
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
   }, [timePeriod]);
 
   // Format currency
@@ -352,7 +356,7 @@ const AnalyticsReports = () => {
   return (
     <IonPage>
       <AdminLayout>
-        <IonContent className="ion-padding">
+        <IonContent className={isMobile ? 'ion-padding' : 'ion-no-padding'}>
           {/* Header */}
           <div className="mb-8 flex items-center justify-between">
             <div>

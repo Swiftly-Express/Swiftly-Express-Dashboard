@@ -28,6 +28,14 @@ const ManageOrders = () => {
     pending: 0
   });
 
+  const [isMobile, setIsMobile] = useState(typeof window !== 'undefined' ? window.innerWidth < 768 : false);
+
+  useEffect(() => {
+    const handleResize = () => setIsMobile(window.innerWidth < 768);
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
+
   const fetchDeliveries = async (page = 1) => {
     try {
       setLoading(true);
@@ -225,15 +233,15 @@ const ManageOrders = () => {
   return (
     <IonPage>
       <AdminLayout>
-        <IonContent className="ion-no-padding">
+        <IonContent className={isMobile ? 'ion-padding' : 'ion-no-padding'}>
           <div className="mb-8">
             <YummyText className="text-3xl font-medium text-[#1E1E1E] mb-2">Manage Orders</YummyText>
             <YummyText className="text-[#717182]">View and manage all delivery orders</YummyText>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+          <div className="grid grid-cols-2 md:grid-cols-2 lg:grid-cols-4 gap-3 mb-8">
             {statsCards.map((stat, index) => (
-              <div key={index} className="bg-white rounded-xl p-6 shadow-sm border border-gray-100">
+              <div key={index} className="bg-white rounded-xl p-3 md:p-5 shadow-sm border border-gray-100">
                 <div className="flex flex-col items-start">
                   <div
                     className="p-2 rounded-lg mb-3"
@@ -262,28 +270,29 @@ const ManageOrders = () => {
 
           <div className="bg-white rounded-xl shadow-sm border border-gray-100">
             <div className="p-3 border-b border-gray-100">
-              <div className="flex items-center justify-between">
+              <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-3">
                 <div>
                   <YummyText className="text-medium font-medium text-gray-900">All Orders</YummyText>
                   <YummyText className="text-xs text-gray-500">
                     {loading ? 'Loading...' : `Showing ${filteredOrders.length} of ${totalOrders} orders`}
                   </YummyText>
                 </div>
-                <div className="flex items-center gap-3">
-                  <div className="relative">
+
+                <div className="flex flex-col md:flex-row items-stretch md:items-center gap-3 w-full md:w-auto">
+                  <div className="relative w-full md:w-auto">
                     <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400" />
                     <input
                       type="text"
                       placeholder="Search orders..."
                       value={searchQuery}
                       onChange={(e) => setSearchQuery(e.target.value)}
-                      className="pl-10 pr-4 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                      className="w-full pl-10 pr-4 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                     />
                   </div>
                   <select
                     value={statusFilter}
                     onChange={(e) => setStatusFilter(e.target.value)}
-                    className="px-4 py-2 border border-gray-200 rounded-lg text-sm text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    className="w-full md:w-auto flex items-center gap-2 px-4 py-2 border border-gray-200 rounded-lg text-sm text-gray-700 hover:bg-gray-50"
                   >
                     <option>All Status</option>
                     <option>Delivered</option>
@@ -302,6 +311,45 @@ const ManageOrders = () => {
               ) : filteredOrders.length === 0 ? (
                 <div className="p-8 text-center">
                   <p className="text-gray-500">No orders found</p>
+                </div>
+              ) : isMobile ? (
+                <div className="space-y-4 p-4">
+                  {filteredOrders.map((order, idx) => {
+                    const orderId = order.deliveryId || order._id || order.id || 'N/A';
+                    const customerName = order.customer?.name || order.customerName || 'N/A';
+                    const driverName = order.driver?.name || order.driverName || order.rider?.name || 'Unassigned';
+                    const pickupAddressRaw = order.pickupLocation?.address || order.pickupAddress || order.from || '';
+                    const deliveryAddressRaw = order.deliveryLocation?.address || order.deliveryAddress || order.to || '';
+                    const pickupAddress = formatAddress(pickupAddressRaw) || 'N/A';
+                    const deliveryAddress = formatAddress(deliveryAddressRaw) || 'N/A';
+                    const distance = order.distance || 0;
+                    const amount = order.price || order.amount || order.totalAmount || 0;
+                    const deliveryStatus = getDeliveryStatus(order);
+                    const dateTime = formatDateTime(order.createdAt || order.created_at || order.dateTime);
+
+                    return (
+                      <div key={order._id || order.id || idx} className="bg-white rounded-lg p-4 border border-gray-100 shadow-sm">
+                        <div className="flex items-start justify-between">
+                          <div className="flex-1 pr-3">
+                            <YummyText className="text-sm font-medium text-gray-900 truncate">{customerName}</YummyText>
+                            <div className="text-xs text-gray-600 mt-1 truncate">{orderId}</div>
+                            <div className="text-xs text-gray-600 mt-1 whitespace-normal break-words">{pickupAddress} → {deliveryAddress}</div>
+                            <div className="mt-2 text-xs text-gray-600">{formatCurrency(amount)} • {formatDistance(distance)}</div>
+                          </div>
+                          <div className="text-right flex-shrink-0">
+                            <span className={`inline-block px-2 py-1 rounded-full text-xs font-medium ${deliveryStatus.color}`}>{deliveryStatus.status}</span>
+                            <div className="text-xs text-gray-400 mt-2">{dateTime.date}</div>
+                            <div className="text-xs text-gray-400">{dateTime.time}</div>
+                          </div>
+                        </div>
+                        <div className="mt-3 flex items-center justify-end gap-2">
+                          <button className="text-gray-400 hover:text-gray-600">
+                            <MoreVertical className="w-5 h-5" />
+                          </button>
+                        </div>
+                      </div>
+                    );
+                  })}
                 </div>
               ) : (
                 <div className="overflow-hidden">
@@ -333,7 +381,7 @@ const ManageOrders = () => {
                           <th className="w-[13%] px-6 py-3 text-left text-[10.5px] font-[500] text-[#0A0A0A] uppercase tracking-wider">
                             Date
                           </th>
-                          <th className="w-[5%] px-0 py-3 text-left text-[10.5px] font-[500] text-[#0A0A0A] uppercase tracking-wider">
+                          <th className="w-[6%] px-0 py-3 text-left text-[10.5px] font-[500] text-[#0A0A0A] uppercase tracking-wider">
                             Actions
                           </th>
                         </tr>
@@ -410,13 +458,13 @@ const ManageOrders = () => {
                                   {deliveryStatus.status}
                                 </span>
                               </td>
-                              <td className="w-[13%] px-2 py-4 whitespace-nowrap">
+                              <td className="w-[13%] px-5 py-4 whitespace-nowrap">
                                 <div>
                                   <YummyText className="text-xs text-gray-900">{dateTime.date}</YummyText>
                                   <YummyText className="text-xs text-gray-500">{dateTime.time}</YummyText>
                                 </div>
                               </td>
-                              <td className="w-[5%] px-0 py-4 whitespace-nowrap text-left">
+                              <td className="w-[5%] px-0 py-4 whitespace-nowrap text-center">
                                 <button className="text-gray-400 hover:text-gray-600">
                                   <MoreVertical className="w-5 h-5" />
                                 </button>
@@ -442,8 +490,8 @@ const ManageOrders = () => {
                       onClick={handlePreviousPage}
                       disabled={currentPage === 1}
                       className={`p-2 rounded-lg border ${currentPage === 1
-                          ? 'border-gray-200 text-gray-400 cursor-not-allowed'
-                          : 'border-gray-300 text-gray-700 hover:bg-gray-50'
+                        ? 'border-gray-200 text-gray-400 cursor-not-allowed'
+                        : 'border-gray-300 text-gray-700 hover:bg-gray-50'
                         }`}
                     >
                       <ChevronLeft className="w-4 h-4" />
@@ -460,8 +508,8 @@ const ManageOrders = () => {
                             key={page}
                             onClick={() => handlePageClick(page)}
                             className={`px-3 py-1 rounded-lg text-sm ${currentPage === page
-                                ? 'bg-blue-600 text-white'
-                                : 'text-gray-700 hover:bg-gray-100'
+                              ? 'bg-blue-600 text-white'
+                              : 'text-gray-700 hover:bg-gray-100'
                               }`}
                           >
                             {page}
@@ -474,8 +522,8 @@ const ManageOrders = () => {
                       onClick={handleNextPage}
                       disabled={currentPage === totalPages}
                       className={`p-2 rounded-lg border ${currentPage === totalPages
-                          ? 'border-gray-200 text-gray-400 cursor-not-allowed'
-                          : 'border-gray-300 text-gray-700 hover:bg-gray-50'
+                        ? 'border-gray-200 text-gray-400 cursor-not-allowed'
+                        : 'border-gray-300 text-gray-700 hover:bg-gray-50'
                         }`}
                     >
                       <ChevronRight className="w-4 h-4" />

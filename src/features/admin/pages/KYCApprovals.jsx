@@ -30,9 +30,14 @@ const KYCApprovals = () => {
   const [showRejectModal, setShowRejectModal] = useState(false);
   const [showApproveModal, setShowApproveModal] = useState(false);
 
+  const [isMobile, setIsMobile] = useState(typeof window !== 'undefined' ? window.innerWidth < 768 : false);
+
   // Fetch verifications on mount and when page changes
   useEffect(() => {
     fetchVerifications();
+    const handleResize = () => setIsMobile(window.innerWidth < 768);
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
   }, [currentPage]);
 
   // Listen for verification events from the rider app and refresh list
@@ -371,7 +376,7 @@ const KYCApprovals = () => {
   return (
     <IonPage>
       <AdminLayout>
-        <IonContent className="ion-padding">
+        <IonContent className={isMobile ? 'ion-padding' : 'ion-no-padding'}>
           {/* Pull-to-Refresh */}
           <IonRefresher slot="fixed" onIonRefresh={handleRefresh}>
             <IonRefresherContent></IonRefresherContent>

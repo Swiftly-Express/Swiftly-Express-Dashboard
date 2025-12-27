@@ -29,6 +29,7 @@ const AdminDashboard = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [refreshing, setRefreshing] = useState(false);
+  const [isMobile, setIsMobile] = useState(typeof window !== 'undefined' ? window.innerWidth < 768 : false);
   const [overview, setOverview] = useState(null);
   const [revenueData, setRevenueData] = useState([]);
   const [recentOrders, setRecentOrders] = useState([]);
@@ -167,6 +168,9 @@ const AdminDashboard = () => {
   // Fetch data on mount
   useEffect(() => {
     fetchDashboardData();
+    const handleResize = () => setIsMobile(window.innerWidth < 768);
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
   }, []);
 
   // Calculate order status data for pie chart
@@ -248,7 +252,7 @@ const AdminDashboard = () => {
   return (
     <IonPage>
       <AdminLayout>
-        <IonContent className="ion-padding">
+        <IonContent className={isMobile ? 'ion-padding' : 'ion-no-padding'}>
           <IonRefresher slot="fixed" onIonRefresh={handleIonRefresh}>
             <IonRefresherContent />
           </IonRefresher>
@@ -270,7 +274,7 @@ const AdminDashboard = () => {
           </div>
 
           {/* Stats Cards */}
-          <div className="grid grid-cols-2 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
+          <div className="grid grid-cols-2 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-8 px-0 md:px-1 sm:px-1">
             <StatCard 
               icon={Users}
               title="Total Users"

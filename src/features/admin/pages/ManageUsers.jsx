@@ -153,7 +153,7 @@ const ManageUsers = () => {
   return (
     <IonPage>
       <AdminLayout>
-        <IonContent className="ion-padding">
+        <IonContent className={isMobile ? 'ion-padding' : 'ion-no-padding'}>
           {/* Header */}
           <div className="mb-8">
             <YummyText className="text-3xl font-medium text-[#1E1E1E] mb-2">Manage Users</YummyText>
