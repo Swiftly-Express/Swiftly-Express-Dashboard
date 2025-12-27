@@ -5,6 +5,10 @@ import { Line, Doughnut } from 'react-chartjs-2';
 import { Chart as ChartJS, CategoryScale, LinearScale, PointElement, LineElement, ArcElement, Title, Tooltip, Legend } from 'chart.js';
 import AdminLayout from '../components/AdminLayout';
 
+const sideBottomShadow = {
+  boxShadow: '2px 2px 4px rgba(0,0,0,0.06), -2px 2px 4px rgba(0,0,0,0.06), 0 4px 8px rgba(0,0,0,0.08)'
+};
+
 // Register Chart.js components
 ChartJS.register(CategoryScale, LinearScale, PointElement, LineElement, ArcElement, Title, Tooltip, Legend);
 import { YummyText } from '../../../components/YummyText';
@@ -174,7 +178,7 @@ const AdminDashboard = () => {
   ].filter(item => item.value > 0) : [];
 
   const StatCard = ({ icon: Icon, title, value, change, iconBg, iconColor, loading }) => (
-    <div className="bg-white rounded-xl p-6 shadow-sm border border-gray-100">
+    <div className="bg-white rounded-xl p-3 md:p-5" style={sideBottomShadow}>
       <div className="flex items-start justify-between mb-4">
         <div className={`${iconBg} p-3 rounded-lg`}>
           <Icon className={`w-5 h-5 ${iconColor}`} />
@@ -266,7 +270,7 @@ const AdminDashboard = () => {
           </div>
 
           {/* Stats Cards */}
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+          <div className="grid grid-cols-2 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
             <StatCard 
               icon={Users}
               title="Total Users"

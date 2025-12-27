@@ -3,7 +3,8 @@ import { useIonRouter } from '@ionic/react';
 import { YummyText } from '../../../components/YummyText';
 import { logout as apiLogout } from '../../../utils/authApi';
 import { getCookie, deleteCookie } from '../../../utils/cookies';
-import React from 'react';
+import React, { useState, useEffect } from 'react';
+import ReactDOM from 'react-dom';
 import BlockIcon from '../../../icons/Blockicon';
 import DashboardIcon from '../../../icons/Dashboardicon';
 import PeopleIcon from '../../../icons/Peopleicon';
@@ -49,8 +50,21 @@ const SidebarButton = ({ to, active, icon, label, count }) => {
   );
 };
 
+
 const AdminSidebar = () => {
   const router = useIonRouter();
+  const [mobileOpen, setMobileOpen] = useState(false);
+
+  useEffect(() => {
+    const toggle = () => setMobileOpen((s) => !s);
+    const close = () => setMobileOpen(false);
+    window.addEventListener('admin:toggleMobileSidebar', toggle);
+    window.addEventListener('admin:closeMobileSidebar', close);
+    return () => {
+      window.removeEventListener('admin:toggleMobileSidebar', toggle);
+      window.removeEventListener('admin:closeMobileSidebar', close);
+    };
+  }, []);
 
   const handleLogout = () => {
     (async () => {
@@ -151,6 +165,75 @@ const AdminSidebar = () => {
           <YummyText className="text-[15px]">Logout</YummyText>
         </button>
       </div>
+      {/* Mobile sidebar panel (overlay) rendered into document.body to escape stacking contexts */}
+      {mobileOpen && ReactDOM.createPortal(
+        <div className="md:hidden fixed inset-0" style={{ zIndex: 9999999 }}>
+          <div className="absolute inset-0 bg-black/30" onClick={() => setMobileOpen(false)} />
+          <div className="relative inset-0 w-full h-full bg-white shadow-xl p-5 overflow-auto">
+            <div className="flex items-center justify-between mb-6">
+              <YummyText className="text-3xl font-medium">Swiftly</YummyText>
+              <div className="flex items-center gap-3">
+                <button onClick={() => setMobileOpen(false)} aria-label="Close" className="p-2">
+                  <svg width="32" height="32" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <path d="M18 6L6 18M6 6l12 12" stroke="#111827" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" />
+                  </svg>
+                </button>
+              </div>
+            </div>
+
+            <div className="space-y-2">
+              {menuItems.map((item) => (
+                <button
+                  key={item.id}
+                  onClick={(e) => {
+                    e.preventDefault();
+                    if (document && document.activeElement) document.activeElement.blur();
+                    router.push(item.to, 'forward', 'push');
+                    setMobileOpen(false);
+                  }}
+                  className={`w-full text-left`}
+                >
+                  <div
+                    className={`flex items-center gap-4 px-4 py-4 rounded-xl transition-colors w-full ${
+                      location.pathname === item.to ? 'bg-[#00A63E] text-white' : 'text-[#64748B] hover:bg-gray-50'
+                    }`}
+                  >
+                    {typeof item.icon === 'string' ? (
+                      <img src={item.icon} alt={`${item.label} icon`} className="w-7 h-7" />
+                    ) : (
+                      item.icon
+                    )}
+                    <YummyText className="flex-1 text-left text-[20px] font-medium">{item.label}</YummyText>
+                    {item.count !== undefined && (
+                      <span className="bg-[#FF6B00] text-white text-sm font-medium px-2.5 py-1 rounded-full min-w-[28px] text-center">{item.count}</span>
+                    )}
+                  </div>
+                </button>
+              ))}
+            </div>
+
+            <div className="mt-6 border-t pt-6">
+              <div className="flex items-center justify-between mb-4">
+                <div className="text-base font-medium text-[#64748B]">Notifications</div>
+                <label className="relative inline-block w-12 h-6">
+                  <input type="checkbox" className="sr-only peer" defaultChecked />
+                  <div className="w-12 h-6 bg-gray-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-[#00D68F]"></div>
+                </label>
+              </div>
+
+              <div>
+                <button onClick={() => { setMobileOpen(false); handleLogout(); }} className="w-full flex items-center gap-4 text-[#EF4444] hover:bg-red-50 transition-colors px-4 py-3 rounded-lg">
+                  <svg width="32" height="32" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <path d="M17 7l-1.41 1.41L18.17 11H8v2h10.17l-2.58 2.58L17 17l5-5zM4 5h8V3H4c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h8v-2H4V5z" fill="currentColor" />
+                  </svg>
+                  <YummyText className="text-[20px] font-medium">Logout</YummyText>
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>,
+        document.body
+      )}
     </div>
   );
 };

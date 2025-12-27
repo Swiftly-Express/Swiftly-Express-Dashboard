@@ -190,7 +190,7 @@ const RiderLayout = ({ children }) => {
   };
 
   return (
-    <div className="flex h-screen bg-[#f5f5f5] overflow-hidden">
+    <div className="flex h-screen bg-[#f5f5f5]">
       <RiderSidebar />
       <div className="md:ml-64 ml-0 flex-1 flex flex-col min-h-0 bricolage-font bg-white">
         {/* Mobile Header (visible on small screens) */}
