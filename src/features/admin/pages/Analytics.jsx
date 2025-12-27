@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
-import { IonPage, IonContent } from '@ionic/react';
+import { IonPage, IonContent, IonRefresher, IonRefresherContent } from '@ionic/react';
 import { DollarSign, Package, Users, Bike, TrendingUp, TrendingDown, Star, RefreshCw, AlertCircle } from 'lucide-react';
+import StyledDropdown from '../../../components/StyledDropdown';
 import { Line, Bar, Doughnut } from 'react-chartjs-2';
 import { Chart as ChartJS, CategoryScale, LinearScale, PointElement, LineElement, BarElement, ArcElement, Title, Tooltip, Legend, Filler } from 'chart.js';
 import AdminLayout from '../components/AdminLayout';
@@ -28,32 +29,32 @@ const RiderCard = ({ rider }) => {
       <div className="flex items-center flex-1">
         <div className="relative w-12 h-12">
           <div className="relative w-full h-full" style={{ perspective: '1000px' }}>
-            <div 
+            <div
               className="relative w-full h-full transition-transform duration-500"
-              style={{ 
+              style={{
                 transformStyle: 'preserve-3d',
                 transform: showRank ? 'rotateY(180deg)' : 'rotateY(0deg)'
               }}
             >
               {/* Front - Profile Picture */}
-              <div 
+              <div
                 className="absolute w-full h-full rounded-full overflow-hidden"
-                style={{ 
+                style={{
                   backfaceVisibility: 'hidden',
                   WebkitBackfaceVisibility: 'hidden'
                 }}
               >
-                <img 
-                  src={rider.avatar} 
+                <img
+                  src={rider.avatar}
                   alt={rider.name}
                   className="w-full h-full object-cover"
                 />
               </div>
-              
+
               {/* Back - Rank */}
-              <div 
+              <div
                 className="absolute w-full h-full rounded-full flex items-center justify-center text-white font-bold text-lg"
-                style={{ 
+                style={{
                   backgroundColor: rider.color,
                   backfaceVisibility: 'hidden',
                   WebkitBackfaceVisibility: 'hidden',
@@ -78,14 +79,12 @@ const RiderCard = ({ rider }) => {
       </div>
       <div className="text-right">
         <div className="flex items-center justify-end gap-2 mb-1">
-          <YummyText className={`text-xl font-bold ${
-            rider.trend === 'up' ? 'text-green-600' : 'text-red-600'
-          }`}>{rider.earnings}</YummyText>
-          <div className={`flex items-center text-xs py-0.5 px-2 rounded-full ${
-            rider.trend === 'up' 
-              ? 'bg-[#F0FDF4] border border-[#B9F8CF] text-green-600' 
+          <YummyText className={`text-xl font-bold ${rider.trend === 'up' ? 'text-green-600' : 'text-red-600'
+            }`}>{rider.earnings}</YummyText>
+          <div className={`flex items-center text-xs py-0.5 px-2 rounded-full ${rider.trend === 'up'
+              ? 'bg-[#F0FDF4] border border-[#B9F8CF] text-green-600'
               : 'bg-red-50 border border-red-200 text-red-600'
-          }`}>
+            }`}>
             {rider.trend === 'up' ? (
               <TrendingUp className="w-3 h-3 mr-1" />
             ) : (
@@ -106,12 +105,12 @@ const AnalyticsReports = () => {
   const [error, setError] = useState(null);
   const [refreshing, setRefreshing] = useState(false);
   const [isMobile, setIsMobile] = useState(typeof window !== 'undefined' ? window.innerWidth < 768 : false);
-  
+
   // State for API data
   const [overviewData, setOverviewData] = useState(null);
   const [revenueData, setRevenueData] = useState([]);
   const [driverData, setDriverData] = useState([]);
-  
+
   // Fetch all analytics data
   const fetchAnalyticsData = async (isRefresh = false) => {
     try {
@@ -125,8 +124,8 @@ const AnalyticsReports = () => {
       // Calculate date range based on time period
       const endDate = new Date();
       const startDate = new Date();
-      
-      switch(timePeriod) {
+
+      switch (timePeriod) {
         case 'Last Month':
           startDate.setMonth(endDate.getMonth() - 1);
           break;
@@ -159,7 +158,7 @@ const AnalyticsReports = () => {
       setOverviewData(overview);
       setRevenueData(revenue);
       setDriverData(drivers);
-      
+
     } catch (err) {
       console.error('Error fetching analytics:', err);
       setError(err.message || 'Failed to load analytics data');
@@ -176,6 +175,8 @@ const AnalyticsReports = () => {
     window.addEventListener('resize', handleResize);
     return () => window.removeEventListener('resize', handleResize);
   }, [timePeriod]);
+
+  // Using shared StyledDropdown component (imported above)
 
   // Format currency
   const formatCurrency = (amount) => {
@@ -202,7 +203,7 @@ const AnalyticsReports = () => {
   // Process revenue data for charts
   const processRevenueOrdersData = () => {
     if (!revenueData?.data || !Array.isArray(revenueData.data)) return [];
-    
+
     return revenueData.data.map(item => ({
       month: item.month || item.period || item.date,
       revenue: item.revenue || item.totalRevenue || 0,
@@ -224,7 +225,7 @@ const AnalyticsReports = () => {
   // Process top riders data
   const processTopRiders = () => {
     if (!driverData?.topDrivers && !driverData?.data) return [];
-    
+
     const drivers = driverData.topDrivers || driverData.data || [];
     if (!Array.isArray(drivers)) return [];
 
@@ -234,7 +235,7 @@ const AnalyticsReports = () => {
       const rating = driver.rating || driver.averageRating || 4.5;
       const previousEarnings = driver.previousEarnings || earnings * 0.8;
       const roi = calculatePercentChange(earnings, previousEarnings);
-      
+
       return {
         rank: index + 1,
         name: driver.fullName || driver.name || `Driver ${index + 1}`,
@@ -254,7 +255,7 @@ const AnalyticsReports = () => {
     if (!revenueData?.data || !Array.isArray(revenueData.data)) {
       return [];
     }
-    
+
     return revenueData.data.map(item => ({
       month: item.month || item.period || item.date,
       customers: item.customerCount || item.customers || 0,
@@ -268,7 +269,7 @@ const AnalyticsReports = () => {
     if (Array.isArray(peakData) && peakData.length > 0) {
       return peakData;
     }
-    
+
     // Default mock data if API doesn't provide it
     return [
       { time: '00:00', orders: 0 },
@@ -357,6 +358,9 @@ const AnalyticsReports = () => {
     <IonPage>
       <AdminLayout>
         <IonContent className={isMobile ? 'ion-padding' : 'ion-no-padding'}>
+          <IonRefresher slot="fixed" onIonRefresh={(e) => { fetchAnalyticsData(true).finally(() => e.detail.complete()); }}>
+            <IonRefresherContent />
+          </IonRefresher>
           {/* Header */}
           <div className="mb-8 flex items-center justify-between">
             <div>
@@ -364,40 +368,28 @@ const AnalyticsReports = () => {
               <YummyText className="text-gray-500">Comprehensive insights into platform performance</YummyText>
             </div>
             <div className="flex items-center gap-3">
-              <button
-                onClick={() => fetchAnalyticsData(true)}
-                disabled={refreshing}
-                className="px-4 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white hover:bg-gray-50 transition-colors flex items-center gap-2 disabled:opacity-50"
-              >
-                <RefreshCw className={`w-4 h-4 ${refreshing ? 'animate-spin' : ''}`} />
-                {refreshing ? 'Refreshing...' : 'Refresh'}
-              </button>
-              <select 
+              <StyledDropdown
                 value={timePeriod}
-                onChange={(e) => setTimePeriod(e.target.value)}
-                className="px-4 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white"
-              >
-                <option>Last 6 Months</option>
-                <option>Last 3 Months</option>
-                <option>Last Month</option>
-                <option>This Year</option>
-              </select>
+                onChange={(v) => setTimePeriod(v)}
+                options={["Last 6 Months", "Last 3 Months", "Last Month", "This Year"]}
+                className='w-full border-[2.5px] border-gray-200 rounded-full'
+                width='w-full'
+              />
             </div>
           </div>
 
           {/* Stats Cards */}
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
+          <div className="grid grid-cols-2 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
             {/* Total Revenue */}
             <div className="bg-white rounded-xl p-6 px-4 shadow-sm border border-gray-100">
               <div className="flex items-start justify-between mb-8">
                 <div className="bg-blue-50 p-2.5 rounded-lg">
                   <DollarSign className="w-6 h-6 text-blue-600" />
                 </div>
-                <div className={`flex items-center text-xs mt-3 gap-2 py-0.5 px-2 rounded-full ${
-                  stats.totalRevenue >= stats.previousRevenue 
+                <div className={`flex items-center text-xs mt-3 gap-2 py-0.5 px-2 rounded-full ${stats.totalRevenue >= stats.previousRevenue
                     ? 'bg-[#F0FDF4] border border-[#B9F8CF] text-green-600'
                     : 'bg-red-50 border border-red-200 text-red-600'
-                }`}>
+                  }`}>
                   {stats.totalRevenue >= stats.previousRevenue ? (
                     <TrendingUp className="w-4 h-4 mr-1" />
                   ) : (
@@ -417,11 +409,10 @@ const AnalyticsReports = () => {
                 <div className="bg-green-50 p-2.5 rounded-lg">
                   <Package className="w-6 h-6 text-green-600" />
                 </div>
-                <div className={`flex items-center text-xs mt-3 gap-2 py-0.5 px-2 rounded-full ${
-                  stats.totalOrders >= stats.previousOrders 
+                <div className={`flex items-center text-xs mt-3 gap-2 py-0.5 px-2 rounded-full ${stats.totalOrders >= stats.previousOrders
                     ? 'bg-[#F0FDF4] border border-[#B9F8CF] text-green-600'
                     : 'bg-red-50 border border-red-200 text-red-600'
-                }`}>
+                  }`}>
                   {stats.totalOrders >= stats.previousOrders ? (
                     <TrendingUp className="w-4 h-4 mr-1" />
                   ) : (
@@ -441,11 +432,10 @@ const AnalyticsReports = () => {
                 <div className="bg-purple-50 p-2.5 rounded-lg">
                   <Users className="w-6 h-6 text-purple-600" />
                 </div>
-                <div className={`flex items-center text-xs mt-3 gap-2 py-0.5 px-2 rounded-full ${
-                  stats.activeUsers >= stats.previousUsers 
+                <div className={`flex items-center text-xs mt-3 gap-2 py-0.5 px-2 rounded-full ${stats.activeUsers >= stats.previousUsers
                     ? 'bg-[#F0FDF4] border border-[#B9F8CF] text-green-600'
                     : 'bg-red-50 border border-red-200 text-red-600'
-                }`}>
+                  }`}>
                   {stats.activeUsers >= stats.previousUsers ? (
                     <TrendingUp className="w-4 h-4 mr-1" />
                   ) : (
@@ -465,11 +455,10 @@ const AnalyticsReports = () => {
                 <div className="bg-orange-50 p-2.5 rounded-lg">
                   <Bike className="w-6 h-6 text-orange-600" />
                 </div>
-                <div className={`flex items-center text-xs mt-3 gap-2 py-0.5 px-2 rounded-full ${
-                  stats.activeRiders >= stats.previousRiders 
+                <div className={`flex items-center text-xs mt-3 gap-2 py-0.5 px-2 rounded-full ${stats.activeRiders >= stats.previousRiders
                     ? 'bg-[#F0FDF4] border border-[#B9F8CF] text-green-600'
                     : 'bg-red-50 border border-red-200 text-red-600'
-                }`}>
+                  }`}>
                   {stats.activeRiders >= stats.previousRiders ? (
                     <TrendingUp className="w-4 h-4 mr-1" />
                   ) : (
@@ -773,11 +762,11 @@ const AnalyticsReports = () => {
 
           {/* Top Performing Riders */}
           <div className="bg-white rounded-xl p-6 shadow-sm border border-gray-100">
-            <YummyText> 
-            <div className="text-lg font-semibold text-gray-900 -mb-0.5">Top Performing Riders</div>
-            <div className="text-sm text-gray-500 mb-6">Highest performing riders this period</div>
+            <YummyText>
+              <div className="text-lg font-semibold text-gray-900 -mb-0.5">Top Performing Riders</div>
+              <div className="text-sm text-gray-500 mb-6">Highest performing riders this period</div>
             </YummyText>
-            
+
             {topRiders.length > 0 ? (
               <div className="space-y-4">
                 {topRiders.map((rider, index) => (

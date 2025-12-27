@@ -399,7 +399,7 @@ const KYCApprovals = () => {
           </div>
 
           {/* Stats Cards */}
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-3 mb-8">
+          <div className="grid grid-cols-2 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
             {statsData.map((stat, index) => (
               <div key={index} className="bg-white rounded-xl p-5 shadow-sm border border-gray-100">
                 <div className="flex flex-col items-start">
@@ -458,6 +458,28 @@ const KYCApprovals = () => {
                   <div className="space-y-4">
                     {applications.map((app, index) => {
                       const normalizedApp = getApplicationData(app);
+                      if (isMobile) {
+                        return (
+                          <div key={index} className="bg-white rounded-lg p-4 border border-gray-100 shadow-sm">
+                            <div className="flex items-start justify-between">
+                              <div className="flex-1 pr-3">
+                                <YummyText className="text-sm font-medium text-[#0A0A0A] truncate">{normalizedApp.name}</YummyText>
+                                <div className="text-xs text-gray-600 mt-1">Application ID: {normalizedApp.id}</div>
+                                <div className="text-xs text-gray-600 mt-1">{normalizedApp.email || 'N/A'}</div>
+                                <div className="text-xs text-gray-600 mt-1">{normalizedApp.phone || 'N/A'}</div>
+                                <div className="text-xs text-gray-400 mt-2">Submitted: {formatDate(normalizedApp.submitted)}</div>
+                              </div>
+                              <div className="text-right flex-shrink-0">
+                                <span className={`inline-block px-2 py-1 rounded-full text-xs font-medium ${getStatusDisplay(normalizedApp.status).bgColor} ${getStatusDisplay(normalizedApp.status).textColor} ${getStatusDisplay(normalizedApp.status).borderColor}`}>{normalizedApp.status.charAt(0).toUpperCase() + normalizedApp.status.slice(1)}</span>
+                                <div className="mt-3">
+                                  <button onClick={() => openModal(app)} className="w-full bg-[#00A63E] hover:bg-[#007A29] text-white px-3 py-2 rounded-full text-sm font-medium">Review</button>
+                                </div>
+                              </div>
+                            </div>
+                          </div>
+                        );
+                      }
+
                       return (
                         <div key={index} className="border border-gray-200 rounded-xl p-6 hover:border-gray-300 transition-colors">
                           <div className="flex items-start justify-between mb-4">

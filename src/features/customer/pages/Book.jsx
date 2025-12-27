@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { IonPage, IonContent, IonToast, useIonRouter } from '@ionic/react';
+import StyledDropdown from '../../../components/StyledDropdown';
 import CustomerLayout from '../components/CustomerLayout';
 import { YummyText } from '../../../components/YummyText';
 import { createDelivery, isAuthenticated } from '../../../utils/authApi';
@@ -199,21 +200,17 @@ const Book = () => {
 
               {/* Delivery Type */}
               <div className="mb-6">
-                <label className="block text-sm font-medium text-[#0F172A] mb-2">
-                  Delivery Type
-                </label>
-                <select
-                  name="deliveryType"
-                  value={formData.deliveryType}
-                  onChange={handleChange}
-                  className="w-full px-4 md:px-5 py-3 pr-1 rounded-xl bg-[#F8F9FA] text-sm md:text-base text-[#0F172A] focus:outline-none focus:ring-2 focus:ring-[#00D68F] border-none"
-                  required
-                >
-                  <option value="">Select delivery type</option>
-                  <option value="express">Express (Same day) - ₦2500</option>
-                  <option value="standard">Standard (1-2 days) - ₦1200</option>
-                  <option value="economy">Economy (3-5 days) - ₦800</option>
-                </select>
+                <label className="block text-sm font-medium text-[#0F172A] mb-2">Delivery Type</label>
+                <StyledDropdown
+                  value={selectedDeliveryType?.label || 'Select delivery type'}
+                  onChange={(label) => {
+                    const selected = deliveryTypes.find(t => t.label === label);
+                    if (selected) handleDeliveryTypeSelect(selected.value);
+                  }}
+                  options={deliveryTypes.map(t => t.label)}
+                  className="w-full border-[1.5px] border-gray-200 rounded-full"
+                  width="w-full"
+                />
               </div>
 
               {/* Pickup & Delivery Details Grid */}
