@@ -32,12 +32,15 @@ const KYCApprovals = () => {
 
   const [isMobile, setIsMobile] = useState(typeof window !== 'undefined' ? window.innerWidth < 768 : false);
 
-  // Fetch verifications on mount and when page changes
-  useEffect(() => {
-    fetchVerifications();
+  React.useEffect(() => {
     const handleResize = () => setIsMobile(window.innerWidth < 768);
     window.addEventListener('resize', handleResize);
     return () => window.removeEventListener('resize', handleResize);
+  }, []);
+
+  // Fetch verifications on mount and when page changes
+  useEffect(() => {
+    fetchVerifications();
   }, [currentPage]);
 
   // Listen for verification events from the rider app and refresh list
@@ -143,64 +146,79 @@ const KYCApprovals = () => {
     console.log('[KYCApprovals] Mapping application data:', app);
 
     // Extract contact info from nested structures
-    const contactInfo = app.contactInfo || {};
-    const identity = app.identity || {};
-    const vehicle = app.vehicle || {};
-    const user = app.user || app.userId || {};
+    const contactInfo = app.contactInfo || app.contact || {};
+    const identity = app.identity || app.id_info || {};
+    const vehicle = app.vehicle || app.vehicle_info || {};
+    const user = app.user || (typeof app.userId === 'object' ? app.userId : {}) || app.profile || {};
+
+    // Extract name from multiple possible sources
+    const extractedName = app.fullName ||
+      identity.fullName ||
+      app.name ||
+      user.name ||
+      user.fullName ||
+      user.profile?.fullName ||
+      (app.firstName || user.firstName ? `${app.firstName || user.firstName} ${app.lastName || user.lastName || ''}`.trim() : '') ||
+      app.displayName || app.profile?.name || '';
+
+    // Extract email from multiple sources
+    const extractedEmail = app.email ||
+      user.email ||
+      user.profile?.email ||
+      contactInfo.email ||
+      app.contactEmail ||
+      app.profile?.email ||
+      app.user?.email ||
+      (typeof app.userId === 'object' ? app.userId?.email : '') || '';
+
+    // Extract phone from multiple sources
+    const extractedPhone = app.phoneNumber ||
+      contactInfo.phone ||
+      app.phone ||
+      user.phone ||
+      app.user?.phone ||
+      app.contactPhone ||
+      (typeof app.userId === 'object' ? app.userId?.phone : '') || '';
 
     // Normalize different API response structures
     const normalizedData = {
-      id: app._id || app.id,
-      name: app.fullName ||
-        identity.fullName ||
-        app.name ||
-        user.name ||
-        `${app.firstName || user.firstName || ''} ${app.lastName || user.lastName || ''}`.trim() ||
-        'N/A',
+      id: app._id || app.id || app.verificationId || app.verification_id || app.verification?.id || app._doc?.id,
+      _rawId: app._id || app.id || app.verificationId || app.verification_id || app.verification?.id || null,
+      raw: app,
+      name: extractedName || '',
       riderId: app.userId?._id || app.userId || app.riderId || app.user?._id || user._id,
-      email: app.email ||
-        user.email ||
-        contactInfo.email ||
-        app.user?.email ||
-        'N/A',
-      phone: app.phoneNumber ||
-        contactInfo.phone ||
-        app.phone ||
-        user.phone ||
-        app.user?.phone ||
-        'N/A',
+      email: extractedEmail || '',
+      phone: extractedPhone || '',
       submitted: app.createdAt || app.created_at || app.submittedAt,
       identity: identity.idType || app.idType || app.identificationType || 'Driver\'s License',
       vehicle: vehicle.makeModel ||
         app.vehicleModel ||
         app.makeModel ||
         `${vehicle.type || ''} ${vehicle.year || ''}`.trim() ||
-        'N/A',
+        '',
       documents: app.documents?.length > 0 ? 'All Submitted' : 'Pending',
       status: getApplicationStatus(app),
       fullDetails: {
         // Contact Information
-        address: contactInfo.streetAddress || app.address || app.streetAddress || 'N/A',
-        city: contactInfo.city || app.city || 'N/A',
-        state: contactInfo.state || app.state || 'N/A',
-        zipCode: contactInfo.zipCode || app.zipCode || app.postalCode || 'N/A',
-        emergencyContact: app.emergencyContactName || app.emergencyContact || 'N/A',
-        emergencyPhone: app.emergencyContactPhone || app.emergencyPhone || 'N/A',
+        email: extractedEmail || '',
+        phone: extractedPhone || '',
+        address: contactInfo.streetAddress || contactInfo.address || app.address || app.streetAddress || '',
+        city: contactInfo.city || app.city || '',
+        state: contactInfo.state || app.state || '',
+        zipCode: contactInfo.zipCode || app.zipCode || app.postalCode || '',
+        emergencyContact: contactInfo.emergencyContact || contactInfo.emergency_name || app.emergencyContactName || app.emergencyContact || '',
+        emergencyPhone: contactInfo.emergencyPhone || app.emergencyContactPhone || app.emergencyPhone || app.emergency_phone || '',
 
         // Identity Information
-        fullName: app.fullName || identity.fullName || app.name || user.name || 'N/A',
-        dob: identity.dateOfBirth || app.dateOfBirth || app.dob || 'N/A',
-        nationality: identity.nationality || app.nationality || 'N/A',
-        idType: identity.idType || app.idType || app.identificationType || 'N/A',
-        idNumber: identity.idNumber || app.idNumber || app.identificationNumber || 'N/A',
-        idExpiry: identity.idExpiryDate || app.idExpiryDate || app.idExpiry || 'N/A',
+        fullName: extractedName || '',
+        idType: identity.idType || app.idType || app.identificationType || '',
+        idNumber: identity.idNumber || app.idNumber || app.identificationNumber || '',
 
         // Vehicle Information
-        vehicleType: vehicle.type || app.vehicleType || 'N/A',
-        makeModel: vehicle.makeModel || app.vehicleModel || app.makeModel || 'N/A',
-        year: vehicle.year || app.vehicleYear || app.year || 'N/A',
-        licensePlate: vehicle.licensePlate || app.licensePlate || app.vehiclePlate || 'N/A',
-        insurance: vehicle.insurance || app.insuranceExpiry || app.insurance || 'N/A',
+        vehicleType: vehicle.type || app.vehicleType || '',
+        makeModel: vehicle.makeModel || app.vehicleModel || app.makeModel || '',
+        year: vehicle.year || app.vehicleYear || app.year || '',
+        licensePlate: vehicle.licensePlate || app.licensePlate || app.vehiclePlate || '',
 
         // Documents
         documents: app.documents || [],
@@ -216,6 +234,9 @@ const KYCApprovals = () => {
     };
 
     console.log('[KYCApprovals] Normalized application data:', normalizedData);
+    console.log('[KYCApprovals] Name extracted:', extractedName);
+    console.log('[KYCApprovals] Email extracted:', extractedEmail);
+    console.log('[KYCApprovals] Phone extracted:', extractedPhone);
     return normalizedData;
   };
 
@@ -285,11 +306,27 @@ const KYCApprovals = () => {
 
     try {
       setActionLoading(true);
-      const verificationId = selectedApplication.id;
 
-      await approveVerification(verificationId, {
-        notes: approvalNotes || 'Application approved by admin'
-      });
+      const verificationId =
+        selectedApplication.id ||
+        selectedApplication._rawId ||
+        selectedApplication.raw?._id ||
+        selectedApplication.raw?.id ||
+        selectedApplication.raw?.verificationId ||
+        selectedApplication.raw?.verification_id ||
+        selectedApplication.raw?.verification?.id;
+
+      if (!verificationId) {
+        console.error('[KYCApprovals] No verification id found on selectedApplication:', selectedApplication);
+        showToast('Unable to determine verification id for this application', 'error');
+        setActionLoading(false);
+        return;
+      }
+
+      const approvePayload = { notes: approvalNotes || 'Application approved by admin', status: 'approved' };
+      console.log('[KYCApprovals] Approve → verificationId:', verificationId, 'payload:', approvePayload);
+
+      await approveVerification(verificationId, approvePayload);
 
       showToast('Application approved successfully!', 'success');
       closeModal();
@@ -313,11 +350,27 @@ const KYCApprovals = () => {
 
     try {
       setActionLoading(true);
-      const verificationId = selectedApplication.id;
 
-      await rejectVerification(verificationId, {
-        reason: rejectReason
-      });
+      const verificationId =
+        selectedApplication.id ||
+        selectedApplication._rawId ||
+        selectedApplication.raw?._id ||
+        selectedApplication.raw?.id ||
+        selectedApplication.raw?.verificationId ||
+        selectedApplication.raw?.verification_id ||
+        selectedApplication.raw?.verification?.id;
+
+      if (!verificationId) {
+        console.error('[KYCApprovals] No verification id found on selectedApplication:', selectedApplication);
+        showToast('Unable to determine verification id for this application', 'error');
+        setActionLoading(false);
+        return;
+      }
+
+      const rejectPayload = { reason: rejectReason, status: 'rejected' };
+      console.log('[KYCApprovals] Reject → verificationId:', verificationId, 'payload:', rejectPayload);
+
+      await rejectVerification(verificationId, rejectPayload);
 
       showToast('Application rejected', 'success');
       closeModal();
@@ -463,10 +516,10 @@ const KYCApprovals = () => {
                           <div key={index} className="bg-white rounded-lg p-4 border border-gray-100 shadow-sm">
                             <div className="flex items-start justify-between">
                               <div className="flex-1 pr-3">
-                                <YummyText className="text-sm font-medium text-[#0A0A0A] truncate">{normalizedApp.name}</YummyText>
+                                <YummyText className="text-sm font-medium text-[#0A0A0A] truncate">{normalizedApp.fullDetails?.fullName || normalizedApp.name}</YummyText>
                                 <div className="text-xs text-gray-600 mt-1">Application ID: {normalizedApp.id}</div>
-                                <div className="text-xs text-gray-600 mt-1">{normalizedApp.email || 'N/A'}</div>
-                                <div className="text-xs text-gray-600 mt-1">{normalizedApp.phone || 'N/A'}</div>
+                                <div className="text-xs text-gray-600 mt-1">{normalizedApp.email || normalizedApp.fullDetails?.email || 'Not provided'}</div>
+                                <div className="text-xs text-gray-600 mt-1">{normalizedApp.phone || normalizedApp.fullDetails?.emergencyPhone || 'Not provided'}</div>
                                 <div className="text-xs text-gray-400 mt-2">Submitted: {formatDate(normalizedApp.submitted)}</div>
                               </div>
                               <div className="text-right flex-shrink-0">
@@ -485,7 +538,7 @@ const KYCApprovals = () => {
                           <div className="flex items-start justify-between mb-4">
                             <div className="flex-1">
                               <div className="flex items-center mb-2">
-                                <YummyText className="text-lg font-medium text-[#0A0A0A] mr-3">{normalizedApp.name}</YummyText>
+                                <YummyText className="text-lg font-medium text-[#0A0A0A] mr-3">{normalizedApp.fullDetails?.fullName || normalizedApp.name}</YummyText>
                                 <span className={`px-3 py-1 rounded-full text-xs font-medium flex items-center gap-1.5 border ${getStatusDisplay(normalizedApp.status).bgColor} ${getStatusDisplay(normalizedApp.status).textColor} ${getStatusDisplay(normalizedApp.status).borderColor}`}>
                                   {getStatusDisplay(normalizedApp.status).icon}
                                   {normalizedApp.status.charAt(0).toUpperCase() + normalizedApp.status.slice(1)}
@@ -493,8 +546,8 @@ const KYCApprovals = () => {
                               </div>
                               <YummyText className="text-sm text-gray-600 mb-1">Application ID: {normalizedApp.id}</YummyText>
                               {normalizedApp.riderId && <YummyText className="text-sm text-gray-600 mb-1">Rider ID: {normalizedApp.riderId}</YummyText>}
-                              <YummyText className="text-sm text-gray-600 mb-1">Email: {normalizedApp.email || 'N/A'}</YummyText>
-                              <YummyText className="text-sm text-gray-600">Phone: {normalizedApp.phone || 'N/A'}</YummyText>
+                              <YummyText className="text-sm text-gray-600 mb-1">Email: {normalizedApp.email || normalizedApp.fullDetails?.email || 'Not provided'}</YummyText>
+                              <YummyText className="text-sm text-gray-600">Phone: {normalizedApp.phone || normalizedApp.fullDetails?.emergencyPhone || 'Not provided'}</YummyText>
                               <YummyText className="text-xs text-gray-400 mt-2">Submitted: {formatDate(normalizedApp.submitted)}</YummyText>
                             </div>
                             <button
@@ -587,8 +640,9 @@ const KYCApprovals = () => {
                 {/* Applicant Info */}
                 <div className="flex items-start justify-between mb-6">
                   <div>
-                    <YummyText className="text-2xl font-medium text-[#1E1E1E] mb-1">{selectedApplication.name}</YummyText>
+                    <YummyText className="text-2xl font-medium text-[#1E1E1E] mb-1">{selectedApplication.fullDetails?.fullName || selectedApplication.name}</YummyText>
                     <YummyText className="text-sm text-[#717182]">Application ID: {selectedApplication.id}</YummyText>
+                    <YummyText className="text-sm text-[#717182]">Email: {selectedApplication.email || selectedApplication.fullDetails?.email || 'Not provided'}</YummyText>
                   </div>
                   <span className={`px-3 py-1 rounded-full text-xs font-medium flex items-center gap-1.5 border ${getStatusDisplay(selectedApplication.status).bgColor} ${getStatusDisplay(selectedApplication.status).textColor} ${getStatusDisplay(selectedApplication.status).borderColor}`}>
                     {getStatusDisplay(selectedApplication.status).icon}
@@ -629,11 +683,11 @@ const KYCApprovals = () => {
                     <div className="grid grid-cols-2 gap-4">
                       <div>
                         <YummyText className="text-xs text-gray-500 mb-1">Email</YummyText>
-                        <YummyText className="text-sm text-[#0A0A0A]">{selectedApplication.email || 'N/A'}</YummyText>
+                        <YummyText className="text-sm text-[#0A0A0A]">{selectedApplication.email || selectedApplication.fullDetails?.email || 'Not provided'}</YummyText>
                       </div>
                       <div>
                         <YummyText className="text-xs text-gray-500 mb-1">Phone</YummyText>
-                        <YummyText className="text-sm text-[#0A0A0A]">{selectedApplication.phone || 'N/A'}</YummyText>
+                        <YummyText className="text-sm text-[#0A0A0A]">{selectedApplication.phone || selectedApplication.fullDetails?.phone || 'Not provided'}</YummyText>
                       </div>
                       <div>
                         <YummyText className="text-xs text-gray-500 mb-1">Address</YummyText>
@@ -649,11 +703,11 @@ const KYCApprovals = () => {
                       </div>
                       <div>
                         <YummyText className="text-xs text-gray-500 mb-1">Emergency Contact</YummyText>
-                        <YummyText className="text-sm text-[#0A0A0A]">{selectedApplication.fullDetails.emergencyContact}</YummyText>
+                        <YummyText className="text-sm text-[#0A0A0A]">{selectedApplication.fullDetails?.emergencyContact || selectedApplication.fullDetails?.emergency_name || 'Not provided'}</YummyText>
                       </div>
                       <div className="col-span-2">
                         <YummyText className="text-xs text-gray-500 mb-1">Emergency Phone</YummyText>
-                        <YummyText className="text-sm text-[#0A0A0A]">{selectedApplication.fullDetails.emergencyPhone}</YummyText>
+                        <YummyText className="text-sm text-[#0A0A0A]">{selectedApplication.fullDetails?.emergencyPhone || selectedApplication.phone || 'Not provided'}</YummyText>
                       </div>
                     </div>
                   </div>
@@ -664,16 +718,9 @@ const KYCApprovals = () => {
                     <div className="grid grid-cols-2 gap-4">
                       <div>
                         <YummyText className="text-xs text-gray-500 mb-1">Full Legal Name</YummyText>
-                        <YummyText className="text-sm text-gray-900">{selectedApplication.fullDetails.fullName}</YummyText>
+                        <YummyText className="text-sm text-gray-900">{selectedApplication.fullDetails?.fullName || selectedApplication.name}</YummyText>
                       </div>
-                      <div>
-                        <YummyText className="text-xs text-gray-500 mb-1">Date of Birth</YummyText>
-                        <YummyText className="text-sm text-gray-900">{formatDate(selectedApplication.fullDetails.dob)}</YummyText>
-                      </div>
-                      <div>
-                        <YummyText className="text-xs text-gray-500 mb-1">Nationality</YummyText>
-                        <YummyText className="text-sm text-gray-900">{selectedApplication.fullDetails.nationality}</YummyText>
-                      </div>
+                      {/* Date of Birth and Nationality removed (not requested) */}
                       <div>
                         <YummyText className="text-xs text-gray-500 mb-1">ID Type</YummyText>
                         <YummyText className="text-sm text-gray-900">{selectedApplication.fullDetails.idType}</YummyText>
@@ -682,10 +729,7 @@ const KYCApprovals = () => {
                         <YummyText className="text-xs text-gray-500 mb-1">ID Number</YummyText>
                         <YummyText className="text-sm text-gray-900">{selectedApplication.fullDetails.idNumber}</YummyText>
                       </div>
-                      <div>
-                        <YummyText className="text-xs text-gray-500 mb-1">ID Expiry Date</YummyText>
-                        <YummyText className="text-sm text-gray-900">{formatDate(selectedApplication.fullDetails.idExpiry)}</YummyText>
-                      </div>
+                      {/* ID Expiry removed (not requested) */}
                     </div>
 
                     <div className="mt-6 border border-gray-200"></div>
@@ -696,66 +740,58 @@ const KYCApprovals = () => {
                       </YummyText>
                       <div className="grid grid-cols-2 gap-4">
                         {selectedApplication.fullDetails.documentUrls?.idFront && (
-                          <div className="border border-gray-200 rounded-lg p-4 text-center hover:border-gray-300 transition-colors">
+                          <div className="border border-gray-200 rounded-lg p-4 text-center hover:border-gray-300 transition-colors min-h-[88px] flex flex-col items-center justify-center bg-white">
                             <FileText className="w-8 h-8 text-gray-400 mx-auto mb-2" />
-                            <YummyText>
-                              <div className="text-sm text-gray-900 mb-1">ID Front</div>
-                              <button
-                                onClick={() => handleDownloadDocument(selectedApplication.fullDetails.documentUrls.idFront, 'id-front')}
-                                className="text-xs text-blue-600 hover:text-blue-700 flex items-center gap-1 mx-auto"
-                              >
-                                <Eye className="w-3 h-3" />
-                                View Document
-                              </button>
-                            </YummyText>
+                            <div className="text-sm text-gray-900 mb-1">ID Front</div>
+                            <button
+                              onClick={() => handleDownloadDocument(selectedApplication.fullDetails.documentUrls.idFront, 'id-front')}
+                              className="inline-flex items-center gap-1 px-3 py-1 text-xs font-medium text-blue-600 bg-blue-50 border border-blue-100 rounded-md hover:bg-blue-100 mx-auto"
+                            >
+                              <Eye className="w-3 h-3" />
+                              View Document
+                            </button>
                           </div>
                         )}
                         {selectedApplication.fullDetails.documentUrls?.idBack && (
-                          <div className="border border-gray-200 rounded-lg p-4 text-center hover:border-gray-300 transition-colors">
+                          <div className="border border-gray-200 rounded-lg p-4 text-center hover:border-gray-300 transition-colors min-h-[88px] flex flex-col items-center justify-center bg-white">
                             <FileText className="w-8 h-8 text-gray-400 mx-auto mb-2" />
-                            <YummyText>
-                              <div className="text-sm text-gray-900 mb-1">ID Back</div>
-                              <button
-                                onClick={() => handleDownloadDocument(selectedApplication.fullDetails.documentUrls.idBack, 'id-back')}
-                                className="text-xs text-blue-600 hover:text-blue-700 flex items-center gap-1 mx-auto"
-                              >
-                                <Eye className="w-3 h-3" />
-                                View Document
-                              </button>
-                            </YummyText>
+                            <div className="text-sm text-gray-900 mb-1">ID Back</div>
+                            <button
+                              onClick={() => handleDownloadDocument(selectedApplication.fullDetails.documentUrls.idBack, 'id-back')}
+                              className="inline-flex items-center gap-1 px-3 py-1 text-xs font-medium text-blue-600 bg-blue-50 border border-blue-100 rounded-md hover:bg-blue-100 mx-auto"
+                            >
+                              <Eye className="w-3 h-3" />
+                              View Document
+                            </button>
                           </div>
                         )}
                         {selectedApplication.fullDetails.documentUrls?.selfie && (
-                          <div className="border border-gray-200 rounded-lg p-4 text-center hover:border-gray-300 transition-colors">
+                          <div className="border border-gray-200 rounded-lg p-4 text-center hover:border-gray-300 transition-colors min-h-[88px] flex flex-col items-center justify-center bg-white">
                             <FileText className="w-8 h-8 text-gray-400 mx-auto mb-2" />
-                            <YummyText>
-                              <div className="text-sm text-gray-900 mb-1">Selfie Verification</div>
-                              <button
-                                onClick={() => handleDownloadDocument(selectedApplication.fullDetails.documentUrls.selfie, 'selfie')}
-                                className="text-xs text-blue-600 hover:text-blue-700 flex items-center gap-1 mx-auto"
-                              >
-                                <Eye className="w-3 h-3" />
-                                View Document
-                              </button>
-                            </YummyText>
+                            <div className="text-sm text-gray-900 mb-1">Selfie Verification</div>
+                            <button
+                              onClick={() => handleDownloadDocument(selectedApplication.fullDetails.documentUrls.selfie, 'selfie')}
+                              className="inline-flex items-center gap-1 px-3 py-1 text-xs font-medium text-blue-600 bg-blue-50 border border-blue-100 rounded-md hover:bg-blue-100 mx-auto"
+                            >
+                              <Eye className="w-3 h-3" />
+                              View Document
+                            </button>
                           </div>
                         )}
                         {selectedApplication.fullDetails.documents?.length > 0 && !selectedApplication.fullDetails.documentUrls?.idFront && (
                           selectedApplication.fullDetails.documents
                             .filter(doc => doc.type === 'identity' || doc.type?.includes('id') || doc.type?.includes('selfie'))
                             .map((doc, idx) => (
-                              <div key={idx} className="border border-gray-200 rounded-lg p-4 text-center hover:border-gray-300 transition-colors">
+                              <div key={idx} className="border border-gray-200 rounded-lg p-4 text-center hover:border-gray-300 transition-colors min-h-[88px] flex flex-col items-center justify-center bg-white">
                                 <FileText className="w-8 h-8 text-gray-400 mx-auto mb-2" />
-                                <YummyText>
-                                  <div className="text-sm text-gray-900 mb-1">{doc.name || doc.type || 'Document'}</div>
-                                  <button
-                                    onClick={() => handleDownloadDocument(doc.url, doc.name)}
-                                    className="text-xs text-blue-600 hover:text-blue-700 flex items-center gap-1 mx-auto"
-                                  >
-                                    <Eye className="w-3 h-3" />
-                                    View Document
-                                  </button>
-                                </YummyText>
+                                <div className="text-sm text-gray-900 mb-1">{doc.name || doc.type || 'Document'}</div>
+                                <button
+                                  onClick={() => handleDownloadDocument(doc.url, doc.name)}
+                                  className="inline-flex items-center gap-1 px-3 py-1 text-xs font-medium text-blue-600 bg-blue-50 border border-blue-100 rounded-md hover:bg-blue-100 mx-auto"
+                                >
+                                  <Eye className="w-3 h-3" />
+                                  View Document
+                                </button>
                               </div>
                             ))
                         )}
@@ -785,7 +821,7 @@ const KYCApprovals = () => {
                       </div>
                       <div className="col-span-2">
                         <YummyText className="text-xs text-gray-500 mb-1">Insurance Expiry</YummyText>
-                        <YummyText className="text-sm text-gray-900">{formatDate(selectedApplication.fullDetails.insurance)}</YummyText>
+                        {/* Insurance expiry removed (not requested) */}
                       </div>
                     </div>
 
@@ -801,7 +837,7 @@ const KYCApprovals = () => {
                               <div className="text-sm text-gray-900 mb-1">Vehicle Registration</div>
                               <button
                                 onClick={() => handleDownloadDocument(selectedApplication.fullDetails.documentUrls.vehicleRegistration, 'registration')}
-                                className="text-xs text-blue-600 hover:text-blue-700 flex items-center gap-1 mx-auto"
+                                className="inline-flex items-center gap-1 px-3 py-1 text-xs font-medium text-blue-600 bg-blue-50 border border-blue-100 rounded-md hover:bg-blue-100 mx-auto"
                               >
                                 <Eye className="w-3 h-3" />
                                 View Document
@@ -814,7 +850,7 @@ const KYCApprovals = () => {
                               <div className="text-sm text-gray-900 mb-1">Insurance</div>
                               <button
                                 onClick={() => handleDownloadDocument(selectedApplication.fullDetails.documentUrls.insurance, 'insurance')}
-                                className="text-xs text-blue-600 hover:text-blue-700 flex items-center gap-1 mx-auto"
+                                className="inline-flex items-center gap-1 px-3 py-1 text-xs font-medium text-blue-600 bg-blue-50 border border-blue-100 rounded-md hover:bg-blue-100 mx-auto"
                               >
                                 <Eye className="w-3 h-3" />
                                 View Document
@@ -830,7 +866,7 @@ const KYCApprovals = () => {
                                   <div className="text-sm text-gray-900 mb-1">{doc.name || doc.type || 'Document'}</div>
                                   <button
                                     onClick={() => handleDownloadDocument(doc.url, doc.name)}
-                                    className="text-xs text-blue-600 hover:text-blue-700 flex items-center gap-1 mx-auto"
+                                    className="inline-flex items-center gap-1 px-3 py-1 text-xs font-medium text-blue-600 bg-blue-50 border border-blue-100 rounded-md hover:bg-blue-100 mx-auto"
                                   >
                                     <Eye className="w-3 h-3" />
                                     View Document
@@ -895,9 +931,8 @@ const KYCApprovals = () => {
             />
             <div className="flex gap-3">
               <button
-                onClick={() => setShowApproveModal(false)}
-                disabled={actionLoading}
-                className="flex-1 border border-gray-300 text-gray-700 py-2 rounded-lg hover:bg-gray-50 disabled:opacity-50"
+                onClick={() => { setActionLoading(false); setShowApproveModal(false); }}
+                className="flex-1 border border-gray-300 text-gray-700 py-2 rounded-lg hover:bg-gray-50"
               >
                 Cancel
               </button>
@@ -929,9 +964,8 @@ const KYCApprovals = () => {
             />
             <div className="flex gap-3">
               <button
-                onClick={() => setShowRejectModal(false)}
-                disabled={actionLoading}
-                className="flex-1 border border-gray-300 text-gray-700 py-2 rounded-lg hover:bg-gray-50 disabled:opacity-50"
+                onClick={() => { setActionLoading(false); setShowRejectModal(false); }}
+                className="flex-1 border border-gray-300 text-gray-700 py-2 rounded-lg hover:bg-gray-50"
               >
                 Cancel
               </button>

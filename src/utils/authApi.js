@@ -9,7 +9,7 @@ const apiClient = axios.create({
     'Content-Type': 'application/json',
     Accept: 'application/json'
   },
-  withCredentials: false
+  withCredentials: true
 });
 
 // Request interceptor
@@ -25,13 +25,15 @@ apiClient.interceptors.request.use(
     const token = adminToken || riderToken || customerToken || authToken;
 
     if (token) {
-      // Validate token format before sending
-      if (typeof token === 'string' && token.split('.').length === 3) {
-        config.headers.Authorization = `Bearer ${token}`;
-        console.log("[authApi] ✓ Token attached →", config.url, "(first 20 chars:", token.substring(0, 20) + "...)");
-      } else {
-        console.error("[authApi] Invalid JWT token format:", token);
-        console.error("[authApi] Token type:", typeof token, "Parts:", token?.split('.')?.length);
+      try {
+        if (typeof token === 'string') {
+          config.headers.Authorization = `Bearer ${token}`;
+          console.log('[authApi] ✓ Token attached →', config.url);
+        } else {
+          console.warn('[authApi] ⚠ Token present but not a string, skipping Authorization header');
+        }
+      } catch (e) {
+        console.error('[authApi] ❌ Failed to attach token', e);
       }
     } else {
       console.warn("[authApi] ⚠ No token found for →", config.url);
