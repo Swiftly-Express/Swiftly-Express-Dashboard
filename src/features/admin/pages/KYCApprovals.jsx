@@ -7,7 +7,7 @@ import ClockIcon from '../../../icons/Clockicon';
 import CheckIcon from '../../../icons/Checkicon';
 import CircleXIcon from '../../../icons/Circlexicon';
 import DocumentIcon from '../../../icons/Documenticon';
-import { getPendingVerifications, approveVerification, rejectVerification } from '../../../utils/adminApi';
+import { getPendingVerifications, approveVerification, rejectVerification, getUser, searchUsers } from '../../../utils/adminApi';
 
 const KYCApprovals = () => {
   const [selectedApplication, setSelectedApplication] = useState(null);
@@ -74,6 +74,14 @@ const KYCApprovals = () => {
       console.log('[KYCApprovals] Sample verification object:', verificationsData[0]);
 
       setApplications(verificationsData);
+
+      // Enrich applications asynchronously so pending list shows rider profile fields when available
+      try {
+        const enriched = await enrichApplicationsWithProfiles(verificationsData);
+        setApplications(enriched);
+      } catch (e) {
+        console.warn('[KYCApprovals] Failed to enrich applications with profiles:', e);
+      }
       setTotalPages(paginationData.totalPages || 1);
 
       // Calculate stats from the data
@@ -86,6 +94,73 @@ const KYCApprovals = () => {
     } finally {
       setLoading(false);
     }
+  };
+
+  // Enrich applications list by fetching rider profiles where possible so pending list shows up-to-date name/email
+  const enrichApplicationsWithProfiles = async (apps = []) => {
+    if (!apps || apps.length === 0) return apps;
+
+    const enriched = await Promise.all(apps.map(async (app) => {
+      try {
+        const normalized = getApplicationData(app);
+
+        // If name/email already present, skip expensive lookup
+        if ((normalized.name && normalized.name !== '') || (normalized.email && normalized.email !== '')) {
+          return app;
+        }
+
+        const raw = app || {};
+        const candidateUserId = normalized.riderId || raw.driver || raw.rider || raw.userId?._id || raw.user?._id || raw.userId || raw.driverId || raw.riderId || null;
+
+        let userData = null;
+        if (candidateUserId) {
+          try {
+            const resp = await getUser(candidateUserId);
+            userData = resp?.data || resp;
+          } catch (e) {
+            // ignore
+          }
+        }
+
+        if (!userData) {
+          const emailToSearch = normalized.email || normalized.fullDetails?.email || raw.email || raw.contactInfo?.email;
+          const phoneToSearch = normalized.phone || normalized.fullDetails?.phone || raw.phone || raw.contactInfo?.phone;
+          if (emailToSearch || phoneToSearch) {
+            try {
+              const searchResp = await searchUsers({ email: emailToSearch, phone: phoneToSearch });
+              const list = searchResp?.data || searchResp;
+              const users = Array.isArray(list) ? list : (list?.users || list?.data || []);
+              if (users && users.length > 0) userData = users[0];
+            } catch (e) {
+              // ignore
+            }
+          }
+        }
+
+        if (userData) {
+          // Attach a small merged profile so getApplicationData picks it up
+          const merged = {
+            name: userData.fullName || userData.name || `${userData.firstName || ''} ${userData.lastName || ''}`.trim(),
+            email: userData.email,
+            phone: userData.phone,
+            fullDetails: {
+              fullName: userData.fullName || userData.name,
+              email: userData.email,
+              phone: userData.phone,
+              address: userData.address || userData.contactInfo?.streetAddress
+            }
+          };
+          return { ...app, _merged: merged };
+        }
+
+        return app;
+      } catch (err) {
+        console.warn('[KYCApprovals] enrichApplicationsWithProfiles error for app:', err);
+        return app;
+      }
+    }));
+
+    return enriched;
   };
 
   // Pull-to-refresh handler
@@ -145,6 +220,9 @@ const KYCApprovals = () => {
   const getApplicationData = (app) => {
     console.log('[KYCApprovals] Mapping application data:', app);
 
+    // If a merged profile was attached earlier, prefer those values
+    const merged = app?._merged || {};
+
     // Extract contact info from nested structures
     const contactInfo = app.contactInfo || app.contact || {};
     const identity = app.identity || app.id_info || {};
@@ -152,7 +230,7 @@ const KYCApprovals = () => {
     const user = app.user || (typeof app.userId === 'object' ? app.userId : {}) || app.profile || {};
 
     // Extract name from multiple possible sources
-    const extractedName = app.fullName ||
+    const extractedName = merged.name || app.fullName ||
       identity.fullName ||
       app.name ||
       user.name ||
@@ -162,7 +240,7 @@ const KYCApprovals = () => {
       app.displayName || app.profile?.name || '';
 
     // Extract email from multiple sources
-    const extractedEmail = app.email ||
+    const extractedEmail = merged.email || app.email ||
       user.email ||
       user.profile?.email ||
       contactInfo.email ||
@@ -172,7 +250,7 @@ const KYCApprovals = () => {
       (typeof app.userId === 'object' ? app.userId?.email : '') || '';
 
     // Extract phone from multiple sources
-    const extractedPhone = app.phoneNumber ||
+    const extractedPhone = merged.phone || app.phoneNumber ||
       contactInfo.phone ||
       app.phone ||
       user.phone ||
@@ -200,9 +278,9 @@ const KYCApprovals = () => {
       status: getApplicationStatus(app),
       fullDetails: {
         // Contact Information
-        email: extractedEmail || '',
-        phone: extractedPhone || '',
-        address: contactInfo.streetAddress || contactInfo.address || app.address || app.streetAddress || '',
+        email: merged.fullDetails?.email || extractedEmail || '',
+        phone: merged.fullDetails?.phone || extractedPhone || '',
+        address: merged.fullDetails?.address || contactInfo.streetAddress || contactInfo.address || app.address || app.streetAddress || '',
         city: contactInfo.city || app.city || '',
         state: contactInfo.state || app.state || '',
         zipCode: contactInfo.zipCode || app.zipCode || app.postalCode || '',
@@ -210,7 +288,7 @@ const KYCApprovals = () => {
         emergencyPhone: contactInfo.emergencyPhone || app.emergencyContactPhone || app.emergencyPhone || app.emergency_phone || '',
 
         // Identity Information
-        fullName: extractedName || '',
+        fullName: merged.fullDetails?.fullName || extractedName || '',
         idType: identity.idType || app.idType || app.identificationType || '',
         idNumber: identity.idNumber || app.idNumber || app.identificationNumber || '',
 
@@ -285,6 +363,64 @@ const KYCApprovals = () => {
     setRejectReason('');
   };
 
+  // When opening modal, fetch latest rider/user info if possible to ensure name/email are up-to-date
+  const openModalWithProfile = async (application) => {
+    const normalizedApp = getApplicationData(application);
+    setSelectedApplication(normalizedApp);
+    setActiveTab('contact');
+    setApprovalNotes('');
+    setRejectReason('');
+
+    // Try to resolve missing email/name from admin user endpoint or by search
+    try {
+      const raw = normalizedApp.raw || {};
+      const candidateUserId = normalizedApp.riderId || raw.driver || raw.rider || raw.userId?._id || raw.user?._id || raw.userId || raw.user?._id || raw.driverId || raw.riderId || null;
+
+      let userData = null;
+
+      if (candidateUserId) {
+        const userResp = await getUser(candidateUserId);
+        userData = userResp?.data || userResp;
+      }
+
+      // If no direct id, try searching by email or phone from the verification record
+      if (!userData) {
+        const emailToSearch = normalizedApp.email || normalizedApp.fullDetails?.email || raw.email || raw.contactInfo?.email;
+        const phoneToSearch = normalizedApp.phone || normalizedApp.fullDetails?.phone || raw.phone || raw.contactInfo?.phone;
+
+        if (emailToSearch || phoneToSearch) {
+          const searchResp = await searchUsers({ email: emailToSearch, phone: phoneToSearch });
+          const list = searchResp?.data || searchResp;
+          // Try multiple shapes (array or { users: [] } or { data: [] })
+          const users = Array.isArray(list) ? list : (list?.users || list?.data || []);
+          if (users && users.length > 0) {
+            userData = users[0];
+          }
+        }
+      }
+
+      if (userData) {
+        setSelectedApplication(prev => ({
+          ...prev,
+          name: userData.fullName || userData.name || `${userData.firstName || ''} ${userData.lastName || ''}`.trim() || prev.name,
+          email: userData.email || prev.email,
+          phone: userData.phone || prev.phone,
+          riderId: prev.riderId || userData._id || userData.id,
+          fullDetails: {
+            ...prev.fullDetails,
+            fullName: userData.fullName || prev.fullDetails?.fullName,
+            email: userData.email || prev.fullDetails?.email,
+            phone: userData.phone || prev.fullDetails?.phone,
+            address: userData.address || prev.fullDetails?.address,
+            emergencyContact: userData.emergencyContact || prev.fullDetails?.emergencyContact
+          }
+        }));
+      }
+    } catch (err) {
+      console.warn('[KYCApprovals] Could not fetch/merge user profile for application:', err);
+    }
+  };
+
   const closeModal = () => {
     setSelectedApplication(null);
     setApprovalNotes('');
@@ -294,7 +430,8 @@ const KYCApprovals = () => {
   };
 
   const handleApproveClick = () => {
-    setShowApproveModal(true);
+    // Directly approve without forcing notes modal
+    handleApprove();
   };
 
   const handleRejectClick = () => {
@@ -323,7 +460,8 @@ const KYCApprovals = () => {
         return;
       }
 
-      const approvePayload = { notes: approvalNotes || 'Application approved by admin', status: 'approved' };
+      // Backend expects `verificationStatus` — do not send `status` or `notes` fields which some backends reject
+      const approvePayload = { verificationStatus: 'approved' };
       console.log('[KYCApprovals] Approve → verificationId:', verificationId, 'payload:', approvePayload);
 
       await approveVerification(verificationId, approvePayload);
@@ -525,7 +663,7 @@ const KYCApprovals = () => {
                               <div className="text-right flex-shrink-0">
                                 <span className={`inline-block px-2 py-1 rounded-full text-xs font-medium ${getStatusDisplay(normalizedApp.status).bgColor} ${getStatusDisplay(normalizedApp.status).textColor} ${getStatusDisplay(normalizedApp.status).borderColor}`}>{normalizedApp.status.charAt(0).toUpperCase() + normalizedApp.status.slice(1)}</span>
                                 <div className="mt-3">
-                                  <button onClick={() => openModal(app)} className="w-full bg-[#00A63E] hover:bg-[#007A29] text-white px-3 py-2 rounded-full text-sm font-medium">Review</button>
+                                  <button onClick={() => openModalWithProfile(app)} className="w-full bg-[#00A63E] hover:bg-[#007A29] text-white px-3 py-2 rounded-full text-sm font-medium">Review</button>
                                 </div>
                               </div>
                             </div>
@@ -551,7 +689,7 @@ const KYCApprovals = () => {
                               <YummyText className="text-xs text-gray-400 mt-2">Submitted: {formatDate(normalizedApp.submitted)}</YummyText>
                             </div>
                             <button
-                              onClick={() => openModal(app)}
+                              onClick={() => openModalWithProfile(app)}
                               className="bg-[#00A63E] hover:bg-[#007A29] text-white px-6 py-2 rounded-full text-sm font-medium transition-colors flex items-center gap-2"
                             >
                               <Eye className="w-4 h-4" />

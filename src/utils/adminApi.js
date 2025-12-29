@@ -20,7 +20,7 @@ adminApiClient.interceptors.request.use(
     // Prioritize admin_token for admin requests
     const adminToken = getCookie("admin_token");
     const authToken = getCookie("auth_token");
-    
+
     const token = adminToken || authToken;
 
     if (token) {
@@ -164,6 +164,30 @@ export async function getAnalyticsOverview() {
 }
 
 /**
+ * Get single user by ID
+ * @param {string} userId
+ */
+export async function getUser(userId) {
+  if (!userId) throw new Error('userId is required');
+  console.log('[adminApi] → Getting user:', userId);
+  return adminApiClient.get(`/api/admin/users/${userId}`);
+}
+
+/**
+ * Search users by email or phone (returns list)
+ * @param {Object} params - { email, phone }
+ */
+export async function searchUsers(params = {}) {
+  const { email, phone } = params || {};
+  console.log('[adminApi] → Searching users by', { email, phone });
+  const qs = new URLSearchParams();
+  if (email) qs.append('email', email);
+  if (phone) qs.append('phone', phone);
+  const query = qs.toString();
+  return adminApiClient.get(`/api/admin/users${query ? `?${query}` : ''}`);
+}
+
+/**
  * Get revenue analytics
  * @param {Object} params - Query parameters (startDate, endDate, etc.)
  * @returns {Promise} Revenue analytics data
@@ -207,10 +231,11 @@ export async function getPendingVerifications(page = 1, limit = 20) {
 export async function approveVerification(verificationId, approvalData = {}) {
   if (!verificationId) throw new Error('verificationId is required');
   console.log('[adminApi] → Approving verification:', verificationId);
-  return adminApiClient.put(`/api/admin/verifications/${verificationId}`, {
-    ...approvalData,
-    status: 'approved'
-  });
+  const payload = { ...approvalData };
+  // ensure we send verificationStatus (backend expects this) and avoid sending `status`
+  if (!payload.verificationStatus) payload.verificationStatus = 'approved';
+  if ('status' in payload) delete payload.status;
+  return adminApiClient.put(`/api/admin/verifications/${verificationId}`, payload);
 }
 
 /**
@@ -223,10 +248,11 @@ export async function rejectVerification(verificationId, rejectionData) {
   if (!verificationId) throw new Error('verificationId is required');
   if (!rejectionData?.reason) throw new Error('Rejection reason is required');
   console.log('[adminApi] → Rejecting verification:', verificationId);
-  return adminApiClient.put(`/api/admin/verifications/${verificationId}`, {
-    ...rejectionData,
-    status: 'rejected'
-  });
+  const payload = { ...rejectionData };
+  // send verificationStatus and remove `status` to satisfy backend validation
+  payload.verificationStatus = 'rejected';
+  if ('status' in payload) delete payload.status;
+  return adminApiClient.put(`/api/admin/verifications/${verificationId}`, payload);
 }
 
 // Export all functions
@@ -236,17 +262,18 @@ export default {
   createUser,
   updateUser,
   deleteUser,
-  
+  getUser,
+
   // Delivery management
   getAllDeliveries,
   assignDriver,
   adjustPricing,
-  
+
   // Analytics
   getAnalyticsOverview,
   getRevenueAnalytics,
   getDriverAnalytics,
-  
+
   // Verification management
   getPendingVerifications,
   approveVerification,

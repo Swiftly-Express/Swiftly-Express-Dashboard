@@ -4,7 +4,7 @@ import RiderLayout from '../components/RiderLayout';
 import { YummyText } from '../../../components/YummyText';
 import DocumentIcon from "../../../icons/Documenticon";
 import UploadIcon from "../../../icons/Uploadicon";
-import { getRiderProfile, updateRiderProfile, uploadRiderProfileImage, getRiderEarnings } from '../../../utils/authApi';
+import { getRiderProfile, updateRiderProfile, uploadRiderProfileImage, getRiderEarnings, notifyAdminEmailChange } from '../../../utils/authApi';
 import { getCookie, setCookie, getJSONCookie, setJSONCookie } from '../../../utils/cookies';
 
 const sideBottomShadow = {
@@ -516,6 +516,22 @@ const RiderProfile = () => {
         console.log('[Profile] Updating API with payload:', payload);
         const response = await updateRiderProfile(payload);
         console.log('[Profile] API update response:', response);
+
+        // If email changed, notify admins (best-effort)
+        try {
+          const cachedUser = getJSONCookie('user_data') || {};
+          const prevEmail = (cachedUser && (cachedUser.email || cachedUser.data?.email)) || profileData?.email || '';
+          const newEmail = personalInfo.email || '';
+          const riderIdentifier = profileData?.id || profileData?._id || cachedUser?.id || cachedUser?._id || null;
+
+          if (prevEmail && newEmail && prevEmail !== newEmail) {
+            console.log('[Profile] Email changed, notifying admin', { riderIdentifier, prevEmail, newEmail });
+            await notifyAdminEmailChange({ type: 'email_change', riderId: riderIdentifier, oldEmail: prevEmail, newEmail });
+            console.log('[Profile] Admin notified about email change');
+          }
+        } catch (notifyErr) {
+          console.warn('[Profile] Failed to notify admin about email change (continuing):', notifyErr);
+        }
       } catch (apiError) {
         console.warn('[Profile] API update failed (continuing with localStorage):', apiError);
       }
@@ -787,8 +803,8 @@ const RiderProfile = () => {
               <button
                 onClick={() => setActiveTab('personal')}
                 className={`px-4 py-2 md:px-7 md:py-1 rounded-full text-sm md:text-sm font-normal transition-colors ${activeTab === 'personal'
-                    ? 'text-[#0F172A] bg-white shadow-sm'
-                    : 'text-[#64748B]'
+                  ? 'text-[#0F172A] bg-white shadow-sm'
+                  : 'text-[#64748B]'
                   }`}
               >
                 Personal Info
@@ -796,8 +812,8 @@ const RiderProfile = () => {
               <button
                 onClick={() => setActiveTab('vehicle')}
                 className={`px-5 py-2 md:px-7 md:py-1 rounded-full text-sm md:text-sm font-normal transition-colors ${activeTab === 'vehicle'
-                    ? 'text-[#0F172A] bg-white shadow-sm'
-                    : 'text-[#64748B]'
+                  ? 'text-[#0F172A] bg-white shadow-sm'
+                  : 'text-[#64748B]'
                   }`}
               >
                 Vehicle
@@ -805,8 +821,8 @@ const RiderProfile = () => {
               <button
                 onClick={() => setActiveTab('documents')}
                 className={`px-5 py-2 md:px-7 md:py-1 rounded-full text-sm md:text-sm font-normal transition-colors ${activeTab === 'documents'
-                    ? 'text-[#0F172A] bg-white shadow-sm'
-                    : 'text-[#64748B]'
+                  ? 'text-[#0F172A] bg-white shadow-sm'
+                  : 'text-[#64748B]'
                   }`}
               >
                 Documents

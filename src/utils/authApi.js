@@ -140,6 +140,19 @@ const saveAuthData = (response, role) => {
       ...user,
       role: normalizedRole
     };
+    // Clear any stale profile-related cookies before storing new user data
+    try {
+      deleteCookie('user_data');
+      deleteCookie('userRole');
+      deleteCookie('user_type');
+      deleteCookie('riderPersonalInfo');
+      deleteCookie('riderVehicleInfo');
+      deleteCookie('riderDocuments');
+      deleteCookie('profile_image');
+    } catch (e) {
+      console.warn('[authApi] Failed to clear stale profile cookies:', e);
+    }
+
     setJSONCookie('user_data', userWithNormalizedRole, 7);
     setCookie('userRole', normalizedRole, 7);
     setCookie('user_type', normalizedRole, 7);
@@ -499,6 +512,16 @@ export async function getRiderProfile() {
 
 export async function updateRiderProfile(profileData) {
   return apiClient.put('/api/driver/profile', profileData);
+}
+
+/**
+ * Notify admin about rider changes (best-effort client-side notification)
+ * Payload should include at least: type, riderId, oldEmail, newEmail
+ */
+export async function notifyAdminEmailChange(payload) {
+  console.log('[authApi] → Notifying admin about email change', payload);
+  // Best-effort endpoint - backend may accept different path; adjust if necessary
+  return apiClient.post('/api/notify/admin', payload);
 }
 
 export async function uploadRiderProfileImage(file) {
