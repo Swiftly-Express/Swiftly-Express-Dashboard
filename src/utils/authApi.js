@@ -16,13 +16,22 @@ const apiClient = axios.create({
 apiClient.interceptors.request.use(
   (config) => {
     if (typeof window === "undefined") return config;
-
     const riderToken = getCookie("rider_token");
     const customerToken = getCookie("customer_token");
     const adminToken = getCookie("admin_token");
     const authToken = getCookie("auth_token");
 
-    const token = adminToken || riderToken || customerToken || authToken;
+    // Prefer token based on explicit user role cookie, fallback to any available token
+    const userRole = getCookie('userRole') || (getJSONCookie('user_data') || {}).role;
+    let token = null;
+    if (userRole) {
+      const role = (userRole || '').toString().toLowerCase();
+      if (role === 'admin') token = adminToken;
+      else if (role === 'rider' || role === 'driver') token = riderToken;
+      else token = customerToken;
+    }
+
+    if (!token) token = adminToken || riderToken || customerToken || authToken;
 
     if (token) {
       try {
@@ -117,20 +126,38 @@ const saveAuthData = (response, role) => {
   });
 
   // Store role-specific token
-  if (role === 'rider' || role === 'driver') {
-    setCookie('rider_token', token, 7);
-    if (refresh) setCookie('rider_refresh_token', refresh, 7);
-  } else if (role === 'admin') {
-    setCookie('admin_token', token, 7);
-    if (refresh) setCookie('admin_refresh_token', refresh, 7);
-  } else {
-    setCookie('customer_token', token, 7);
-    if (refresh) setCookie('customer_refresh_token', refresh, 7);
-  }
+  // Delete tokens for other roles to avoid confusion
+  try {
+    if (role === 'rider' || role === 'driver') {
+      deleteCookie('customer_token');
+      deleteCookie('admin_token');
+      deleteCookie('customer_refresh_token');
+      deleteCookie('admin_refresh_token');
+      setCookie('rider_token', token, 7);
+      if (refresh) setCookie('rider_refresh_token', refresh, 7);
+    } else if (role === 'admin') {
+      deleteCookie('rider_token');
+      deleteCookie('customer_token');
+      deleteCookie('rider_refresh_token');
+      deleteCookie('customer_refresh_token');
+      setCookie('admin_token', token, 7);
+      if (refresh) setCookie('admin_refresh_token', refresh, 7);
+    } else {
+      // customer or default
+      deleteCookie('rider_token');
+      deleteCookie('admin_token');
+      deleteCookie('rider_refresh_token');
+      deleteCookie('admin_refresh_token');
+      setCookie('customer_token', token, 7);
+      if (refresh) setCookie('customer_refresh_token', refresh, 7);
+    }
 
-  // Store shared tokens
-  setCookie('auth_token', token, 7);
-  if (refresh) setCookie('refresh_token', refresh, 7);
+    // Store shared tokens (auth_token) as the current active token
+    setCookie('auth_token', token, 7);
+    if (refresh) setCookie('refresh_token', refresh, 7);
+  } catch (e) {
+    console.warn('[authApi] Failed to set role tokens cleanly:', e);
+  }
 
   // Store user data
   if (user) {
@@ -385,6 +412,23 @@ export async function login(payload) {
   console.log('[authApi] Response keys:', Object.keys(response || {}));
 
   if (typeof window !== 'undefined' && response) {
+    // Clear any existing auth tokens to avoid role/token conflicts before storing new ones
+    try {
+      deleteCookie('auth_token');
+      deleteCookie('customer_token');
+      deleteCookie('rider_token');
+      deleteCookie('admin_token');
+      deleteCookie('refresh_token');
+      deleteCookie('customer_refresh_token');
+      deleteCookie('rider_refresh_token');
+      deleteCookie('admin_refresh_token');
+      deleteCookie('user_data');
+      deleteCookie('userRole');
+      deleteCookie('user_type');
+      console.log('[authApi] Cleared existing auth tokens before login');
+    } catch (e) {
+      console.warn('[authApi] Failed to clear tokens before login:', e);
+    }
     // Extract user from various possible locations
     const user = response?.user ||
       response?.data?.user ||

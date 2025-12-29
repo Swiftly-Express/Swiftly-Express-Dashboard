@@ -22,7 +22,7 @@ const VerificationPromptModal = ({ isOpen, onClose }) => {
   const [showSuccessModal, setShowSuccessModal] = useState(false);
   const [uploading, setUploading] = useState(false);
   
-  // Debug log to track modal visibility
+
   useEffect(() => {
     console.log('[VerificationPromptModal] 👁️ isOpen prop changed:', isOpen);
   }, [isOpen]);

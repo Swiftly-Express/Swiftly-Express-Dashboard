@@ -61,31 +61,38 @@ const KYCApprovals = () => {
     try {
       setLoading(true);
       setError(null);
-      const response = await getPendingVerifications(currentPage, 20);
+      
+      // Fetch ALL verifications (not just pending) to get accurate stats
+      const response = await getPendingVerifications(1, 100); // Get more records for stats
 
       console.log('[KYCApprovals] Full API response:', JSON.stringify(response, null, 2));
 
       // Handle response data structure
       const data = response.data || response;
-      const verificationsData = data.verifications || data.data || [];
+      const allVerifications = data.verifications || data.data || [];
       const paginationData = data.pagination || {};
 
-      console.log('[KYCApprovals] Extracted verifications:', verificationsData);
-      console.log('[KYCApprovals] Sample verification object:', verificationsData[0]);
+      console.log('[KYCApprovals] Extracted verifications:', allVerifications);
+      console.log('[KYCApprovals] Sample verification object:', allVerifications[0]);
 
-      setApplications(verificationsData);
+      // Filter for current page display (only pending)
+      const pendingOnly = allVerifications.filter(v => 
+        (v.status === 'pending' || v.verificationStatus === 'pending')
+      );
+      
+      setApplications(pendingOnly);
 
-      // Enrich applications asynchronously so pending list shows rider profile fields when available
+      // Enrich applications asynchronously
       try {
-        const enriched = await enrichApplicationsWithProfiles(verificationsData);
+        const enriched = await enrichApplicationsWithProfiles(pendingOnly);
         setApplications(enriched);
       } catch (e) {
         console.warn('[KYCApprovals] Failed to enrich applications with profiles:', e);
       }
       setTotalPages(paginationData.totalPages || 1);
 
-      // Calculate stats from the data
-      calculateStats(verificationsData);
+      // Calculate stats from ALL verifications (not just pending)
+      calculateStats(allVerifications);
 
     } catch (err) {
       console.error('[KYCApprovals] Error fetching verifications:', err);
@@ -174,23 +181,37 @@ const KYCApprovals = () => {
     const today = new Date();
     today.setHours(0, 0, 0, 0);
 
-    const pending = verificationsData.filter(v => v.status === 'pending' || v.verificationStatus === 'pending').length;
+    const pending = verificationsData.filter(v => 
+      v.status === 'pending' || v.verificationStatus === 'pending'
+    ).length;
+    
     const approvedToday = verificationsData.filter(v => {
       const status = v.status || v.verificationStatus;
-      const updatedAt = new Date(v.updatedAt || v.updated_at);
+      const updatedAt = new Date(v.updatedAt || v.updated_at || v.approvedAt);
       return status === 'approved' && updatedAt >= today;
     }).length;
+    
     const rejectedToday = verificationsData.filter(v => {
       const status = v.status || v.verificationStatus;
-      const updatedAt = new Date(v.updatedAt || v.updated_at);
+      const updatedAt = new Date(v.updatedAt || v.updated_at || v.rejectedAt);
       return status === 'rejected' && updatedAt >= today;
     }).length;
+
+    const totalMonth = verificationsData.length;
+
+    console.log('[KYCApprovals] Stats calculated:', {
+      pending,
+      approvedToday,
+      rejectedToday,
+      totalMonth,
+      totalVerifications: verificationsData.length
+    });
 
     setStats({
       pending,
       approvedToday,
       rejectedToday,
-      totalMonth: verificationsData.length
+      totalMonth
     });
   };
 
@@ -563,6 +584,7 @@ const KYCApprovals = () => {
       valueColor: '#000000'
     }
   ];
+  
 
   return (
     <IonPage>

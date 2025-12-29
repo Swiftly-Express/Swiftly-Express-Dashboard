@@ -14,115 +14,115 @@ const sideBottomShadow = {
 const StatCard = ({ icon, title, value, subtitle, color }) => (
   <div className="bg-white rounded-xl p-5 py-3 leading-none" style={sideBottomShadow}>
     <YummyText>
-    <div className={`text-2xl font-[300] ${color} mb-1`}>{value}</div>
-    <div className="text-xs text-[#64748B] mb-2">{title}</div>
-    <div className="text-[11px] text-[#64748B] leading-none">{subtitle}</div>
+      <div className={`text-2xl font-[300] ${color} mb-1`}>{value}</div>
+      <div className="text-xs text-[#64748B] mb-2">{title}</div>
+      <div className="text-[11px] text-[#64748B] leading-none">{subtitle}</div>
     </YummyText>
   </div>
 );
 
-const OrderCard = ({ 
+const OrderCard = ({
   deliveryId,
-  packageId, 
-  priority, 
-  size, 
-  pickupName, 
-  pickupAddress, 
-  deliveryName, 
-  deliveryAddress, 
-  distance, 
-  time, 
-  packageSize, 
-  price, 
+  packageId,
+  priority,
+  size,
+  pickupName,
+  pickupAddress,
+  deliveryName,
+  deliveryAddress,
+  distance,
+  time,
+  packageSize,
+  price,
   tips,
   onAccept,
-  accepting 
+  accepting
 }) => (
   <div className="bg-white rounded-2xl p-6 mb-4" style={sideBottomShadow}>
     <YummyText>
-    <div className="flex items-start justify-between mb-4">
-      <div className="flex items-center gap-3">
-        <div className="text-lg font-normal text-[#0F172A]">{packageId}</div>
-        {priority && (
-          <span className="px-3 py-1 rounded-lg text-xs font-normal bg-[#FF7A00] text-[#FFFFFF]">
-            {priority}
-          </span>
-        )}
-        {size && (
-          <span className="px-3 py-1 rounded-lg text-xs font-normal border border-gray-400 text-gray-700">
-            {size}
-          </span>
-        )}
+      <div className="flex items-start justify-between mb-4">
+        <div className="flex items-center gap-3">
+          <div className="text-lg font-normal text-[#0F172A]">{packageId}</div>
+          {priority && (
+            <span className="px-3 py-1 rounded-lg text-xs font-normal bg-[#FF7A00] text-[#FFFFFF]">
+              {priority}
+            </span>
+          )}
+          {size && (
+            <span className="px-3 py-1 rounded-lg text-xs font-normal border border-gray-400 text-gray-700">
+              {size}
+            </span>
+          )}
+        </div>
+        <div className="text-right">
+          <div className="text-2xl font-normal text-[#00D68F]">{price}</div>
+          <div className="text-xs text-[#64748B]">+ {tips} tips</div>
+        </div>
       </div>
-      <div className="text-right">
-        <div className="text-2xl font-normal text-[#00D68F]">{price}</div>
-        <div className="text-xs text-[#64748B]">+ {tips} tips</div>
-      </div>
-    </div>
     </YummyText>
 
     <div className="grid grid-cols-2 gap-6 mb-4">
       <YummyText>
-      <div className="flex gap-3">
-        <div className="w-8 h-8 bg-[#E8F8F0] rounded-full flex items-center justify-center flex-shrink-0">
-          <img width="16" height="16" src="/locationicon.svg" alt="Pickup Icon"/>
+        <div className="flex gap-3">
+          <div className="w-8 h-8 bg-[#E8F8F0] rounded-full flex items-center justify-center flex-shrink-0">
+            <img width="16" height="16" src="/locationicon.svg" alt="Pickup Icon" />
+          </div>
+          <div>
+            <div className="text-xs font-medium text-[#64748B] mb-2">Pickup</div>
+            <div className="text-sm font-medium text-[#0F172A] mb-1">{pickupName}</div>
+            <div className="text-xs text-[#64748B]">{pickupAddress}</div>
+          </div>
         </div>
-        <div>
-          <div className="text-xs font-medium text-[#64748B] mb-2">Pickup</div>
-          <div className="text-sm font-medium text-[#0F172A] mb-1">{pickupName}</div>
-          <div className="text-xs text-[#64748B]">{pickupAddress}</div>
-        </div>
-      </div>
       </YummyText>
 
       <YummyText>
-      <div className="flex gap-3">
-        <div className="w-8 h-8 bg-[#FFF4E6] rounded-full flex items-center justify-center flex-shrink-0">
-          <img width="16" height="16" src="/location-orange.svg" alt="Delivery Icon"/>
+        <div className="flex gap-3">
+          <div className="w-8 h-8 bg-[#FFF4E6] rounded-full flex items-center justify-center flex-shrink-0">
+            <img width="16" height="16" src="/location-orange.svg" alt="Delivery Icon" />
+          </div>
+          <div>
+            <div className="text-xs font-medium text-[#64748B] mb-2">Delivery</div>
+            <div className="text-sm font-medium text-[#0F172A] mb-1">{deliveryName}</div>
+            <div className="text-xs text-[#64748B]">{deliveryAddress}</div>
+          </div>
         </div>
-        <div>
-          <div className="text-xs font-medium text-[#64748B] mb-2">Delivery</div>
-          <div className="text-sm font-medium text-[#0F172A] mb-1">{deliveryName}</div>
-          <div className="text-xs text-[#64748B]">{deliveryAddress}</div>
-        </div>
-      </div>
       </YummyText>
     </div>
 
     <div className="my-3 border-t border-gray-200"></div>
 
     <YummyText>
-    <div className="flex items-center gap-4 mb-4 text-xs text-[#64748B]">
-      <div className="flex items-center gap-1">
-        <img width="16" height="16" src="/paperplane-icon.svg" alt="Distance Icon"/>
-        {distance}
+      <div className="flex items-center gap-4 mb-4 text-xs text-[#64748B]">
+        <div className="flex items-center gap-1">
+          <img width="16" height="16" src="/paperplane-icon.svg" alt="Distance Icon" />
+          {distance}
+        </div>
+        <div className="flex items-center gap-1">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <path d="M11.99 2C6.47 2 2 6.48 2 12s4.47 10 9.99 10C17.52 22 22 17.52 22 12S17.52 2 11.99 2zM12 20c-4.42 0-8-3.58-8-8s3.58-8 8-8 8 3.58 8 8-3.58 8-8 8zm.5-13H11v6l5.25 3.15.75-1.23-4.5-2.67z" fill="currentColor" />
+          </svg>
+          {time}
+        </div>
+        <div className="flex items-center gap-1">
+          <img width="16" height="16" src="/dollar-icon.svg" alt="Package Size Icon" />
+          {packageSize}
+        </div>
       </div>
-      <div className="flex items-center gap-1">
-        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-          <path d="M11.99 2C6.47 2 2 6.48 2 12s4.47 10 9.99 10C17.52 22 22 17.52 22 12S17.52 2 11.99 2zM12 20c-4.42 0-8-3.58-8-8s3.58-8 8-8 8 3.58 8 8-3.58 8-8 8zm.5-13H11v6l5.25 3.15.75-1.23-4.5-2.67z" fill="currentColor"/>
-        </svg>
-        {time}
-      </div>
-      <div className="flex items-center gap-1">
-        <img width="16" height="16" src="/dollar-icon.svg" alt="Package Size Icon"/>
-        {packageSize}
-      </div>
-    </div>
     </YummyText>
 
     <YummyText>
-    <div className="flex gap-3">
-      <button 
-        onClick={() => onAccept(deliveryId)}
-        disabled={accepting}
-        className={`flex-1 bg-[#00B75A] hover:bg-[#00B876] text-white py-2 rounded-lg transition-colors font-[400] ${accepting ? 'opacity-50 cursor-not-allowed' : ''}`}
-      >
-        {accepting ? 'Accepting...' : 'Accept Order'}
-      </button>
-      <button className="flex-1 bg-white border border-gray-200 hover:bg-gray-50 rounded-lg transition-colors text-[#0F172A] font-[400] py-2" style={{border: "1px solid #0000001A"}}>
-        View Details
-      </button>
-    </div>
+      <div className="flex gap-3">
+        <button
+          onClick={() => onAccept(deliveryId)}
+          disabled={accepting}
+          className={`flex-1 bg-[#00B75A] hover:bg-[#00B876] text-white py-2 rounded-lg transition-colors font-[400] ${accepting ? 'opacity-50 cursor-not-allowed' : ''}`}
+        >
+          {accepting ? 'Accepting...' : 'Accept Order'}
+        </button>
+        <button className="flex-1 bg-white border border-gray-200 hover:bg-gray-50 rounded-lg transition-colors text-[#0F172A] font-[400] py-2" style={{ border: "1px solid #0000001A" }}>
+          View Details
+        </button>
+      </div>
     </YummyText>
   </div>
 );
@@ -137,7 +137,6 @@ const AvailableOrders = () => {
   const [showToast, setShowToast] = useState(false);
   const [isVerified, setIsVerified] = useState(false);
   const [lastRefresh, setLastRefresh] = useState(Date.now());
-  const [autoRefresh, setAutoRefresh] = useState(true);
 
   // Debug: Check tokens on mount
   useEffect(() => {
@@ -145,7 +144,7 @@ const AvailableOrders = () => {
     const customerToken = getCookie('customer_token');
     const authToken = getCookie('auth_token');
     const userData = getJSONCookie('user_data');
-    
+
     console.log('[AvailableOrders] Token check on mount:', {
       riderToken: riderToken ? riderToken.substring(0, 20) + '...' : 'missing',
       customerToken: customerToken ? customerToken.substring(0, 20) + '...' : 'missing',
@@ -160,12 +159,12 @@ const AvailableOrders = () => {
       console.log('[AvailableOrders] 🔍 Fetching verification status from backend...');
       const response = await getRiderProfile();
       const profile = response?.data?.driver || response?.driver || response?.data || response;
-      
+
       console.log('[AvailableOrders] 📦 Backend profile:', profile);
-      
+
       const backendStatus = profile?.verificationStatus || profile?.accountStatus || profile?.status;
       const isApproved = backendStatus === 'approved' || backendStatus === 'active';
-      
+
       console.log('[AvailableOrders] Backend verification status:', {
         backendStatus,
         isApproved,
@@ -176,18 +175,18 @@ const AvailableOrders = () => {
           riderVerificationStatus: getCookie('riderVerificationStatus')
         }
       });
-      
+
       // Sync backend status to cookies
       if (backendStatus) {
         setCookie('riderVerificationStatus', backendStatus, 7);
         setCookie('riderAccountVerified', backendStatus, 7);
-        
+
         // Update user_data with latest profile
         const existingUserData = getJSONCookie('user_data') || {};
         setJSONCookie('user_data', { ...existingUserData, ...profile, verificationStatus: backendStatus }, 7);
         console.log('[AvailableOrders] ✓ Synced backend status to cookies:', backendStatus);
       }
-      
+
       setIsVerified(isApproved);
       return isApproved;
     } catch (error) {
@@ -214,7 +213,7 @@ const AvailableOrders = () => {
       // Re-check verification status from backend
       const verified = await checkVerificationStatus();
       console.log('[AvailableOrders] ✓ Verification status after event:', verified);
-      
+
       if (verified) {
         setToastMsg('✅ Verification approved! You can now view available orders.');
         setShowToast(true);
@@ -239,17 +238,7 @@ const AvailableOrders = () => {
     }
   }, [page, isVerified]);
 
-  // Auto-refresh every 30 seconds if enabled
-  useEffect(() => {
-    if (!autoRefresh || !isVerified) return;
-    
-    const intervalId = setInterval(() => {
-      console.log('[AvailableOrders] Auto-refreshing jobs...');
-      fetchAvailableJobs();
-    }, 30000); // 30 seconds
-
-    return () => clearInterval(intervalId);
-  }, [autoRefresh, isVerified]);
+  // Auto-refresh removed — use pull-to-refresh or manual refresh instead
 
   // Listen for new deliveries created by customers
   useEffect(() => {
@@ -280,21 +269,21 @@ const AvailableOrders = () => {
       console.log('[AvailableOrders] Fetching available jobs from API...');
       const response = await getAvailableJobs(page, 20);
       console.log('[AvailableOrders] API Response:', response);
-      
+
       // Handle different response structures
-      const jobs = response?.data?.jobs || 
-                   response?.data?.deliveries || 
-                   response?.jobs || 
-                   response?.deliveries || 
-                   response?.data || 
-                   [];
-      
+      const jobs = response?.data?.jobs ||
+        response?.data?.deliveries ||
+        response?.jobs ||
+        response?.deliveries ||
+        response?.data ||
+        [];
+
       console.log('[AvailableOrders] Extracted jobs:', jobs);
       console.log('[AvailableOrders] Total jobs found:', jobs.length);
-      
+
       setOrders(jobs);
       setLastRefresh(Date.now());
-      
+
       if (jobs.length === 0) {
         console.warn('[AvailableOrders] No jobs returned from API');
       }
@@ -317,12 +306,12 @@ const AvailableOrders = () => {
     try {
       const response = await acceptDeliveryJob(deliveryId);
       console.log('[AvailableOrders] Job accepted:', response);
-      
+
       setToastMsg('Order accepted successfully!');
       setShowToast(true);
-      
+
       setOrders(prev => prev.filter(order => (order._id || order.id) !== deliveryId));
-      
+
       window.dispatchEvent(new CustomEvent('delivery:accepted', { detail: { deliveryId } }));
     } catch (error) {
       console.error('[AvailableOrders] Failed to accept job:', error);
@@ -416,36 +405,33 @@ const AvailableOrders = () => {
               {/* Filter Tabs */}
               <div className="flex items-center gap-2 mb-6 bg-gray-50 left-2 p-1 rounded-full w-fit">
                 <YummyText>
-                <button
-                  onClick={() => setActiveTab('all')}
-                  className={`px-5 py-1 rounded-full text-sm font-normal transition-colors ${
-                    activeTab === 'all'
-                      ? 'text-[#00B75A] bg-white shadow-sm'
-                      : 'text-[#64748B]'
-                  }`}
-                >
-                  All Orders ({orders.length})
-                </button>
-                <button
-                  onClick={() => setActiveTab('express')}
-                  className={`px-5 py-1 rounded-full text-sm font-normal transition-colors ${
-                    activeTab === 'express'
-                      ? 'text-[#00B75A] bg-white shadow-sm'
-                      : 'text-[#64748B]'
-                  }`}
-                >
-                  Express ({expressCount})
-                </button>
-                <button
-                  onClick={() => setActiveTab('nearby')}
-                  className={`px-5 py-1 rounded-full text-sm font-normal transition-colors ${
-                    activeTab === 'nearby'
-                      ? 'text-[#00B75A] bg-white shadow-sm'
-                      : 'text-[#64748B]'
-                  }`}
-                >
-                  Nearby ({nearbyCount})
-                </button>
+                  <button
+                    onClick={() => setActiveTab('all')}
+                    className={`px-5 py-1 rounded-full text-sm font-normal transition-colors ${activeTab === 'all'
+                        ? 'text-[#00B75A] bg-white shadow-sm'
+                        : 'text-[#64748B]'
+                      }`}
+                  >
+                    All Orders ({orders.length})
+                  </button>
+                  <button
+                    onClick={() => setActiveTab('express')}
+                    className={`px-5 py-1 rounded-full text-sm font-normal transition-colors ${activeTab === 'express'
+                        ? 'text-[#00B75A] bg-white shadow-sm'
+                        : 'text-[#64748B]'
+                      }`}
+                  >
+                    Express ({expressCount})
+                  </button>
+                  <button
+                    onClick={() => setActiveTab('nearby')}
+                    className={`px-5 py-1 rounded-full text-sm font-normal transition-colors ${activeTab === 'nearby'
+                        ? 'text-[#00B75A] bg-white shadow-sm'
+                        : 'text-[#64748B]'
+                      }`}
+                  >
+                    Nearby ({nearbyCount})
+                  </button>
                 </YummyText>
               </div>
 

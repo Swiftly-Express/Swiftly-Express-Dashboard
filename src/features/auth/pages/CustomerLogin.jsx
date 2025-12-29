@@ -4,6 +4,7 @@ import { eyeOutline, eyeOffOutline } from 'ionicons/icons';
 import { YummyText } from '../../../components/YummyText';
 import Button from '../../../components/Button';
 import { login, getCurrentUser } from '../../../utils/authApi';
+import { setCookie, setJSONCookie } from '../../../utils/cookies';
 
 const CustomerLogin = () => {
   const router = useIonRouter();
@@ -61,9 +62,10 @@ const CustomerLogin = () => {
             role: userData.role || 'customer'
           };
 
-          localStorage.setItem('user_data', JSON.stringify(userToStore));
-          localStorage.setItem('user_type', userToStore.role || 'customer');
-          console.log('[CustomerLogin] Stored user data:', userToStore);
+          setJSONCookie('user_data', userToStore, 7);
+          setCookie('user_type', userToStore.role || 'customer', 7);
+          setCookie('userRole', userToStore.role || 'customer', 7);
+          console.log('[CustomerLogin] Stored user data (cookies):', userToStore);
         } else {
           // Fallback: try to extract from login response
           const loginUser = res?.user || res?.data?.user || res?.data;
@@ -73,9 +75,10 @@ const CustomerLogin = () => {
               fullName: loginUser.fullName || loginUser.full_name || loginUser.name,
               role: loginUser.role || 'customer'
             };
-            localStorage.setItem('user_data', JSON.stringify(userToStore));
-            localStorage.setItem('user_type', userToStore.role || 'customer');
-            console.log('[CustomerLogin] Stored user from login response:', userToStore);
+            setJSONCookie('user_data', userToStore, 7);
+            setCookie('user_type', userToStore.role || 'customer', 7);
+            setCookie('userRole', userToStore.role || 'customer', 7);
+            console.log('[CustomerLogin] Stored user from login response (cookies):', userToStore);
           } else {
             localStorage.setItem('user_type', 'customer');
             console.warn('[CustomerLogin] No user data available');
@@ -91,11 +94,13 @@ const CustomerLogin = () => {
             fullName: loginUser.fullName || loginUser.full_name || loginUser.name,
             role: loginUser.role || 'customer'
           };
-          localStorage.setItem('user_data', JSON.stringify(userToStore));
-          localStorage.setItem('user_type', userToStore.role || 'customer');
-          console.log('[CustomerLogin] Stored user from login response (fallback):', userToStore);
+          setJSONCookie('user_data', userToStore, 7);
+          setCookie('user_type', userToStore.role || 'customer', 7);
+          setCookie('userRole', userToStore.role || 'customer', 7);
+          console.log('[CustomerLogin] Stored user from login response (fallback, cookies):', userToStore);
         } else {
-          localStorage.setItem('user_type', 'customer');
+          setCookie('user_type', 'customer', 7);
+          setCookie('userRole', 'customer', 7);
         }
       }
 

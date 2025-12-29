@@ -4,6 +4,7 @@ import { IonIcon } from '@ionic/react';
 import { YummyText } from '../../../components/YummyText';
 import Button from '../../../components/Button';
 import { registerCustomer } from '../../../utils/authApi';
+import { setCookie, setJSONCookie } from '../../../utils/cookies';
 import { eyeOutline, eyeOffOutline } from 'ionicons/icons';
 
 const CustomerSignUp = () => {
@@ -75,20 +76,13 @@ const CustomerSignUp = () => {
 
       const res = await registerCustomer(payload);
 
-      // Store pending verification data
-      localStorage.setItem('pendingVerificationEmail', emailVal);
-      localStorage.setItem('pendingVerificationType', 'customer');
-      localStorage.setItem('pendingUserData', JSON.stringify({
-        fullName,
-        email: emailVal
-      }));
+      // Store pending verification data using cookies
+      setCookie('pendingVerificationEmail', emailVal, 1);
+      setCookie('pendingVerificationType', 'customer', 1);
+      setJSONCookie('pending_user_data', { fullName, email: emailVal }, 1);
 
-      // Store user data for later display
-      localStorage.setItem('user_data', JSON.stringify({
-        fullName,
-        email: emailVal,
-        name: fullName
-      }));
+      // Store user data for later display (cookies)
+      setJSONCookie('user_data', { fullName, email: emailVal, name: fullName }, 1);
 
       // If backend returned a user id, store it for verify/resend endpoints
       try {

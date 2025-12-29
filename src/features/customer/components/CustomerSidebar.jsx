@@ -2,23 +2,23 @@ import { useLocation } from 'react-router-dom';
 import { useIonRouter } from '@ionic/react';
 import { YummyText } from '../../../components/YummyText';
 import { logout as apiLogout, getCustomerDeliveries } from '../../../utils/authApi';
+import { getCookie, deleteCookie } from '../../../utils/cookies';
 import React, { useState, useEffect } from 'react';
 
 const SidebarButton = ({ to, active, icon, label, count }) => {
   const router = useIonRouter();
-  
+
   const handleClick = (e) => {
     e.preventDefault();
     if (document && document.activeElement) document.activeElement.blur();
     router.push(to, 'forward', 'push');
   };
-  
+
   return (
     <button onClick={handleClick} className="w-full text-left">
       <div
-        className={`flex items-center gap-3 px-4 py-3 rounded-xl transition-colors w-full ${
-          active ? 'bg-[#00B75A] text-white' : 'text-[#4B5563] hover:bg-gray-50'
-        }`}
+        className={`flex items-center gap-3 px-4 py-3 rounded-xl transition-colors w-full ${active ? 'bg-[#00B75A] text-white' : 'text-[#4B5563] hover:bg-gray-50'
+          }`}
       >
         <img src={icon} alt={label} className="w-5 h-5" style={{ filter: active ? 'brightness(0) invert(1)' : 'brightness(0)' }} />
         <YummyText className="flex-1 text-left text-[15px]">{label}</YummyText>
@@ -56,15 +56,28 @@ const CustomerSidebar = () => {
   const handleLogout = () => {
     (async () => {
       try {
-        const refreshToken = localStorage.getItem('refresh_token') || '';
+        const refreshToken = getCookie('refresh_token') || '';
         if (refreshToken) await apiLogout({ refreshToken });
       } catch (err) {
         console.error('Logout API failed', err);
       } finally {
-        localStorage.removeItem('auth_token');
-        localStorage.removeItem('refresh_token');
-        localStorage.removeItem('user_type');
-        localStorage.removeItem('user_data');
+        // Ensure cookies are cleared (apiLogout also attempts this)
+        try {
+          deleteCookie('auth_token');
+          deleteCookie('customer_token');
+          deleteCookie('rider_token');
+          deleteCookie('admin_token');
+          deleteCookie('refresh_token');
+          deleteCookie('customer_refresh_token');
+          deleteCookie('rider_refresh_token');
+          deleteCookie('admin_refresh_token');
+          deleteCookie('user_data');
+          deleteCookie('userRole');
+          deleteCookie('user_type');
+        } catch (e) {
+          console.warn('[CustomerSidebar] Failed to clear cookies on logout', e);
+        }
+
         if (document && document.activeElement) document.activeElement.blur();
         router.push('/auth/customer/login', 'back', 'pop');
       }
@@ -116,23 +129,23 @@ const CustomerSidebar = () => {
     // Event listeners
     const onCreated = (e) => {
       console.log('[CustomerSidebar] delivery:created event received:', e?.detail);
-      
+
       const delivery = e?.detail;
       if (delivery) {
         const deliveryId = delivery._id || delivery.id || delivery.trackingId;
-        
+
         if (deliveryId) {
           setUnreadDeliveryIds((prevIds) => {
             const newIds = new Set(prevIds);
             newIds.add(deliveryId);
-            
+
             // Save to localStorage
             localStorage.setItem('unread_delivery_ids', JSON.stringify([...newIds]));
-            
+
             console.log('[CustomerSidebar] Added unread delivery:', deliveryId);
             return newIds;
           });
-          
+
           setDeliveriesCount((currentCount) => {
             const newCount = currentCount + 1;
             console.log('[CustomerSidebar] Incrementing count from', currentCount, 'to', newCount);
@@ -144,28 +157,28 @@ const CustomerSidebar = () => {
 
     const onUpdated = (e) => {
       console.log('[CustomerSidebar] delivery:updated event received:', e?.detail);
-      
+
       const detail = e?.detail;
       if (detail) {
         const deliveryId = detail._id || detail.id || detail.trackingId;
         const prev = (detail.previousStatus || '').toLowerCase();
         const curr = (detail.status || '').toLowerCase();
-        
+
         // If status changed to delivered/completed, mark as unread
-        if (prev !== 'delivered' && prev !== 'completed' && 
-            (curr === 'delivered' || curr === 'completed') && deliveryId) {
-          
+        if (prev !== 'delivered' && prev !== 'completed' &&
+          (curr === 'delivered' || curr === 'completed') && deliveryId) {
+
           setUnreadDeliveryIds((prevIds) => {
             const newIds = new Set(prevIds);
             newIds.add(deliveryId);
-            
+
             // Save to localStorage
             localStorage.setItem('unread_delivery_ids', JSON.stringify([...newIds]));
-            
+
             console.log('[CustomerSidebar] Added unread delivery (status change):', deliveryId);
             return newIds;
           });
-          
+
           setDeliveriesCount((c) => {
             const newCount = c + 1;
             console.log('[CustomerSidebar] Incrementing count from', c, 'to', newCount);
@@ -177,21 +190,21 @@ const CustomerSidebar = () => {
 
     const onRead = (e) => {
       console.log('[CustomerSidebar] delivery:read event received:', e?.detail);
-      
+
       const deliveryId = e?.detail?.id || e?.detail?._id || e?.detail?.deliveryId;
-      
+
       if (deliveryId) {
         setUnreadDeliveryIds((prevIds) => {
           const newIds = new Set(prevIds);
           newIds.delete(deliveryId);
-          
+
           // Save to localStorage
           localStorage.setItem('unread_delivery_ids', JSON.stringify([...newIds]));
-          
+
           console.log('[CustomerSidebar] Removed unread delivery:', deliveryId);
           return newIds;
         });
-        
+
         setDeliveriesCount((c) => {
           const newCount = Math.max(c - 1, 0);
           console.log('[CustomerSidebar] Decrementing count from', c, 'to', newCount);
@@ -248,12 +261,12 @@ const CustomerSidebar = () => {
 
         {/* Logout Button */}
         <div className="px-6 py-6 border-t border-gray-200">
-          <button 
+          <button
             onClick={handleLogout}
             className="flex items-center gap-3 text-[#EF4444] hover:bg-red-50 transition-colors w-full px-3 py-2 rounded-lg"
           >
             <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-              <path d="M17 7l-1.41 1.41L18.17 11H8v2h10.17l-2.58 2.58L17 17l5-5zM4 5h8V3H4c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h8v-2H4V5z" fill="currentColor"/>
+              <path d="M17 7l-1.41 1.41L18.17 11H8v2h10.17l-2.58 2.58L17 17l5-5zM4 5h8V3H4c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h8v-2H4V5z" fill="currentColor" />
             </svg>
             <YummyText className="text-[15px]">Logout</YummyText>
           </button>
@@ -273,7 +286,7 @@ const CustomerSidebar = () => {
                 </button>
                 <button onClick={closeMobile} aria-label="Close" className="p-2">
                   <svg width="32" height="32" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                    <path d="M18 6L6 18M6 6l12 12" stroke="#111827" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"/>
+                    <path d="M18 6L6 18M6 6l12 12" stroke="#111827" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" />
                   </svg>
                 </button>
               </div>
@@ -292,9 +305,8 @@ const CustomerSidebar = () => {
                   className={`w-full text-left`}
                 >
                   <div
-                    className={`flex items-center gap-4 px-4 py-4 rounded-xl transition-colors w-full ${
-                      location.pathname === item.to ? 'bg-[#00B75A] text-white' : 'text-[#64748B] hover:bg-gray-50'
-                    }`}
+                    className={`flex items-center gap-4 px-4 py-4 rounded-xl transition-colors w-full ${location.pathname === item.to ? 'bg-[#00B75A] text-white' : 'text-[#64748B] hover:bg-gray-50'
+                      }`}
                   >
                     <img src={item.icon} alt={item.label} className="w-7 h-7" style={{ filter: location.pathname === item.to ? 'brightness(0) invert(1)' : 'brightness(0)' }} />
                     <YummyText className="flex-1 text-left text-[20px] font-medium">{item.label}</YummyText>
@@ -318,7 +330,7 @@ const CustomerSidebar = () => {
               <div>
                 <button onClick={() => { closeMobile(); handleLogout(); }} className="w-full flex items-center gap-4 text-[#EF4444] hover:bg-red-50 transition-colors px-4 py-3 rounded-lg">
                   <svg width="32" height="32" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                    <path d="M17 7l-1.41 1.41L18.17 11H8v2h10.17l-2.58 2.58L17 17l5-5zM4 5h8V3H4c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h8v-2H4V5z" fill="currentColor"/>
+                    <path d="M17 7l-1.41 1.41L18.17 11H8v2h10.17l-2.58 2.58L17 17l5-5zM4 5h8V3H4c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h8v-2H4V5z" fill="currentColor" />
                   </svg>
                   <YummyText className="text-[20px] font-medium">Logout</YummyText>
                 </button>
