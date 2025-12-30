@@ -92,6 +92,9 @@ const ManageRiders = () => {
   // Transform API data to UI format
   const transformedRiders = useMemo(() => {
     return ridersData.map(rider => {
+      // Prefer merged/profile data when available (some APIs return nested user/profile objects)
+      const profile = rider._merged || rider.user || rider.driver || rider.profile || rider.account || rider;
+
       const kycStatus = getKycStatus(rider);
       const riderStatus = getRiderStatus(rider);
 
@@ -110,15 +113,15 @@ const ManageRiders = () => {
           : 'bg-gray-100 text-gray-800';
 
       return {
-        id: rider.riderId || rider.driverId || rider.id || 'N/A',
-        name: rider.name || rider.fullName || `${rider.firstName || ''} ${rider.lastName || ''}`.trim() || 'Unknown',
-        joined: formatDate(rider.createdAt || rider.joinedDate || rider.registeredAt),
-        email: rider.email || 'N/A',
-        phone: rider.phone || rider.phoneNumber || rider.mobile || 'N/A',
-        vehicle: rider.vehicleType || rider.vehicle?.type || 'Not specified',
-        license: rider.licenseNumber || rider.driverLicense || rider.license || 'N/A',
-        deliveries: formatNumber(rider.totalDeliveries || rider.deliveryCount || rider.completedTrips || 0),
-        earnings: formatCurrency(rider.totalEarnings || rider.earnings || 0),
+        id: rider.riderId || rider.driverId || profile._id || profile.id || rider.id || 'N/A',
+        name: profile.name || profile.fullName || `${profile.firstName || ''} ${profile.lastName || ''}`.trim() || 'Unknown',
+        joined: formatDate(profile.createdAt || profile.joinedDate || profile.registeredAt || rider.createdAt),
+        email: profile.email || profile.contactEmail || rider.email || 'N/A',
+        phone: profile.phone || profile.phoneNumber || profile.mobile || rider.phone || 'N/A',
+        vehicle: profile.vehicleType || profile.vehicle?.type || rider.vehicleType || 'Not specified',
+        license: profile.licenseNumber || profile.driverLicense || profile.license || rider.licenseNumber || 'N/A',
+        deliveries: formatNumber(rider.totalDeliveries || rider.deliveryCount || rider.completedTrips || profile.totalDeliveries || 0),
+        earnings: formatCurrency(rider.totalEarnings || rider.earnings || profile.totalEarnings || 0),
         kyc: kycStatus,
         kycColor: kycColor,
         status: riderStatus,
@@ -373,13 +376,13 @@ const ManageRiders = () => {
                               <th className="w-[8%] px-1 py-3 text-left text-[10.5px] font-[500] text-[#0A0A0A] uppercase tracking-wider">
                                 Rider ID
                               </th>
-                              <th className="w-[12%] px-1 py-3 text-left text-[10.5px] font-[500] text-[#0A0A0A] uppercase tracking-wider">
+                              <th className="w-[12%] px-2 py-3 text-left text-[10.5px] font-[500] text-[#0A0A0A] uppercase tracking-wider">
                                 Name
                               </th>
-                              <th className="w-[18%] px-1 py-3 text-left text-[10.5px] font-[500] text-[#0A0A0A] uppercase tracking-wider">
+                              <th className="w-[16%] px-8 py-3 text-left text-[10.5px] font-[500] text-[#0A0A0A] uppercase tracking-wider">
                                 Contact
                               </th>
-                              <th className="w-[20%] px-1 py-3 text-left text-[10.5px] font-medium text-[#0A0A0A] uppercase tracking-wider">
+                              <th className="w-[20%] px-3 py-3 text-center text-[10.5px] font-medium text-[#0A0A0A] uppercase tracking-wider">
                                 Vehicle
                               </th>
                               <th className="w-[10%] px-1 py-3 text-left text-[10.5px] font-[500] text-[#0A0A0A] uppercase tracking-wider">
@@ -388,7 +391,7 @@ const ManageRiders = () => {
                               <th className="w-[10%] px-1 py-3 text-left text-[10.5px] font-[500] text-[#0A0A0A] uppercase tracking-wider">
                                 Earnings
                               </th>
-                              <th className="w-[8%] px-1 py-3 text-left text-[10.5px] font-[500] text-[#0A0A0A] uppercase tracking-wider">
+                              <th className="w-[8%] px-5 py-3 text-left text-[10.5px] font-[500] text-[#0A0A0A] uppercase tracking-wider">
                                 KYC
                               </th>
                               <th className="w-[8%] px-1 py-3 text-left text-[10.5px] font-[500] text-[#0A0A0A] uppercase tracking-wider">
@@ -418,15 +421,41 @@ const ManageRiders = () => {
                               paginatedRiders.map((rider, index) => (
                                 <tr key={index} className="hover:bg-gray-50 transition-colors">
                                   <td className="w-[8%] px-1 py-4 whitespace-nowrap">
-                                    <YummyText className="text-[12px] font-medium text-gray-900">{rider.id}</YummyText>
+                                    <span
+                                      className="text-[12px] font-medium text-gray-900"
+                                      style={{
+                                        maxWidth: '68px',
+                                        overflow: 'hidden',
+                                        textOverflow: 'ellipsis',
+                                        whiteSpace: 'nowrap',
+                                        display: 'inline-block',
+                                        verticalAlign: 'bottom'
+                                      }}
+                                      title={rider.id}
+                                    >
+                                      {rider.id}
+                                    </span>
                                   </td>
-                                  <td className="w-[12%] px-1 py-4 whitespace-nowrap">
+                                  <td className="w-[12%] px-2 py-4 whitespace-nowrap">
                                     <div>
-                                      <YummyText className="text-xs font-medium text-gray-900 truncate">{rider.name}</YummyText>
+                                      <span
+                                        className="text-xs font-medium text-gray-900"
+                                        style={{
+                                          maxWidth: '110px',
+                                          overflow: 'hidden',
+                                          textOverflow: 'ellipsis',
+                                          whiteSpace: 'nowrap',
+                                          display: 'inline-block',
+                                          verticalAlign: 'bottom'
+                                        }}
+                                        title={rider.name}
+                                      >
+                                        {rider.name}
+                                      </span>
                                       <YummyText className="text-xs text-gray-500 truncate">{rider.joined}</YummyText>
                                     </div>
                                   </td>
-                                  <td className="w-[18%] px-1 py-4 whitespace-nowrap">
+                                  <td className="w-[18%] px-4 py-4 whitespace-nowrap">
                                     <div className="space-y-1">
                                       <div className="flex items-center text-xs text-gray-600">
                                         <Mail className="w-3 h-3 mr-1 text-gray-400 flex-shrink-0" />
@@ -438,9 +467,9 @@ const ManageRiders = () => {
                                       </div>
                                     </div>
                                   </td>
-                                  <td className="w-[20%] px-1 py-4">
+                                  <td className="w-[20%] px-1 text-center py-4">
                                     <div>
-                                      <div className="flex items-center text-xs text-gray-900 font-medium">
+                                      <div className="flex items-center justify-center text-xs text-gray-900 font-medium">
                                         <span className="truncate">{rider.vehicle}</span>
                                       </div>
                                       <YummyText className="text-xs text-gray-500 truncate">{rider.license}</YummyText>
@@ -449,7 +478,7 @@ const ManageRiders = () => {
                                   <td className="w-[10%] px-5 py-4 whitespace-nowrap">
                                     <YummyText className="text-xs text-gray-900">{rider.deliveries}</YummyText>
                                   </td>
-                                  <td className="w-[10%] px-1 py-4 whitespace-nowrap">
+                                  <td className="w-[10%] px-2 py-4 whitespace-nowrap">
                                     <YummyText className="text-xs font-medium text-gray-900">{rider.earnings}</YummyText>
                                   </td>
                                   <td className="w-[8%] px-1 py-4 whitespace-nowrap">
@@ -511,8 +540,8 @@ const ManageRiders = () => {
                               key={pageNum}
                               onClick={() => handlePageChange(pageNum)}
                               className={`px-3 py-1 rounded-lg text-sm transition-colors ${currentPage === pageNum
-                                  ? 'bg-blue-600 text-white'
-                                  : 'text-gray-700 hover:bg-gray-100'
+                                ? 'bg-blue-600 text-white'
+                                : 'text-gray-700 hover:bg-gray-100'
                                 }`}
                             >
                               {pageNum}
