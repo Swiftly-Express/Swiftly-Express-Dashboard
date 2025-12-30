@@ -6,7 +6,7 @@ import BlockIcon from "../../../icons/Blockicon";
 import NairaIcon from "../../../icons/Nairaicon";
 import AnalyticsIcon from "../../../icons/Analyticsicon";
 import VerificationPromptModal from '../components/VerificationPromptModal';
-import { getRiderProfile, getRiderDeliveries, getAvailableJobs, getRiderEarnings } from '../../../utils/authApi';
+import { getRiderProfile, getRiderDeliveries, getAvailableJobs, getRiderEarnings, getRiderVerificationStatus } from '../../../utils/authApi';
 import { getCookie, setCookie, getJSONCookie } from '../../../utils/cookies';
 
 // Shadow only on left, right and bottom - no top shadow for seamless blend
@@ -136,44 +136,35 @@ const Dashboard = () => {
     fetchUserProfile();
     fetchDashboardData();
 
-    // Check if verification has been completed
-    const verificationCompleted = getCookie('verificationCompleted');
-    const verificationSubmitted = getCookie('verificationSubmitted');
-    const riderVerificationStatus = getCookie('riderVerificationStatus');
 
-    console.log('[Dashboard] 🔍 Verification status check:', {
-      verificationCompleted,
-      verificationSubmitted,
-      riderVerificationStatus
-    });
+    // Always fetch latest verification status from backend and only show modal if NOT approved
+    const checkVerificationStatus = async () => {
+      try {
+        const res = await getRiderVerificationStatus();
+        const status = res?.data?.verificationStatus || res?.verificationStatus || res?.data || 'pending';
+        setCookie('riderVerificationStatus', status, 7);
+        if (status && status.toLowerCase() === 'approved') {
+          setShowVerificationModal(false);
+        } else {
+          // Show modal after 2 seconds if not approved
+          const timer = setTimeout(() => {
+            setShowVerificationModal(true);
+          }, 2000);
+          return () => clearTimeout(timer);
+        }
+      } catch (e) {
+        console.error('[Dashboard] Failed to fetch verification status:', e);
+      }
+    };
+
+    checkVerificationStatus();
 
     // Listen for verification completion to close modal
     const handleVerificationComplete = () => {
-      console.log('[Dashboard] ✅ Verification completed, closing modal');
       setShowVerificationModal(false);
     };
-
     window.addEventListener('verification:completed', handleVerificationComplete);
-
-    // Show modal if NOT approved
-    const isApproved = riderVerificationStatus === 'approved';
-
-    if (isApproved) {
-      console.log('[Dashboard] ✓ Already approved - modal will NOT show');
-      return () => {
-        window.removeEventListener('verification:completed', handleVerificationComplete);
-      };
-    }
-
-    // Show modal after 2 seconds
-    console.log('[Dashboard] 🔔 Will show verification modal in 2 seconds...');
-    const timer = setTimeout(() => {
-      console.log('[Dashboard] 📋 Showing verification modal NOW');
-      setShowVerificationModal(true);
-    }, 2000);
-
     return () => {
-      clearTimeout(timer);
       window.removeEventListener('verification:completed', handleVerificationComplete);
     };
   }, []);
