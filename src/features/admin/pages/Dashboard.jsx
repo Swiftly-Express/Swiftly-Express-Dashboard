@@ -15,14 +15,18 @@ import { YummyText } from '../../../components/YummyText';
 import ClockIcon from '../../../icons/Clockicon';
 import CheckIcon from '../../../icons/Checkicon';
 import CircleXIcon from '../../../icons/Circlexicon';
-import { 
-  getAnalyticsOverview, 
-  getRevenueAnalytics, 
-  getAllDeliveries, 
+
+import {
+  getAnalyticsOverview,
+  getRevenueAnalytics,
+  getAllDeliveries,
   getPendingVerifications,
   approveVerification,
   rejectVerification
 } from '../../../utils/adminApi';
+import { getRiderStatsFromRiders } from '../../../utils/riderStats';
+import { getUserStatsFromUsers } from '../../../utils/userStats';
+import { getOrderStatsFromOrders } from '../../../utils/orderStats';
 
 const AdminDashboard = () => {
   // State management
@@ -31,6 +35,9 @@ const AdminDashboard = () => {
   const [refreshing, setRefreshing] = useState(false);
   const [isMobile, setIsMobile] = useState(typeof window !== 'undefined' ? window.innerWidth < 768 : false);
   const [overview, setOverview] = useState(null);
+  const [riderStats, setRiderStats] = useState(null);
+  const [userStats, setUserStats] = useState(null);
+  const [orderStats, setOrderStats] = useState(null);
   const [revenueData, setRevenueData] = useState([]);
   const [recentOrders, setRecentOrders] = useState([]);
   const [kycApprovals, setKycApprovals] = useState([]);
@@ -77,18 +84,32 @@ const AdminDashboard = () => {
   const fetchDashboardData = async () => {
     try {
       setError(null);
-      
       // Fetch all data in parallel
-      const [overviewRes, revenueRes, deliveriesRes, verificationsRes] = await Promise.all([
+      const [overviewRes, revenueRes, deliveriesRes, verificationsRes, riderStatsRes, userStatsRes, orderStatsRes] = await Promise.all([
         getAnalyticsOverview().catch(err => ({ error: err.message })),
         getRevenueAnalytics({ period: '6months' }).catch(err => ({ error: err.message })),
         getAllDeliveries(1, 10).catch(err => ({ error: err.message })),
-        getPendingVerifications(1, 5).catch(err => ({ error: err.message }))
+        getPendingVerifications(1, 5).catch(err => ({ error: err.message })),
+        getRiderStatsFromRiders().catch(() => null),
+        getUserStatsFromUsers().catch(() => null),
+        getOrderStatsFromOrders().catch(() => null)
       ]);
 
       // Set overview data
       if (!overviewRes.error) {
         setOverview(overviewRes.data || overviewRes);
+      }
+      // Set real-time rider stats
+      if (riderStatsRes) {
+        setRiderStats(riderStatsRes);
+      }
+      // Set real-time user stats
+      if (userStatsRes) {
+        setUserStats(userStatsRes);
+      }
+      // Set real-time order stats
+      if (orderStatsRes) {
+        setOrderStats(orderStatsRes);
       }
 
       // Set revenue chart data
@@ -275,34 +296,34 @@ const AdminDashboard = () => {
 
           {/* Stats Cards */}
           <div className="grid grid-cols-2 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-8 px-0 md:px-1 sm:px-1">
-            <StatCard 
+            <StatCard
               icon={Users}
               title="Total Users"
-              value={overview?.totalUsers?.toLocaleString() || '0'}
+              value={typeof userStats?.total === 'number' ? userStats.total.toLocaleString() : (overview?.totalUsers?.toLocaleString() || '0')}
               change={overview?.userGrowth ? `+${overview.userGrowth}%` : null}
               iconBg="bg-blue-50"
               iconColor="text-blue-600"
               loading={refreshing}
             />
-            <StatCard 
+            <StatCard
               icon={Bike}
               title="Active Riders"
-              value={overview?.activeRiders?.toLocaleString() || overview?.totalRiders?.toLocaleString() || '0'}
+              value={typeof riderStats?.active === 'number' ? riderStats.active.toLocaleString() : (overview?.activeRiders?.toLocaleString() || overview?.totalRiders?.toLocaleString() || '0')}
               change={overview?.riderGrowth ? `+${overview.riderGrowth}%` : null}
               iconBg="bg-orange-50"
               iconColor="text-orange-600"
               loading={refreshing}
             />
-            <StatCard 
+            <StatCard
               icon={Package}
               title="Total Orders"
-              value={overview?.totalOrders?.toLocaleString() || '0'}
+              value={typeof orderStats?.total === 'number' ? orderStats.total.toLocaleString() : (overview?.totalOrders?.toLocaleString() || '0')}
               change={overview?.orderGrowth ? `+${overview.orderGrowth}%` : null}
               iconBg="bg-green-50"
               iconColor="text-green-600"
               loading={refreshing}
             />
-            <StatCard 
+            <StatCard
               icon={DollarSign}
               title="Total Revenue"
               value={formatCurrency(overview?.totalRevenue || 0)}
@@ -455,7 +476,7 @@ const AdminDashboard = () => {
                     const receiverName = order.receiver?.name || order.receiverName || null;
                     const displayName = receiverName ? `${customerName} × ${receiverName}` : customerName;
                     const createdAt = order.createdAt || order.dateCreated;
-                    
+
                     return (
                       <div key={orderId} className="flex items-center justify-between pb-4 border-b border-gray-100 last:border-0">
                         <div className="flex-1">
@@ -495,7 +516,7 @@ const AdminDashboard = () => {
                     const userEmail = user.driver?.email || user.user?.email || user.email || 'N/A';
                     const submittedAt = user.submittedAt || user.createdAt;
                     const isProcessing = processingKyc[verificationId];
-                    
+
                     return (
                       <div key={verificationId || index} className="pb-4 border-b border-gray-100 last:border-0">
                         <div className="flex items-start justify-between mb-3">
@@ -510,7 +531,7 @@ const AdminDashboard = () => {
                           </span>
                         </div>
                         <div className="flex gap-2">
-                          <button 
+                          <button
                             onClick={() => handleApproveKyc(verificationId)}
                             disabled={!!isProcessing}
                             className="flex-1 bg-green-500 hover:bg-green-600 text-white text-sm font-medium py-2 px-4 rounded-lg transition-colors flex items-center justify-center gap-1.5 disabled:opacity-50 disabled:cursor-not-allowed"
@@ -522,7 +543,7 @@ const AdminDashboard = () => {
                             )}
                             Approve
                           </button>
-                          <button 
+                          <button
                             onClick={() => handleRejectKyc(verificationId)}
                             disabled={!!isProcessing}
                             className="flex-1 bg-red-500 hover:bg-red-600 text-white text-sm font-medium py-2 px-4 rounded-lg transition-colors flex items-center justify-center gap-1.5 disabled:opacity-50 disabled:cursor-not-allowed"
@@ -547,7 +568,7 @@ const AdminDashboard = () => {
               )}
             </div>
           </div>
-            
+
         </IonContent>
       </AdminLayout>
     </IonPage>

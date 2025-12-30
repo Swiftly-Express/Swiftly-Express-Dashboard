@@ -113,14 +113,29 @@ const ManageRiders = () => {
           ? 'bg-red-100 text-red-800'
           : 'bg-gray-100 text-gray-800';
 
+      // Vehicle and license extraction from KYC/driver object
+      let vehicle = 'Not specified';
+      let license = 'N/A';
+      // Try to extract from KYC/driver fields
+      if (rider.vehicleType) vehicle = rider.vehicleType;
+      else if (rider.vehicle && typeof rider.vehicle === 'object') vehicle = rider.vehicle.type || rider.vehicle.name || rider.vehicle.model || vehicle;
+      else if (profile.vehicleType) vehicle = profile.vehicleType;
+      else if (profile.vehicle && typeof profile.vehicle === 'object') vehicle = profile.vehicle.type || profile.vehicle.name || profile.vehicle.model || vehicle;
+
+      if (rider.licenseNumber) license = rider.licenseNumber;
+      else if (rider.license) license = rider.license;
+      else if (profile.licenseNumber) license = profile.licenseNumber;
+      else if (profile.license) license = profile.license;
+      else if (profile.driverLicense) license = profile.driverLicense;
+
       return {
         id: rider.riderId || rider.driverId || profile._id || profile.id || rider.id || 'N/A',
         name: profile.name || profile.fullName || `${profile.firstName || ''} ${profile.lastName || ''}`.trim() || 'Unknown',
         joined: formatDate(profile.createdAt || profile.joinedDate || profile.registeredAt || rider.createdAt),
         email: profile.email || profile.contactEmail || rider.email || 'N/A',
         phone: profile.phone || profile.phoneNumber || profile.mobile || rider.phone || 'N/A',
-        vehicle: profile.vehicleType || profile.vehicle?.type || rider.vehicleType || 'Not specified',
-        license: profile.licenseNumber || profile.driverLicense || profile.license || rider.licenseNumber || 'N/A',
+        vehicle,
+        license,
         deliveries: formatNumber(rider.totalDeliveries || rider.deliveryCount || rider.completedTrips || profile.totalDeliveries || 0),
         earnings: formatCurrency(rider.totalEarnings || rider.earnings || profile.totalEarnings || 0),
         kyc: kycStatus,
