@@ -8,6 +8,8 @@ import CheckIcon from '../../../icons/Checkicon';
 import CircleXIcon from '../../../icons/Circlexicon';
 import DocumentIcon from '../../../icons/Documenticon';
 import { getPendingVerifications, approveVerification, rejectVerification, getUser, searchUsers } from '../../../utils/adminApi';
+import { getApprovedRiders } from '../../../utils/adminApi';
+import { onVerificationApproved } from '../../../utils/verificationNotifications';
 
 const KYCApprovals = () => {
   const [selectedApplication, setSelectedApplication] = useState(null);
@@ -61,7 +63,7 @@ const KYCApprovals = () => {
     try {
       setLoading(true);
       setError(null);
-      
+
       // Fetch ALL verifications (not just pending) to get accurate stats
       const response = await getPendingVerifications(1, 100); // Get more records for stats
 
@@ -75,23 +77,20 @@ const KYCApprovals = () => {
       console.log('[KYCApprovals] Extracted verifications:', allVerifications);
       console.log('[KYCApprovals] Sample verification object:', allVerifications[0]);
 
-      // Filter for current page display (only pending)
-      const pendingOnly = allVerifications.filter(v => 
-        (v.status === 'pending' || v.verificationStatus === 'pending')
-      );
-      
-      setApplications(pendingOnly);
+
+      // Show all applications (pending, approved, rejected)
+      setApplications(allVerifications);
 
       // Enrich applications asynchronously
       try {
-        const enriched = await enrichApplicationsWithProfiles(pendingOnly);
+        const enriched = await enrichApplicationsWithProfiles(allVerifications);
         setApplications(enriched);
       } catch (e) {
         console.warn('[KYCApprovals] Failed to enrich applications with profiles:', e);
       }
       setTotalPages(paginationData.totalPages || 1);
 
-      // Calculate stats from ALL verifications (not just pending)
+      // Calculate stats from ALL verifications
       calculateStats(allVerifications);
 
     } catch (err) {
@@ -181,16 +180,16 @@ const KYCApprovals = () => {
     const today = new Date();
     today.setHours(0, 0, 0, 0);
 
-    const pending = verificationsData.filter(v => 
+    const pending = verificationsData.filter(v =>
       v.status === 'pending' || v.verificationStatus === 'pending'
     ).length;
-    
+
     const approvedToday = verificationsData.filter(v => {
       const status = v.status || v.verificationStatus;
       const updatedAt = new Date(v.updatedAt || v.updated_at || v.approvedAt);
       return status === 'approved' && updatedAt >= today;
     }).length;
-    
+
     const rejectedToday = verificationsData.filter(v => {
       const status = v.status || v.verificationStatus;
       const updatedAt = new Date(v.updatedAt || v.updated_at || v.rejectedAt);
@@ -486,11 +485,38 @@ const KYCApprovals = () => {
       console.log('[KYCApprovals] Approve → verificationId:', verificationId, 'payload:', approvePayload);
 
       await approveVerification(verificationId, approvePayload);
+      // Mark as verified in notification system (for in-app and push notifications)
+      onVerificationApproved();
+
+      // Fetch the just-approved rider from analytics/drivers and update their status in the applications list
+      try {
+        // Fetch all KYC approved riders from the correct endpoint
+        const approvedRidersRes = await getApprovedRiders(1, 100);
+        const approvedRiders = approvedRidersRes.data || approvedRidersRes.riders || [];
+        // Find the just-approved rider by ID
+        const justApproved = approvedRiders.find(r => {
+          const id = r._id || r.id;
+          return id && id === selectedApplication.riderId;
+        });
+        if (justApproved) {
+          setApplications(prev =>
+            prev.map(app => {
+              const normalized = getApplicationData(app);
+              if (normalized.riderId === (justApproved._id || justApproved.id)) {
+                return { ...app, status: 'approved', verificationStatus: 'approved' };
+              }
+              return app;
+            })
+          );
+        }
+      } catch (e) {
+        console.warn('[KYCApprovals] Could not update status from /api/admin/drivers:', e);
+      }
 
       showToast('Application approved successfully!', 'success');
       closeModal();
 
-      // Refresh the list
+      // Optionally, refresh the list from backend as well
       await fetchVerifications();
     } catch (err) {
       console.error('[KYCApprovals] Error approving verification:', err);
@@ -584,7 +610,7 @@ const KYCApprovals = () => {
       valueColor: '#000000'
     }
   ];
-  
+
 
   return (
     <IonPage>

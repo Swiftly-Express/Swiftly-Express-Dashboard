@@ -8,7 +8,7 @@ import CheckCircleIcon from '../../../icons/Circlecheck';
 import PauseIcon from '../../../icons/Pauseicon';
 import ClockIcon from '../../../icons/Clockicon';
 import BanIcon from '../../../icons/Banicon';
-import { getDriverAnalytics } from '../../../utils/adminApi';
+import { getApprovedRiders } from '../../../utils/adminApi';
 
 const ManageRiders = () => {
   const [searchQuery, setSearchQuery] = useState('');
@@ -27,10 +27,10 @@ const ManageRiders = () => {
       try {
         setLoading(true);
         setError(null);
-        const response = await getDriverAnalytics();
-
-        // Handle different response structures
-        const drivers = response?.data?.drivers || response?.drivers || response?.data || [];
+        // Fetch only approved riders
+        const response = await getApprovedRiders(1, 100);
+        // Correctly parse drivers from response.data.drivers
+        const drivers = response?.data?.drivers || [];
         setRidersData(Array.isArray(drivers) ? drivers : []);
       } catch (err) {
         console.error('Error fetching riders:', err);
@@ -47,21 +47,22 @@ const ManageRiders = () => {
     return () => window.removeEventListener('resize', handleResize);
   }, []);
 
-  // Helper function to get KYC status from verification data
+  // Helper function to get KYC status from verificationStatus field
   const getKycStatus = (rider) => {
-    const verification = rider.verification || rider.kyc || {};
-    const status = verification.status || verification.verificationStatus || 'pending';
-
-    // Normalize status to match our UI expectations
+    const status = rider.verificationStatus || 'pending';
     if (status === 'approved' || status === 'verified') return 'Approved';
     if (status === 'rejected' || status === 'declined') return 'Rejected';
     return 'Pending';
   };
 
   // Helper function to get rider status
+  // Use backend-provided active/inactive status directly if available
   const getRiderStatus = (rider) => {
     if (rider.isSuspended || rider.suspended || rider.status === 'suspended') return 'Suspended';
-    if (rider.isActive || rider.active || rider.status === 'active') return 'Active';
+    // Prefer backend-provided toggle/flag for active state
+    if (typeof rider.isActive === 'boolean') return rider.isActive ? 'Active' : 'Inactive';
+    if (typeof rider.active === 'boolean') return rider.active ? 'Active' : 'Inactive';
+    if (rider.status === 'active') return 'Active';
     return 'Inactive';
   };
 
@@ -206,6 +207,7 @@ const ManageRiders = () => {
     const endIndex = startIndex + itemsPerPage;
     return filteredRiders.slice(startIndex, endIndex);
   }, [filteredRiders, currentPage, itemsPerPage]);
+  console.log('Rendering riders:', paginatedRiders)
 
   // Handle page change
   const handlePageChange = (newPage) => {
@@ -481,6 +483,7 @@ const ManageRiders = () => {
                                   <td className="w-[10%] px-2 py-4 whitespace-nowrap">
                                     <YummyText className="text-xs font-medium text-gray-900">{rider.earnings}</YummyText>
                                   </td>
+
                                   <td className="w-[8%] px-1 py-4 whitespace-nowrap">
                                     <span className={`px-2 py-1 rounded-full text-[11px] font-medium ${rider.kycColor}`}>
                                       {rider.kyc}

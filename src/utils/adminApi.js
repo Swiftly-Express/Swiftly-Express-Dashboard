@@ -1,3 +1,10 @@
+/**
+ * Get all approved riders (analytics/drivers)
+ * @returns {Promise} List of approved riders
+ */
+export async function getApprovedRiders(page = 1, limit = 20) {
+  return adminApiClient.get(`/api/admin/drivers?page=${page}&limit=${limit}`);
+}
 import axios from 'axios';
 import { getCookie } from './cookies';
 
@@ -273,6 +280,7 @@ export default {
   getAnalyticsOverview,
   getRevenueAnalytics,
   getDriverAnalytics,
+  getApprovedRiders,
 
   // Verification management
   getPendingVerifications,
