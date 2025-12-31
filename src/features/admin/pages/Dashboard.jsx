@@ -148,6 +148,8 @@ const AdminDashboard = () => {
       // Remove from list
       setKycApprovals(prev => prev.filter(k => k._id !== verificationId && k.id !== verificationId));
       setProcessingKyc(prev => ({ ...prev, [verificationId]: null }));
+      // Dispatch event to update analytics and dashboard stats
+      window.dispatchEvent(new CustomEvent('kyc:updated'));
     } catch (err) {
       console.error('Error approving KYC:', err);
       alert(err.message || 'Failed to approve verification');
@@ -166,6 +168,8 @@ const AdminDashboard = () => {
       // Remove from list
       setKycApprovals(prev => prev.filter(k => k._id !== verificationId && k.id !== verificationId));
       setProcessingKyc(prev => ({ ...prev, [verificationId]: null }));
+      // Dispatch event to update analytics and dashboard stats
+      window.dispatchEvent(new CustomEvent('kyc:updated'));
     } catch (err) {
       console.error('Error rejecting KYC:', err);
       alert(err.message || 'Failed to reject verification');
@@ -186,12 +190,22 @@ const AdminDashboard = () => {
     });
   };
 
-  // Fetch data on mount
+  // Fetch data on mount and after KYC update
   useEffect(() => {
     fetchDashboardData();
     const handleResize = () => setIsMobile(window.innerWidth < 768);
     window.addEventListener('resize', handleResize);
-    return () => window.removeEventListener('resize', handleResize);
+
+    // Listen for KYC approval/rejection events to refresh stats
+    const handleKycUpdate = () => {
+      fetchDashboardData();
+    };
+    window.addEventListener('kyc:updated', handleKycUpdate);
+
+    return () => {
+      window.removeEventListener('resize', handleResize);
+      window.removeEventListener('kyc:updated', handleKycUpdate);
+    };
   }, []);
 
   // Calculate order status data for pie chart

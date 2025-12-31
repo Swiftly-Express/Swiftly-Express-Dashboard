@@ -168,12 +168,22 @@ const AnalyticsReports = () => {
     }
   };
 
-  // Fetch data on mount and when time period changes
+  // Fetch data on mount, when time period changes, or after KYC approval/rejection
   useEffect(() => {
     fetchAnalyticsData();
     const handleResize = () => setIsMobile(window.innerWidth < 768);
     window.addEventListener('resize', handleResize);
-    return () => window.removeEventListener('resize', handleResize);
+
+    // Listen for KYC approval/rejection events to refresh stats
+    const handleKycUpdate = () => {
+      fetchAnalyticsData(true);
+    };
+    window.addEventListener('kyc:updated', handleKycUpdate);
+
+    return () => {
+      window.removeEventListener('resize', handleResize);
+      window.removeEventListener('kyc:updated', handleKycUpdate);
+    };
   }, [timePeriod]);
 
   // Using shared StyledDropdown component (imported above)

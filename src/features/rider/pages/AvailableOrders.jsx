@@ -136,6 +136,7 @@ const AvailableOrders = () => {
   const [toastMsg, setToastMsg] = useState('');
   const [showToast, setShowToast] = useState(false);
   const [isVerified, setIsVerified] = useState(false);
+  const [isAvailable, setIsAvailable] = useState(true);
   const [lastRefresh, setLastRefresh] = useState(Date.now());
 
   // Debug: Check tokens on mount
@@ -162,8 +163,13 @@ const AvailableOrders = () => {
 
       console.log('[AvailableOrders] 📦 Backend profile:', profile);
 
-      const backendStatus = profile?.verificationStatus || profile?.accountStatus || profile?.status;
-      const isApproved = backendStatus === 'approved' || backendStatus === 'active';
+
+      // Fix: Also check nested verification object for status
+      let backendStatus = profile?.verificationStatus || profile?.accountStatus || profile?.status;
+      if (!backendStatus && profile?.verification && profile.verification.verificationStatus) {
+        backendStatus = profile.verification.verificationStatus;
+      }
+      const isApproved = backendStatus === 'approved';
 
       console.log('[AvailableOrders] Backend verification status:', {
         backendStatus,
@@ -187,14 +193,17 @@ const AvailableOrders = () => {
         console.log('[AvailableOrders] ✓ Synced backend status to cookies:', backendStatus);
       }
 
+      // Check availability (must be true to accept orders)
+      const available = profile?.availability !== false && profile?.isActive !== false;
+      setIsAvailable(available);
+
       setIsVerified(isApproved);
       return isApproved;
     } catch (error) {
       console.error('[AvailableOrders] Failed to check verification status:', error);
       // Fallback to local cookie check
-      const verified = isRiderVerified();
-      setIsVerified(verified);
-      return verified;
+      setIsVerified(false);
+      return false;
     }
   };
 
@@ -302,6 +311,11 @@ const AvailableOrders = () => {
   };
 
   const handleAcceptOrder = async (deliveryId) => {
+    if (!isAvailable) {
+      setToastMsg('You must be available/active to accept orders. Please update your status in your profile.');
+      setShowToast(true);
+      return;
+    }
     setAccepting(deliveryId);
     try {
       const response = await acceptDeliveryJob(deliveryId);
@@ -315,7 +329,7 @@ const AvailableOrders = () => {
       window.dispatchEvent(new CustomEvent('delivery:accepted', { detail: { deliveryId } }));
     } catch (error) {
       console.error('[AvailableOrders] Failed to accept job:', error);
-      setToastMsg(error.message || 'Failed to accept order');
+      setToastMsg((error && (error.message || error.data?.message || error.data?.errorMessage)) || 'Failed to accept order');
       setShowToast(true);
     } finally {
       setAccepting(null);
@@ -370,6 +384,20 @@ const AvailableOrders = () => {
                 className="bg-[#00B75A] hover:bg-[#00B876] text-white px-6 py-3 rounded-full font-medium transition-colors"
               >
                 Go to Dashboard
+              </button>
+            </div>
+          ) : !isAvailable ? (
+            <div className="text-center py-20 rounded-2xl px-6" style={sideBottomShadow}>
+              <BanIcon className="w-16 h-16 mx-auto mb-4 text-[#FF6B00]" />
+              <div className="text-xl font-medium text-[#0F172A] mb-3">Set Availability</div>
+              <div className="text-sm text-[#64748B] max-w-md mx-auto mb-6">
+                You must be marked as available/active to accept orders. Please update your status in your profile.
+              </div>
+              <button
+                onClick={() => window.location.href = '/rider/profile'}
+                className="bg-[#00B75A] hover:bg-[#00B876] text-white px-6 py-3 rounded-full font-medium transition-colors"
+              >
+                Go to Profile
               </button>
             </div>
           ) : (

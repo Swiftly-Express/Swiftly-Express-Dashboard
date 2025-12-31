@@ -7,7 +7,7 @@ import ClockIcon from '../../../icons/Clockicon';
 import CheckIcon from '../../../icons/Checkicon';
 import CircleXIcon from '../../../icons/Circlexicon';
 import DocumentIcon from '../../../icons/Documenticon';
-import { getPendingVerifications, approveVerification, rejectVerification, getUser, searchUsers } from '../../../utils/adminApi';
+import { getPendingVerifications, approveVerification, rejectVerification, getUser, searchUsers, getAnalyticsOverview } from '../../../utils/adminApi';
 import { getApprovedRiders } from '../../../utils/adminApi';
 import { onVerificationApproved } from '../../../utils/verificationNotifications';
 
@@ -16,6 +16,7 @@ const KYCApprovals = () => {
   const [approvedKYC, setApprovedKYC] = useState([]);
   const [approvedKYCLoading, setApprovedKYCLoading] = useState(true);
   const [approvedKYCError, setApprovedKYCError] = useState(null);
+
 
   // Fetch recently approved KYC applications
   const fetchApprovedKYC = async () => {
@@ -33,9 +34,29 @@ const KYCApprovals = () => {
     }
   };
 
+  // Fetch KYC stats from analytics overview
+  const fetchKYCStats = async () => {
+    try {
+      const resp = await getAnalyticsOverview();
+      const data = resp.data || resp;
+      // Defensive: check for nested structure
+      const kycStats = data.kycStats || data.kyc || data.stats || data;
+      setStats({
+        pending: kycStats.pending || 0,
+        approvedToday: kycStats.approvedToday || 0,
+        rejectedToday: kycStats.rejectedToday || 0,
+        totalMonth: kycStats.totalMonth || 0
+      });
+    } catch (err) {
+      // Optionally show error toast or fallback
+      console.warn('[KYCApprovals] Failed to fetch KYC stats from analytics overview:', err);
+    }
+  };
+
   // Fetch on mount
   useEffect(() => {
     fetchApprovedKYC();
+    fetchKYCStats();
   }, []);
   const [selectedApplication, setSelectedApplication] = useState(null);
   const [activeTab, setActiveTab] = useState('contact');
@@ -69,6 +90,15 @@ const KYCApprovals = () => {
   useEffect(() => {
     fetchVerifications();
   }, [currentPage]);
+
+  // Refetch KYC stats after approval/rejection
+  const refetchAll = async () => {
+    await Promise.all([
+      fetchVerifications(),
+      fetchApprovedKYC(),
+      fetchKYCStats()
+    ]);
+  };
 
   // Listen for verification events from the rider app and refresh list
   useEffect(() => {
@@ -513,32 +543,8 @@ const KYCApprovals = () => {
       // Mark as verified in notification system (for in-app and push notifications)
       onVerificationApproved();
 
-      // Fetch the just-approved rider from analytics/drivers and update their status in the applications list
-      try {
-        // Fetch all KYC approved riders from the correct endpoint
-        const approvedRidersRes = await getApprovedRiders(1, 100);
-        const approvedRiders = approvedRidersRes.data || approvedRidersRes.riders || [];
-        // Find the just-approved rider by ID
-        const justApproved = approvedRiders.find(r => {
-          const id = r._id || r.id;
-          return id && id === selectedApplication.riderId;
-        });
-        if (justApproved) {
-          setApplications(prev =>
-            prev.map(app => {
-              const normalized = getApplicationData(app);
-              if (normalized.riderId === (justApproved._id || justApproved.id)) {
-                return { ...app, status: 'approved', verificationStatus: 'approved' };
-              }
-              return app;
-            })
-          );
-        }
-      } catch (e) {
-        console.warn('[KYCApprovals] Could not update status from /api/admin/drivers:', e);
-      }
-
-      await fetchVerifications();
+      // Refetch all relevant data (verifications, approved KYC, stats)
+      await refetchAll();
       showToast('Application approved successfully!', 'success');
       closeModal();
     } catch (err) {
@@ -580,7 +586,8 @@ const KYCApprovals = () => {
 
       await rejectVerification(verificationId, rejectPayload);
 
-      await fetchVerifications();
+      // Refetch all relevant data (verifications, approved KYC, stats)
+      await refetchAll();
       showToast('Application rejected', 'success');
       closeModal();
     } catch (err) {

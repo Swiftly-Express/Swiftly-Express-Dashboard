@@ -47,18 +47,9 @@ export function getCookie(name) {
  */
 export function isRiderVerified() {
   if (typeof window === 'undefined') return false;
-  
-  const verificationCompleted = getCookie('verificationCompleted') === 'true';
-  const verificationSubmitted = getCookie('verificationSubmitted') === 'true';
-  const riderAccountVerified = getCookie('riderAccountVerified');
+  // Only allow if backend status is 'approved'
   const riderVerificationStatus = getCookie('riderVerificationStatus');
-  
-  return verificationCompleted || 
-         verificationSubmitted || 
-         riderAccountVerified === 'true' || 
-         riderAccountVerified === 'pending' ||
-         riderVerificationStatus === 'pending' ||
-         riderVerificationStatus === 'approved';
+  return riderVerificationStatus === 'approved';
 }
 
 /**
