@@ -82,8 +82,8 @@ const RiderCard = ({ rider }) => {
           <YummyText className={`text-xl font-bold ${rider.trend === 'up' ? 'text-green-600' : 'text-red-600'
             }`}>{rider.earnings}</YummyText>
           <div className={`flex items-center text-xs py-0.5 px-2 rounded-full ${rider.trend === 'up'
-              ? 'bg-[#F0FDF4] border border-[#B9F8CF] text-green-600'
-              : 'bg-red-50 border border-red-200 text-red-600'
+            ? 'bg-[#F0FDF4] border border-[#B9F8CF] text-green-600'
+            : 'bg-red-50 border border-red-200 text-red-600'
             }`}>
             {rider.trend === 'up' ? (
               <TrendingUp className="w-3 h-3 mr-1" />
@@ -397,8 +397,8 @@ const AnalyticsReports = () => {
                   <DollarSign className="w-6 h-6 text-blue-600" />
                 </div>
                 <div className={`flex items-center text-xs mt-3 gap-2 py-0.5 px-2 rounded-full ${stats.totalRevenue >= stats.previousRevenue
-                    ? 'bg-[#F0FDF4] border border-[#B9F8CF] text-green-600'
-                    : 'bg-red-50 border border-red-200 text-red-600'
+                  ? 'bg-[#F0FDF4] border border-[#B9F8CF] text-green-600'
+                  : 'bg-red-50 border border-red-200 text-red-600'
                   }`}>
                   {stats.totalRevenue >= stats.previousRevenue ? (
                     <TrendingUp className="w-4 h-4 mr-1" />
@@ -420,8 +420,8 @@ const AnalyticsReports = () => {
                   <Package className="w-6 h-6 text-green-600" />
                 </div>
                 <div className={`flex items-center text-xs mt-3 gap-2 py-0.5 px-2 rounded-full ${stats.totalOrders >= stats.previousOrders
-                    ? 'bg-[#F0FDF4] border border-[#B9F8CF] text-green-600'
-                    : 'bg-red-50 border border-red-200 text-red-600'
+                  ? 'bg-[#F0FDF4] border border-[#B9F8CF] text-green-600'
+                  : 'bg-red-50 border border-red-200 text-red-600'
                   }`}>
                   {stats.totalOrders >= stats.previousOrders ? (
                     <TrendingUp className="w-4 h-4 mr-1" />
@@ -443,8 +443,8 @@ const AnalyticsReports = () => {
                   <Users className="w-6 h-6 text-purple-600" />
                 </div>
                 <div className={`flex items-center text-xs mt-3 gap-2 py-0.5 px-2 rounded-full ${stats.activeUsers >= stats.previousUsers
-                    ? 'bg-[#F0FDF4] border border-[#B9F8CF] text-green-600'
-                    : 'bg-red-50 border border-red-200 text-red-600'
+                  ? 'bg-[#F0FDF4] border border-[#B9F8CF] text-green-600'
+                  : 'bg-red-50 border border-red-200 text-red-600'
                   }`}>
                   {stats.activeUsers >= stats.previousUsers ? (
                     <TrendingUp className="w-4 h-4 mr-1" />
@@ -466,8 +466,8 @@ const AnalyticsReports = () => {
                   <Bike className="w-6 h-6 text-orange-600" />
                 </div>
                 <div className={`flex items-center text-xs mt-3 gap-2 py-0.5 px-2 rounded-full ${stats.activeRiders >= stats.previousRiders
-                    ? 'bg-[#F0FDF4] border border-[#B9F8CF] text-green-600'
-                    : 'bg-red-50 border border-red-200 text-red-600'
+                  ? 'bg-[#F0FDF4] border border-[#B9F8CF] text-green-600'
+                  : 'bg-red-50 border border-red-200 text-red-600'
                   }`}>
                   {stats.activeRiders >= stats.previousRiders ? (
                     <TrendingUp className="w-4 h-4 mr-1" />

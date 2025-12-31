@@ -436,8 +436,8 @@ const AvailableOrders = () => {
                   <button
                     onClick={() => setActiveTab('all')}
                     className={`px-5 py-1 rounded-full text-sm font-normal transition-colors ${activeTab === 'all'
-                        ? 'text-[#00B75A] bg-white shadow-sm'
-                        : 'text-[#64748B]'
+                      ? 'text-[#00B75A] bg-white shadow-sm'
+                      : 'text-[#64748B]'
                       }`}
                   >
                     All Orders ({orders.length})
@@ -445,8 +445,8 @@ const AvailableOrders = () => {
                   <button
                     onClick={() => setActiveTab('express')}
                     className={`px-5 py-1 rounded-full text-sm font-normal transition-colors ${activeTab === 'express'
-                        ? 'text-[#00B75A] bg-white shadow-sm'
-                        : 'text-[#64748B]'
+                      ? 'text-[#00B75A] bg-white shadow-sm'
+                      : 'text-[#64748B]'
                       }`}
                   >
                     Express ({expressCount})
@@ -454,8 +454,8 @@ const AvailableOrders = () => {
                   <button
                     onClick={() => setActiveTab('nearby')}
                     className={`px-5 py-1 rounded-full text-sm font-normal transition-colors ${activeTab === 'nearby'
-                        ? 'text-[#00B75A] bg-white shadow-sm'
-                        : 'text-[#64748B]'
+                      ? 'text-[#00B75A] bg-white shadow-sm'
+                      : 'text-[#64748B]'
                       }`}
                   >
                     Nearby ({nearbyCount})

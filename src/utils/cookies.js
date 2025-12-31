@@ -12,11 +12,11 @@ export function setCookie(name, value, days = 7, options = {}) {
     date.setTime(date.getTime() + (days * 24 * 60 * 60 * 1000));
     expires = `; expires=${date.toUTCString()}`;
   }
-  
+
   const secure = window.location.protocol === 'https:' ? '; Secure' : '';
   const sameSite = options.sameSite || 'Lax';
   const path = options.path || '/';
-  
+
   document.cookie = `${name}=${encodeURIComponent(value)}${expires}; path=${path}; SameSite=${sameSite}${secure}`;
 }
 
@@ -28,7 +28,7 @@ export function setCookie(name, value, days = 7, options = {}) {
 export function getCookie(name) {
   const nameEQ = name + '=';
   const cookies = document.cookie.split(';');
-  
+
   for (let i = 0; i < cookies.length; i++) {
     let cookie = cookies[i];
     while (cookie.charAt(0) === ' ') {
@@ -78,7 +78,7 @@ export function hasCookie(name) {
 export function getAllCookies() {
   const cookies = {};
   const cookieArray = document.cookie.split(';');
-  
+
   for (let i = 0; i < cookieArray.length; i++) {
     const cookie = cookieArray[i].trim();
     const [name, value] = cookie.split('=');
@@ -86,7 +86,7 @@ export function getAllCookies() {
       cookies[name] = decodeURIComponent(value);
     }
   }
-  
+
   return cookies;
 }
 
@@ -110,7 +110,7 @@ export function setJSONCookie(name, data, days = 7, options = {}) {
 export function getJSONCookie(name) {
   const value = getCookie(name);
   if (!value) return null;
-  
+
   try {
     return JSON.parse(value);
   } catch (e) {

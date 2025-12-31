@@ -659,12 +659,12 @@ const KYCApprovals = () => {
 
           {/* Header */}
           <YummyText>
-          <div className="mb-8">
-          
+            <div className="mb-8">
+
               <div className="text-3xl font-medium text-[#1E1E1E] mb-0.5">KYC Approvals</div>
               <div className="text-[#717182]">Review and approve rider verification applications</div>
-            
-          </div>
+
+            </div>
           </YummyText>
 
 
@@ -688,51 +688,51 @@ const KYCApprovals = () => {
 
           {/* Recently Approved KYC Section */}
           <YummyText>
-          <div className="bg-white rounded-2xl shadow p-6 mb-8">
-            <div className="flex items-center mb-1">
-              <CheckIcon size={20} color="#00A63E" className="mr-2" />
-              <h2 className="text-lg font-semibold text-gray-900">Recently Approved KYC Applications</h2>
-            </div>
-            {approvedKYCLoading ? (
-              <div className="flex items-center gap-2 text-gray-500"><Loader className="w-4 h-4 animate-spin" /> Loading...</div>
-            ) : approvedKYCError ? (
-              <div className="text-red-500">{approvedKYCError}</div>
-            ) : approvedKYC.length === 0 ? (
-              <div className="text-gray-500">No recently approved KYC applications.</div>
-            ) : (
-              <div className="overflow-x-auto">
-                <table className="min-w-full divide-y divide-gray-200">
-                  <thead>
-                    <tr>
-                      <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Name</th>
-                      <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Email</th>
-                      <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Phone</th>
-                      <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Vehicle</th>
-                      <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Date Approved</th>
-                    </tr>
-                  </thead>
-                  <tbody className="bg-white divide-y divide-gray-100">
-                    {approvedKYC.map((rider, idx) => {
-                      const name = rider.fullName || rider.name || rider.profile?.fullName || rider.profile?.name || '';
-                      const email = rider.email || rider.profile?.email || '';
-                      const phone = rider.phone || rider.profile?.phone || '';
-                      const vehicle = rider.vehicleModel || rider.vehicle?.makeModel || rider.vehicle?.type || '';
-                      const approvedAt = rider.approvedAt || rider.updatedAt || rider.createdAt || '';
-                      return (
-                        <tr key={rider._id || rider.id || idx}>
-                          <td className="px-4 py-2 whitespace-nowrap text-sm text-gray-900">{name}</td>
-                          <td className="px-4 py-2 whitespace-nowrap text-sm text-gray-700">{email}</td>
-                          <td className="px-4 py-2 whitespace-nowrap text-sm text-gray-700">{phone}</td>
-                          <td className="px-4 py-2 whitespace-nowrap text-sm text-gray-700">{vehicle}</td>
-                          <td className="px-4 py-2 whitespace-nowrap text-sm text-gray-500">{approvedAt ? new Date(approvedAt).toLocaleString() : ''}</td>
-                        </tr>
-                      );
-                    })}
-                  </tbody>
-                </table>
+            <div className="bg-white rounded-2xl shadow p-6 mb-8">
+              <div className="flex items-center mb-1">
+                <CheckIcon size={20} color="#00A63E" className="mr-2" />
+                <h2 className="text-lg font-semibold text-gray-900">Recently Approved KYC Applications</h2>
               </div>
-            )}
-          </div>
+              {approvedKYCLoading ? (
+                <div className="flex items-center gap-2 text-gray-500"><Loader className="w-4 h-4 animate-spin" /> Loading...</div>
+              ) : approvedKYCError ? (
+                <div className="text-red-500">{approvedKYCError}</div>
+              ) : approvedKYC.length === 0 ? (
+                <div className="text-gray-500">No recently approved KYC applications.</div>
+              ) : (
+                <div className="overflow-x-auto">
+                  <table className="min-w-full divide-y divide-gray-200">
+                    <thead>
+                      <tr>
+                        <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Name</th>
+                        <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Email</th>
+                        <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Phone</th>
+                        <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Vehicle</th>
+                        <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Date Approved</th>
+                      </tr>
+                    </thead>
+                    <tbody className="bg-white divide-y divide-gray-100">
+                      {approvedKYC.map((rider, idx) => {
+                        const name = rider.fullName || rider.name || rider.profile?.fullName || rider.profile?.name || '';
+                        const email = rider.email || rider.profile?.email || '';
+                        const phone = rider.phone || rider.profile?.phone || '';
+                        const vehicle = rider.vehicleModel || rider.vehicle?.makeModel || rider.vehicle?.type || '';
+                        const approvedAt = rider.approvedAt || rider.updatedAt || rider.createdAt || '';
+                        return (
+                          <tr key={rider._id || rider.id || idx}>
+                            <td className="px-4 py-2 whitespace-nowrap text-sm text-gray-900">{name}</td>
+                            <td className="px-4 py-2 whitespace-nowrap text-sm text-gray-700">{email}</td>
+                            <td className="px-4 py-2 whitespace-nowrap text-sm text-gray-700">{phone}</td>
+                            <td className="px-4 py-2 whitespace-nowrap text-sm text-gray-700">{vehicle}</td>
+                            <td className="px-4 py-2 whitespace-nowrap text-sm text-gray-500">{approvedAt ? new Date(approvedAt).toLocaleString() : ''}</td>
+                          </tr>
+                        );
+                      })}
+                    </tbody>
+                  </table>
+                </div>
+              )}
+            </div>
           </YummyText>
 
           {/* Loading State */}
