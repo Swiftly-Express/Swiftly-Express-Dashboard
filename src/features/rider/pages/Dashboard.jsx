@@ -141,19 +141,25 @@ const Dashboard = () => {
     const checkVerificationStatus = async () => {
       try {
         const res = await getRiderVerificationStatus();
-        const status = res?.data?.verificationStatus || res?.verificationStatus || res?.data || 'pending';
+        const status = (res?.data?.verificationStatus || res?.verificationStatus || res?.data || '').toLowerCase();
         setCookie('riderVerificationStatus', status, 7);
-        if (status && status.toLowerCase() === 'approved') {
-          setShowVerificationModal(false);
-        } else {
-          // Show modal after 2 seconds if not approved
+        console.log('[Dashboard] Rider verification status:', status);
+        // Show modal for new/unverified riders
+        if (!status || status === 'pending' || status === 'incomplete') {
           const timer = setTimeout(() => {
             setShowVerificationModal(true);
           }, 2000);
           return () => clearTimeout(timer);
+        } else if (status === 'approved') {
+          setShowVerificationModal(false);
+        } else {
+          // For any other status (e.g., rejected), you can decide what to do
+          setShowVerificationModal(false);
         }
       } catch (e) {
         console.error('[Dashboard] Failed to fetch verification status:', e);
+        // If error, treat as new/unverified
+        setShowVerificationModal(true);
       }
     };
 

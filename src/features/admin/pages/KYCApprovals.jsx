@@ -12,6 +12,31 @@ import { getApprovedRiders } from '../../../utils/adminApi';
 import { onVerificationApproved } from '../../../utils/verificationNotifications';
 
 const KYCApprovals = () => {
+  // Approved KYC history state
+  const [approvedKYC, setApprovedKYC] = useState([]);
+  const [approvedKYCLoading, setApprovedKYCLoading] = useState(true);
+  const [approvedKYCError, setApprovedKYCError] = useState(null);
+
+  // Fetch recently approved KYC applications
+  const fetchApprovedKYC = async () => {
+    setApprovedKYCLoading(true);
+    setApprovedKYCError(null);
+    try {
+      const resp = await getApprovedRiders(1, 10); // Fetch 10 most recent
+      const data = resp.data || resp;
+      const riders = data.riders || data.data || [];
+      setApprovedKYC(riders);
+    } catch (err) {
+      setApprovedKYCError(err.message || 'Failed to load approved KYC');
+    } finally {
+      setApprovedKYCLoading(false);
+    }
+  };
+
+  // Fetch on mount
+  useEffect(() => {
+    fetchApprovedKYC();
+  }, []);
   const [selectedApplication, setSelectedApplication] = useState(null);
   const [activeTab, setActiveTab] = useState('contact');
   const [applications, setApplications] = useState([]);
@@ -513,11 +538,9 @@ const KYCApprovals = () => {
         console.warn('[KYCApprovals] Could not update status from /api/admin/drivers:', e);
       }
 
+      await fetchVerifications();
       showToast('Application approved successfully!', 'success');
       closeModal();
-
-      // Optionally, refresh the list from backend as well
-      await fetchVerifications();
     } catch (err) {
       console.error('[KYCApprovals] Error approving verification:', err);
       showToast(err.message || 'Failed to approve application', 'error');
@@ -557,11 +580,9 @@ const KYCApprovals = () => {
 
       await rejectVerification(verificationId, rejectPayload);
 
+      await fetchVerifications();
       showToast('Application rejected', 'success');
       closeModal();
-
-      // Refresh the list
-      await fetchVerifications();
     } catch (err) {
       console.error('[KYCApprovals] Error rejecting verification:', err);
       showToast(err.message || 'Failed to reject application', 'error');
@@ -583,28 +604,28 @@ const KYCApprovals = () => {
   const statsData = [
     {
       label: 'Pending Review',
-      value: stats.pending.toString(),
+      value: loading ? <Loader className="w-5 h-5 animate-spin" /> : stats.pending.toString(),
       icon: <ClockIcon className="w-5 h-5" stroke="#D08700" />,
       bgColor: '#FEF9C2',
       valueColor: '#000000'
     },
     {
       label: 'Approved Today',
-      value: stats.approvedToday.toString(),
+      value: loading ? <Loader className="w-5 h-5 animate-spin" /> : stats.approvedToday.toString(),
       icon: <CheckIcon size={18} color="#00A63E" />,
       bgColor: '#D1FAE5',
       valueColor: '#00A63E'
     },
     {
       label: 'Rejected Today',
-      value: stats.rejectedToday.toString(),
+      value: loading ? <Loader className="w-5 h-5 animate-spin" /> : stats.rejectedToday.toString(),
       icon: <CircleXIcon className="w-5 h-5" stroke="#EF4444" />,
       bgColor: '#FFE2E2',
       valueColor: '#E7000B'
     },
     {
       label: 'Total This Month',
-      value: stats.totalMonth.toString(),
+      value: loading ? <Loader className="w-5 h-5 animate-spin" /> : stats.totalMonth.toString(),
       icon: <DocumentIcon width={18} height={18} stroke="#3B82F6" />,
       bgColor: '#DBEAFE',
       valueColor: '#000000'
@@ -630,12 +651,15 @@ const KYCApprovals = () => {
           )}
 
           {/* Header */}
+          <YummyText>
           <div className="mb-8">
-            <YummyText>
+          
               <div className="text-3xl font-medium text-[#1E1E1E] mb-0.5">KYC Approvals</div>
               <div className="text-[#717182]">Review and approve rider verification applications</div>
-            </YummyText>
+            
           </div>
+          </YummyText>
+
 
           {/* Stats Cards */}
           <div className="grid grid-cols-2 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
@@ -654,6 +678,55 @@ const KYCApprovals = () => {
               </div>
             ))}
           </div>
+
+          {/* Recently Approved KYC Section */}
+          <YummyText>
+          <div className="bg-white rounded-2xl shadow p-6 mb-8">
+            <div className="flex items-center mb-1">
+              <CheckIcon size={20} color="#00A63E" className="mr-2" />
+              <h2 className="text-lg font-semibold text-gray-900">Recently Approved KYC Applications</h2>
+            </div>
+            {approvedKYCLoading ? (
+              <div className="flex items-center gap-2 text-gray-500"><Loader className="w-4 h-4 animate-spin" /> Loading...</div>
+            ) : approvedKYCError ? (
+              <div className="text-red-500">{approvedKYCError}</div>
+            ) : approvedKYC.length === 0 ? (
+              <div className="text-gray-500">No recently approved KYC applications.</div>
+            ) : (
+              <div className="overflow-x-auto">
+                <table className="min-w-full divide-y divide-gray-200">
+                  <thead>
+                    <tr>
+                      <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Name</th>
+                      <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Email</th>
+                      <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Phone</th>
+                      <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Vehicle</th>
+                      <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Date Approved</th>
+                    </tr>
+                  </thead>
+                  <tbody className="bg-white divide-y divide-gray-100">
+                    {approvedKYC.map((rider, idx) => {
+                      const name = rider.fullName || rider.name || rider.profile?.fullName || rider.profile?.name || '';
+                      const email = rider.email || rider.profile?.email || '';
+                      const phone = rider.phone || rider.profile?.phone || '';
+                      const vehicle = rider.vehicleModel || rider.vehicle?.makeModel || rider.vehicle?.type || '';
+                      const approvedAt = rider.approvedAt || rider.updatedAt || rider.createdAt || '';
+                      return (
+                        <tr key={rider._id || rider.id || idx}>
+                          <td className="px-4 py-2 whitespace-nowrap text-sm text-gray-900">{name}</td>
+                          <td className="px-4 py-2 whitespace-nowrap text-sm text-gray-700">{email}</td>
+                          <td className="px-4 py-2 whitespace-nowrap text-sm text-gray-700">{phone}</td>
+                          <td className="px-4 py-2 whitespace-nowrap text-sm text-gray-700">{vehicle}</td>
+                          <td className="px-4 py-2 whitespace-nowrap text-sm text-gray-500">{approvedAt ? new Date(approvedAt).toLocaleString() : ''}</td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </div>
+            )}
+          </div>
+          </YummyText>
 
           {/* Loading State */}
           {loading && (
@@ -1123,7 +1196,7 @@ const KYCApprovals = () => {
                 Cancel
               </button>
               <button
-                onClick={handleApprove}
+                onClick={handleApproveWithRefresh}
                 disabled={actionLoading}
                 className="flex-1 bg-[#00A63E] text-white py-2 rounded-lg hover:bg-green-600 flex items-center justify-center gap-2 disabled:opacity-50"
               >
