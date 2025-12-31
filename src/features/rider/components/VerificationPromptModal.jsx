@@ -1,8 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { IonIcon } from '@ionic/react';
 import confetti from 'canvas-confetti';
-import { 
-  closeOutline, 
+import {
+  closeOutline,
   informationCircleOutline
 } from 'ionicons/icons';
 import ForwardIcon from "../../../icons/Forwardicon";
@@ -21,12 +21,12 @@ const VerificationPromptModal = ({ isOpen, onClose }) => {
   const [currentStep, setCurrentStep] = useState(1);
   const [showSuccessModal, setShowSuccessModal] = useState(false);
   const [uploading, setUploading] = useState(false);
-  
+
 
   useEffect(() => {
     console.log('[VerificationPromptModal] 👁️ isOpen prop changed:', isOpen);
   }, [isOpen]);
-  
+
   const [formData, setFormData] = useState({
     // Contact Information
     phoneNumber: '',
@@ -169,7 +169,7 @@ const VerificationPromptModal = ({ isOpen, onClose }) => {
     // Validate file type
     const allowedTypes = ['image/jpeg', 'image/png', 'image/jpg', 'application/pdf'];
     if (!allowedTypes.includes(file.type)) {
-      alert('Please upload a valid image (JPG, PNG) or PDF file');
+      alert('Please upload a valid JPG, JPEG, PNG, or PDF file');
       return;
     }
 
@@ -181,7 +181,7 @@ const VerificationPromptModal = ({ isOpen, onClose }) => {
         // Show processing message
         console.log(`[VerificationModal] Processing ${field}...`);
         processedFile = await compressImage(file, 1); // Max 1MB per image
-        
+
         // Final size check after compression
         if (processedFile.size > 2 * 1024 * 1024) {
           alert('File is still too large after compression. Please use a smaller image.');
@@ -222,200 +222,200 @@ const VerificationPromptModal = ({ isOpen, onClose }) => {
   };
 
   // Add this to the handleSubmit function in VerificationPromptModal
-// Replace the existing token check section
+  // Replace the existing token check section
 
-const handleSubmit = async () => {
-  if (!formData.agreeBackgroundCheck) {
-    alert('Please accept the background check authorization');
-    return;
-  }
-
-  // CRITICAL AUTH CHECK
-  const riderToken = getCookie('rider_token');
-  const authToken = getCookie('auth_token');
-  const customerToken = getCookie('customer_token');
-  
-  console.log('[VerificationModal] 🔍 Auth Check:', {
-    riderToken: riderToken ? '✓ Present' : '✗ Missing',
-    authToken: authToken ? '✓ Present' : '✗ Missing',
-    customerToken: customerToken ? '✓ Present' : '✗ Missing',
-    allCookies: document.cookie
-  });
-  
-  const hasToken = !!(riderToken || authToken || customerToken);
-  
-  if (!hasToken) {
-    console.error('[VerificationModal] ❌ NO AUTHENTICATION TOKEN FOUND!');
-    alert('Authentication required. You need to verify your email first, then log in before submitting documents.');
-    
-    // Redirect to login
-    window.location.href = '/rider/login';
-    return;
-  }
-  
-  console.log('[VerificationModal] ✓ Token verified, proceeding with submission');
-
-  // Validate files
-  if (!formData.idDocument || !(formData.idDocument instanceof File)) {
-    alert('Please upload your ID document');
-    return;
-  }
-  if (!formData.profilePhoto || !(formData.profilePhoto instanceof File)) {
-    alert('Please upload your profile photo');
-    return;
-  }
-  if (!formData.driversLicense || !(formData.driversLicense instanceof File)) {
-    alert("Please upload your driver's license");
-    return;
-  }
-
-  // Check total upload size
-  const totalSize = (formData.idDocument?.size || 0) + 
-                    (formData.profilePhoto?.size || 0) + 
-                    (formData.driversLicense?.size || 0) + 
-                    (formData.insurance?.size || 0);
-  
-  const totalSizeMB = totalSize / 1024 / 1024;
-  
-  console.log('[VerificationModal] 📦 Total upload size:', {
-    idDocument: (formData.idDocument.size / 1024).toFixed(2) + 'KB',
-    profilePhoto: (formData.profilePhoto.size / 1024).toFixed(2) + 'KB',
-    driversLicense: (formData.driversLicense.size / 1024).toFixed(2) + 'KB',
-    insurance: formData.insurance ? (formData.insurance.size / 1024).toFixed(2) + 'KB' : 'Not provided',
-    total: totalSizeMB.toFixed(2) + 'MB'
-  });
-
-  // Enforce maximum total size of 8MB
-  if (totalSize > 8 * 1024 * 1024) {
-    alert(`Total file size (${totalSizeMB.toFixed(2)}MB) exceeds 8MB limit. Please use smaller images.`);
-    return;
-  }
-
-  setUploading(true);
-
-  try {
-    const submitData = new FormData();
-    
-    // Add all form fields
-    submitData.append('contactInfo[phone]', formData.phoneNumber || '');
-    submitData.append('contactInfo[streetAddress]', formData.streetAddress || '');
-    submitData.append('contactInfo[city]', formData.city || '');
-    submitData.append('contactInfo[state]', formData.state || '');
-    submitData.append('contactInfo[zipCode]', formData.zipCode || '');
-    
-    submitData.append('identity[idType]', formData.idType || '');
-    submitData.append('identity[idNumber]', formData.idNumber || '');
-    
-    submitData.append('vehicle[type]', formData.vehicleType || '');
-    submitData.append('vehicle[makeModel]', formData.makeModel || '');
-    submitData.append('vehicle[year]', formData.year ? parseInt(formData.year) : '');
-    submitData.append('vehicle[licensePlate]', formData.licensePlate || '');
-    
-    submitData.append('backgroundCheckConsent', true);
-    
-    // Add files with explicit filenames
-    submitData.append('idDocument', formData.idDocument, formData.idDocument.name);
-    submitData.append('profilePhoto', formData.profilePhoto, formData.profilePhoto.name);
-    submitData.append('driversLicense', formData.driversLicense, formData.driversLicense.name);
-    
-    if (formData.insurance && formData.insurance instanceof File) {
-      submitData.append('insurance', formData.insurance, formData.insurance.name);
+  const handleSubmit = async () => {
+    if (!formData.agreeBackgroundCheck) {
+      alert('Please accept the background check authorization');
+      return;
     }
 
-    console.log('[VerificationModal] 📤 Submitting verification documents to API...');
-    console.log('[VerificationModal] ℹ️ This may take a moment due to file uploads...');
+    // CRITICAL AUTH CHECK
+    const riderToken = getCookie('rider_token');
+    const authToken = getCookie('auth_token');
+    const customerToken = getCookie('customer_token');
 
-    const response = await submitRiderVerification(submitData);
-    
-    console.log('[VerificationModal] ✅ Submission successful:', response);
+    console.log('[VerificationModal] 🔍 Auth Check:', {
+      riderToken: riderToken ? '✓ Present' : '✗ Missing',
+      authToken: authToken ? '✓ Present' : '✗ Missing',
+      customerToken: customerToken ? '✓ Present' : '✗ Missing',
+      allCookies: document.cookie
+    });
 
-    // Store verification data in cookies for profile sync
-    const verificationData = {
-      contactInfo: {
-        phone: formData.phoneNumber,
-        streetAddress: formData.streetAddress,
-        city: formData.city,
-        state: formData.state,
-        zipCode: formData.zipCode
-      },
-      vehicle: {
-        type: formData.vehicleType,
-        makeModel: formData.makeModel,
-        year: formData.year,
-        licensePlate: formData.licensePlate
-      },
-      identity: {
-        idType: formData.idType,
-        idNumber: formData.idNumber
-      }
-    };
-    
-    // Store in cookies for profile access
-    setJSONCookie('riderVerificationData', verificationData, 7);
-    console.log('[VerificationModal] 💾 Verification data stored in cookies');
+    const hasToken = !!(riderToken || authToken || customerToken);
 
-    // Mark verification as submitted - CRITICAL: Use consistent values
-    setCookie('verificationCompleted', 'true', 7);
-    setCookie('verificationSubmitted', 'true', 7);
-    setCookie('riderAccountVerified', 'pending', 7);
-    setCookie('riderVerificationStatus', 'pending', 7);
-    
-    console.log('[VerificationModal] ✓ Verification flags set in cookies');
+    if (!hasToken) {
+      console.error('[VerificationModal] ❌ NO AUTHENTICATION TOKEN FOUND!');
+      alert('Authentication required. You need to verify your email first, then log in before submitting documents.');
 
-    // Clean up
-    deleteCookie('verificationPromptDismissedAt');
-    deleteCookie('nextVerificationPushNotification');
-    deleteCookie('lastVerificationPushNotification');
-
-    // Refresh profile and update cookies
-    try {
-      console.log('[VerificationModal] 🔄 Fetching updated profile...');
-      const profileResponse = await getRiderProfile();
-      const profile = profileResponse?.data?.driver || profileResponse?.driver || profileResponse?.data;
-      
-      if (profile) {
-        // Update user_data cookie with latest profile info
-        const existingUserData = getJSONCookie('user_data') || {};
-        const updatedUserData = {
-          ...existingUserData,
-          ...profile,
-          phone: formData.phoneNumber || existingUserData.phone,
-          verificationStatus: 'pending'
-        };
-        setJSONCookie('user_data', updatedUserData, 7);
-        console.log('[VerificationModal] ✓ user_data cookie updated with profile');
-      }
-      
-      // Dispatch event for other components to refresh
-      window.dispatchEvent(new CustomEvent('verification:completed', { 
-        detail: { 
-          profile: profile,
-          verificationData: verificationData
-        } 
-      }));
-      console.log('[VerificationModal] 📢 verification:completed event dispatched');
-    } catch (profileError) {
-      console.error('[VerificationModal] Profile refresh failed:', profileError);
-      // Still dispatch event even if profile fetch fails
-      window.dispatchEvent(new CustomEvent('verification:completed', { 
-        detail: { verificationData: verificationData } 
-      }));
-    }
-
-    setShowSuccessModal(true);
-  } catch (error) {
-    console.error('[VerificationModal] ❌ Submission failed:', error);
-    
-    if (error.status === 401 || error.message?.includes('token') || error.message?.includes('auth')) {
-      alert('Session expired. Please log in again and retry.');
+      // Redirect to login
       window.location.href = '/rider/login';
-    } else {
-      alert(error.message || 'Failed to submit documents. Please try again.');
+      return;
     }
-  } finally {
-    setUploading(false);
-  }
-};
+
+    console.log('[VerificationModal] ✓ Token verified, proceeding with submission');
+
+    // Validate files
+    if (!formData.idDocument || !(formData.idDocument instanceof File)) {
+      alert('Please upload your ID document');
+      return;
+    }
+    if (!formData.profilePhoto || !(formData.profilePhoto instanceof File)) {
+      alert('Please upload your profile photo');
+      return;
+    }
+    if (!formData.driversLicense || !(formData.driversLicense instanceof File)) {
+      alert("Please upload your driver's license");
+      return;
+    }
+
+    // Check total upload size
+    const totalSize = (formData.idDocument?.size || 0) +
+      (formData.profilePhoto?.size || 0) +
+      (formData.driversLicense?.size || 0) +
+      (formData.insurance?.size || 0);
+
+    const totalSizeMB = totalSize / 1024 / 1024;
+
+    console.log('[VerificationModal] 📦 Total upload size:', {
+      idDocument: (formData.idDocument.size / 1024).toFixed(2) + 'KB',
+      profilePhoto: (formData.profilePhoto.size / 1024).toFixed(2) + 'KB',
+      driversLicense: (formData.driversLicense.size / 1024).toFixed(2) + 'KB',
+      insurance: formData.insurance ? (formData.insurance.size / 1024).toFixed(2) + 'KB' : 'Not provided',
+      total: totalSizeMB.toFixed(2) + 'MB'
+    });
+
+    // Enforce maximum total size of 8MB
+    if (totalSize > 8 * 1024 * 1024) {
+      alert(`Total file size (${totalSizeMB.toFixed(2)}MB) exceeds 8MB limit. Please use smaller images.`);
+      return;
+    }
+
+    setUploading(true);
+
+    try {
+      const submitData = new FormData();
+
+      // Add all form fields
+      submitData.append('contactInfo[phone]', formData.phoneNumber || '');
+      submitData.append('contactInfo[streetAddress]', formData.streetAddress || '');
+      submitData.append('contactInfo[city]', formData.city || '');
+      submitData.append('contactInfo[state]', formData.state || '');
+      submitData.append('contactInfo[zipCode]', formData.zipCode || '');
+
+      submitData.append('identity[idType]', formData.idType || '');
+      submitData.append('identity[idNumber]', formData.idNumber || '');
+
+      submitData.append('vehicle[type]', formData.vehicleType || '');
+      submitData.append('vehicle[makeModel]', formData.makeModel || '');
+      submitData.append('vehicle[year]', formData.year ? parseInt(formData.year) : '');
+      submitData.append('vehicle[licensePlate]', formData.licensePlate || '');
+
+      submitData.append('backgroundCheckConsent', true);
+
+      // Add files with explicit filenames
+      submitData.append('idDocument', formData.idDocument, formData.idDocument.name);
+      submitData.append('profilePhoto', formData.profilePhoto, formData.profilePhoto.name);
+      submitData.append('driversLicense', formData.driversLicense, formData.driversLicense.name);
+
+      if (formData.insurance && formData.insurance instanceof File) {
+        submitData.append('insurance', formData.insurance, formData.insurance.name);
+      }
+
+      console.log('[VerificationModal] 📤 Submitting verification documents to API...');
+      console.log('[VerificationModal] ℹ️ This may take a moment due to file uploads...');
+
+      const response = await submitRiderVerification(submitData);
+
+      console.log('[VerificationModal] ✅ Submission successful:', response);
+
+      // Store verification data in cookies for profile sync
+      const verificationData = {
+        contactInfo: {
+          phone: formData.phoneNumber,
+          streetAddress: formData.streetAddress,
+          city: formData.city,
+          state: formData.state,
+          zipCode: formData.zipCode
+        },
+        vehicle: {
+          type: formData.vehicleType,
+          makeModel: formData.makeModel,
+          year: formData.year,
+          licensePlate: formData.licensePlate
+        },
+        identity: {
+          idType: formData.idType,
+          idNumber: formData.idNumber
+        }
+      };
+
+      // Store in cookies for profile access
+      setJSONCookie('riderVerificationData', verificationData, 7);
+      console.log('[VerificationModal] 💾 Verification data stored in cookies');
+
+      // Mark verification as submitted - CRITICAL: Use consistent values
+      setCookie('verificationCompleted', 'true', 7);
+      setCookie('verificationSubmitted', 'true', 7);
+      setCookie('riderAccountVerified', 'pending', 7);
+      setCookie('riderVerificationStatus', 'pending', 7);
+
+      console.log('[VerificationModal] ✓ Verification flags set in cookies');
+
+      // Clean up
+      deleteCookie('verificationPromptDismissedAt');
+      deleteCookie('nextVerificationPushNotification');
+      deleteCookie('lastVerificationPushNotification');
+
+      // Refresh profile and update cookies
+      try {
+        console.log('[VerificationModal] 🔄 Fetching updated profile...');
+        const profileResponse = await getRiderProfile();
+        const profile = profileResponse?.data?.driver || profileResponse?.driver || profileResponse?.data;
+
+        if (profile) {
+          // Update user_data cookie with latest profile info
+          const existingUserData = getJSONCookie('user_data') || {};
+          const updatedUserData = {
+            ...existingUserData,
+            ...profile,
+            phone: formData.phoneNumber || existingUserData.phone,
+            verificationStatus: 'pending'
+          };
+          setJSONCookie('user_data', updatedUserData, 7);
+          console.log('[VerificationModal] ✓ user_data cookie updated with profile');
+        }
+
+        // Dispatch event for other components to refresh
+        window.dispatchEvent(new CustomEvent('verification:completed', {
+          detail: {
+            profile: profile,
+            verificationData: verificationData
+          }
+        }));
+        console.log('[VerificationModal] 📢 verification:completed event dispatched');
+      } catch (profileError) {
+        console.error('[VerificationModal] Profile refresh failed:', profileError);
+        // Still dispatch event even if profile fetch fails
+        window.dispatchEvent(new CustomEvent('verification:completed', {
+          detail: { verificationData: verificationData }
+        }));
+      }
+
+      setShowSuccessModal(true);
+    } catch (error) {
+      console.error('[VerificationModal] ❌ Submission failed:', error);
+
+      if (error.status === 401 || error.message?.includes('token') || error.message?.includes('auth')) {
+        alert('Session expired. Please log in again and retry.');
+        window.location.href = '/rider/login';
+      } else {
+        alert(error.message || 'Failed to submit documents. Please try again.');
+      }
+    } finally {
+      setUploading(false);
+    }
+  };
 
   const handleDismiss = () => {
     setCookie('verificationPromptDismissedAt', Date.now().toString(), 1);
@@ -459,29 +459,29 @@ const handleSubmit = async () => {
 
   const isStep1Valid = () => {
     return formData.phoneNumber.trim() !== '' &&
-           formData.streetAddress.trim() !== '' &&
-           formData.city.trim() !== '' &&
-           formData.state.trim() !== '' &&
-           formData.zipCode.trim() !== '';
+      formData.streetAddress.trim() !== '' &&
+      formData.city.trim() !== '' &&
+      formData.state.trim() !== '' &&
+      formData.zipCode.trim() !== '';
   };
 
   const isStep2Valid = () => {
     return formData.idType !== '' &&
-           formData.idNumber.trim() !== '' &&
-           formData.idDocument !== null &&
-           formData.profilePhoto !== null;
+      formData.idNumber.trim() !== '' &&
+      formData.idDocument !== null &&
+      formData.profilePhoto !== null;
   };
 
   const isStep3Valid = () => {
     return formData.vehicleType !== '' &&
-           formData.makeModel.trim() !== '' &&
-           formData.year.trim() !== '' &&
-           formData.licensePlate.trim() !== '' &&
-           formData.driversLicense !== null;
+      formData.makeModel.trim() !== '' &&
+      formData.year.trim() !== '' &&
+      formData.licensePlate.trim() !== '' &&
+      formData.driversLicense !== null;
   };
 
   const isCurrentStepValid = () => {
-    switch(currentStep) {
+    switch (currentStep) {
       case 1: return isStep1Valid();
       case 2: return isStep2Valid();
       case 3: return isStep3Valid();
@@ -491,13 +491,12 @@ const handleSubmit = async () => {
   };
 
   return (
-  <div
-    className={`fixed inset-0 z-50 flex items-center justify-center p-4 transition-opacity ${
-      isOpen ? 'opacity-100 pointer-events-auto' : 'opacity-0 pointer-events-none'
-    }`}
-    onClick={handleBackdropClick}
-  >
-      <div 
+    <div
+      className={`fixed inset-0 z-50 flex items-center justify-center p-4 transition-opacity ${isOpen ? 'opacity-100 pointer-events-auto' : 'opacity-0 pointer-events-none'
+        }`}
+      onClick={handleBackdropClick}
+    >
+      <div
         className="absolute inset-0 bg-black/40 backdrop-blur-md"
         style={{ backdropFilter: 'blur(8px)' }}
       />
@@ -536,7 +535,7 @@ const handleSubmit = async () => {
             </div>
 
             <div className="relative h-1.5 bg-gray-200 rounded-full overflow-hidden">
-              <div 
+              <div
                 className="absolute top-0 left-0 h-full bg-[#00D68F] transition-all duration-300"
                 style={{ width: getProgressWidth() }}
               />
@@ -557,7 +556,7 @@ const handleSubmit = async () => {
                     <p className="text-sm text-[#1E40AF]">All information is encrypted and securely stored.</p>
                   </div>
 
-                  <div> 
+                  <div>
                     <label className="block text-sm font-medium text-[#0F172A] mb-2 mt-5">Phone Number *</label>
                     <input
                       type="tel"
@@ -664,7 +663,7 @@ const handleSubmit = async () => {
                         <UploadIcon size={16} stroke="#717182" />
                         <input
                           type="file"
-                          accept="image/*,.pdf"
+                          accept="image/jpeg,image/jpg,image/png,application/pdf"
                           className="hidden"
                           onChange={(e) => handleFileUpload('idDocument', e)}
                         />
@@ -680,7 +679,7 @@ const handleSubmit = async () => {
                         <UploadIcon size={16} stroke="#717182" />
                         <input
                           type="file"
-                          accept="image/*"
+                          accept="image/jpeg,image/jpg,image/png"
                           className="hidden"
                           onChange={(e) => handleFileUpload('profilePhoto', e)}
                         />
@@ -764,7 +763,7 @@ const handleSubmit = async () => {
                         <UploadIcon size={16} stroke="#717182" />
                         <input
                           type="file"
-                          accept="image/*,.pdf"
+                          accept="image/jpeg,image/jpg,image/png,application/pdf"
                           className="hidden"
                           onChange={(e) => handleFileUpload('driversLicense', e)}
                         />
@@ -780,7 +779,7 @@ const handleSubmit = async () => {
                         <UploadIcon size={16} stroke="#717182" />
                         <input
                           type="file"
-                          accept="image/*,.pdf"
+                          accept="image/jpeg,image/jpg,image/png,application/pdf"
                           className="hidden"
                           onChange={(e) => handleFileUpload('insurance', e)}
                         />
@@ -854,7 +853,7 @@ const handleSubmit = async () => {
                   <button
                     onClick={prevStep}
                     className="flex-1 flex items-center justify-center gap-2 px-6 py-3 bg-white rounded-xl hover:bg-gray-50 transition-colors"
-                    style={{border: "1px solid #0000001A"}}
+                    style={{ border: "1px solid #0000001A" }}
                   >
                     <BackIcon size={18} color="#0A0A0A" />
                     <span className="font-medium text-[#0A0A0A]">Back</span>
@@ -862,20 +861,19 @@ const handleSubmit = async () => {
                 ) : (
                   <button
                     onClick={handleDismiss}
-                    className="flex-1 px-6 py-3 bg-white border border-gray-200 rounded-xl hover:bg-gray-50 transition-colors font-medium text-[#0A0A0A]" 
-                    style={{border: "1px solid #0000001A"}}
+                    className="flex-1 px-6 py-3 bg-white border border-gray-200 rounded-xl hover:bg-gray-50 transition-colors font-medium text-[#0A0A0A]"
+                    style={{ border: "1px solid #0000001A" }}
                   >
                     Cancel
                   </button>
                 )}
-                
+
                 {currentStep < 4 ? (
                   <button
                     onClick={nextStep}
                     disabled={!isCurrentStepValid()}
-                    className={`flex-1 flex items-center justify-center gap-2 px-6 py-3 bg-[#00D68F] text-white rounded-xl transition-colors font-medium ${
-                      isCurrentStepValid() ? 'hover:bg-[#00B876] opacity-100' : 'opacity-50 cursor-not-allowed'
-                    }`}
+                    className={`flex-1 flex items-center justify-center gap-2 px-6 py-3 bg-[#00D68F] text-white rounded-xl transition-colors font-medium ${isCurrentStepValid() ? 'hover:bg-[#00B876] opacity-100' : 'opacity-50 cursor-not-allowed'
+                      }`}
                   >
                     <span>Continue</span>
                     <ForwardIcon size={18} color="#FFFFFF" />
@@ -884,11 +882,10 @@ const handleSubmit = async () => {
                   <button
                     onClick={handleSubmit}
                     disabled={!formData.agreeBackgroundCheck || uploading}
-                    className={`flex-1 px-6 py-3 rounded-xl transition-colors font-medium flex items-center justify-center gap-2 ${
-                      formData.agreeBackgroundCheck && !uploading
+                    className={`flex-1 px-6 py-3 rounded-xl transition-colors font-medium flex items-center justify-center gap-2 ${formData.agreeBackgroundCheck && !uploading
                         ? 'bg-[#00D68F] hover:bg-[#00B876] text-white'
                         : 'bg-gray-300 text-gray-500 cursor-not-allowed'
-                    }`}
+                      }`}
                   >
                     {uploading && (
                       <div className="animate-spin rounded-full h-4 w-4 border-2 border-white border-t-transparent"></div>
