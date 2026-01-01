@@ -221,7 +221,42 @@ const CustomerSignUp = () => {
                       style={{ accentColor: '#00D68F', outline: 'none' }}
                     />
                     <label className="text-sm text-gray-600">
-                      I agree to the <span className="text-[#00D68F] cursor-pointer hover:underline">Terms of Service</span> and <span className="text-[#00D68F] cursor-pointer hover:underline">Privacy Policy</span>
+                      I agree to the{' '}
+                      <span
+                        onClick={() => {
+                          const publicSiteUrl = import.meta.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3001';
+                          window.location.href = `${publicSiteUrl}/terms-of-service`;
+                        }}
+                        className="text-[#00D68F] cursor-pointer hover:underline"
+                        role="link"
+                        tabIndex={0}
+                        onKeyPress={(e) => {
+                          if (e.key === 'Enter') {
+                            const publicSiteUrl = import.meta.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3001';
+                            window.location.href = `${publicSiteUrl}/terms-of-service`;
+                          }
+                        }}
+                      >
+                        Terms of Service
+                      </span>{' '}
+                      and{' '}
+                      <span
+                        onClick={() => {
+                          const publicSiteUrl = import.meta.env.VITE_PUBLIC_SITE_URL || 'http://localhost:3001';
+                          window.location.href = `${publicSiteUrl}/privacy-policy`;
+                        }}
+                        className="text-[#00D68F] cursor-pointer hover:underline"
+                        role="link"
+                        tabIndex={0}
+                        onKeyPress={(e) => {
+                          if (e.key === 'Enter') {
+                            const publicSiteUrl = import.meta.env.VITE_PUBLIC_SITE_URL || 'http://localhost:3001';
+                            window.location.href = `${publicSiteUrl}/privacy-policy`;
+                          }
+                        }}
+                      >
+                        Privacy Policy
+                      </span>
                     </label>
                   </div>
                 </YummyText>
