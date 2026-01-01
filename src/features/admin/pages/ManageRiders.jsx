@@ -42,9 +42,22 @@ const ManageRiders = () => {
     };
 
     fetchRiders();
+
+    // Listen for delivery status updates to refresh rider data
+    const handleDeliveryStatusChanged = () => {
+      console.log('[ManageRiders] Delivery status changed, refreshing rider data...');
+      fetchRiders();
+    };
+
+    window.addEventListener('delivery:statusChanged', handleDeliveryStatusChanged);
+
     const handleResize = () => setIsMobile(window.innerWidth < 768);
     window.addEventListener('resize', handleResize);
-    return () => window.removeEventListener('resize', handleResize);
+
+    return () => {
+      window.removeEventListener('delivery:statusChanged', handleDeliveryStatusChanged);
+      window.removeEventListener('resize', handleResize);
+    };
   }, []);
 
   // Helper function to get KYC status from verificationStatus field

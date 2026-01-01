@@ -33,7 +33,9 @@ const DeliveryCard = ({
   size,
   weight,
   notes,
-  actionButtonText
+  actionButtonText,
+  onActionClick,
+  isUpdating
 }) => (
   <div className="bg-white rounded-2xl mb-6 overflow-hidden ml-0.5" style={sideBottomShadow}>
     {/* Header Section with Background */}
@@ -151,8 +153,12 @@ const DeliveryCard = ({
       {/* Action Buttons */}
       <YummyText>
         <div className="flex gap-3">
-          <button className="flex-1 bg-[#00B75A] hover:bg-[#00B876] text-white py-2 rounded-xl transition-colors font-[300]">
-            {actionButtonText}
+          <button
+            onClick={onActionClick}
+            disabled={isUpdating}
+            className="flex-1 bg-[#00B75A] hover:bg-[#00B876] disabled:bg-gray-400 text-white py-2 rounded-xl transition-colors font-[300]"
+          >
+            {isUpdating ? 'Updating...' : actionButtonText}
           </button>
           <button className="px-6 py-2 bg-white hover:bg-gray-50 rounded-xl transition-colors text-[#0F172A] font-[300]"
             style={{ border: "1px solid #0000001A" }}
@@ -225,9 +231,14 @@ const ActiveDeliveries = () => {
       setToastMsg('✅ Status updated successfully!');
       setShowToast(true);
 
-      // Dispatch event for other components
+      // Dispatch event for admin/rider components
       window.dispatchEvent(new CustomEvent('delivery:statusChanged', {
         detail: { deliveryId, newStatus }
+      }));
+
+      // Dispatch event for customer tracking pages
+      window.dispatchEvent(new CustomEvent('delivery:updated', {
+        detail: { deliveryId, status: newStatus }
       }));
 
       // Refresh deliveries
@@ -244,6 +255,24 @@ const ActiveDeliveries = () => {
     } finally {
       setUpdatingStatus(null);
     }
+  };
+
+  const handleActionClick = (delivery) => {
+    const status = (delivery.status || '').toLowerCase();
+    let newStatus = 'in-transit';
+
+    // Determine next status based on current status
+    // Backend expects: [assigned, picked-up, in-transit, delivered, cancelled]
+    if (status.includes('assigned') || status.includes('pending')) {
+      newStatus = 'in-transit';
+    } else if (status.includes('picked') || status.includes('picked-up')) {
+      newStatus = 'delivered';
+    } else if (status.includes('transit') || status.includes('in-transit')) {
+      newStatus = 'delivered';
+    }
+
+    console.log(`[ActiveDeliveries] Action clicked for ${delivery._id || delivery.id}: ${status} → ${newStatus}`);
+    handleStatusUpdate(delivery._id || delivery.id, newStatus);
   };
 
   const handleProofUpload = async (deliveryId, file) => {
@@ -365,9 +394,8 @@ const ActiveDeliveries = () => {
                     weight={delivery.packageWeight || delivery.weight || delivery.packageDetails?.weight || 'N/A'}
                     notes={delivery.specialInstructions || delivery.notes || delivery.description || delivery.packageDescription || delivery.packageDetails?.description || 'No special instructions'}
                     actionButtonText={getActionButtonText(delivery.status)}
-                    onStatusUpdate={(newStatus) => handleStatusUpdate(delivery._id || delivery.id, newStatus)}
-                    onProofUpload={(file) => handleProofUpload(delivery._id || delivery.id, file)}
-                    updating={updatingStatus === (delivery._id || delivery.id)}
+                    onActionClick={() => handleActionClick(delivery)}
+                    isUpdating={updatingStatus === (delivery._id || delivery.id)}
                   />
                 );
               })

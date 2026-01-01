@@ -13,48 +13,52 @@ const sideBottomShadow = {
 // Helper function to get status styling
 const getStatusStyle = (status) => {
   const statusLower = status?.toLowerCase() || 'pending';
-  
+
   const styles = {
-    pending: { color: 'text-orange-700', bg: 'bg-orange-100' },
-    'in transit': { color: 'text-blue-700', bg: 'bg-blue-100' },
+    assigned: { color: 'text-yellow-700', bg: 'bg-yellow-100' },
+    'picked-up': { color: 'text-orange-700', bg: 'bg-orange-100' },
     'in-transit': { color: 'text-blue-700', bg: 'bg-blue-100' },
-    processing: { color: 'text-yellow-700', bg: 'bg-yellow-100' },
+    'in transit': { color: 'text-blue-700', bg: 'bg-blue-100' },
     delivered: { color: 'text-green-700', bg: 'bg-green-100' },
-    completed: { color: 'text-green-700', bg: 'bg-green-100' },
     cancelled: { color: 'text-red-700', bg: 'bg-red-100' },
+    pending: { color: 'text-orange-700', bg: 'bg-orange-100' },
+    processing: { color: 'text-yellow-700', bg: 'bg-yellow-100' },
+    completed: { color: 'text-green-700', bg: 'bg-green-100' },
     failed: { color: 'text-red-700', bg: 'bg-red-100' }
   };
-  
+
   return styles[statusLower] || { color: 'text-gray-700', bg: 'bg-gray-100' };
 };
 
 // Helper function to calculate progress
 const getProgress = (status) => {
   const statusLower = status?.toLowerCase() || 'pending';
-  
+
   const progressMap = {
+    assigned: 25,
+    'picked-up': 50,
+    'in-transit': 75,
+    'in transit': 75,
+    delivered: 100,
     pending: 10,
     processing: 25,
-    'in transit': 60,
-    'in-transit': 60,
     'out for delivery': 85,
-    delivered: 100,
     completed: 100
   };
-  
+
   return progressMap[statusLower] || 0;
 };
 
 // Helper function to format date
 const formatDate = (dateString) => {
   if (!dateString) return 'N/A';
-  
+
   try {
     const date = new Date(dateString);
-    return date.toLocaleDateString('en-US', { 
-      year: 'numeric', 
-      month: 'short', 
-      day: 'numeric' 
+    return date.toLocaleDateString('en-US', {
+      year: 'numeric',
+      month: 'short',
+      day: 'numeric'
     });
   } catch (e) {
     return dateString;
@@ -66,25 +70,25 @@ const DeliveryCard = ({ delivery }) => {
   const [showCopyToast, setShowCopyToast] = useState(false);
   const statusStyle = getStatusStyle(delivery.status);
   const progress = getProgress(delivery.status);
-  
+
   const handleToggleDetails = () => {
     const newIsOpen = !isOpen;
     setIsOpen(newIsOpen);
-    
+
     if (newIsOpen) {
       const deliveryId = delivery._id || delivery.id || delivery.trackingNumber || delivery.trackingId;
       if (deliveryId) {
-        window.dispatchEvent(new CustomEvent('delivery:read', { 
-          detail: { 
+        window.dispatchEvent(new CustomEvent('delivery:read', {
+          detail: {
             id: deliveryId,
             _id: delivery._id,
             deliveryId: deliveryId
-          } 
+          }
         }));
       }
     }
   };
-  
+
   const handleCopyPackageId = async () => {
     const packageId = delivery.trackingNumber || delivery.trackingId || delivery.id || delivery._id;
     try {
@@ -94,7 +98,7 @@ const DeliveryCard = ({ delivery }) => {
       console.error('Failed to copy:', err);
     }
   };
-  
+
   return (
     <div className="bg-white rounded-2xl p-4 md:p-6 mb-4" style={sideBottomShadow}>
       {/* Mobile & Desktop Layout */}
@@ -115,13 +119,13 @@ const DeliveryCard = ({ delivery }) => {
                 {delivery.status || 'Pending'}
               </span>
             </div>
-            
+
             <div className="text-sm text-[#4A5565] mb-1 flex items-center gap-1 flex-wrap">
               <span className="truncate max-w-[120px] md:max-w-none">{delivery.pickupAddress?.city || 'Pickup'}</span>
               <IonIcon icon={arrowForward} className="text-sm flex-shrink-0" />
               <span className="truncate max-w-[120px] md:max-w-none">{delivery.deliveryAddress?.city || 'Delivery'}</span>
             </div>
-            
+
             <div className="text-xs text-[#4A5565] mb-3">
               Booked: {formatDate(delivery.createdAt || delivery.bookedDate)}
             </div>
@@ -133,7 +137,7 @@ const DeliveryCard = ({ delivery }) => {
                 <YummyText className="text-xs font-medium text-[#4A5565]">{progress}%</YummyText>
               </div>
               <div className="relative h-2 bg-gray-200 rounded-full overflow-hidden">
-                <div 
+                <div
                   className="absolute top-0 left-0 h-full bg-[#00D68F] rounded-full transition-all duration-300"
                   style={{ width: `${progress}%` }}
                 ></div>
@@ -143,7 +147,7 @@ const DeliveryCard = ({ delivery }) => {
         </div>
 
         {/* View Details Button */}
-        <button 
+        <button
           onClick={handleToggleDetails}
           className="flex items-center justify-center gap-2 text-sm text-[#64748B] shadow-sm px-4 py-2 rounded-xl hover:text-[#0F172A] hover:border-gray-800 transition-colors w-full md:w-auto"
           style={{ border: '1.5px solid #0000001A' }}
@@ -161,7 +165,7 @@ const DeliveryCard = ({ delivery }) => {
               <div className="text-xs font-medium text-[#64748B] mb-1">Package ID</div>
               <div className="text-sm text-[#0F172A] flex items-center gap-2">
                 <span className="truncate">{delivery.trackingNumber || delivery.trackingId || delivery.id || delivery._id || 'N/A'}</span>
-                <button 
+                <button
                   onClick={handleCopyPackageId}
                   className="text-[#64748B] hover:text-[#0F172A] transition-colors flex-shrink-0"
                   title="Copy Package ID"
@@ -207,25 +211,25 @@ const DeliveryCard = ({ delivery }) => {
 const MobileCompletedCard = ({ delivery }) => {
   const [isOpen, setIsOpen] = useState(false);
   const [showCopyToast, setShowCopyToast] = useState(false);
-  
+
   const handleToggleDetails = () => {
     const newIsOpen = !isOpen;
     setIsOpen(newIsOpen);
-    
+
     if (newIsOpen) {
       const deliveryId = delivery._id || delivery.id || delivery.trackingNumber || delivery.trackingId;
       if (deliveryId) {
-        window.dispatchEvent(new CustomEvent('delivery:read', { 
-          detail: { 
+        window.dispatchEvent(new CustomEvent('delivery:read', {
+          detail: {
             id: deliveryId,
             _id: delivery._id,
             deliveryId: deliveryId
-          } 
+          }
         }));
       }
     }
   };
-  
+
   const handleCopyPackageId = async () => {
     const packageId = delivery.trackingNumber || delivery.trackingId || delivery.id || delivery._id;
     try {
@@ -235,7 +239,7 @@ const MobileCompletedCard = ({ delivery }) => {
       console.error('Failed to copy:', err);
     }
   };
-  
+
   return (
     <div className="bg-white rounded-2xl p-4 mb-3 border border-gray-100">
       <div className="flex items-start justify-between mb-3">
@@ -258,7 +262,7 @@ const MobileCompletedCard = ({ delivery }) => {
           </span>
         </div>
         <div className="flex items-center gap-3 ml-2">
-          <button 
+          <button
             onClick={handleToggleDetails}
             className="text-[#64748B] hover:text-[#0F172A] transition-colors"
           >
@@ -277,7 +281,7 @@ const MobileCompletedCard = ({ delivery }) => {
               <div className="text-xs font-medium text-[#64748B] mb-1">Package ID</div>
               <div className="text-sm text-[#0F172A] flex items-center gap-2">
                 <span className="truncate">{delivery.trackingNumber || delivery.trackingId || 'N/A'}</span>
-                <button 
+                <button
                   onClick={handleCopyPackageId}
                   className="text-[#64748B] hover:text-[#0F172A] transition-colors"
                   title="Copy Package ID"
@@ -323,25 +327,25 @@ const MobileCompletedCard = ({ delivery }) => {
 const CompletedDeliveryRow = ({ delivery }) => {
   const [isOpen, setIsOpen] = useState(false);
   const [showCopyToast, setShowCopyToast] = useState(false);
-  
+
   const handleToggleDetails = () => {
     const newIsOpen = !isOpen;
     setIsOpen(newIsOpen);
-    
+
     if (newIsOpen) {
       const deliveryId = delivery._id || delivery.id || delivery.trackingNumber || delivery.trackingId;
       if (deliveryId) {
-        window.dispatchEvent(new CustomEvent('delivery:read', { 
-          detail: { 
+        window.dispatchEvent(new CustomEvent('delivery:read', {
+          detail: {
             id: deliveryId,
             _id: delivery._id,
             deliveryId: deliveryId
-          } 
+          }
         }));
       }
     }
   };
-  
+
   const handleCopyPackageId = async () => {
     const packageId = delivery.trackingNumber || delivery.trackingId || delivery.id || delivery._id;
     try {
@@ -351,7 +355,7 @@ const CompletedDeliveryRow = ({ delivery }) => {
       console.error('Failed to copy:', err);
     }
   };
-  
+
   return (
     <>
       <tr className="border-b border-gray-100 hover:bg-gray-50">
@@ -378,7 +382,7 @@ const CompletedDeliveryRow = ({ delivery }) => {
         </td>
         <td className="py-4 px-4">
           <div className="flex items-center justify-center gap-6">
-            <button 
+            <button
               onClick={handleToggleDetails}
               className="text-[#0A0A0A] hover:text-[#0F172A] transition-colors"
             >
@@ -398,7 +402,7 @@ const CompletedDeliveryRow = ({ delivery }) => {
                 <div className="text-xs font-medium text-[#64748B] mb-1">Package ID</div>
                 <div className="text-sm text-[#0F172A] flex items-center gap-2">
                   <span>{delivery.trackingNumber || delivery.trackingId || delivery.id || delivery._id || 'N/A'}</span>
-                  <button 
+                  <button
                     onClick={handleCopyPackageId}
                     className="text-[#64748B] hover:text-[#0F172A] transition-colors"
                     title="Copy Package ID"
@@ -460,12 +464,12 @@ const MyDeliveries = () => {
       console.log('[MyDeliveries] Received refresh event');
       fetchDeliveries();
     };
-    
+
     const handleDeliveryCreated = (event) => {
       console.log('[MyDeliveries] Delivery created:', event.detail);
       fetchDeliveries();
     };
-    
+
     const handleDeliveryUpdated = (event) => {
       console.log('[MyDeliveries] Delivery updated:', event.detail);
       fetchDeliveries();
@@ -489,9 +493,9 @@ const MyDeliveries = () => {
       console.log('[MyDeliveries] Fetching deliveries...');
       const res = await getCustomerDeliveries({ page, limit });
       console.log('[MyDeliveries] API response:', res);
-      
+
       let items = [];
-      
+
       if (Array.isArray(res)) {
         items = res;
       } else if (res?.data) {
@@ -503,21 +507,21 @@ const MyDeliveries = () => {
       } else if (res?.results) {
         items = res.results;
       }
-      
+
       console.log('[MyDeliveries] Parsed items:', items);
-      
+
       const active = items.filter((d) => {
         const status = d?.status?.toLowerCase() || 'pending';
         return status !== 'delivered' && status !== 'completed' && status !== 'cancelled';
       });
-      
+
       const completed = items.filter((d) => {
         const status = d?.status?.toLowerCase() || '';
         return status === 'delivered' || status === 'completed';
       });
-      
+
       console.log('[MyDeliveries] Active:', active.length, 'Completed:', completed.length);
-      
+
       setActiveDeliveries(active);
       setCompletedDeliveries(completed);
     } catch (err) {
@@ -553,21 +557,19 @@ const MyDeliveries = () => {
           <div className="flex items-center gap-2 mb-6 bg-gray-100 p-1 rounded-full w-full md:w-fit">
             <button
               onClick={() => setActiveTab('active')}
-              className={`flex-1 md:flex-none md:px-14 px-6 py-3 md:py-2 whitespace-nowrap rounded-full text-sm font-normal transition-colors ${
-                activeTab === 'active'
+              className={`flex-1 md:flex-none md:px-14 px-6 py-3 md:py-2 whitespace-nowrap rounded-full text-sm font-normal transition-colors ${activeTab === 'active'
                   ? 'text-[#0F172A] bg-white shadow-sm'
                   : 'text-[#64748B]'
-              }`}
+                }`}
             >
               Active ({activeDeliveries.length})
             </button>
             <button
               onClick={() => setActiveTab('completed')}
-              className={`flex-1 md:flex-none md:px-14 px-6 py-3 md:py-2 whitespace-nowrap rounded-full text-sm font-normal transition-colors ${
-                activeTab === 'completed'
+              className={`flex-1 md:flex-none md:px-14 px-6 py-3 md:py-2 whitespace-nowrap rounded-full text-sm font-normal transition-colors ${activeTab === 'completed'
                   ? 'text-[#0F172A] bg-white shadow-sm'
                   : 'text-[#64748B]'
-              }`}
+                }`}
             >
               Completed ({completedDeliveries.length})
             </button>
