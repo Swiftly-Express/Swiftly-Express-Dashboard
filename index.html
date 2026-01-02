@@ -1,18 +1,24 @@
 <!DOCTYPE html>
 <html lang="en">
-  <head>
-    <meta charset="UTF-8" />
-    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Swiftly Express - Ionic React App</title>
-    <script>
-      // Ensure React is available globally before any modules load
-      window.React = window.React || {};
-      window.ReactDOM = window.ReactDOM || {};
-    </script>
-  </head>
-  <body>
-    <div id="root"></div>
-    <script type="module" src="/src/main.jsx"></script>
-  </body>
+
+<head>
+  <meta charset="UTF-8" />
+  <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Swiftly Express - Ionic React App</title>
+  <script>
+    // Ensure React is available globally before any modules load
+    window.React = window.React || {};
+    window.ReactDOM = window.ReactDOM || {};
+  </script>
+  <!-- Google Maps JS (Places) - required for address autocomplete -->
+  <script src="https://maps.googleapis.com/maps/api/js?key=AIzaSyBrHMjPnW8t_bKIhYSLQIOZMvSJxUT5lfs&libraries=places"
+    async defer></script>
+</head>
+
+<body>
+  <div id="root"></div>
+  <script type="module" src="/src/main.jsx"></script>
+</body>
+
 </html>

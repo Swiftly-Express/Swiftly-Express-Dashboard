@@ -2,6 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import Infoicon from '../../../icons/Infoicon';
 import { IonPage, IonContent, IonToast, useIonRouter } from '@ionic/react';
 import StyledDropdown from '../../../components/StyledDropdown';
+import GoogleMapsAutocomplete from '../../../components/GoogleMapsAutocomplete';
 import CustomerLayout from '../components/CustomerLayout';
 import { YummyText } from '../../../components/YummyText';
 import { createDelivery, isAuthenticated } from '../../../utils/authApi';
@@ -16,16 +17,10 @@ const Book = () => {
     senderName: '',
     senderPhone: '',
     pickupStreet: '',
-    pickupCity: '',
-    pickupState: '',
-    pickupZipCode: '',
     pickupDate: '',
     recipientName: '',
     recipientPhone: '',
     deliveryStreet: '',
-    deliveryCity: '',
-    deliveryState: '',
-    deliveryZipCode: '',
     recipientEmail: '',
     // New package sizing fields
     sizeCategory: 'small',
@@ -39,6 +34,9 @@ const Book = () => {
     packageDescription: '',
     declaredValue: ''
   });
+
+  const [pickupCoordinates, setPickupCoordinates] = useState({ lat: 0, lng: 0 });
+  const [deliveryCoordinates, setDeliveryCoordinates] = useState({ lat: 0, lng: 0 });
 
   const router = useIonRouter();
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -107,17 +105,17 @@ const Book = () => {
       const payload = {
         pickupAddress: {
           street: formData.pickupStreet,
-          city: formData.pickupCity,
-          state: formData.pickupState,
-          zipCode: formData.pickupZipCode || '00000',
-          coordinates: { lat: 0, lng: 0 }
+          city: '',
+          state: '',
+          zipCode: '00000',
+          coordinates: pickupCoordinates
         },
         deliveryAddress: {
           street: formData.deliveryStreet,
-          city: formData.deliveryCity,
-          state: formData.deliveryState,
-          zipCode: formData.deliveryZipCode || '00000',
-          coordinates: { lat: 0, lng: 0 }
+          city: '',
+          state: '',
+          zipCode: '00000',
+          coordinates: deliveryCoordinates
         },
         packageDetails: {
           sizeCategory: formData.sizeCategory,
@@ -289,59 +287,19 @@ const Book = () => {
 
                     <div>
                       <label className="block text-sm font-medium text-[#0F172A] mb-2">
-                        Street Address
+                        Pickup Address
                       </label>
-                      <input
-                        type="text"
-                        name="pickupStreet"
+                      <GoogleMapsAutocomplete
                         value={formData.pickupStreet}
-                        onChange={handleChange}
-                        placeholder="123 Main Street"
-                        className="w-full px-4 py-3 rounded-xl bg-[#F8F9FA] text-sm md:text-base text-[#0F172A] placeholder:text-[#94A3B8] focus:outline-none focus:ring-2 focus:ring-[#00D68F] border-none"
-                      />
-                    </div>
-
-                    <div className="grid grid-cols-2 gap-3">
-                      <div>
-                        <label className="block text-sm font-medium text-[#0F172A] mb-2">
-                          City
-                        </label>
-                        <input
-                          type="text"
-                          name="pickupCity"
-                          value={formData.pickupCity}
-                          onChange={handleChange}
-                          placeholder="Lagos"
-                          className="w-full px-4 py-3 rounded-xl bg-[#F8F9FA] text-sm md:text-base text-[#0F172A] placeholder:text-[#94A3B8] focus:outline-none focus:ring-2 focus:ring-[#00D68F] border-none"
-                        />
-                      </div>
-
-                      <div>
-                        <label className="block text-sm font-medium text-[#0F172A] mb-2">
-                          State
-                        </label>
-                        <input
-                          type="text"
-                          name="pickupState"
-                          value={formData.pickupState}
-                          onChange={handleChange}
-                          placeholder="Lagos State"
-                          className="w-full px-4 py-3 rounded-xl bg-[#F8F9FA] text-sm md:text-base text-[#0F172A] placeholder:text-[#94A3B8] focus:outline-none focus:ring-2 focus:ring-[#00D68F] border-none"
-                        />
-                      </div>
-                    </div>
-
-                    <div>
-                      <label className="block text-sm font-medium text-[#0F172A] mb-2">
-                        Zip/Postal Code
-                      </label>
-                      <input
-                        type="text"
-                        name="pickupZipCode"
-                        value={formData.pickupZipCode}
-                        onChange={handleChange}
-                        placeholder="100001"
-                        className="w-full px-4 py-3 rounded-xl bg-[#F8F9FA] text-sm md:text-base text-[#0F172A] placeholder:text-[#94A3B8] focus:outline-none focus:ring-2 focus:ring-[#00D68F] border-none"
+                        onChange={(value) => setFormData({ ...formData, pickupStreet: value })}
+                        placeholder="Enter pickup address"
+                        onPlaceSelect={(place) => {
+                          setFormData({ ...formData, pickupStreet: place.formatted_address });
+                          setPickupCoordinates({
+                            lat: place.geometry.location.lat,
+                            lng: place.geometry.location.lng
+                          });
+                        }}
                       />
                     </div>
 
@@ -400,59 +358,19 @@ const Book = () => {
 
                     <div>
                       <label className="block text-sm font-medium text-[#0F172A] mb-2">
-                        Street Address
+                        Delivery Address
                       </label>
-                      <input
-                        type="text"
-                        name="deliveryStreet"
+                      <GoogleMapsAutocomplete
                         value={formData.deliveryStreet}
-                        onChange={handleChange}
-                        placeholder="456 Oak Avenue"
-                        className="w-full px-4 py-3 rounded-xl bg-[#F8F9FA] text-sm md:text-base text-[#0F172A] placeholder:text-[#94A3B8] focus:outline-none focus:ring-2 focus:ring-[#00D68F] border-none"
-                      />
-                    </div>
-
-                    <div className="grid grid-cols-2 gap-3">
-                      <div>
-                        <label className="block text-sm font-medium text-[#0F172A] mb-2">
-                          City
-                        </label>
-                        <input
-                          type="text"
-                          name="deliveryCity"
-                          value={formData.deliveryCity}
-                          onChange={handleChange}
-                          placeholder="Abuja"
-                          className="w-full px-4 py-3 rounded-xl bg-[#F8F9FA] text-sm md:text-base text-[#0F172A] placeholder:text-[#94A3B8] focus:outline-none focus:ring-2 focus:ring-[#00D68F] border-none"
-                        />
-                      </div>
-
-                      <div>
-                        <label className="block text-sm font-medium text-[#0F172A] mb-2">
-                          State
-                        </label>
-                        <input
-                          type="text"
-                          name="deliveryState"
-                          value={formData.deliveryState}
-                          onChange={handleChange}
-                          placeholder="FCT"
-                          className="w-full px-4 py-3 rounded-xl bg-[#F8F9FA] text-sm md:text-base text-[#0F172A] placeholder:text-[#94A3B8] focus:outline-none focus:ring-2 focus:ring-[#00D68F] border-none"
-                        />
-                      </div>
-                    </div>
-
-                    <div>
-                      <label className="block text-sm font-medium text-[#0F172A] mb-2">
-                        Zip/Postal Code
-                      </label>
-                      <input
-                        type="text"
-                        name="deliveryZipCode"
-                        value={formData.deliveryZipCode}
-                        onChange={handleChange}
-                        placeholder="900001"
-                        className="w-full px-4 py-3 rounded-xl bg-[#F8F9FA] text-sm md:text-base text-[#0F172A] placeholder:text-[#94A3B8] focus:outline-none focus:ring-2 focus:ring-[#00D68F] border-none"
+                        onChange={(value) => setFormData({ ...formData, deliveryStreet: value })}
+                        placeholder="Enter delivery address"
+                        onPlaceSelect={(place) => {
+                          setFormData({ ...formData, deliveryStreet: place.formatted_address });
+                          setDeliveryCoordinates({
+                            lat: place.geometry.location.lat,
+                            lng: place.geometry.location.lng
+                          });
+                        }}
                       />
                     </div>
 
