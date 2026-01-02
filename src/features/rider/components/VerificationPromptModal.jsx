@@ -5,6 +5,7 @@ import {
   closeOutline,
   informationCircleOutline
 } from 'ionicons/icons';
+import GoogleMapsAutocomplete from '../../../components/GoogleMapsAutocomplete';
 import ForwardIcon from "../../../icons/Forwardicon";
 import BackIcon from "../../../icons/Backicon";
 import ShieldCheckIcon from '../../../icons/Shieldcheck';
@@ -31,9 +32,9 @@ const VerificationPromptModal = ({ isOpen, onClose }) => {
     // Contact Information
     phoneNumber: '',
     streetAddress: '',
-    city: '',
-    state: '',
-    zipCode: '',
+    // Coordinates from autocomplete
+    lat: 0,
+    lng: 0,
     // Identity
     idType: '',
     idNumber: '',
@@ -299,9 +300,8 @@ const VerificationPromptModal = ({ isOpen, onClose }) => {
       // Add all form fields
       submitData.append('contactInfo[phone]', formData.phoneNumber || '');
       submitData.append('contactInfo[streetAddress]', formData.streetAddress || '');
-      submitData.append('contactInfo[city]', formData.city || '');
-      submitData.append('contactInfo[state]', formData.state || '');
-      submitData.append('contactInfo[zipCode]', formData.zipCode || '');
+      submitData.append('contactInfo[lat]', formData.lat || 0);
+      submitData.append('contactInfo[lng]', formData.lng || 0);
 
       submitData.append('identity[idType]', formData.idType || '');
       submitData.append('identity[idNumber]', formData.idNumber || '');
@@ -423,9 +423,8 @@ const VerificationPromptModal = ({ isOpen, onClose }) => {
     setFormData({
       phoneNumber: '',
       streetAddress: '',
-      city: '',
-      state: '',
-      zipCode: '',
+      lat: 0,
+      lng: 0,
       idType: '',
       idNumber: '',
       idDocument: null,
@@ -460,9 +459,8 @@ const VerificationPromptModal = ({ isOpen, onClose }) => {
   const isStep1Valid = () => {
     return formData.phoneNumber.trim() !== '' &&
       formData.streetAddress.trim() !== '' &&
-      formData.city.trim() !== '' &&
-      formData.state.trim() !== '' &&
-      formData.zipCode.trim() !== '';
+      formData.lat !== 0 &&
+      formData.lng !== 0;
   };
 
   const isStep2Valid = () => {
@@ -568,47 +566,17 @@ const VerificationPromptModal = ({ isOpen, onClose }) => {
                   </div>
 
                   <div>
-                    <label className="block text-sm font-medium text-[#0F172A] mb-2 mt-3">Street Address *</label>
-                    <input
-                      type="text"
-                      placeholder="123 Main Street"
+                    <label className="block text-sm font-medium text-[#0F172A] mb-2 mt-3">Address *</label>
+                    <GoogleMapsAutocomplete
                       value={formData.streetAddress}
-                      onChange={(e) => handleInputChange('streetAddress', e.target.value)}
-                      className="w-full px-4 py-3 bg-[#F3F3F5] border-none placeholder:text-[#717182] rounded-lg focus:ring-2 focus:ring-[#00D68F] outline-none"
+                      onChange={(value) => handleInputChange('streetAddress', value)}
+                      placeholder="Enter your address"
+                      onPlaceSelect={(place) => {
+                        handleInputChange('streetAddress', place.formatted_address);
+                        handleInputChange('lat', place.geometry.location.lat);
+                        handleInputChange('lng', place.geometry.location.lng);
+                      }}
                     />
-                  </div>
-
-                  <div className="grid grid-cols-3 gap-2">
-                    <div>
-                      <label className="block text-sm font-medium text-[#0F172A] mb-2 mt-3">City *</label>
-                      <input
-                        type="text"
-                        placeholder="Uyo"
-                        value={formData.city}
-                        onChange={(e) => handleInputChange('city', e.target.value)}
-                        className="w-full px-4 py-3 bg-[#F3F3F5] placeholder:text-[#717182] border-none rounded-lg focus:ring-2 focus:ring-[#00D68F] outline-none"
-                      />
-                    </div>
-                    <div>
-                      <label className="block text-sm font-medium text-[#0F172A] mb-2 mt-3">State *</label>
-                      <input
-                        type="text"
-                        placeholder="Akwa Ibom"
-                        value={formData.state}
-                        onChange={(e) => handleInputChange('state', e.target.value)}
-                        className="w-full px-4 py-3 bg-[#F3F3F5] placeholder:text-[#717182] border-none rounded-lg focus:ring-2 focus:ring-[#00D68F] outline-none"
-                      />
-                    </div>
-                    <div>
-                      <label className="block text-sm font-medium text-[#0F172A] mb-2 mt-3">ZIP Code *</label>
-                      <input
-                        type="text"
-                        placeholder="10001"
-                        value={formData.zipCode}
-                        onChange={(e) => handleInputChange('zipCode', e.target.value)}
-                        className="w-full px-4 py-3 bg-[#F3F3F5] placeholder:text-[#717182] border-none rounded-lg focus:ring-2 focus:ring-[#00D68F] outline-none"
-                      />
-                    </div>
                   </div>
                 </YummyText>
               </div>
@@ -883,8 +851,8 @@ const VerificationPromptModal = ({ isOpen, onClose }) => {
                     onClick={handleSubmit}
                     disabled={!formData.agreeBackgroundCheck || uploading}
                     className={`flex-1 px-6 py-3 rounded-xl transition-colors font-medium flex items-center justify-center gap-2 ${formData.agreeBackgroundCheck && !uploading
-                        ? 'bg-[#00D68F] hover:bg-[#00B876] text-white'
-                        : 'bg-gray-300 text-gray-500 cursor-not-allowed'
+                      ? 'bg-[#00D68F] hover:bg-[#00B876] text-white'
+                      : 'bg-gray-300 text-gray-500 cursor-not-allowed'
                       }`}
                   >
                     {uploading && (
