@@ -38,10 +38,10 @@ const OrderCard = ({
   onAccept,
   accepting
 }) => (
-  <div className="bg-white rounded-2xl p-6 mb-4" style={sideBottomShadow}>
+  <div className="bg-white rounded-2xl p-4 sm:p-6 mb-4" style={sideBottomShadow}>
     <YummyText>
-      <div className="flex items-start justify-between mb-4">
-        <div className="flex items-center gap-3">
+      <div className="flex flex-col sm:flex-row items-start sm:justify-between mb-4">
+        <div className="flex items-center gap-3 mb-3 sm:mb-0">
           <div className="text-lg font-normal text-[#0F172A]">{packageId}</div>
           {priority && (
             <span className="px-3 py-1 rounded-lg text-xs font-normal bg-[#FF7A00] text-[#FFFFFF]">
@@ -61,7 +61,7 @@ const OrderCard = ({
       </div>
     </YummyText>
 
-    <div className="grid grid-cols-2 gap-6 mb-4">
+    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-4">
       <YummyText>
         <div className="flex gap-3">
           <div className="w-8 h-8 bg-[#E8F8F0] rounded-full flex items-center justify-center flex-shrink-0">
@@ -74,7 +74,6 @@ const OrderCard = ({
           </div>
         </div>
       </YummyText>
-
       <YummyText>
         <div className="flex gap-3">
           <div className="w-8 h-8 bg-[#FFF4E6] rounded-full flex items-center justify-center flex-shrink-0">
@@ -111,15 +110,15 @@ const OrderCard = ({
     </YummyText>
 
     <YummyText>
-      <div className="flex gap-3">
+      <div className="flex flex-col sm:flex-row gap-3">
         <button
           onClick={() => onAccept(deliveryId)}
           disabled={accepting}
-          className={`flex-1 bg-[#00B75A] hover:bg-[#00B876] text-white py-2 rounded-lg transition-colors font-[400] ${accepting ? 'opacity-50 cursor-not-allowed' : ''}`}
+          className={`w-full sm:flex-1 bg-[#00B75A] hover:bg-[#00B876] text-white py-2 rounded-lg transition-colors font-[400] ${accepting ? 'opacity-50 cursor-not-allowed' : ''}`}
         >
           {accepting ? 'Accepting...' : 'Accept Order'}
         </button>
-        <button className="flex-1 bg-white border border-gray-200 hover:bg-gray-50 rounded-lg transition-colors text-[#0F172A] font-[400] py-2" style={{ border: "1px solid #0000001A" }}>
+        <button className="w-full sm:flex-1 bg-white border border-gray-200 hover:bg-gray-50 rounded-lg transition-colors text-[#0F172A] font-[400] py-2" style={{ border: "1px solid #0000001A" }}>
           View Details
         </button>
       </div>
@@ -430,37 +429,41 @@ const AvailableOrders = () => {
                 />
               </div>
 
-              {/* Filter Tabs */}
-              <div className="flex items-center gap-2 mb-6 bg-gray-50 left-2 p-1 rounded-full w-fit">
-                <YummyText>
-                  <button
-                    onClick={() => setActiveTab('all')}
-                    className={`px-5 py-1 rounded-full text-sm font-normal transition-colors ${activeTab === 'all'
-                      ? 'text-[#00B75A] bg-white shadow-sm'
-                      : 'text-[#64748B]'
-                      }`}
-                  >
-                    All Orders ({orders.length})
-                  </button>
-                  <button
-                    onClick={() => setActiveTab('express')}
-                    className={`px-5 py-1 rounded-full text-sm font-normal transition-colors ${activeTab === 'express'
-                      ? 'text-[#00B75A] bg-white shadow-sm'
-                      : 'text-[#64748B]'
-                      }`}
-                  >
-                    Express ({expressCount})
-                  </button>
-                  <button
-                    onClick={() => setActiveTab('nearby')}
-                    className={`px-5 py-1 rounded-full text-sm font-normal transition-colors ${activeTab === 'nearby'
-                      ? 'text-[#00B75A] bg-white shadow-sm'
-                      : 'text-[#64748B]'
-                      }`}
-                  >
-                    Nearby ({nearbyCount})
-                  </button>
-                </YummyText>
+              {/* Filter Tabs (mobile: horizontal scroll) */}
+              <div className="mb-6">
+                <div className="overflow-x-auto -mx-4 sm:mx-0 px-4 sm:px-0">
+                  <div className="inline-flex items-center gap-2 bg-gray-50 p-1 rounded-full whitespace-nowrap">
+                    <YummyText>
+                      <button
+                        onClick={() => setActiveTab('all')}
+                        className={`inline-block px-4 py-1 rounded-full text-sm font-normal transition-colors ${activeTab === 'all'
+                          ? 'text-[#00B75A] bg-white shadow-sm'
+                          : 'text-[#64748B]'
+                          }`}
+                      >
+                        All Orders ({orders.length})
+                      </button>
+                      <button
+                        onClick={() => setActiveTab('express')}
+                        className={`inline-block px-4 py-1 rounded-full text-sm font-normal transition-colors ${activeTab === 'express'
+                          ? 'text-[#00B75A] bg-white shadow-sm'
+                          : 'text-[#64748B]'
+                          }`}
+                      >
+                        Express ({expressCount})
+                      </button>
+                      <button
+                        onClick={() => setActiveTab('nearby')}
+                        className={`inline-block px-4 py-1 rounded-full text-sm font-normal transition-colors ${activeTab === 'nearby'
+                          ? 'text-[#00B75A] bg-white shadow-sm'
+                          : 'text-[#64748B]'
+                          }`}
+                      >
+                        Nearby ({nearbyCount})
+                      </button>
+                    </YummyText>
+                  </div>
+                </div>
               </div>
 
               {/* Orders List */}
