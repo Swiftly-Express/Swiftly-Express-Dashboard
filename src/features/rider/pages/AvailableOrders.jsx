@@ -1,8 +1,10 @@
 import React, { useState, useEffect } from 'react';
-import { IonPage, IonContent, IonToast, IonRefresher, IonRefresherContent } from '@ionic/react';
+import { IonPage, IonContent, IonToast, IonRefresher, IonRefresherContent, IonIcon } from '@ionic/react';
+import { closeOutline } from 'ionicons/icons';
 import RiderLayout from '../components/RiderLayout';
 import { YummyText } from '../../../components/YummyText';
 import BanIcon from '../../../icons/Banicon';
+import MapboxMap from '../../../components/MapboxMap';
 import { getAvailableJobs, acceptDeliveryJob, getRiderProfile } from '../../../utils/authApi';
 import { getCookie, getJSONCookie, isRiderVerified, setCookie, setJSONCookie } from '../../../utils/cookies';
 
@@ -36,9 +38,10 @@ const OrderCard = ({
   price,
   tips,
   onAccept,
+  onViewDetails,
   accepting
 }) => (
-  <div className="bg-white rounded-2xl p-4 sm:p-6 mb-4" style={sideBottomShadow}>
+  <div id={`order-${deliveryId}`} className="bg-white rounded-2xl p-4 sm:p-6 mb-4" style={sideBottomShadow}>
     <YummyText>
       <div className="flex flex-col sm:flex-row items-start sm:justify-between mb-4">
         <div className="flex items-center gap-3 mb-3 sm:mb-0">
@@ -64,7 +67,7 @@ const OrderCard = ({
     <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-4">
       <YummyText>
         <div className="flex gap-3">
-          <div className="w-8 h-8 bg-[#E8F8F0] rounded-full flex items-center justify-center flex-shrink-0">
+          <div className="w-8 h-8 bg-[#E8F8F0] rounded-full flex items-center justify-center flex-shrink-0 animate-zoom">
             <img width="16" height="16" src="/locationicon.svg" alt="Pickup Icon" />
           </div>
           <div>
@@ -76,7 +79,7 @@ const OrderCard = ({
       </YummyText>
       <YummyText>
         <div className="flex gap-3">
-          <div className="w-8 h-8 bg-[#FFF4E6] rounded-full flex items-center justify-center flex-shrink-0">
+          <div className="w-8 h-8 bg-[#FFF4E6] rounded-full flex items-center justify-center flex-shrink-0 animate-zoom">
             <img width="16" height="16" src="/location-orange.svg" alt="Delivery Icon" />
           </div>
           <div>
@@ -118,7 +121,7 @@ const OrderCard = ({
         >
           {accepting ? 'Accepting...' : 'Accept Order'}
         </button>
-        <button className="w-full sm:flex-1 bg-white border border-gray-200 hover:bg-gray-50 rounded-lg transition-colors text-[#0F172A] font-[400] py-2" style={{ border: "1px solid #0000001A" }}>
+        <button onClick={() => onViewDetails && onViewDetails(deliveryId)} className="w-full sm:flex-1 bg-white border border-gray-200 hover:bg-gray-50 rounded-lg transition-colors text-[#0F172A] font-[400] py-2" style={{ border: "1px solid #0000001A" }}>
           View Details
         </button>
       </div>
@@ -137,6 +140,16 @@ const AvailableOrders = () => {
   const [isVerified, setIsVerified] = useState(false);
   const [isAvailable, setIsAvailable] = useState(true);
   const [lastRefresh, setLastRefresh] = useState(Date.now());
+  const [selectedOrder, setSelectedOrder] = useState(null);
+  // lock body scroll when drawer/modal is open
+  useEffect(() => {
+    if (selectedOrder) {
+      const prev = document.body.style.overflow;
+      document.body.style.overflow = 'hidden';
+      return () => { document.body.style.overflow = prev; };
+    }
+    return undefined;
+  }, [selectedOrder]);
 
   // Debug: Check tokens on mount
   useEffect(() => {
@@ -335,6 +348,16 @@ const AvailableOrders = () => {
     }
   };
 
+  const handleViewDetails = (deliveryId) => {
+    // Scroll the card into view so rider doesn't lose context
+    const el = document.getElementById(`order-${deliveryId}`);
+    if (el && el.scrollIntoView) {
+      el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    }
+    const order = orders.find(o => (o._id || o.id) === deliveryId || o.id === deliveryId || o._id === deliveryId);
+    if (order) setSelectedOrder(order);
+  };
+
   const filteredOrders = orders.filter(order => {
     if (activeTab === 'all') return true;
     if (activeTab === 'express') return order.priority === 'Express';
@@ -348,6 +371,27 @@ const AvailableOrders = () => {
   const handleRefresh = async (event) => {
     await fetchAvailableJobs();
     event.detail.complete();
+  };
+
+  // Helper to extract coords from various payload shapes
+  const extractCoords = (order, which) => {
+    // which = 'pickup' or 'delivery'
+    try {
+      if (!order) return null;
+      const pickup = order.pickup || order.pickupAddress || order.pickupCoords || order.pickup_location || order.pickupLocation;
+      const delivery = order.dropoff || order.deliveryAddress || order.deliveryCoords || order.destination || order.destinationAddress;
+      const candidate = which === 'pickup' ? pickup : delivery;
+      if (!candidate) return null;
+      // Candidate could be [lng, lat] or { lat, lng } or { coordinates: { lat, lng } }
+      if (Array.isArray(candidate) && candidate.length >= 2) return [candidate[0], candidate[1]];
+      if (candidate.coordinates && typeof candidate.coordinates.lat === 'number' && typeof candidate.coordinates.lng === 'number') return [candidate.coordinates.lng, candidate.coordinates.lat];
+      if (typeof candidate.lat === 'number' && typeof candidate.lng === 'number') return [candidate.lng, candidate.lat];
+      if (candidate.location && candidate.location.lat && candidate.location.lng) return [candidate.location.lng, candidate.location.lat];
+      if (candidate.coordinates && Array.isArray(candidate.coordinates)) return candidate.coordinates;
+      return null;
+    } catch (e) {
+      return null;
+    }
   };
 
   return (
@@ -429,14 +473,14 @@ const AvailableOrders = () => {
                 />
               </div>
 
-              {/* Filter Tabs (mobile: horizontal scroll) */}
+              {/* Filter Tabs (single responsive row) */}
               <div className="mb-6">
                 <div className="overflow-x-auto -mx-4 sm:mx-0 px-4 sm:px-0">
                   <div className="inline-flex items-center gap-2 bg-gray-50 p-1 rounded-full whitespace-nowrap">
                     <YummyText>
                       <button
                         onClick={() => setActiveTab('all')}
-                        className={`inline-block px-4 py-1 rounded-full text-sm font-normal transition-colors ${activeTab === 'all'
+                        className={`inline-block flex-shrink-0 min-w-[88px] sm:min-w-[120px] px-3 sm:px-5 py-1 rounded-full text-sm font-normal transition-colors ${activeTab === 'all'
                           ? 'text-[#00B75A] bg-white shadow-sm'
                           : 'text-[#64748B]'
                           }`}
@@ -445,7 +489,7 @@ const AvailableOrders = () => {
                       </button>
                       <button
                         onClick={() => setActiveTab('express')}
-                        className={`inline-block px-4 py-1 rounded-full text-sm font-normal transition-colors ${activeTab === 'express'
+                        className={`inline-block flex-shrink-0 min-w-[88px] sm:min-w-[120px] px-3 sm:px-5 py-1 rounded-full text-sm font-normal transition-colors ${activeTab === 'express'
                           ? 'text-[#00B75A] bg-white shadow-sm'
                           : 'text-[#64748B]'
                           }`}
@@ -454,7 +498,7 @@ const AvailableOrders = () => {
                       </button>
                       <button
                         onClick={() => setActiveTab('nearby')}
-                        className={`inline-block px-4 py-1 rounded-full text-sm font-normal transition-colors ${activeTab === 'nearby'
+                        className={`inline-block flex-shrink-0 min-w-[8px] sm:min-w-[120px] px-3 sm:px-5 py-1 rounded-full text-sm font-normal transition-colors ${activeTab === 'nearby'
                           ? 'text-[#00B75A] bg-white shadow-sm'
                           : 'text-[#64748B]'
                           }`}
@@ -501,12 +545,60 @@ const AvailableOrders = () => {
                       price={order.price || 'N/A'}
                       tips={order.tips || '0.00'}
                       onAccept={handleAcceptOrder}
+                      onViewDetails={handleViewDetails}
                       accepting={accepting === (order._id || order.id)}
                     />
                   ))
                 )}
               </div>
             </>
+          )}
+
+          {/* Details drawer (simple bottom sheet) */}
+          {selectedOrder && (
+            <div className="fixed inset-0 z-50 flex items-end">
+              {/* Backdrop */}
+              <div onClick={() => setSelectedOrder(null)} className="absolute inset-0 bg-black/40" />
+              <div className="relative w-full">
+                <div className="max-h-[75vh] overflow-y-auto bg-white rounded-t-2xl p-4 shadow-lg" style={sideBottomShadow}>
+                  <div className="flex items-center justify-between mb-3">
+                    <div>
+                      <div className="text-lg font-medium text-[#0F172A]">{selectedOrder.trackingNumber || selectedOrder.id || 'Order'}</div>
+                      <div className="text-sm text-[#64748B]">{selectedOrder.status || selectedOrder.state || ''}</div>
+                    </div>
+                    <button onClick={() => setSelectedOrder(null)} className="text-[#64748B] p-2 rounded-full hover:bg-gray-100">
+                      <IonIcon icon={closeOutline} />
+                    </button>
+                  </div>
+
+                  {/* Map preview */}
+                  <div className="mb-3 h-40 rounded-lg overflow-hidden">
+                    <MapboxMap
+                      pickupCoords={extractCoords(selectedOrder, 'pickup') || [3.3792, 6.5244]}
+                      deliveryCoords={extractCoords(selectedOrder, 'delivery') || [3.45, 6.52]}
+                      height="100%"
+                      showRoute={true}
+                      animateDriver={false}
+                    />
+                  </div>
+
+                  <div className="text-sm text-[#0F172A] mb-2">Pickup: {selectedOrder.pickupAddress?.street || selectedOrder.pickupAddress || selectedOrder.pickupName}</div>
+                  <div className="text-sm text-[#0F172A] mb-2">Delivery: {selectedOrder.deliveryAddress?.street || selectedOrder.deliveryAddress || selectedOrder.deliveryName}</div>
+                  <div className="text-sm text-[#64748B] mb-2">Distance: {selectedOrder.distance || 'N/A'}</div>
+                  <div className="text-sm text-[#64748B] mb-2">Price: {selectedOrder.price || selectedOrder.amount || 'N/A'}</div>
+                  <div className="mt-3 text-xs text-[#64748B]">{selectedOrder.specialInstructions || selectedOrder.notes || selectedOrder.packageDescription || ''}</div>
+
+                  <div className="mt-4 flex gap-3">
+                    <button onClick={() => { handleAcceptOrder(selectedOrder._id || selectedOrder.id); setSelectedOrder(null); }} className="flex-1 bg-[#00B75A] hover:bg-[#00B876] text-white py-2 rounded-lg transition-colors font-[400]">
+                      Accept Order
+                    </button>
+                    <button onClick={() => setSelectedOrder(null)} className="flex-1 bg-white border border-gray-200 hover:bg-gray-50 rounded-lg transition-colors text-[#0F172A] font-[400] py-2">
+                      Close
+                    </button>
+                  </div>
+                </div>
+              </div>
+            </div>
           )}
 
           <IonToast
