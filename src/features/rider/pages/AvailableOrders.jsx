@@ -578,7 +578,8 @@ const AvailableOrders = () => {
                       deliveryCoords={extractCoords(selectedOrder, 'delivery') || [3.45, 6.52]}
                       height="100%"
                       showRoute={true}
-                      animateDriver={false}
+                      animateVehicle={false}
+                      packageId={selectedOrder.trackingNumber || selectedOrder.id}
                     />
                   </div>
 

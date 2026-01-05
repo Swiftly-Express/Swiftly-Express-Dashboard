@@ -33,10 +33,17 @@ const Book = () => {
     weight: '',
     packageDescription: '',
     declaredValue: ''
+    ,
+    // optional upload and payment fields
+    packageImage: null,
+    paymentMethod: 'cash',
+    paymentNotes: ''
   });
 
   const [pickupCoordinates, setPickupCoordinates] = useState({ lat: 0, lng: 0 });
   const [deliveryCoordinates, setDeliveryCoordinates] = useState({ lat: 0, lng: 0 });
+  const [pickupAddressObj, setPickupAddressObj] = useState(null);
+  const [deliveryAddressObj, setDeliveryAddressObj] = useState(null);
 
   const router = useIonRouter();
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -102,31 +109,84 @@ const Book = () => {
         ? formData.weight.trim()
         : defaultWeightRanges[formData.weightCategory] || '0-5 kg';
 
+      const pickupAddrRaw = pickupAddressObj ? {
+        street: pickupAddressObj.street || '',
+        city: pickupAddressObj.city || '',
+        state: pickupAddressObj.state || pickupAddressObj.country || pickupAddressObj.city || '',
+        zipCode: pickupAddressObj.zipCode || '',
+        country: pickupAddressObj.country || '',
+        coordinates: pickupAddressObj.coordinates || pickupCoordinates
+      } : {
+        street: formData.pickupStreet,
+        city: '',
+        state: '',
+        zipCode: '',
+        country: '',
+        coordinates: pickupCoordinates
+      };
+
+      const deliveryAddrRaw = deliveryAddressObj ? {
+        street: deliveryAddressObj.street || '',
+        city: deliveryAddressObj.city || '',
+        state: deliveryAddressObj.state || deliveryAddressObj.country || deliveryAddressObj.city || '',
+        zipCode: deliveryAddressObj.zipCode || '',
+        country: deliveryAddressObj.country || '',
+        coordinates: deliveryAddressObj.coordinates || deliveryCoordinates
+      } : {
+        street: formData.deliveryStreet,
+        city: '',
+        state: '',
+        zipCode: '',
+        country: '',
+        coordinates: deliveryCoordinates
+      };
+
+      // Ensure required fields are non-empty to satisfy backend validation
+      const { country: _pCountry, ...pickupNoCountry } = pickupAddrRaw;
+      const pickupAddr = {
+        ...pickupNoCountry,
+        state: pickupAddrRaw.state || pickupAddrRaw.city || 'Unknown',
+        zipCode: pickupAddrRaw.zipCode || '00000'
+      };
+
+      const { country: _dCountry, ...deliveryNoCountry } = deliveryAddrRaw;
+      const deliveryAddr = {
+        ...deliveryNoCountry,
+        state: deliveryAddrRaw.state || deliveryAddrRaw.city || 'Unknown',
+        zipCode: deliveryAddrRaw.zipCode || '00000'
+      };
+
       const payload = {
-        pickupAddress: {
-          street: formData.pickupStreet,
-          city: '',
-          state: '',
-          zipCode: '00000',
-          coordinates: pickupCoordinates
-        },
-        deliveryAddress: {
-          street: formData.deliveryStreet,
-          city: '',
-          state: '',
-          zipCode: '00000',
-          coordinates: deliveryCoordinates
-        },
+        senderName: formData.senderName,
+        senderPhone: formData.senderPhone,
+        pickupDate: formData.pickupDate,
+        recipientName: formData.recipientName,
+        recipientPhone: formData.recipientPhone,
+        recipientEmail: formData.recipientEmail,
+        pickupAddress: pickupAddr,
+        deliveryAddress: deliveryAddr,
         packageDetails: {
           sizeCategory: formData.sizeCategory,
           weightCategory: formData.weightCategory,
           weight: weightString,
           dimensions: formData.dimensions || `${Math.round(30 * (formData.sizeScale / 100))}×${Math.round(30 * (formData.sizeScale / 100))}×${Math.round(30 * (formData.sizeScale / 100))} cm`,
           description: formData.packageDescription
+        },
+        payment: {
+          method: formData.paymentMethod,
+          notes: formData.paymentNotes
         }
       };
 
-      const response = await createDelivery(payload);
+      let response;
+      if (formData.packageImage) {
+        const fd = new FormData();
+        fd.append('packageImage', formData.packageImage);
+        fd.append('payload', JSON.stringify(payload));
+        response = await createDelivery(fd);
+      } else {
+        response = await createDelivery(payload);
+      }
 
       window.dispatchEvent(new Event('deliveries:refresh'));
       window.dispatchEvent(new CustomEvent('delivery:created', {
@@ -294,11 +354,9 @@ const Book = () => {
                         onChange={(value) => setFormData({ ...formData, pickupStreet: value })}
                         placeholder="Enter pickup address"
                         onPlaceSelect={(place) => {
-                          setFormData({ ...formData, pickupStreet: place.formatted_address });
-                          setPickupCoordinates({
-                            lat: place.geometry.location.lat,
-                            lng: place.geometry.location.lng
-                          });
+                          setFormData(prev => ({ ...prev, pickupStreet: place.street || place.formatted_address || '' }));
+                          setPickupCoordinates(place.coordinates || { lat: 0, lng: 0 });
+                          setPickupAddressObj(place);
                         }}
                       />
                     </div>
@@ -365,11 +423,9 @@ const Book = () => {
                         onChange={(value) => setFormData({ ...formData, deliveryStreet: value })}
                         placeholder="Enter delivery address"
                         onPlaceSelect={(place) => {
-                          setFormData({ ...formData, deliveryStreet: place.formatted_address });
-                          setDeliveryCoordinates({
-                            lat: place.geometry.location.lat,
-                            lng: place.geometry.location.lng
-                          });
+                          setFormData(prev => ({ ...prev, deliveryStreet: place.street || place.formatted_address || '' }));
+                          setDeliveryCoordinates(place.coordinates || { lat: 0, lng: 0 });
+                          setDeliveryAddressObj(place);
                         }}
                       />
                     </div>
@@ -737,6 +793,42 @@ const Book = () => {
                     onChange={handleChange}
                     placeholder="10000.00"
                     step="0.01"
+                    className="w-full px-4 py-3 rounded-xl bg-[#F8F9FA] text-sm md:text-base text-[#0F172A] placeholder:text-[#94A3B8] focus:outline-none focus:ring-2 focus:ring-[#00D68F] border-none"
+                  />
+                </div>
+
+                <div className="mb-6">
+                  <label className="block text-sm font-medium text-[#0F172A] mb-2">Package Image (optional)</label>
+                  <input
+                    type="file"
+                    accept="image/*"
+                    onChange={(e) => setFormData({ ...formData, packageImage: e.target.files && e.target.files[0] ? e.target.files[0] : null })}
+                    className="w-full"
+                  />
+                </div>
+
+                <div className="mb-6">
+                  <label className="block text-sm font-medium text-[#0F172A] mb-2">Payment Method</label>
+                  <StyledDropdown
+                    value={formData.paymentMethod === 'cash' ? 'Cash' : 'Bank Transfer'}
+                    onChange={(label) => {
+                      const map = { 'Cash': 'cash', 'Bank Transfer': 'transfer' };
+                      setFormData({ ...formData, paymentMethod: map[label] || 'cash' });
+                    }}
+                    options={['Cash', 'Bank Transfer']}
+                    className="w-full border-[1.5px] border-gray-200 rounded-full"
+                    width="w-full"
+                  />
+                </div>
+
+                <div className="mb-6">
+                  <label className="block text-sm font-medium text-[#0F172A] mb-2">Payment Notes (optional)</label>
+                  <input
+                    type="text"
+                    name="paymentNotes"
+                    value={formData.paymentNotes}
+                    onChange={handleChange}
+                    placeholder="Any notes for payment (e.g., teller/transfer details)"
                     className="w-full px-4 py-3 rounded-xl bg-[#F8F9FA] text-sm md:text-base text-[#0F172A] placeholder:text-[#94A3B8] focus:outline-none focus:ring-2 focus:ring-[#00D68F] border-none"
                   />
                 </div>

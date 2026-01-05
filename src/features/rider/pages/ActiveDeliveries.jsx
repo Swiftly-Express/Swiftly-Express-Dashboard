@@ -87,13 +87,13 @@ const ActiveDeliveries = () => {
           };
         } catch (geoError) {
           console.error('[ActiveDeliveries] Location required but unavailable:', geoError);
-          setToastMsg('⚠️ Location permission required to update status');
+          setToastMsg('Location permission required to update status');
           setShowToast(true);
           setUpdatingStatus(null);
           return;
         }
       } else {
-        setToastMsg('⚠️ Geolocation not supported by your browser');
+        setToastMsg('Geolocation not supported by your browser');
         setShowToast(true);
         setUpdatingStatus(null);
         return;
@@ -102,7 +102,7 @@ const ActiveDeliveries = () => {
       const response = await updateDeliveryStatus(deliveryId, statusUpdate);
       console.log('[ActiveDeliveries] Status updated:', response);
 
-      setToastMsg('✅ Status updated successfully!');
+      setToastMsg('Status updated successfully!');
       setShowToast(true);
 
       // Dispatch event for admin/rider components
@@ -139,7 +139,7 @@ const ActiveDeliveries = () => {
         errorMessage = error.message;
       }
 
-      setToastMsg('❌ ' + errorMessage);
+      setToastMsg(errorMessage);
       setShowToast(true);
     } finally {
       setUpdatingStatus(null);
@@ -179,7 +179,7 @@ const ActiveDeliveries = () => {
       await fetchActiveDeliveries();
     } catch (error) {
       console.error('[ActiveDeliveries] Failed to upload proof:', error);
-      setToastMsg('❌ ' + (error.message || 'Failed to upload proof'));
+      setToastMsg((error.message || 'Failed to upload proof'));
       setShowToast(true);
     }
   }; return (
@@ -232,6 +232,9 @@ const ActiveDeliveries = () => {
                 const deliveryCoords = delivery.dropoff?.coordinates || delivery.deliveryCoords || delivery.destination?.coordinates ||
                   (delivery.deliveryAddress?.coordinates ? [delivery.deliveryAddress.coordinates.lng, delivery.deliveryAddress.coordinates.lat] : null);
 
+                const vehicleCoords = (delivery.currentLocation && [delivery.currentLocation.lng, delivery.currentLocation.lat]) ||
+                  (delivery.lastKnownLocation && [delivery.lastKnownLocation.lng, delivery.lastKnownLocation.lat]) || null;
+
                 // Get action button text based on status
                 const getActionButtonText = (status) => {
                   const statusLower = status?.toLowerCase() || '';
@@ -278,6 +281,7 @@ const ActiveDeliveries = () => {
                     deliveryName={delivery.dropoff?.name || delivery.deliveryName || delivery.recipientName || delivery.receiverName || 'Delivery Location'}
                     deliveryAddress={deliveryAddressText}
                     deliveryCoords={deliveryCoords}
+                    vehicleCoords={vehicleCoords}
                     deliveryBorder={(delivery.status?.toLowerCase() || '').includes('picked') ? 'border-[#FF9500]' : 'border-gray-200'}
                     size={delivery.packageSize || delivery.size || delivery.packageDetails?.size || 'Standard'}
                     weight={delivery.packageWeight || delivery.weight || delivery.packageDetails?.weight || 'N/A'}
@@ -332,6 +336,7 @@ const DeliveryCard = ({
   deliveryName,
   deliveryAddress,
   deliveryCoords,
+  vehicleCoords,
   deliveryBorder,
   size,
   weight,
@@ -450,6 +455,9 @@ const DeliveryCard = ({
           deliveryCoords={deliveryCoords}
           height="300px"
           showRoute={true}
+          animateVehicle={true}
+          packageId={packageId}
+          vehicleCoords={vehicleCoords}
         />
       </div>
 

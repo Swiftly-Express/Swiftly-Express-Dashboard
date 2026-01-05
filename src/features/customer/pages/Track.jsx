@@ -3,6 +3,7 @@ import { IonPage, IonContent, IonToast } from '@ionic/react';
 import CustomerLayout from '../components/CustomerLayout';
 import { YummyText } from '../../../components/YummyText';
 import Loader from '../../../components/Loader';
+import MapboxMap from '../../../components/MapboxMap';
 import { getDeliveryByTracking } from '../../../utils/authApi';
 import BlockIcon from '../../../icons/Blockicon';
 import CheckIcon from '../../../icons/Checkicon';
@@ -187,18 +188,44 @@ const Track = () => {
           {/* Tracking Result */}
           {!loading && deliveryData && (
             <div className="space-y-6">
-              {/* Map Placeholder */}
+              {/* Map */}
               <div className="bg-white rounded-2xl overflow-hidden" style={sideBottomShadow}>
-                <div className="h-64 bg-gradient-to-br from-[#E5F5E5] to-[#C8E6C9] relative flex items-center justify-center">
-                  <div className="text-center">
-                    <svg width="64" height="64" viewBox="0 0 24 24" fill="none" className="mx-auto mb-3 opacity-50">
-                      <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z" fill="#00B75A" />
-                      <circle cx="12" cy="10" r="3" fill="white" />
-                    </svg>
-                    <YummyText className="text-[#64748B] text-sm">
-                      Map view
-                    </YummyText>
-                  </div>
+                <div className="h-64 relative">
+                  {deliveryData.pickupAddress?.coordinates && deliveryData.deliveryAddress?.coordinates ? (
+                    <MapboxMap
+                      pickupCoords={[
+                        deliveryData.pickupAddress.coordinates.lng,
+                        deliveryData.pickupAddress.coordinates.lat
+                      ]}
+                      deliveryCoords={[
+                        deliveryData.deliveryAddress.coordinates.lng,
+                        deliveryData.deliveryAddress.coordinates.lat
+                      ]}
+                      height="256px"
+                      showRoute={true}
+                      showRandomCars={false}
+                      // pass package id so MapboxMap can listen for rider:position events for this package
+                      packageId={deliveryData.trackingNumber || deliveryData.trackingId || deliveryData.id || deliveryData._id}
+                      // pass vehicle coords if backend provides last known location
+                      vehicleCoords={
+                        (deliveryData.currentLocation && [deliveryData.currentLocation.lng, deliveryData.currentLocation.lat]) ||
+                        (deliveryData.lastKnownLocation && [deliveryData.lastKnownLocation.lng, deliveryData.lastKnownLocation.lat]) ||
+                        null
+                      }
+                    />
+                  ) : (
+                    <div className="h-64 bg-gradient-to-br from-[#E5F5E5] to-[#C8E6C9] flex items-center justify-center">
+                      <div className="text-center">
+                        <svg width="64" height="64" viewBox="0 0 24 24" fill="none" className="mx-auto mb-3 opacity-50">
+                          <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z" fill="#00B75A" />
+                          <circle cx="12" cy="10" r="3" fill="white" />
+                        </svg>
+                        <YummyText className="text-[#64748B] text-sm">
+                          Map view
+                        </YummyText>
+                      </div>
+                    </div>
+                  )}
                 </div>
               </div>
 

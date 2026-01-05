@@ -120,45 +120,60 @@ const GoogleMapsAutocomplete = ({
 
                 if (response.results && response.results.length > 0) {
                     const result = response.results[0];
-                    const components = result.address_components;
+                    const components = result.address_components || [];
 
-                    // Extract address parts
-                    let streetNumber = '';
-                    let route = '';
-                    let city = '';
-                    let state = '';
+                    const extract = (componentsList) => {
+                        const out = { streetNumber: '', route: '', premise: '', subpremise: '', name: '', city: '', state: '', postal_code: '', country: '' };
+                        componentsList.forEach(component => {
+                            const types = component.types || [];
+                            if (types.includes('street_number')) out.streetNumber = component.long_name;
+                            if (types.includes('route')) out.route = component.long_name;
+                            if (types.includes('premise')) out.premise = component.long_name;
+                            if (types.includes('subpremise')) out.subpremise = component.long_name;
+                            if (types.includes('establishment')) out.name = component.long_name;
+                            if (types.includes('locality') || types.includes('postal_town')) {
+                                if (!out.city) out.city = component.long_name;
+                            }
+                            if (types.includes('administrative_area_level_1')) out.state = component.long_name;
+                            if (types.includes('postal_code')) out.postal_code = component.long_name;
+                            if (types.includes('country')) out.country = component.long_name;
+                        });
+                        return out;
+                    };
 
-                    components.forEach(component => {
-                        const types = component.types;
-                        if (types.includes('street_number')) {
-                            streetNumber = component.long_name;
-                        } else if (types.includes('route')) {
-                            route = component.long_name;
-                        } else if (types.includes('locality')) {
-                            city = component.long_name;
-                        } else if (types.includes('administrative_area_level_1')) {
-                            state = component.long_name;
-                        }
-                    });
+                    const c = extract(components);
 
-                    // Build clean address string
-                    const addressParts = [];
-                    if (streetNumber) addressParts.push(streetNumber);
-                    if (route) addressParts.push(route);
-                    if (city) addressParts.push(city);
-                    if (state) addressParts.push(state);
+                    // Build street: prefer premise/name, then street_number + route, then route
+                    let streetLine = '';
+                    if (c.premise) streetLine = c.premise;
+                    else if (c.name) streetLine = c.name;
+                    else if (c.streetNumber || c.route) streetLine = [c.streetNumber, c.route].filter(Boolean).join(' ');
+                    else if (c.route) streetLine = c.route;
 
-                    const cleanAddress = addressParts.join(', ') || result.formatted_address;
+                    // Fallback to result.name or formatted_address if still empty
+                    if (!streetLine) {
+                        streetLine = result.name || result.formatted_address || '';
+                    }
+
+                    // City fallback: try administrative_area_level_2 or neighborhood
+                    if (!c.city) {
+                        const alt = components.find(comp => comp.types && (comp.types.includes('administrative_area_level_2') || comp.types.includes('neighborhood') || comp.types.includes('sublocality_level_1')));
+                        if (alt) c.city = alt.long_name;
+                    }
+
+                    const cleanAddress = [streetLine, c.city, c.state].filter(Boolean).join(', ') || result.formatted_address;
 
                     onChange(cleanAddress);
 
                     const placeResult = {
-                        formatted_address: cleanAddress,
-                        geometry: {
-                            location: {
-                                lat: result.geometry.location.lat(),
-                                lng: result.geometry.location.lng(),
-                            },
+                        street: streetLine || result.formatted_address,
+                        city: c.city || '',
+                        state: c.state || '',
+                        zipCode: c.postal_code || '',
+                        country: c.country || '',
+                        coordinates: {
+                            lat: result.geometry.location.lat(),
+                            lng: result.geometry.location.lng(),
                         },
                         place_id: prediction.place_id,
                     };
@@ -239,43 +254,54 @@ const GoogleMapsAutocomplete = ({
 
                     if (response.results && response.results.length > 0) {
                         const result = response.results[0];
-                        const components = result.address_components;
+                        const components = result.address_components || [];
 
-                        // Extract address parts
-                        let streetNumber = '';
-                        let route = '';
-                        let city = '';
-                        let state = '';
+                        const extract = (componentsList) => {
+                            const out = { streetNumber: '', route: '', premise: '', subpremise: '', name: '', city: '', state: '', postal_code: '', country: '' };
+                            componentsList.forEach(component => {
+                                const types = component.types || [];
+                                if (types.includes('street_number')) out.streetNumber = component.long_name;
+                                if (types.includes('route')) out.route = component.long_name;
+                                if (types.includes('premise')) out.premise = component.long_name;
+                                if (types.includes('subpremise')) out.subpremise = component.long_name;
+                                if (types.includes('establishment')) out.name = component.long_name;
+                                if (types.includes('locality') || types.includes('postal_town')) {
+                                    if (!out.city) out.city = component.long_name;
+                                }
+                                if (types.includes('administrative_area_level_1')) out.state = component.long_name;
+                                if (types.includes('postal_code')) out.postal_code = component.long_name;
+                                if (types.includes('country')) out.country = component.long_name;
+                            });
+                            return out;
+                        };
 
-                        components.forEach(component => {
-                            const types = component.types;
-                            if (types.includes('street_number')) {
-                                streetNumber = component.long_name;
-                            } else if (types.includes('route')) {
-                                route = component.long_name;
-                            } else if (types.includes('locality')) {
-                                city = component.long_name;
-                            } else if (types.includes('administrative_area_level_1')) {
-                                state = component.long_name;
-                            }
-                        });
+                        const c = extract(components);
 
-                        // Build clean address string
-                        const addressParts = [];
-                        if (streetNumber) addressParts.push(streetNumber);
-                        if (route) addressParts.push(route);
-                        if (city) addressParts.push(city);
-                        if (state) addressParts.push(state);
+                        let streetLine = '';
+                        if (c.premise) streetLine = c.premise;
+                        else if (c.name) streetLine = c.name;
+                        else if (c.streetNumber || c.route) streetLine = [c.streetNumber, c.route].filter(Boolean).join(' ');
+                        else if (c.route) streetLine = c.route;
+                        if (!streetLine) {
+                            streetLine = result.name || result.formatted_address || '';
+                        }
 
-                        const cleanAddress = addressParts.join(', ') || result.formatted_address;
+                        if (!c.city) {
+                            const alt = components.find(comp => comp.types && (comp.types.includes('administrative_area_level_2') || comp.types.includes('neighborhood') || comp.types.includes('sublocality_level_1')));
+                            if (alt) c.city = alt.long_name;
+                        }
+
+                        const cleanAddress = [streetLine, c.city, c.state].filter(Boolean).join(', ') || result.formatted_address;
 
                         const placeResult = {
-                            formatted_address: cleanAddress,
-                            geometry: {
-                                location: {
-                                    lat: latitude,
-                                    lng: longitude,
-                                },
+                            street: streetLine || result.formatted_address,
+                            city: c.city || '',
+                            state: c.state || '',
+                            zipCode: c.postal_code || '',
+                            country: c.country || '',
+                            coordinates: {
+                                lat: latitude,
+                                lng: longitude,
                             },
                             place_id: result.place_id,
                         };

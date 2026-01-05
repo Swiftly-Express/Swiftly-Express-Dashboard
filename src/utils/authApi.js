@@ -580,6 +580,12 @@ export async function uploadRiderProfileImage(file) {
 }
 
 export async function createDelivery(payload) {
+  if (payload instanceof FormData) {
+    return apiClient.post('/api/customer/deliveries', payload, {
+      headers: { 'Content-Type': 'multipart/form-data' }
+    });
+  }
+
   return apiClient.post('/api/customer/deliveries', payload);
 }
 
