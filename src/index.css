@@ -51,8 +51,23 @@
 
   100% {
     transform: scale(1);
-    box-shadow: 0 0 0 0 rgba(0, 214, 143, 0.0);
+    box-shadow: 0 0 0 0 rgba(0, 214, 143, 0);
   }
+}
+
+/* Drawer slide-in animation */
+@keyframes slideInRight {
+  from {
+    transform: translateX(100%);
+  }
+
+  to {
+    transform: translateX(0);
+  }
+}
+
+.animate-slide-in-right {
+  animation: slideInRight 0.3s ease-out;
 }
 
 /* Delivery marker subtle pulse */

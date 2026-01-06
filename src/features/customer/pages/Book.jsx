@@ -36,7 +36,7 @@ const Book = () => {
     ,
     // optional upload and payment fields
     packageImage: null,
-    paymentMethod: 'cash',
+    paymentMethod: '',
     paymentNotes: ''
   });
 
@@ -54,6 +54,8 @@ const Book = () => {
   const hideBubbleTimeout = useRef(null);
   const [sliderBubble, setSliderBubble] = useState(null); // { percent, value }
   const [showFineTuneInfo, setShowFineTuneInfo] = useState(false);
+  const [showPaymentDrawer, setShowPaymentDrawer] = useState(false);
+  const [selectedPaymentMethod, setSelectedPaymentMethod] = useState('cash');
 
   const deliveryTypes = [
     { value: 'express', label: 'Express (Same day)', price: '₦2500' },
@@ -797,28 +799,109 @@ const Book = () => {
                   />
                 </div>
 
+                {/* Package Image Upload - Redesigned */}
                 <div className="mb-6">
-                  <label className="block text-sm font-medium text-[#0F172A] mb-2">Package Image (optional)</label>
-                  <input
-                    type="file"
-                    accept="image/*"
-                    onChange={(e) => setFormData({ ...formData, packageImage: e.target.files && e.target.files[0] ? e.target.files[0] : null })}
-                    className="w-full"
-                  />
+                  <label className="block text-sm font-medium text-[#0F172A] mb-3">Package Image (optional)</label>
+                  <div className="border-2 border-dashed border-gray-300 rounded-xl p-6 hover:border-[#00B75A] transition-colors cursor-pointer bg-[#F8F9FA]">
+                    <input
+                      type="file"
+                      accept="image/*"
+                      id="package-image-upload"
+                      onChange={(e) => setFormData({ ...formData, packageImage: e.target.files && e.target.files[0] ? e.target.files[0] : null })}
+                      className="hidden"
+                    />
+                    <label htmlFor="package-image-upload" className="cursor-pointer flex flex-col items-center justify-center text-center">
+                      {formData.packageImage ? (
+                        <div className="w-full">
+                          <div className="flex items-center justify-between mb-2">
+                            <div className="flex items-center gap-2">
+                              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                                <path d="M21 19V5c0-1.1-.9-2-2-2H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2zM8.5 13.5l2.5 3.01L14.5 12l4.5 6H5l3.5-4.5z" fill="#00B75A" />
+                              </svg>
+                              <span className="text-sm font-medium text-[#0F172A]">{formData.packageImage.name}</span>
+                            </div>
+                            <button
+                              type="button"
+                              onClick={(e) => {
+                                e.preventDefault();
+                                setFormData({ ...formData, packageImage: null });
+                              }}
+                              className="text-red-500 hover:text-red-700"
+                            >
+                              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                                <path d="M6 19c0 1.1.9 2 2 2h8c1.1 0 2-.9 2-2V7H6v12zM19 4h-3.5l-1-1h-5l-1 1H5v2h14V4z" fill="currentColor" />
+                              </svg>
+                            </button>
+                          </div>
+                          <p className="text-xs text-[#64748B]">Click to change image</p>
+                        </div>
+                      ) : (
+                        <>
+                          <svg width="48" height="48" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" className="mb-3">
+                            <path d="M21 19V5c0-1.1-.9-2-2-2H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2zM8.5 13.5l2.5 3.01L14.5 12l4.5 6H5l3.5-4.5z" fill="#94A3B8" />
+                          </svg>
+                          <p className="text-sm font-medium text-[#0F172A] mb-1">Click to upload package image</p>
+                          <p className="text-xs text-[#64748B]">PNG, JPG up to 10MB</p>
+                        </>
+                      )}
+                    </label>
+                  </div>
                 </div>
 
+                {/* Payment Method - Redesigned */}
                 <div className="mb-6">
-                  <label className="block text-sm font-medium text-[#0F172A] mb-2">Payment Method</label>
-                  <StyledDropdown
-                    value={formData.paymentMethod === 'cash' ? 'Cash' : 'Bank Transfer'}
-                    onChange={(label) => {
-                      const map = { 'Cash': 'cash', 'Bank Transfer': 'transfer' };
-                      setFormData({ ...formData, paymentMethod: map[label] || 'cash' });
-                    }}
-                    options={['Cash', 'Bank Transfer']}
-                    className="w-full border-[1.5px] border-gray-200 rounded-full"
-                    width="w-full"
-                  />
+                  <label className="block text-sm font-medium text-[#0F172A] mb-3">Payment Method</label>
+                  <button
+                    type="button"
+                    onClick={() => setShowPaymentDrawer(true)}
+                    className="w-full px-5 py-4 rounded-xl bg-white border-2 border-gray-300 hover:border-[#00B75A] text-sm md:text-base focus:outline-none focus:ring-2 focus:ring-[#00B75A] transition-all text-left flex items-center justify-between group"
+                  >
+                    <div className="flex items-center gap-3">
+                      {formData.paymentMethod === 'cash' && (
+                        <>
+                          <div className="w-10 h-10 rounded-full bg-[#F0FDF4] flex items-center justify-center">
+                            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                              <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-2h2v2zm0-4h-2V7h2v6z" fill="#00B75A" />
+                            </svg>
+                          </div>
+                          <span className="font-medium text-[#0F172A]">Cash on Delivery</span>
+                        </>
+                      )}
+                      {formData.paymentMethod === 'card' && (
+                        <>
+                          <div className="w-10 h-10 rounded-full bg-[#F0FDF4] flex items-center justify-center">
+                            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                              <path d="M20 4H4c-1.11 0-1.99.89-1.99 2L2 18c0 1.11.89 2 2 2h16c1.11 0 2-.89 2-2V6c0-1.11-.89-2-2-2zm0 14H4v-6h16v6zm0-10H4V6h16v2z" fill="#00B75A" />
+                            </svg>
+                          </div>
+                          <span className="font-medium text-[#0F172A]">Pay with Card (Paystack)</span>
+                        </>
+                      )}
+                      {formData.paymentMethod === 'transfer' && (
+                        <>
+                          <div className="w-10 h-10 rounded-full bg-[#F0FDF4] flex items-center justify-center">
+                            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                              <path d="M11.8 10.9c-2.27-.59-3-1.2-3-2.15 0-1.09 1.01-1.85 2.7-1.85 1.78 0 2.44.85 2.5 2.1h2.21c-.07-1.72-1.12-3.3-3.21-3.81V3h-3v2.16c-1.94.42-3.5 1.68-3.5 3.61 0 2.31 1.91 3.46 4.7 4.13 2.5.6 3 1.48 3 2.41 0 .69-.49 1.79-2.7 1.79-2.06 0-2.87-.92-2.98-2.1h-2.2c.12 2.19 1.76 3.42 3.68 3.83V21h3v-2.15c1.95-.37 3.5-1.5 3.5-3.55 0-2.84-2.43-3.81-4.7-4.4z" fill="#00B75A" />
+                            </svg>
+                          </div>
+                          <span className="font-medium text-[#0F172A]">Bank Transfer</span>
+                        </>
+                      )}
+                      {!formData.paymentMethod && (
+                        <>
+                          <div className="w-10 h-10 rounded-full bg-gray-100 flex items-center justify-center">
+                            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                              <path d="M20 4H4c-1.11 0-1.99.89-1.99 2L2 18c0 1.11.89 2 2 2h16c1.11 0 2-.89 2-2V6c0-1.11-.89-2-2-2zm0 14H4v-6h16v6zm0-10H4V6h16v2z" fill="#94A3B8" />
+                            </svg>
+                          </div>
+                          <span className="text-[#94A3B8]">Select payment method</span>
+                        </>
+                      )}
+                    </div>
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" className="group-hover:translate-x-1 transition-transform">
+                      <path d="M9 5l7 7-7 7" stroke="#64748B" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+                    </svg>
+                  </button>
                 </div>
 
                 <div className="mb-6">
@@ -876,6 +959,144 @@ const Book = () => {
             </div>
           </div>
         </IonContent>
+
+        {/* Payment Method Drawer */}
+        {showPaymentDrawer && (
+          <div
+            className="fixed inset-0 z-[9999]"
+            onClick={() => setShowPaymentDrawer(false)}
+          >
+            <div className="absolute inset-0 bg-black/50" />
+            <div
+              className="absolute top-0 right-0 h-full w-full md:w-[500px] bg-white shadow-2xl animate-slide-in-right"
+              onClick={(e) => e.stopPropagation()}
+            >
+              {/* Drawer Header */}
+              <div className="flex items-center justify-between p-6 border-b border-gray-200">
+                <YummyText className="text-xl font-semibold text-[#0F172A]">Select Payment Method</YummyText>
+                <button
+                  onClick={() => setShowPaymentDrawer(false)}
+                  className="p-2 hover:bg-gray-100 rounded-full transition-colors"
+                >
+                  <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <path d="M18 6L6 18M6 6l12 12" stroke="#64748B" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+                  </svg>
+                </button>
+              </div>
+
+              {/* Drawer Content */}
+              <div className="p-6 overflow-y-auto h-[calc(100%-88px)]">
+                {/* Cash on Delivery */}
+                <button
+                  onClick={() => {
+                    setFormData({ ...formData, paymentMethod: 'cash' });
+                    setShowPaymentDrawer(false);
+                  }}
+                  className={`w-full p-4 rounded-xl border-2 mb-4 transition-all ${formData.paymentMethod === 'cash'
+                    ? 'border-[#00B75A] bg-[#F0FDF4]'
+                    : 'border-gray-200 hover:border-gray-300'
+                    }`}
+                >
+                  <div className="flex items-start gap-4">
+                    <div className={`w-12 h-12 rounded-full flex items-center justify-center ${formData.paymentMethod === 'cash' ? 'bg-[#00B75A]' : 'bg-gray-100'
+                      }`}>
+                      <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                        <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-2h2v2zm0-4h-2V7h2v6z" fill={formData.paymentMethod === 'cash' ? 'white' : '#64748B'} />
+                      </svg>
+                    </div>
+                    <div className="flex-1 text-left">
+                      <div className="font-semibold text-[#0F172A] mb-1">Cash on Delivery</div>
+                      <div className="text-sm text-[#64748B]">Pay with cash when your package is delivered</div>
+                    </div>
+                    {formData.paymentMethod === 'cash' && (
+                      <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                        <path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41L9 16.17z" fill="#00B75A" />
+                      </svg>
+                    )}
+                  </div>
+                </button>
+
+                {/* Pay with Card (Paystack) */}
+                <button
+                  onClick={() => {
+                    setFormData({ ...formData, paymentMethod: 'card' });
+                    setShowPaymentDrawer(false);
+                  }}
+                  className={`w-full p-4 rounded-xl border-2 mb-4 transition-all ${formData.paymentMethod === 'card'
+                    ? 'border-[#00B75A] bg-[#F0FDF4]'
+                    : 'border-gray-200 hover:border-gray-300'
+                    }`}
+                >
+                  <div className="flex items-start gap-4">
+                    <div className={`w-12 h-12 rounded-full flex items-center justify-center ${formData.paymentMethod === 'card' ? 'bg-[#00B75A]' : 'bg-gray-100'
+                      }`}>
+                      <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                        <path d="M20 4H4c-1.11 0-1.99.89-1.99 2L2 18c0 1.11.89 2 2 2h16c1.11 0 2-.89 2-2V6c0-1.11-.89-2-2-2zm0 14H4v-6h16v6zm0-10H4V6h16v2z" fill={formData.paymentMethod === 'card' ? 'white' : '#64748B'} />
+                      </svg>
+                    </div>
+                    <div className="flex-1 text-left">
+                      <div className="font-semibold text-[#0F172A] mb-1">Pay with Card</div>
+                      <div className="text-sm text-[#64748B]">Secure payment via Paystack (Visa, Mastercard, Verve)</div>
+                      <div className="flex items-center gap-2 mt-2">
+                        <img src="https://cdn.paystack.co/img/visa.svg" alt="Visa" className="h-6" />
+                        <img src="https://cdn.paystack.co/img/mastercard.svg" alt="Mastercard" className="h-6" />
+                        <img src="https://cdn.paystack.co/img/verve.svg" alt="Verve" className="h-6" />
+                      </div>
+                    </div>
+                    {formData.paymentMethod === 'card' && (
+                      <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                        <path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41L9 16.17z" fill="#00B75A" />
+                      </svg>
+                    )}
+                  </div>
+                </button>
+
+                {/* Bank Transfer */}
+                <button
+                  onClick={() => {
+                    setFormData({ ...formData, paymentMethod: 'transfer' });
+                    setShowPaymentDrawer(false);
+                  }}
+                  className={`w-full p-4 rounded-xl border-2 mb-4 transition-all ${formData.paymentMethod === 'transfer'
+                    ? 'border-[#00B75A] bg-[#F0FDF4]'
+                    : 'border-gray-200 hover:border-gray-300'
+                    }`}
+                >
+                  <div className="flex items-start gap-4">
+                    <div className={`w-12 h-12 rounded-full flex items-center justify-center ${formData.paymentMethod === 'transfer' ? 'bg-[#00B75A]' : 'bg-gray-100'
+                      }`}>
+                      <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                        <path d="M11.8 10.9c-2.27-.59-3-1.2-3-2.15 0-1.09 1.01-1.85 2.7-1.85 1.78 0 2.44.85 2.5 2.1h2.21c-.07-1.72-1.12-3.3-3.21-3.81V3h-3v2.16c-1.94.42-3.5 1.68-3.5 3.61 0 2.31 1.91 3.46 4.7 4.13 2.5.6 3 1.48 3 2.41 0 .69-.49 1.79-2.7 1.79-2.06 0-2.87-.92-2.98-2.1h-2.2c.12 2.19 1.76 3.42 3.68 3.83V21h3v-2.15c1.95-.37 3.5-1.5 3.5-3.55 0-2.84-2.43-3.81-4.7-4.4z" fill={formData.paymentMethod === 'transfer' ? 'white' : '#64748B'} />
+                      </svg>
+                    </div>
+                    <div className="flex-1 text-left">
+                      <div className="font-semibold text-[#0F172A] mb-1">Bank Transfer</div>
+                      <div className="text-sm text-[#64748B]">Transfer to our bank account and share proof</div>
+                    </div>
+                    {formData.paymentMethod === 'transfer' && (
+                      <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                        <path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41L9 16.17z" fill="#00B75A" />
+                      </svg>
+                    )}
+                  </div>
+                </button>
+
+                {/* Info Box */}
+                <div className="bg-blue-50 border border-blue-200 rounded-xl p-4 mt-6">
+                  <div className="flex items-start gap-3">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" className="flex-shrink-0 mt-0.5">
+                      <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-6h2v6zm0-8h-2V7h2v2z" fill="#3B82F6" />
+                    </svg>
+                    <div className="text-sm text-[#1E40AF]">
+                      <div className="font-medium mb-1">Secure Payment</div>
+                      <div>All card payments are processed securely through Paystack. Your payment information is encrypted and never stored on our servers.</div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
       </CustomerLayout>
     </IonPage>
   );
