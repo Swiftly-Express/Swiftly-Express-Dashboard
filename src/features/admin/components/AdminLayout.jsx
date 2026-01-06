@@ -42,10 +42,10 @@ const AdminLayout = ({ children }) => {
 
         {/* Desktop Top Header - visible on md+ screens */}
         <div className="hidden md:block fixed top-0 left-0 right-0 z-40">
-          <div className="bg-white border-b border-gray-200 h-14 shadow-sm">
+          <div className="bg-white border-b border-gray-200 h-16 shadow-sm">
             <div className="flex items-center justify-between h-full">
               {/* Left: logo + title */}
-              <div className="flex items-center gap-1 ml-0.5">
+              <div className="flex items-center gap-1 ml-4">
                 <img src="/swiftly-logo.svg" alt="Swiftly" className="h-28 object-contain" />
                 <YummyText className="text-xs text-[#0F172A] border border-[#00B75A] rounded-full px-2 py-0.5">Admin</YummyText>
               </div>

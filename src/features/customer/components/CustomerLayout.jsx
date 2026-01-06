@@ -62,7 +62,7 @@ const CustomerLayout = ({ children }) => {
               <div className="flex items-center gap-3">
                 <button className="relative p-2 hover:bg-gray-50 rounded-lg transition-colors" aria-label="Notifications">
                   <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                    <path d="M12 22c1.1 0 2-.9 2-2h-4c0 1.1.9 2 2 2zm6-6v-5c0-3.07-1.63-5.64-4.5-6.32V4c0-.83-.67-1.5-1.5-1.5s-1.5.67-1.5 1.5v.68C7.64 5.36 6 7.92 6 11v5l-2 2v1h16v-1l-2-2zm-2 1H8v-6c0-2.48 1.51-4.5 4-4.5s4 2.02 4 4.5v6z" fill="#64748B"/>
+                    <path d="M12 22c1.1 0 2-.9 2-2h-4c0 1.1.9 2 2 2zm6-6v-5c0-3.07-1.63-5.64-4.5-6.32V4c0-.83-.67-1.5-1.5-1.5s-1.5.67-1.5 1.5v.68C7.64 5.36 6 7.92 6 11v5l-2 2v1h16v-1l-2-2zm-2 1H8v-6c0-2.48 1.51-4.5 4-4.5s4 2.02 4 4.5v6z" fill="#64748B" />
                   </svg>
                   <span className="absolute top-1 right-1 w-5 h-5 bg-[#FF6B00] text-white text-xs rounded-full flex items-center justify-center font-medium">0</span>
                 </button>
@@ -83,21 +83,19 @@ const CustomerLayout = ({ children }) => {
 
         {/* Top Header - visible on md+ screens (sticky inside scroll area) */}
         <div className="hidden md:block fixed top-0 left-0 right-0 z-40">
-          <div className="bg-white border-b border-gray-200 py-4 shadow-sm">
-            <div className="flex items-center justify-between">
-              {/* Left: logo + title */}
-              <div className="flex items-center gap-3 ml-4">
-                <div className="w-8 h-8 bg-gradient-to-br from-[#00D68F] to-[#00B876] rounded-lg flex items-center justify-center">
-                  <img src="/vanicon-white.svg" alt="truck" width={20} height={20} />
-                </div>
-                <YummyText className="text-lg font-medium text-[#0F172A]">Customer Dashboard</YummyText>
+          <div className="bg-white border-b border-gray-200 h-16 shadow-sm">
+            <div className="flex items-center justify-between h-full">
+              {/* Left: logo + title (match Admin layout) */}
+              <div className="flex items-center gap-1 ml-4">
+                <img src="/swiftly-logo.svg" alt="Swiftly" className="h-28 object-contain" />
+                <YummyText className="text-xs text-[#0F172A] border border-[#00B75A] rounded-full px-2 py-0.5">Customer</YummyText>
               </div>
 
               {/* Right: actions */}
               <div className="flex items-center justify-end gap-4 pr-6">
                 <button className="relative p-2 hover:bg-gray-50 rounded-lg transition-colors">
                   <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                    <path d="M12 22c1.1 0 2-.9 2-2h-4c0 1.1.9 2 2 2zm6-6v-5c0-3.07-1.63-5.64-4.5-6.32V4c0-.83-.67-1.5-1.5-1.5s-1.5.67-1.5 1.5v.68C7.64 5.36 6 7.92 6 11v5l-2 2v1h16v-1l-2-2zm-2 1H8v-6c0-2.48 1.51-4.5 4-4.5s4 2.02 4 4.5v6z" fill="#64748B"/>
+                    <path d="M12 22c1.1 0 2-.9 2-2h-4c0 1.1.9 2 2 2zm6-6v-5c0-3.07-1.63-5.64-4.5-6.32V4c0-.83-.67-1.5-1.5-1.5s-1.5.67-1.5 1.5v.68C7.64 5.36 6 7.92 6 11v5l-2 2v1h16v-1l-2-2zm-2 1H8v-6c0-2.48 1.51-4.5 4-4.5s4 2.02 4 4.5v6z" fill="#64748B" />
                   </svg>
                   <span className="absolute top-1 right-2 w-2 h-2 bg-[#FF6B00] rounded-full"></span>
                 </button>

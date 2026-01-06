@@ -140,7 +140,7 @@ const AdminSidebar = () => {
   return (
     <div className="w-64 bg-white h-screen fixed left-0 top-0 border-r border-gray-300 shadow-sm flex flex-col pt-4">
       {/* Top Branding */}
-      <div className="px-4 py-6 flex items-center gap-3">
+      <div className="px-4 py-8 flex items-center gap-3">
         {/* <div className="flex flex-col items-start">
           <img src="/swiftly-logo.svg" alt="Swiftly" className="h-10 object-contain" />
           <YummyText className="text-xs text-[#64748B] mt-1">Admin</YummyText>
