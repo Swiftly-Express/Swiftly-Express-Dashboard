@@ -372,7 +372,7 @@ const DeliveryCard = ({
     <YummyText>
       <div className={isMobile ? "bg-gradient-to-br from-[#EFF6FF] to-[#EDFFF9] p-4" : "bg-gradient-to-br from-[#EFF6FF] to-[#EDFFF9] p-6"}>
         {/* Package ID, Status, and Price */}
-        <div className="flex items-start justify-between mb-1">
+        <div className="flex items-start justify-between -mb-6">
           <div className="flex items-center gap-2 min-w-0">
             <div className={isMobile ? "text-base font-medium text-[#0F172A] truncate" : "text-lg font-normal text-[#0F172A] truncate"}>
               {isMobile ? packageId.substring(0, 12) + '...' : packageId}

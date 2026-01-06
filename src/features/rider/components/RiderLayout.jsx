@@ -107,10 +107,10 @@ const RiderLayout = ({ children }) => {
       if (cachedImage) {
         setProfileImage(cachedImage);
       }
-      
+
       const response = await getRiderProfile();
       const profile = response?.data?.driver || response?.driver || response?.data;
-      
+
       if (profile) {
         // Update profile image from API
         if (profile.profilePhoto && !profile.profilePhoto.includes('dicebear')) {
@@ -125,13 +125,13 @@ const RiderLayout = ({ children }) => {
             setProfileImage(mockAvatar);
           }
         }
-        
+
         // Update user name
         const name = profile.fullName || `${profile.firstName || ''} ${profile.lastName || ''}`.trim();
         if (name) {
           setUserName(name);
         }
-        
+
         console.log('[RiderLayout] Profile loaded:', { name, hasPhoto: !!profile.profilePhoto });
       }
     } catch (error) {
@@ -154,7 +154,7 @@ const RiderLayout = ({ children }) => {
       const response = await getRiderProfile();
       const profile = response?.data?.driver || response?.driver || response?.data;
       const notificationsList = [];
-      
+
       // Check verification status
       const verificationStatus = profile?.verificationStatus || getCookie('riderVerificationStatus');
       if (verificationStatus === 'pending' || getCookie('verificationSubmitted') === 'true') {
@@ -167,7 +167,7 @@ const RiderLayout = ({ children }) => {
           read: false
         });
       }
-      
+
       setNotifications(notificationsList);
       setUnreadCount(notificationsList.filter(n => !n.read).length);
     } catch (error) {
@@ -193,33 +193,35 @@ const RiderLayout = ({ children }) => {
     <div className="flex h-screen bg-[#f5f5f5]">
       <RiderSidebar />
       <div className="md:ml-64 ml-0 flex-1 flex flex-col min-h-0 bricolage-font bg-white">
-        {/* Mobile Header (visible on small screens) */}
+        {/* Mobile Header (visible on small screens) - match Admin compact header */}
         <div className="md:hidden fixed top-0 left-0 right-0 z-50">
-          <div className="bg-transparent backdrop-blur-sm border-b border-gray-200 py-4">
-            <div className="flex items-center justify-between px-4">
-              <div className="flex items-center">
-                <YummyText className="text-2xl font-semibold text-[#0F172A]">
-                  Swiftly
-                </YummyText>
+          <div className="bg-transparent backdrop-blur-sm border-b border-gray-200 h-14">
+            <div className="flex items-center justify-between h-full">
+              {/* Left: logo + title */}
+              <div className="flex items-center gap-1 ml-0.5">
+                <img src="/swiftly-logo.svg" alt="Swiftly" className="h-28 object-contain" />
+                <YummyText className="text-xs text-[#0F172A] border border-[#00B75A] rounded-full px-2 py-0.5">Rider</YummyText>
               </div>
 
-              <div className="flex items-center gap-3">
+              {/* Right: actions (preserve rider controls) */}
+              <div className="flex items-center justify-end gap-4 pr-6">
                 <button
                   onClick={toggleNotifications}
                   className="relative p-2 hover:bg-gray-50 rounded-lg transition-colors"
                   aria-label="Notifications"
                 >
                   <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                    <path d="M12 22c1.1 0 2-.9 2-2h-4c0 1.1.9 2 2 2zm6-6v-5c0-3.07-1.63-5.64-4.5-6.32V4c0-.83-.67-1.5-1.5-1.5s-1.5.67-1.5 1.5v.68C7.64 5.36 6 7.92 6 11v5l-2 2v1h16v-1l-2-2zm-2 1H8v-6c0-2.48 1.51-4.5 4-4.5s4 2.02 4 4.5v6z" fill="#64748B"/>
+                    <path d="M12 22c1.1 0 2-.9 2-2h-4c0 1.1.9 2 2 2zm6-6v-5c0-3.07-1.63-5.64-4.5-6.32V4c0-.83-.67-1.5-1.5-1.5s-1.5.67-1.5 1.5v.68C7.64 5.36 6 7.92 6 11v5l-2 2v1h16v-1l-2-2zm-2 1H8v-6c0-2.48 1.51-4.5 4-4.5s4 2.02 4 4.5v6z" fill="#64748B" />
                   </svg>
                   {unreadCount > 0 && (
-                    <span className="absolute top-1 right-1 w-5 h-5 bg-[#FF6B00] text-white text-xs rounded-full flex items-center justify-center font-medium">{unreadCount}</span>
+                    <span className="absolute top-1 right-2 w-2 h-2 bg-[#FF6B00] rounded-full"></span>
                   )}
                 </button>
 
                 <button
-                  className="w-8 h-8 rounded-full ring-2 ring-[#00D68F] overflow-hidden flex items-center justify-center"
-                  aria-label="Profile"
+                  title="View Profile"
+                  aria-label="View Profile"
+                  className="w-10 h-10 rounded-full bg-gradient-to-br from-[#00D68F] to-[#00B876] flex items-center justify-center overflow-hidden cursor-pointer"
                 >
                   <img src={profileImage} alt={userName} className="w-full h-full object-cover" />
                 </button>
@@ -240,16 +242,12 @@ const RiderLayout = ({ children }) => {
 
         {/* Top Header - visible on md+ screens (sticky inside scroll area) */}
         <div className="hidden md:block fixed top-0 left-0 right-0 z-40">
-          <div className="bg-white border-b border-gray-200 py-4 shadow-sm">
-            <div className="flex items-center justify-between">
-              {/* Left: logo + title */}
-              <div className="flex items-center gap-3 ml-4">
-                <div className="w-8 h-8 bg-gradient-to-br from-[#00D68F] to-[#00B876] rounded-lg flex items-center justify-center">
-                  <img src="/vanicon-white.svg" alt="truck" width={20} height={20} />
-                </div>
-                <YummyText className="text-lg font-medium text-[#0F172A]">
-                  Rider Dashboard
-                </YummyText>
+          <div className="bg-white border-b border-gray-200 h-16 shadow-sm">
+            <div className="flex items-center justify-between h-full">
+              {/* Left: logo + title (match Admin layout) */}
+              <div className="flex items-center gap-1 ml-4">
+                <img src="/swiftly-logo.svg" alt="Swiftly" className="h-28 object-contain" />
+                <YummyText className="text-xs text-[#0F172A] border border-[#00B75A] rounded-full px-2 py-0.5">Rider</YummyText>
               </div>
 
               {/* Right: actions */}
@@ -257,9 +255,9 @@ const RiderLayout = ({ children }) => {
                 <div className="flex items-center gap-4 bg-[#F3F4F6] p-3 px-5 rounded-full shadow-sm">
                   <YummyText className="text-sm text-[#0A0A0A]">{isOnline ? 'Online' : 'Offline'}</YummyText>
                   <label className="relative inline-block w-11 h-6">
-                    <input 
-                      type="checkbox" 
-                      className="sr-only peer" 
+                    <input
+                      type="checkbox"
+                      className="sr-only peer"
                       checked={isOnline}
                       onChange={handleAvailabilityToggle}
                     />
@@ -270,7 +268,7 @@ const RiderLayout = ({ children }) => {
 
                 <button onClick={toggleNotifications} className="relative p-2 hover:bg-gray-50 rounded-lg transition-colors">
                   <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                    <path d="M12 22c1.1 0 2-.9 2-2h-4c0 1.1.9 2 2 2zm6-6v-5c0-3.07-1.63-5.64-4.5-6.32V4c0-.83-.67-1.5-1.5-1.5s-1.5.67-1.5 1.5v.68C7.64 5.36 6 7.92 6 11v5l-2 2v1h16v-1l-2-2zm-2 1H8v-6c0-2.48 1.51-4.5 4-4.5s4 2.02 4 4.5v6z" fill="#64748B"/>
+                    <path d="M12 22c1.1 0 2-.9 2-2h-4c0 1.1.9 2 2 2zm6-6v-5c0-3.07-1.63-5.64-4.5-6.32V4c0-.83-.67-1.5-1.5-1.5s-1.5.67-1.5 1.5v.68C7.64 5.36 6 7.92 6 11v5l-2 2v1h16v-1l-2-2zm-2 1H8v-6c0-2.48 1.51-4.5 4-4.5s4 2.02 4 4.5v6z" fill="#64748B" />
                   </svg>
                   {unreadCount > 0 && (
                     <span className="absolute top-1 right-1 w-5 h-5 bg-[#FF6B00] text-white text-xs rounded-full flex items-center justify-center font-medium">{unreadCount}</span>
@@ -278,10 +276,10 @@ const RiderLayout = ({ children }) => {
                 </button>
 
                 <button className="w-8 h-8 rounded-full bg-gradient-to-br from-[#00D68F] to-[#00B876] flex items-center justify-center overflow-hidden">
-                  <img 
-                    src={profileImage} 
-                    alt={userName} 
-                    className="w-full h-full object-cover" 
+                  <img
+                    src={profileImage}
+                    alt={userName}
+                    className="w-full h-full object-cover"
                   />
                 </button>
               </div>
@@ -292,7 +290,7 @@ const RiderLayout = ({ children }) => {
         {/* Main Content (header is sticky inside the scrollable area).
             The main scroll container is the parent so the scrollbar starts at the top.
         */}
-          <div className="flex-1 md:p-8 pt-16 md:pt-24 overflow-y-auto no-scrollbar">
+        <div className="flex-1 md:p-8 pt-16 md:pt-24 overflow-y-auto no-scrollbar">
           {children}
         </div>
 
@@ -308,20 +306,18 @@ const RiderLayout = ({ children }) => {
                 {notifications.length === 0 ? (
                   <div className="p-8 text-center text-gray-400">
                     <svg width="48" height="48" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" className="mx-auto mb-3 opacity-50">
-                      <path d="M12 22c1.1 0 2-.9 2-2h-4c0 1.1.9 2 2 2zm6-6v-5c0-3.07-1.63-5.64-4.5-6.32V4c0-.83-.67-1.5-1.5-1.5s-1.5.67-1.5 1.5v.68C7.64 5.36 6 7.92 6 11v5l-2 2v1h16v-1l-2-2z" fill="currentColor"/>
+                      <path d="M12 22c1.1 0 2-.9 2-2h-4c0 1.1.9 2 2 2zm6-6v-5c0-3.07-1.63-5.64-4.5-6.32V4c0-.83-.67-1.5-1.5-1.5s-1.5.67-1.5 1.5v.68C7.64 5.36 6 7.92 6 11v5l-2 2v1h16v-1l-2-2z" fill="currentColor" />
                     </svg>
                     <YummyText className="text-sm">No notifications yet</YummyText>
                   </div>
                 ) : (
                   <div className="divide-y divide-gray-100">
                     {notifications.map(notification => (
-                      <div key={notification.id} className={`p-4 hover:bg-gray-50 transition-colors ${
-                        !notification.read ? 'bg-blue-50' : ''
-                      }`}>
+                      <div key={notification.id} className={`p-4 hover:bg-gray-50 transition-colors ${!notification.read ? 'bg-blue-50' : ''
+                        }`}>
                         <div className="flex items-start gap-3">
-                          <div className={`w-10 h-10 rounded-full flex items-center justify-center flex-shrink-0 ${
-                            notification.type === 'warning' ? 'bg-amber-100' : 'bg-blue-100'
-                          }`}>
+                          <div className={`w-10 h-10 rounded-full flex items-center justify-center flex-shrink-0 ${notification.type === 'warning' ? 'bg-amber-100' : 'bg-blue-100'
+                            }`}>
                             {notification.type === 'warning' ? '⏳' : '🔔'}
                           </div>
                           <div className="flex-1 min-w-0">

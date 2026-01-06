@@ -273,17 +273,17 @@ const CustomerSidebar = () => {
         </div>
       </div>
 
-      {/* Mobile sidebar panel (overlay) */}
+      {/* Mobile sidebar panel (overlay) - match Admin header with logo + badge */}
       {mobileOpen && (
         <div className="md:hidden fixed inset-0" style={{ zIndex: 99999 }}>
           <div className="absolute inset-0 bg-black/30" onClick={closeMobile} />
           <div className="relative inset-0 w-full h-full bg-white shadow-xl p-5 overflow-auto">
-            <div className="flex items-center justify-between mb-6">
-              <YummyText className="text-3xl font-medium">Swiftly</YummyText>
+            <div className="flex items-center justify-between mb-6 h-12">
+              <div className="flex items-center gap-1 -ml-2.5">
+                <img src="/swiftly-logo.svg" alt="Swiftly" className="h-28 object-contain" />
+                <YummyText className="text-xs text-[#0F172A] border border-[#00B75A] rounded-full px-2 py-0.5">Customer</YummyText>
+              </div>
               <div className="flex items-center gap-3">
-                <button className="w-12 h-12 rounded-full ring-2 ring-[#00D68F] overflow-hidden flex items-center justify-center">
-                  <img src={localStorage.getItem('profile_image') || '/vanicon-white.svg'} alt="profile" className="w-full h-full object-cover" />
-                </button>
                 <button onClick={closeMobile} aria-label="Close" className="p-2">
                   <svg width="32" height="32" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
                     <path d="M18 6L6 18M6 6l12 12" stroke="#111827" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" />
