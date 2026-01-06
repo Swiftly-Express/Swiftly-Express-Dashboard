@@ -1,11 +1,12 @@
 import React, { useState, useEffect } from 'react';
-import { IonContent, IonPage, IonToast } from '@ionic/react';
+import { IonContent, IonPage, IonToast, IonIcon } from '@ionic/react';
 import RiderLayout from '../components/RiderLayout';
 import { YummyText } from '../../../components/YummyText';
 import TelephoneIcon from "../../../icons/Telephoneicon";
 import ChatIcon from "../../../icons/Chaticon";
 import MapboxMap from '../../../components/MapboxMap';
 import BanIcon from '../../../icons/Banicon';
+import { copyOutline } from 'ionicons/icons';
 import { useDelivery } from '../../../contexts/DeliveryContext';
 import { getRiderDeliveries, updateDeliveryStatus, uploadDeliveryProof } from '../../../utils/authApi';
 import './ActiveDeliveries.css';
@@ -23,6 +24,7 @@ const ActiveDeliveries = () => {
   const [toastMsg, setToastMsg] = useState('');
   const [showToast, setShowToast] = useState(false);
   const [updatingStatus, setUpdatingStatus] = useState(null);
+  const [isMobile, setIsMobile] = useState(false);
 
   // Fetch rider's active deliveries on mount
   useEffect(() => {
@@ -45,6 +47,14 @@ const ActiveDeliveries = () => {
       window.removeEventListener('delivery:accepted', handleDeliveryAccepted);
       window.removeEventListener('delivery:statusChanged', handleDeliveryStatusChanged);
     };
+  }, []);
+
+  // detect mobile view (small screens) to render mobile-optimized layout
+  useEffect(() => {
+    const check = () => setIsMobile(window.innerWidth <= 768);
+    check();
+    window.addEventListener('resize', check);
+    return () => window.removeEventListener('resize', check);
   }, []);
 
   const fetchActiveDeliveries = async () => {
@@ -182,14 +192,16 @@ const ActiveDeliveries = () => {
       setToastMsg((error.message || 'Failed to upload proof'));
       setShowToast(true);
     }
-  }; return (
+  };
+
+  return (
     <IonPage>
       <RiderLayout>
-        <IonContent className="ion-padding">
+        <IonContent className={isMobile ? "" : "ion-padding"}>
           {/* Header */}
           <YummyText>
-            <div className="mb-4 py-2">
-              <div className="text-3xl font-medium text-[#0F172A] mb-2">
+            <div className={isMobile ? "mb-4 px-1 pt-4" : "mb-4 py-2"}>
+              <div className={isMobile ? "text-2xl font-medium text-[#0F172A] mb-1" : "text-3xl font-medium text-[#0F172A] mb-2"}>
                 Active Deliveries
               </div>
               <div className="text-[#4A5565] text-[15px] font-[400]">
@@ -199,7 +211,7 @@ const ActiveDeliveries = () => {
           </YummyText>
 
           {/* Deliveries List */}
-          <div className="max-h-[900px] overflow-y-auto pr-2">
+          <div className={isMobile ? "pb-4" : "max-h-[900px] overflow-y-auto pr-2"}>
             {loading ? (
               <div className="flex items-center justify-center py-20">
                 <div className="text-center">
@@ -248,6 +260,8 @@ const ActiveDeliveries = () => {
                 // Normalize address objects to strings to avoid rendering raw objects
                 const rawPickupAddr = delivery.pickup?.address || delivery.pickupAddress?.address || delivery.pickupAddress;
                 const rawDeliveryAddr = delivery.dropoff?.address || delivery.deliveryAddress?.address || delivery.deliveryAddress || delivery.destinationAddress;
+                const pickupPhone = delivery.pickup?.phone || delivery.senderPhone || delivery.sender?.phone || delivery.pickupPhone || delivery.senderPhoneNumber || null;
+                const deliveryPhone = delivery.dropoff?.phone || delivery.recipientPhone || delivery.receiver?.phone || delivery.deliveryPhone || delivery.recipientPhoneNumber || null;
 
                 const formatAddr = (addr) => {
                   if (!addr) return 'Address not available';
@@ -276,10 +290,12 @@ const ActiveDeliveries = () => {
                     price={delivery.amount ? `₦${Number(delivery.amount).toFixed(2)}` : (delivery.price ? `₦${Number(delivery.price).toFixed(2)}` : '₦0.00')}
                     pickupName={delivery.pickup?.name || delivery.pickupName || delivery.senderName || 'Pickup Location'}
                     pickupAddress={pickupAddressText}
+                    pickupPhone={pickupPhone}
                     pickupCoords={pickupCoords}
                     pickupBorder={(delivery.status?.toLowerCase() || '').includes('picked') ? 'border-[#E5E7EB]' : 'border-[#00D68F]'}
                     deliveryName={delivery.dropoff?.name || delivery.deliveryName || delivery.recipientName || delivery.receiverName || 'Delivery Location'}
                     deliveryAddress={deliveryAddressText}
+                    deliveryPhone={deliveryPhone}
                     deliveryCoords={deliveryCoords}
                     vehicleCoords={vehicleCoords}
                     deliveryBorder={(delivery.status?.toLowerCase() || '').includes('picked') ? 'border-[#FF9500]' : 'border-gray-200'}
@@ -289,19 +305,22 @@ const ActiveDeliveries = () => {
                     actionButtonText={getActionButtonText(delivery.status)}
                     onActionClick={() => handleActionClick(delivery)}
                     isUpdating={updatingStatus === (delivery._id || delivery.id)}
+                    isMobile={isMobile}
                   />
                 );
               })
             ) : (
-              <div className="text-center py-20 rounded-2xl px-6" style={sideBottomShadow}>
+              <div className={isMobile ? "text-center py-12 px-6" : "text-center py-20 rounded-2xl px-6"} style={!isMobile ? sideBottomShadow : {}}>
                 <BanIcon className="w-16 h-16 mx-auto mb-4 text-[#FF6B00]" />
-                <div className="text-xl font-medium text-[#0F172A] mb-3">No Active Deliveries Yet</div>
-                <div className="text-sm text-[#64748B] mb-6 max-w-md mx-auto">
+                <div className={isMobile ? "text-lg font-medium text-[#0F172A] mb-2" : "text-xl font-medium text-[#0F172A] mb-3"}>
+                  No Active Deliveries Yet
+                </div>
+                <div className={isMobile ? "text-sm text-[#64748B] mb-4 max-w-md mx-auto" : "text-sm text-[#64748B] mb-6 max-w-md mx-auto"}>
                   You don't have any active deliveries at the moment. Head over to the Available Orders page to accept new delivery requests.
                 </div>
                 <button
                   onClick={() => window.location.href = '/rider/available-orders'}
-                  className="bg-[#00B75A] hover:bg-[#00B876] text-white px-6 py-3 rounded-full transition-colors font-medium"
+                  className={isMobile ? "bg-[#00B75A] hover:bg-[#00B876] text-white px-6 py-3 rounded-full transition-colors font-medium w-full" : "bg-[#00B75A] hover:bg-[#00B876] text-white px-6 py-3 rounded-full transition-colors font-medium"}
                 >
                   View Available Orders
                 </button>
@@ -331,10 +350,12 @@ const DeliveryCard = ({
   price,
   pickupName,
   pickupAddress,
+  pickupPhone,
   pickupCoords,
   pickupBorder,
   deliveryName,
   deliveryAddress,
+  deliveryPhone,
   deliveryCoords,
   vehicleCoords,
   deliveryBorder,
@@ -343,53 +364,116 @@ const DeliveryCard = ({
   notes,
   actionButtonText,
   onActionClick,
-  isUpdating
+  isUpdating,
+  isMobile
 }) => (
-  <div className="bg-white rounded-2xl mb-6 overflow-hidden ml-0.5" style={sideBottomShadow}>
+  <div className={isMobile ? "bg-white rounded-2xl mb-4 overflow-hidden ml-0.5 -mr-1" : "bg-white rounded-2xl mb-6 overflow-hidden ml-0.5"} style={sideBottomShadow}>
     {/* Header Section with Background */}
     <YummyText>
-      <div className="bg-gradient-to-br from-[#EFF6FF] to-[#EDFFF9] p-6">
+      <div className={isMobile ? "bg-gradient-to-br from-[#EFF6FF] to-[#EDFFF9] p-4" : "bg-gradient-to-br from-[#EFF6FF] to-[#EDFFF9] p-6"}>
         {/* Package ID, Status, and Price */}
         <div className="flex items-start justify-between mb-1">
-          <div className="flex items-center gap-2">
-            <div className="text-lg font-normal text-[#0F172A]">{packageId}</div>
-            <span className={`px-3 py-1 rounded-full text-xs font-normal ${statusColor}`}>
+          <div className="flex items-center gap-2 min-w-0">
+            <div className={isMobile ? "text-base font-medium text-[#0F172A] truncate" : "text-lg font-normal text-[#0F172A] truncate"}>
+              {isMobile ? packageId.substring(0, 12) + '...' : packageId}
+            </div>
+            <button
+              onClick={() => {
+                try {
+                  navigator.clipboard.writeText(packageId);
+                  alert('Package ID copied to clipboard');
+                } catch (e) {
+                  alert(packageId);
+                }
+              }}
+              className="p-1 rounded hover:bg-gray-100"
+              aria-label="Copy package id"
+            >
+              <IonIcon icon={copyOutline} style={{ fontSize: isMobile ? 16 : 18 }} />
+            </button>
+          </div>
+          <div className="flex flex-col items-end">
+            <div className={isMobile ? "text-xl font-semibold text-[#00D68F]" : "text-2xl font-normal text-[#00D68F]"}>
+              {price}
+            </div>
+            <span className={`mt-1 px-2 py-0.5 rounded-full text-xs font-normal ${statusColor}`}>
               {status}
             </span>
           </div>
-          <div className="text-2xl font-normal text-[#00D68F]">{price}</div>
         </div>
 
         {/* Distance and Time */}
-        <div className="text-base text-[#64748B] -mb-3">{distance} • Est. {time}</div>
+        <div className={isMobile ? "text-sm text-[#64748B]" : "text-base text-[#64748B] -mb-3"}>
+          {distance} • Est. {time}
+        </div>
       </div>
     </YummyText>
 
     {/* Main Content */}
-    <div className="p-6">
+    <div className={isMobile ? "p-4" : "p-6"}>
+      {/* Mobile: show map first for quick glance/navigation */}
+      {isMobile && (
+        <div className="mb-4 -ml-1 -mr-0.5 rounded-xl overflow-hidden">
+          <MapboxMap
+            pickupCoords={pickupCoords}
+            deliveryCoords={deliveryCoords}
+            height="250px"
+            showRoute={true}
+            animateVehicle={true}
+            packageId={packageId}
+            vehicleCoords={vehicleCoords}
+          />
+        </div>
+      )}
+
       <YummyText>
-        <div className="grid grid-cols-2 gap-4 mb-6">
+        <div className={isMobile ? "space-y-3 mb-4" : "grid grid-cols-2 gap-4 mb-6"}>
           {/* Pickup Location */}
-          <div className={`p-4 rounded-xl border-2 ${pickupBorder} bg-[#F9FAFB]`}>
-            <div className="flex gap-3 mb-3">
-              <div className="location-icon-container location-icon-pickup w-8 h-8 bg-[#00D68F] rounded-full flex items-center justify-center flex-shrink-0">
-                <img src="/locationicon-white.svg" alt="Pickup" className="w-4 h-4" />
+          <div className={`${isMobile ? "p-3" : "p-4"} rounded-xl border-2 ${pickupBorder} bg-[#F9FAFB]`}>
+            <div className={isMobile ? "flex gap-2 mb-2" : "flex gap-3 mb-3"}>
+              <div className={`location-icon-container location-icon-pickup ${isMobile ? "w-7 h-7" : "w-8 h-8"} bg-[#00D68F] rounded-full flex items-center justify-center flex-shrink-0`}>
+                <img src="/locationicon-white.svg" alt="Pickup" className={isMobile ? "w-3.5 h-3.5" : "w-4 h-4"} />
               </div>
-              <div>
-                <div className="text-xs text-[#64748B] mb-1">Pickup Location</div>
-                <div className="text-sm font-[500] text-[#0A0A0A] mb-1">{pickupName}</div>
-                <div className="text-xs text-[#64748B]">{pickupAddress}</div>
+              <div className="flex-1 min-w-0">
+                <div className="text-xs text-[#64748B] mb-0.5">Pickup Location</div>
+                <div className={`${isMobile ? "text-sm" : "text-sm"} font-medium text-[#0A0A0A] mb-0.5 truncate`}>
+                  {pickupName}
+                </div>
+                <div className={`text-xs text-[#64748B] ${isMobile ? "line-clamp-2" : ""}`}>
+                  {pickupAddress}
+                </div>
               </div>
             </div>
             <div className="flex gap-2">
-              <button className="flex-1 flex items-center justify-center gap-1 py-2 bg-white rounded-lg text-xs hover:bg-gray-50 transition-colors"
+              <button
+                onClick={() => {
+                  if (!pickupPhone) { alert('Phone number not available'); return; }
+                  try {
+                    window.location.href = `tel:${pickupPhone}`;
+                  } catch (e) {
+                    try { navigator.clipboard.writeText(pickupPhone); alert('Phone number copied to clipboard'); } catch (_) { alert(pickupPhone); }
+                  }
+                }}
+                className={`flex-1 flex items-center justify-center gap-1 ${isMobile ? "py-2.5" : "py-2"} bg-white rounded-lg text-xs hover:bg-gray-50 transition-colors`}
                 style={{ border: "1px solid #E5E7EB" }}
               >
-                <TelephoneIcon size={20} color="black" />
+                <TelephoneIcon size={isMobile ? 18 : 20} color="black" />
                 Call
               </button>
-              <button className="flex-1 flex items-center justify-center gap-1 py-2 bg-white rounded-lg text-xs hover:bg-gray-50 transition-colors"
-                style={{ border: "2px solid #E5E7EB" }}
+              <button
+                onClick={() => {
+                  if (packageId) {
+                    window.location.href = `/rider/track/${packageId}`;
+                  } else if (pickupCoords && deliveryCoords) {
+                    const origin = `${pickupCoords[1]},${pickupCoords[0]}`;
+                    const dest = `${deliveryCoords[1]},${deliveryCoords[0]}`;
+                    window.open(`https://www.google.com/maps/dir/?api=1&origin=${origin}&destination=${dest}&travelmode=driving`, '_blank');
+                  } else {
+                    alert('Navigation data not available');
+                  }
+                }}
+                className={`flex-1 flex items-center justify-center gap-1 ${isMobile ? "py-2.5" : "py-2"} bg-white rounded-lg text-xs hover:bg-gray-50 transition-colors`}
+                style={{ border: "1px solid #E5E7EB" }}
               >
                 <img src="/paperplane-icon.svg" alt="Navigate" className="w-4 h-4" />
                 Navigate
@@ -398,28 +482,50 @@ const DeliveryCard = ({
           </div>
 
           {/* Delivery Location */}
-          <div className={`p-4 rounded-xl border-2 ${deliveryBorder} ${deliveryBorder === 'border-[#FF9500]' ? 'bg-[#FFF7ED]' : 'bg-gray-50'}`}>
-            <div className="flex gap-3 mb-3">
-              <div className="location-icon-container location-icon-delivery w-8 h-8 bg-[#FF9500] rounded-full flex items-center justify-center flex-shrink-0">
-                <img src="/location-orange.svg" alt="Delivery" className="w-4 h-4" style={{ filter: 'brightness(0) invert(1)' }} />
+          <div className={`${isMobile ? "p-3" : "p-4"} rounded-xl border-2 ${deliveryBorder} ${deliveryBorder === 'border-[#FF9500]' ? 'bg-[#FFF7ED]' : 'bg-gray-50'}`}>
+            <div className={isMobile ? "flex gap-2 mb-2" : "flex gap-3 mb-3"}>
+              <div className={`location-icon-container location-icon-delivery ${isMobile ? "w-7 h-7" : "w-8 h-8"} bg-[#FF9500] rounded-full flex items-center justify-center flex-shrink-0`}>
+                <img src="/location-orange.svg" alt="Delivery" className={isMobile ? "w-3.5 h-3.5" : "w-4 h-4"} style={{ filter: 'brightness(0) invert(1)' }} />
               </div>
-              <div>
-                <div className="text-xs text-[#64748B] mb-1">Delivery Location</div>
-                <div className="text-sm font-[500] text-[#0A0A0A] mb-1">{deliveryName}</div>
-                <div className="text-xs text-[#64748B]">{deliveryAddress}</div>
+              <div className="flex-1 min-w-0">
+                <div className="text-xs text-[#64748B] mb-0.5">Delivery Location</div>
+                <div className={`${isMobile ? "text-sm" : "text-sm"} font-medium text-[#0A0A0A] mb-0.5 truncate`}>
+                  {deliveryName}
+                </div>
+                <div className={`text-xs text-[#64748B] ${isMobile ? "line-clamp-2" : ""}`}>
+                  {deliveryAddress}
+                </div>
               </div>
             </div>
             <div className="flex gap-2">
-              <button className="flex-1 flex items-center justify-center gap-1 py-2 bg-white rounded-lg text-xs hover:bg-gray-50 transition-colors"
-                style={{ border: "2px solid #E5E7EB" }}
+              <button
+                onClick={() => {
+                  if (!deliveryPhone) { alert('Phone number not available'); return; }
+                  try {
+                    window.location.href = `tel:${deliveryPhone}`;
+                  } catch (e) {
+                    try { navigator.clipboard.writeText(deliveryPhone); alert('Phone number copied to clipboard'); } catch (_) { alert(deliveryPhone); }
+                  }
+                }}
+                className={`flex-1 flex items-center justify-center gap-1 ${isMobile ? "py-2.5" : "py-2"} bg-white rounded-lg text-xs hover:bg-gray-50 transition-colors`}
+                style={{ border: "1px solid #E5E7EB" }}
               >
-                <TelephoneIcon size={20} color="black" />
+                <TelephoneIcon size={isMobile ? 18 : 20} color="black" />
                 Call
               </button>
-              <button className="flex-1 flex items-center justify-center gap-1 py-2 bg-white rounded-lg text-xs hover:bg-gray-50 transition-colors"
-                style={{ border: "2px solid #E5E7EB" }}
+              <button
+                onClick={() => {
+                  if (deliveryPhone) {
+                    const num = deliveryPhone.replace(/[^0-9+]/g, '');
+                    window.open(`https://wa.me/${num.replace(/^\+/, '')}`, '_blank');
+                  } else {
+                    alert('No phone available to message');
+                  }
+                }}
+                className={`flex-1 flex items-center justify-center gap-1 ${isMobile ? "py-2.5" : "py-2"} bg-white rounded-lg text-xs hover:bg-gray-50 transition-colors`}
+                style={{ border: "1px solid #E5E7EB" }}
               >
-                <ChatIcon size={20} color="black" />
+                <ChatIcon size={isMobile ? 18 : 20} color="black" />
                 Message
               </button>
             </div>
@@ -429,9 +535,11 @@ const DeliveryCard = ({
 
       {/* Package Details with Background */}
       <YummyText>
-        <div className="bg-gray-50 rounded-xl p-4 mb-4">
-          <div className="text-sm font-medium text-[#0F172A] mb-3">Package Details</div>
-          <div className="grid grid-cols-3 gap-6">
+        <div className={`bg-gray-50 rounded-xl ${isMobile ? "p-3 mb-3" : "p-4 mb-4"}`}>
+          <div className={`${isMobile ? "text-sm" : "text-sm"} font-medium text-[#0F172A] mb-2`}>
+            Package Details
+          </div>
+          <div className={isMobile ? "space-y-2" : "grid grid-cols-3 gap-6"}>
             <div>
               <div className="text-xs text-[#64748B] mb-1">Size</div>
               <div className="text-sm text-[#0F172A] font-medium">{size}</div>
@@ -442,36 +550,47 @@ const DeliveryCard = ({
             </div>
             <div>
               <div className="text-xs text-[#64748B] mb-1">Notes</div>
-              <div className="text-sm text-[#0F172A] font-medium">{notes}</div>
+              <div className={`text-sm text-[#0F172A] font-medium ${isMobile ? "line-clamp-2" : ""}`}>
+                {notes}
+              </div>
             </div>
           </div>
         </div>
       </YummyText>
 
-      {/* Map Section */}
-      <div className="mb-4 w-full">
-        <MapboxMap
-          pickupCoords={pickupCoords}
-          deliveryCoords={deliveryCoords}
-          height="300px"
-          showRoute={true}
-          animateVehicle={true}
-          packageId={packageId}
-          vehicleCoords={vehicleCoords}
-        />
-      </div>
+      {/* Desktop: show map below details */}
+      {!isMobile && (
+        <div className="mb-4 w-full rounded-xl overflow-hidden">
+          <MapboxMap
+            pickupCoords={pickupCoords}
+            deliveryCoords={deliveryCoords}
+            height="300px"
+            showRoute={true}
+            animateVehicle={true}
+            packageId={packageId}
+            vehicleCoords={vehicleCoords}
+          />
+        </div>
+      )}
 
       {/* Action Buttons */}
       <YummyText>
-        <div className="flex gap-3">
+        <div className={isMobile ? "flex flex-col gap-2" : "flex gap-3"}>
           <button
             onClick={onActionClick}
             disabled={isUpdating}
-            className="flex-1 bg-[#00B75A] hover:bg-[#00B876] disabled:bg-gray-400 text-white py-2 rounded-xl transition-colors font-[300]"
+            className={isMobile ?
+              "w-full bg-[#00B75A] hover:bg-[#00B876] disabled:bg-gray-400 text-white py-3.5 rounded-xl text-base font-medium transition-colors" :
+              "flex-1 bg-[#00B75A] hover:bg-[#00B876] disabled:bg-gray-400 text-white py-2 rounded-xl transition-colors font-[300]"
+            }
           >
             {isUpdating ? 'Updating...' : actionButtonText}
           </button>
-          <button className="px-6 py-2 bg-white hover:bg-gray-50 rounded-xl transition-colors text-[#0F172A] font-[300]"
+          <button
+            className={isMobile ?
+              "w-full px-6 py-3.5 bg-white rounded-xl text-[#0F172A] font-medium transition-colors" :
+              "px-6 py-2 bg-white hover:bg-gray-50 rounded-xl transition-colors text-[#0F172A] font-[300]"
+            }
             style={{ border: "1px solid #0000001A" }}
           >
             Report Issue
@@ -481,7 +600,5 @@ const DeliveryCard = ({
     </div>
   </div>
 );
-
-
 
 export default ActiveDeliveries;

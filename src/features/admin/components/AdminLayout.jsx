@@ -10,21 +10,12 @@ const AdminLayout = ({ children }) => {
       <div className="md:ml-64 ml-0 flex-1 flex flex-col min-h-0 bricolage-font bg-white">
         {/* Fixed Top Header - positioned to respect sidebar width (ml-64) */}
         <div className="md:hidden fixed top-0 left-0 right-0 z-50">
-          <div className="bg-transparent backdrop-blur-sm border-b border-gray-200 py-4">
-            <div className="flex items-center justify-between">
+          <div className="bg-transparent backdrop-blur-sm border-b border-gray-200 h-14">
+            <div className="flex items-center justify-between h-full">
               {/* Left: logo + title */}
-              <div className="flex items-center gap-3 ml-4">
-                <div className="w-8 h-8 bg-gradient-to-br from-[#00D68F] to-[#00B75A] rounded-lg flex items-center justify-center">
-                  <img src="/vanicon-white.svg" alt="truck" width={20} height={20} />
-                </div>
-                <div className="flex flex-col">
-                  <YummyText className="text-lg font-medium text-[#0F172A]">
-                    Swiftly Xpress
-                  </YummyText>
-                  <YummyText className="text-xs text-[#64748B]">
-                    Admin
-                  </YummyText>
-                </div>
+              <div className="flex items-center gap-1 ml-0.5">
+                <img src="/swiftly-logo.svg" alt="Swiftly" className="h-28 object-contain" />
+                <YummyText className="text-xs text-[#0F172A] border border-[#00B75A] rounded-full px-2 py-0.5">Admin</YummyText>
               </div>
 
               {/* Right: actions */}
@@ -51,14 +42,12 @@ const AdminLayout = ({ children }) => {
 
         {/* Desktop Top Header - visible on md+ screens */}
         <div className="hidden md:block fixed top-0 left-0 right-0 z-40">
-          <div className="bg-white border-b border-gray-200 py-4 shadow-sm">
-            <div className="flex items-center justify-between">
+          <div className="bg-white border-b border-gray-200 h-14 shadow-sm">
+            <div className="flex items-center justify-between h-full">
               {/* Left: logo + title */}
-              <div className="flex items-center gap-3 ml-4">
-                <div className="w-8 h-8 bg-gradient-to-br from-[#00D68F] to-[#00B75A] rounded-lg flex items-center justify-center">
-                  <img src="/vanicon-white.svg" alt="truck" width={20} height={20} />
-                </div>
-                <YummyText className="text-lg font-medium text-[#0F172A]">Admin Dashboard</YummyText>
+              <div className="flex items-center gap-1 ml-0.5">
+                <img src="/swiftly-logo.svg" alt="Swiftly" className="h-28 object-contain" />
+                <YummyText className="text-xs text-[#0F172A] border border-[#00B75A] rounded-full px-2 py-0.5">Admin</YummyText>
               </div>
 
               {/* Right actions */}

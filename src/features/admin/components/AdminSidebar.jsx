@@ -138,9 +138,16 @@ const AdminSidebar = () => {
   const location = useLocation();
 
   return (
-    <div className="w-64 bg-white h-screen fixed left-0 top-0 border-r border-gray-300 shadow-sm flex flex-col pt-20">
+    <div className="w-64 bg-white h-screen fixed left-0 top-0 border-r border-gray-300 shadow-sm flex flex-col pt-4">
+      {/* Top Branding */}
+      <div className="px-4 py-6 flex items-center gap-3">
+        {/* <div className="flex flex-col items-start">
+          <img src="/swiftly-logo.svg" alt="Swiftly" className="h-10 object-contain" />
+          <YummyText className="text-xs text-[#64748B] mt-1">Admin</YummyText>
+        </div> */}
+      </div>
       {/* Menu Items */}
-      <div className="px-3 py-4 space-y-1 flex-1">
+      <div className="px-3 py-2 space-y-1 flex-1 mt-2">
         {menuItems.map((item) => (
           <SidebarButton
             key={item.id}
@@ -170,8 +177,11 @@ const AdminSidebar = () => {
         <div className="md:hidden fixed inset-0" style={{ zIndex: 9999999 }}>
           <div className="absolute inset-0 bg-black/30" onClick={() => setMobileOpen(false)} />
           <div className="relative inset-0 w-full h-full bg-white shadow-xl p-5 overflow-auto">
-            <div className="flex items-center justify-between mb-6">
-              <YummyText className="text-3xl font-medium">Swiftly</YummyText>
+            <div className="flex items-center justify-between mb-6 h-12">
+              <div className="flex items-center gap-1 -ml-2.5">
+                <img src="/swiftly-logo.svg" alt="Swiftly" className="h-28 object-contain" />
+                <YummyText className="text-xs text-[#0F172A] border border-[#00B75A] rounded-full px-2 py-0.5">Admin</YummyText>
+              </div>
               <div className="flex items-center gap-3">
                 <button onClick={() => setMobileOpen(false)} aria-label="Close" className="p-2">
                   <svg width="32" height="32" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
