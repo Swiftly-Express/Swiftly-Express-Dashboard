@@ -119,6 +119,119 @@ const Book = () => {
         ? formData.weight.trim()
         : defaultWeightRanges[formData.weightCategory] || '0-5 kg';
 
+      // If user typed an address but didn't select a place, try to geocode the typed string
+      if (!pickupAddressObj && formData.pickupStreet && typeof window !== 'undefined' && window.google && window.google.maps && window.google.maps.Geocoder) {
+        try {
+          const geocoder = new window.google.maps.Geocoder();
+          const res = await geocoder.geocode({ address: formData.pickupStreet });
+          if (res.results && res.results.length > 0) {
+            const result = res.results.find(r => r.types && r.types.some(t => ['street_address', 'premise', 'establishment', 'route', 'postal_town', 'locality'].includes(t))) || res.results[0];
+            const components = result.address_components || [];
+            const extract = (componentsList) => {
+              const out = { streetNumber: '', route: '', premise: '', subpremise: '', name: '', city: '', state: '', postal_code: '', country: '' };
+              componentsList.forEach(component => {
+                const types = component.types || [];
+                if (types.includes('street_number')) out.streetNumber = component.long_name;
+                if (types.includes('route')) out.route = component.long_name;
+                if (types.includes('premise')) out.premise = component.long_name;
+                if (types.includes('subpremise')) out.subpremise = component.long_name;
+                if (types.includes('establishment')) out.name = component.long_name;
+                if (types.includes('locality') || types.includes('postal_town')) {
+                  if (!out.city) out.city = component.long_name;
+                }
+                if (types.includes('administrative_area_level_1')) out.state = component.long_name;
+                if (types.includes('postal_code')) out.postal_code = component.long_name;
+                if (types.includes('country')) out.country = component.long_name;
+              });
+              return out;
+            };
+            const c = extract(components);
+            let streetLine = '';
+            if (c.premise) streetLine = c.premise;
+            else if (c.name) streetLine = c.name;
+            else if (c.streetNumber || c.route) streetLine = [c.streetNumber, c.route].filter(Boolean).join(' ');
+            else if (c.route) streetLine = c.route;
+            if (!streetLine) streetLine = result.name || result.formatted_address || '';
+            if (!c.city) {
+              const alt = components.find(comp => comp.types && (comp.types.includes('administrative_area_level_2') || comp.types.includes('neighborhood') || comp.types.includes('sublocality_level_1')));
+              if (alt) c.city = alt.long_name;
+            }
+            const placeResult = {
+              street: streetLine || result.formatted_address,
+              city: c.city || '',
+              state: c.state || '',
+              zipCode: c.postal_code || '',
+              country: c.country || '',
+              coordinates: {
+                lat: result.geometry.location.lat(),
+                lng: result.geometry.location.lng(),
+              },
+              place_id: result.place_id,
+            };
+            setPickupAddressObj(placeResult);
+            setPickupCoordinates(placeResult.coordinates || pickupCoordinates);
+          }
+        } catch (e) {
+          console.warn('Geocode pickup failed', e);
+        }
+      }
+
+      if (!deliveryAddressObj && formData.deliveryStreet && typeof window !== 'undefined' && window.google && window.google.maps && window.google.maps.Geocoder) {
+        try {
+          const geocoder = new window.google.maps.Geocoder();
+          const res = await geocoder.geocode({ address: formData.deliveryStreet });
+          if (res.results && res.results.length > 0) {
+            const result = res.results.find(r => r.types && r.types.some(t => ['street_address', 'premise', 'establishment', 'route', 'postal_town', 'locality'].includes(t))) || res.results[0];
+            const components = result.address_components || [];
+            const extract = (componentsList) => {
+              const out = { streetNumber: '', route: '', premise: '', subpremise: '', name: '', city: '', state: '', postal_code: '', country: '' };
+              componentsList.forEach(component => {
+                const types = component.types || [];
+                if (types.includes('street_number')) out.streetNumber = component.long_name;
+                if (types.includes('route')) out.route = component.long_name;
+                if (types.includes('premise')) out.premise = component.long_name;
+                if (types.includes('subpremise')) out.subpremise = component.long_name;
+                if (types.includes('establishment')) out.name = component.long_name;
+                if (types.includes('locality') || types.includes('postal_town')) {
+                  if (!out.city) out.city = component.long_name;
+                }
+                if (types.includes('administrative_area_level_1')) out.state = component.long_name;
+                if (types.includes('postal_code')) out.postal_code = component.long_name;
+                if (types.includes('country')) out.country = component.long_name;
+              });
+              return out;
+            };
+            const c = extract(components);
+            let streetLine = '';
+            if (c.premise) streetLine = c.premise;
+            else if (c.name) streetLine = c.name;
+            else if (c.streetNumber || c.route) streetLine = [c.streetNumber, c.route].filter(Boolean).join(' ');
+            else if (c.route) streetLine = c.route;
+            if (!streetLine) streetLine = result.name || result.formatted_address || '';
+            if (!c.city) {
+              const alt = components.find(comp => comp.types && (comp.types.includes('administrative_area_level_2') || comp.types.includes('neighborhood') || comp.types.includes('sublocality_level_1')));
+              if (alt) c.city = alt.long_name;
+            }
+            const placeResult = {
+              street: streetLine || result.formatted_address,
+              city: c.city || '',
+              state: c.state || '',
+              zipCode: c.postal_code || '',
+              country: c.country || '',
+              coordinates: {
+                lat: result.geometry.location.lat(),
+                lng: result.geometry.location.lng(),
+              },
+              place_id: result.place_id,
+            };
+            setDeliveryAddressObj(placeResult);
+            setDeliveryCoordinates(placeResult.coordinates || deliveryCoordinates);
+          }
+        } catch (e) {
+          console.warn('Geocode delivery failed', e);
+        }
+      }
+
       const pickupAddrRaw = pickupAddressObj ? {
         street: pickupAddressObj.street || '',
         city: pickupAddressObj.city || '',

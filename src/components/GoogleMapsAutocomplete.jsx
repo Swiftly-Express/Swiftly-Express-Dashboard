@@ -253,7 +253,10 @@ const GoogleMapsAutocomplete = ({
                     });
 
                     if (response.results && response.results.length > 0) {
-                        const result = response.results[0];
+                        // Pick the most specific/relevant result: prefer street_address, premise, establishment
+                        const preferredTypes = ['street_address', 'premise', 'establishment', 'route', 'postal_town', 'locality'];
+                        let result = response.results.find(r => r.types && r.types.some(t => preferredTypes.includes(t)));
+                        if (!result) result = response.results[0];
                         const components = result.address_components || [];
 
                         const extract = (componentsList) => {
@@ -353,8 +356,8 @@ const GoogleMapsAutocomplete = ({
             },
             {
                 enableHighAccuracy: true,
-                timeout: 10000,
-                maximumAge: 300000, // 5 minutes
+                timeout: 15000,
+                maximumAge: 0 // force fresh reading
             }
         );
     };
