@@ -119,3 +119,44 @@
     transform: scale(1);
   }
 }
+
+/* Gradient ring used for button click feedback while redirecting */
+.btn-gradient-ring {
+  position: relative;
+  overflow: visible;
+}
+
+.gradient-ring {
+  position: absolute;
+  /* minimal thin border: 1px thickness */
+  inset: -1px;
+  border-radius: 9999px;
+  background: linear-gradient(90deg, #ff6b6b, #f7b267, #6effa0, #5ec8ff, #9b6bff, #ff6b6b);
+  background-size: 200% 200%;
+  z-index: 0;
+  pointer-events: none;
+  animation: gradient-move 1.2s linear infinite;
+}
+
+.gradient-inner-cover {
+  position: absolute;
+  inset: 1px;
+  border-radius: 9999px;
+  background: white;
+  z-index: 1;
+  pointer-events: none;
+}
+
+@keyframes gradient-move {
+  0% {
+    background-position: 0% 50%;
+  }
+
+  50% {
+    background-position: 100% 50%;
+  }
+
+  100% {
+    background-position: 0% 50%;
+  }
+}

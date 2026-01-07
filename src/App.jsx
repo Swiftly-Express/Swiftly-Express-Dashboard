@@ -30,6 +30,7 @@ import RiderSignUp from "./features/auth/pages/RiderSignUp";
 import VerifyEmail from "./features/auth/pages/VerifyEmail";
 import ForgotPassword from "./features/auth/pages/ForgotPassword";
 import AdminLogin from "./features/auth/pages/AdminLogin";
+import AuthCallback from "./features/auth/pages/AuthCallback";
 
 /* Customer Dashboard pages */
 import CustomerDashboard from "./features/customer/pages/Dashboard";
@@ -92,6 +93,11 @@ const App = () => {
               </Route>
               <Route exact path="/auth/customer/signup">
                 <CustomerSignUp />
+              </Route>
+
+              {/* OAuth callback (Google) */}
+              <Route exact path="/auth/callback">
+                <AuthCallback />
               </Route>
 
               {/* Rider Auth */}
