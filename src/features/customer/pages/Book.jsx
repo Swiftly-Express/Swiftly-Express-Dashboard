@@ -387,13 +387,13 @@ const Book = () => {
             paymentWindow = null;
           }
 
-          const returnUrl = `${window.location.origin}/customer/payment/success?deliveryId=${encodeURIComponent(deliveryId)}`;
+          // In Book.jsx, when initializing payment:
           const initJson = await apiClient.post(`/api/payment/initialize/${deliveryId}`, {
             amount: calculateTotal(),
             currency: 'NGN',
             email: formData.recipientEmail || 'customer@swiftlyxpress.com',
-            metadata: { deliveryId },
-            returnUrl
+            callback_url: `${window.location.origin}/customer/payment/callback`, // ← Add this line
+            metadata: { deliveryId }
           });
 
           console.log('Payment initialization response (axios):', initJson);
@@ -468,43 +468,36 @@ const Book = () => {
                   ]
                 },
                 onSuccess: async (transaction) => {
-                  console.log('Payment successful:', transaction);
-                  setToastMsg('Payment successful! Verifying...');
+                  console.log('Payment successful (inline):', transaction);
+                  setToastMsg('Payment successful! Redirecting...');
                   setShowToast(true);
 
                   try {
-                    // Verify payment with backend
-                    const verifyJson = await apiClient.get(`/api/payment/verify/${paymentReference}`);
-
-                    console.log('Payment verification response:', verifyJson);
-
-                    // Clear pending data
+                    // Ensure pending identifiers are stored so the success page can verify
                     try {
-                      localStorage.removeItem('pending_payment_delivery_id');
-                      localStorage.removeItem('pending_payment_id');
+                      const pid = paymentReference || transaction?.reference || transaction?.trxref || transaction?.id;
+                      if (pid) localStorage.setItem('pending_payment_id', pid);
+                      if (deliveryId) localStorage.setItem('pending_payment_delivery_id', deliveryId);
                     } catch (e) { /* ignore */ }
 
-                    // Dispatch events
-                    window.dispatchEvent(new Event('deliveries:refresh'));
-                    window.dispatchEvent(new CustomEvent('delivery:created', {
-                      detail: response?.data || response
-                    }));
+                    // Close the Paystack iframe/modal if available
+                    try {
+                      if (handler && typeof handler.closeIframe === 'function') handler.closeIframe();
+                      else if (handler && typeof handler.close === 'function') handler.close();
+                    } catch (closeErr) {
+                      console.warn('Failed to close Paystack iframe gracefully', closeErr);
+                    }
 
-                    setToastMsg('Payment verified! Redirecting...');
-                    setShowToast(true);
+                    // Redirect to the existing payment success page which performs verification
+                    const pidEnc = encodeURIComponent(paymentReference || transaction?.reference || transaction?.trxref || '');
+                    const didPart = deliveryId ? `&deliveryId=${encodeURIComponent(deliveryId)}` : '';
+                    const target = `/customer/payment/success?paymentId=${pidEnc}${didPart}`;
 
-                    // Navigate to deliveries page
                     setTimeout(() => {
-                      router.push('/customer/deliveries', 'root', 'replace');
-                    }, 1500);
-                  } catch (verifyError) {
-                    console.error('Payment verification error:', verifyError);
-                    setToastMsg('Payment completed but verification failed. Please check your deliveries.');
-                    setShowToast(true);
-                    setTimeout(() => {
-                      router.push('/customer/deliveries', 'root', 'replace');
-                    }, 2000);
-                  } finally {
+                      router.push(target, 'root', 'replace');
+                    }, 350);
+                  } catch (err) {
+                    console.error('Error handling inline paystack success:', err);
                     setIsProcessingPayment(false);
                     setIsSubmitting(false);
                   }

@@ -31,6 +31,7 @@ import VerifyEmail from "./features/auth/pages/VerifyEmail";
 import ForgotPassword from "./features/auth/pages/ForgotPassword";
 import AdminLogin from "./features/auth/pages/AdminLogin";
 import AuthCallback from "./features/auth/pages/AuthCallback";
+import PaymentCallback from "./features/customer/pages/PaymentCallback";
 
 /* Customer Dashboard pages */
 import CustomerDashboard from "./features/customer/pages/Dashboard";
@@ -138,9 +139,15 @@ const App = () => {
                   <MyDeliveries />
                 </CustomerRouteGuard>
               </Route>
+              
+              {/* Payment Routes - Should be accessible without auth guard for callback */}
+              <Route exact path="/customer/payment/callback">
+                <PaymentCallback />
+              </Route>
               <Route exact path="/customer/payment/success">
                 <PaymentSuccess />
               </Route>
+              
               <Route exact path="/customer/book">
                 <CustomerRouteGuard>
                   <Book />
@@ -229,7 +236,10 @@ const App = () => {
                 </AdminRouteGuard>
               </Route>
 
-              {/* Public page routes removed — archived */}
+              {/* Public/General Routes */}
+              <Route exact path="/payment/callback">
+                <PaymentCallback />
+              </Route>
               <Route exact path="/forgot-password">
                 <ForgotPassword />
               </Route>

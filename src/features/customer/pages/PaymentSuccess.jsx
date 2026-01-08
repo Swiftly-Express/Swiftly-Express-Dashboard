@@ -1,8 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { IonPage, IonContent, IonSpinner } from '@ionic/react';
 import { useLocation, useHistory } from 'react-router-dom';
-import axios from 'axios';
-import { getCookie } from '../../../utils/cookies';
 import CustomerLayout from '../components/CustomerLayout';
 import { YummyText } from '../../../components/YummyText';
 
@@ -38,21 +36,14 @@ const PaymentSuccess = () => {
                 setStatusMsg('Contacting payment gateway to verify transaction...');
 
                 // prefer verify endpoint
-                const client = axios.create({ baseURL: API_BASE, withCredentials: true });
-                client.interceptors.request.use((config) => {
-                    const customerToken = getCookie('customer_token');
-                    const riderToken = getCookie('rider_token');
-                    const adminToken = getCookie('admin_token');
-                    const authToken = getCookie('auth_token');
-                    const token = customerToken || riderToken || adminToken || authToken;
-                    if (token) config.headers = { ...config.headers, Authorization: `Bearer ${token}` };
-                    return config;
-                });
-
-                let verifyResp = null;
+                let verifyResp;
                 try {
-                    const r = await client.get(`/api/payment/verify/${encodeURIComponent(paymentId)}`);
-                    verifyResp = r.data || r;
+                    const r = await fetch(`${API_BASE}/api/payment/verify/${encodeURIComponent(paymentId)}`, {
+                        method: 'GET',
+                        credentials: 'include',
+                        headers: { 'Accept': 'application/json' }
+                    });
+                    verifyResp = await r.json();
                 } catch (ve) {
                     console.warn('Verify call failed, will try status endpoint', ve);
                 }
@@ -61,8 +52,12 @@ const PaymentSuccess = () => {
                 let statusResp = null;
                 if (!verifyResp || (verifyResp && Object.keys(verifyResp).length === 0)) {
                     try {
-                        const r2 = await client.get(`/api/payment/status/${encodeURIComponent(paymentId)}`);
-                        statusResp = r2.data || r2;
+                        const r2 = await fetch(`${API_BASE}/api/payment/status/${encodeURIComponent(paymentId)}`, {
+                            method: 'GET',
+                            credentials: 'include',
+                            headers: { 'Accept': 'application/json' }
+                        });
+                        statusResp = await r2.json();
                     } catch (se) {
                         console.warn('Status call failed', se);
                     }
