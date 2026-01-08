@@ -20,7 +20,14 @@ const RiderSignup = () => {
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
 
-  const googleAuthUrl = `${import.meta.env.VITE_API_BASE_URL || 'https://api.swiftlyxpress.com'}/api/auth/google?role=rider`;
+  // Ensure API base is absolute. If VITE_API_BASE_URL is set to a relative path
+  // (e.g. '/') in dev, convert it to an absolute URL so window.location.href
+  // doesn't navigate to the dev server's /api path (causing 404).
+  const rawBase = import.meta.env.VITE_API_BASE_URL || 'https://api.swiftlyxpress.com';
+  const apiBase = (typeof window !== 'undefined' && rawBase.startsWith('/'))
+    ? `${window.location.origin.replace(/\/$/, '')}${rawBase.replace(/\/$/, '')}`
+    : rawBase.replace(/\/$/, '');
+  const googleAuthUrl = `${apiBase}/api/auth/google?role=rider`;
 
   const [googleLoading, setGoogleLoading] = useState(false);
 
@@ -30,6 +37,7 @@ const RiderSignup = () => {
     if (el) {
       el.classList.add('scale-95', 'opacity-90');
     }
+    console.log('[RiderSignUp] Redirecting to:', googleAuthUrl);
     setGoogleLoading(true);
     // show gradient ring briefly before leaving
     setTimeout(() => {
