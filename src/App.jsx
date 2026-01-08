@@ -39,6 +39,7 @@ import MyDeliveries from "./features/customer/pages/MyDeliveries";
 import Book from "./features/customer/pages/Book";
 import CustomerProfile from "./features/customer/pages/CustomerProfile";
 import CustomerSupport from "./features/customer/pages/CustomerSupport";
+import PaymentSuccess from "./features/customer/pages/PaymentSuccess";
 
 /* Rider Dashboard pages */
 import RiderDashboard from "./features/rider/pages/Dashboard";
@@ -136,6 +137,9 @@ const App = () => {
                 <CustomerRouteGuard>
                   <MyDeliveries />
                 </CustomerRouteGuard>
+              </Route>
+              <Route exact path="/customer/payment/success">
+                <PaymentSuccess />
               </Route>
               <Route exact path="/customer/book">
                 <CustomerRouteGuard>

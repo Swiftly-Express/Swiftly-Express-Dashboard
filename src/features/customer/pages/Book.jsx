@@ -6,6 +6,39 @@ import GoogleMapsAutocomplete from '../../../components/GoogleMapsAutocomplete';
 import CustomerLayout from '../components/CustomerLayout';
 import { YummyText } from '../../../components/YummyText';
 import { createDelivery, isAuthenticated } from '../../../utils/authApi';
+import axios from 'axios';
+import { getCookie } from '../../../utils/cookies';
+
+const API_BASE = import.meta.env.VITE_API_BASE_URL || 'https://api.swiftlyxpress.com';
+
+// Create authenticated API client
+const apiClient = axios.create({
+  baseURL: API_BASE,
+  headers: {
+    'Content-Type': 'application/json',
+    Accept: 'application/json'
+  },
+  withCredentials: true
+});
+
+// Add request interceptor to attach auth token
+apiClient.interceptors.request.use(
+  (config) => {
+    const riderToken = getCookie("rider_token");
+    const customerToken = getCookie("customer_token");
+    const adminToken = getCookie("admin_token");
+    const authToken = getCookie("auth_token");
+
+    const token = customerToken || adminToken || riderToken || authToken;
+
+    if (token) {
+      config.headers.Authorization = `Bearer ${token}`;
+    }
+
+    return config;
+  },
+  (error) => Promise.reject(error)
+);
 
 const sideBottomShadow = {
   boxShadow: '2px 4px 4px rgba(0,0,0,0.06), -2px 4px 4px rgba(0,0,0,0.06), 0 4px 8px rgba(0,0,0,0.08)'
@@ -47,6 +80,7 @@ const Book = () => {
 
   const router = useIonRouter();
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isProcessingPayment, setIsProcessingPayment] = useState(false);
   const [toastMsg, setToastMsg] = useState('');
   const [showToast, setShowToast] = useState(false);
   const [showDeliveryTypeModal, setShowDeliveryTypeModal] = useState(false);
@@ -107,6 +141,7 @@ const Book = () => {
   };
 
   const handleSubmit = async () => {
+    console.log('[Book] handleSubmit called', { paymentMethod: formData.paymentMethod });
     setIsSubmitting(true);
     try {
       // determine weight string - use user input or default to category range
@@ -301,11 +336,12 @@ const Book = () => {
         }
       };
 
+      // If user selected online payment, create delivery record first (draft/pending),
+      // then call payment initialize endpoint with the returned deliveryId.
       let response;
       if (formData.image) {
         const fd = new FormData();
         fd.append('image', formData.image);
-        // Append payload fields individually so backend receives expected keys
         Object.entries(payload).forEach(([k, v]) => {
           if (v === undefined || v === null) {
             fd.append(k, '');
@@ -316,10 +352,196 @@ const Book = () => {
           }
         });
         response = await createDelivery(fd);
+        console.log('[Book] createDelivery (FormData) response:', response);
       } else {
         response = await createDelivery(payload);
+        console.log('[Book] createDelivery response:', response);
       }
 
+      // If pay-online selected, initialize payment using deliveryId
+      const deliveryId = response?.deliveryId || response?.id || response?._id || response?.data?.id || response?.data?._id || response?.data?.delivery?._id || response?.data?.delivery?.id || response?.data?.deliveryId;
+      console.log('[Book] createDelivery response:', response);
+      console.log('[Book] resolved deliveryId:', deliveryId);
+
+      if (!deliveryId) {
+        console.error('[Book] Missing deliveryId after createDelivery — aborting payment initialize', response);
+        setToastMsg('Failed to create delivery before payment. Please try again.');
+        setShowToast(true);
+        setIsSubmitting(false);
+        setIsProcessingPayment(false);
+        return;
+      }
+      if (formData.paymentMethod === 'card') {
+        try {
+          setIsProcessingPayment(true);
+          setToastMsg('Preparing payment...');
+          setShowToast(true);
+
+          // Open a popup synchronously to preserve user gesture (prevents popup blocker)
+          let paymentWindow = null;
+          try {
+            paymentWindow = window.open('', '_blank');
+            if (paymentWindow) paymentWindow.document.write('<p>Preparing payment...</p>');
+          } catch (pwErr) {
+            console.warn('[Book] Failed to open payment popup synchronously', pwErr);
+            paymentWindow = null;
+          }
+
+          const initJson = await apiClient.post(`/api/payment/initialize/${deliveryId}`, {
+            amount: calculateTotal(),
+            currency: 'NGN',
+            email: formData.recipientEmail || 'customer@swiftlyxpress.com',
+            metadata: { deliveryId }
+          });
+
+          console.log('Payment initialization response (axios):', initJson);
+          const initPayload = initJson?.data || initJson; // axios response -> .data is server payload
+
+          // Backend returns shape like: { success: true, message: '', data: { payment: { id, amount, currency, status, authorizationUrl, reference } } }
+          const paymentObj = initPayload?.data?.payment || initPayload?.payment || initPayload?.data;
+          const paymentReference = paymentObj?.reference || paymentObj?.id || paymentObj?.paymentId || paymentObj?.referenceId;
+          const authorizationUrl = paymentObj?.authorizationUrl || paymentObj?.authorization_url || paymentObj?.url || paymentObj?.payment_url;
+          const paymentIdReturned = paymentObj?.id || paymentObj?.paymentId || paymentObj?._id || paymentObj?.reference;
+          console.log('Parsed payment object:', { paymentObj, paymentReference, authorizationUrl, paymentIdReturned });
+
+          if (!paymentReference && !authorizationUrl) {
+            console.error('Payment initialize returned no reference or authorizationUrl:', initJson);
+            setToastMsg('Failed to initialize payment. Please try again.');
+            setShowToast(true);
+            setIsProcessingPayment(false);
+            setIsSubmitting(false);
+            return;
+          }
+
+          // Store pending data
+          try {
+            if (deliveryId) localStorage.setItem('pending_payment_delivery_id', deliveryId);
+            if (paymentIdReturned) localStorage.setItem('pending_payment_id', paymentIdReturned);
+          } catch (e) { /* ignore */ }
+
+          // Dynamically import Paystack and open modal or navigate hosted checkout (prefer hosted authorizationUrl)
+          try {
+            const PaystackPop = (await import('@paystack/inline-js')).default;
+
+            const paystackPublicKey = import.meta.env.VITE_PAYSTACK_PUBLIC_KEY || 'pk_test_xxxx';
+            console.log('Payment UI decision:', { authorizationUrl, paymentReference });
+
+            // If backend provided hosted checkout URL, navigate the popup to it (preserves gesture)
+            if (authorizationUrl) {
+              console.log('Navigating payment popup to authorizationUrl');
+              try {
+                if (paymentWindow) {
+                  paymentWindow.location.href = authorizationUrl;
+                } else {
+                  window.open(authorizationUrl, '_blank');
+                }
+                setIsProcessingPayment(false);
+                // Do not proceed further; payment will complete on hosted page
+                return;
+              } catch (navErr) {
+                console.error('Failed to navigate popup to authorizationUrl:', navErr);
+                // fallthrough to inline modal attempt
+              }
+            }
+
+            // Fallback to inline modal if no hosted URL
+            if (paymentReference) {
+              // close the blank popup if it exists
+              try { if (paymentWindow) paymentWindow.close(); } catch (e) { /* ignore */ }
+
+              const handler = PaystackPop.setup({
+                key: paystackPublicKey,
+                email: formData.recipientEmail || 'customer@swiftlyxpress.com',
+                amount: calculateTotal() * 100, // convert to kobo
+                currency: 'NGN',
+                ref: paymentReference,
+                metadata: {
+                  deliveryId,
+                  custom_fields: [
+                    {
+                      display_name: 'Delivery ID',
+                      variable_name: 'delivery_id',
+                      value: deliveryId
+                    }
+                  ]
+                },
+                onSuccess: async (transaction) => {
+                  console.log('Payment successful:', transaction);
+                  setToastMsg('Payment successful! Verifying...');
+                  setShowToast(true);
+
+                  try {
+                    // Verify payment with backend
+                    const verifyJson = await apiClient.get(`/api/payment/verify/${paymentReference}`);
+
+                    console.log('Payment verification response:', verifyJson);
+
+                    // Clear pending data
+                    try {
+                      localStorage.removeItem('pending_payment_delivery_id');
+                      localStorage.removeItem('pending_payment_id');
+                    } catch (e) { /* ignore */ }
+
+                    // Dispatch events
+                    window.dispatchEvent(new Event('deliveries:refresh'));
+                    window.dispatchEvent(new CustomEvent('delivery:created', {
+                      detail: response?.data || response
+                    }));
+
+                    setToastMsg('Payment verified! Redirecting...');
+                    setShowToast(true);
+
+                    // Navigate to deliveries page
+                    setTimeout(() => {
+                      router.push('/customer/deliveries', 'root', 'replace');
+                    }, 1500);
+                  } catch (verifyError) {
+                    console.error('Payment verification error:', verifyError);
+                    setToastMsg('Payment completed but verification failed. Please check your deliveries.');
+                    setShowToast(true);
+                    setTimeout(() => {
+                      router.push('/customer/deliveries', 'root', 'replace');
+                    }, 2000);
+                  } finally {
+                    setIsProcessingPayment(false);
+                    setIsSubmitting(false);
+                  }
+                },
+                onCancel: () => {
+                  console.log('Payment cancelled by user');
+                  setToastMsg('Payment cancelled');
+                  setShowToast(true);
+                  setIsProcessingPayment(false);
+                  setIsSubmitting(false);
+                }
+              });
+
+              console.log('Paystack handler created, opening iframe...');
+              handler.openIframe();
+              console.log('Paystack iframe opened successfully');
+              setIsProcessingPayment(false);
+            }
+          } catch (paystackError) {
+            console.error('Error loading Paystack:', paystackError);
+            setToastMsg('Failed to load payment interface. Please try again.');
+            setShowToast(true);
+            setIsProcessingPayment(false);
+            setIsSubmitting(false);
+            return;
+          }
+
+          // Don't proceed with non-payment flow
+          return;
+        } catch (e) {
+          console.error('Payment initialize error', e);
+          setToastMsg(e.message || 'Payment initialization failed');
+          setShowToast(true);
+          setIsProcessingPayment(false);
+          setIsSubmitting(false);
+        }
+      }
+
+      // Non-card or fallback: finalize booking locally (already created)
       window.dispatchEvent(new Event('deliveries:refresh'));
       window.dispatchEvent(new CustomEvent('delivery:created', {
         detail: response?.data || response
