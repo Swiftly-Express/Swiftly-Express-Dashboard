@@ -387,11 +387,13 @@ const Book = () => {
             paymentWindow = null;
           }
 
-          const initJson = await apiClient.post(`/api/payment/initialize/${deliveryId}`, {
-            amount: calculateTotal(),
-            currency: 'NGN',
+          const returnUrl = `${window.location.origin}/customer/payment/success?deliveryId=${encodeURIComponent(deliveryId)}`;
+          const initJson = await apiClient.post(`/api/payment/initialize/${deliveryId}`, { 
+            amount: calculateTotal(), 
+            currency: 'NGN', 
             email: formData.recipientEmail || 'customer@swiftlyxpress.com',
-            metadata: { deliveryId }
+            metadata: { deliveryId },
+            returnUrl
           });
 
           console.log('Payment initialization response (axios):', initJson);
