@@ -199,7 +199,7 @@ const PaymentSuccess = () => {
                                             <p className="text-sm text-[#64748B] mb-4">{statusMsg}</p>
 
                                             <div className="flex justify-center">
-                                                <button onClick={goToDeliveries} className="px-6 py-3 bg-[#00B75A] text-white rounded-full">My Deliveries</button>
+                                                <button onClick={goToDeliveries} className="px-6 py-3 bg-[#00B75A] text-medium text-white rounded-full">My Deliveries</button>
                                             </div>
                                         </YummyText>
                                     </div>
