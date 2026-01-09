@@ -170,7 +170,7 @@ const PaymentSuccess = () => {
                         <div className="relative w-full max-w-xl mx-auto">
                             <div className={`relative overflow-hidden ${/* full-height on small screens, centered box on larger */ ''} h-full sm:h-auto`}></div>
 
-                            <div className="relative bg-white/75 backdrop-blur-md border border-white/20 shadow-lg w-full h-full sm:h-auto rounded-none sm:rounded-2xl p-6">
+                            <div className="relative bg-white/75 backdrop-blur-md border border-white/20 shadow-lg w-full h-full sm:h-auto rounded-3xl sm:rounded-3xl p-6">
                                 {loading ? (
                                     <div className="flex flex-col items-center gap-4 min-h-[240px] justify-center">
                                         <IonSpinner name="crescent" />
@@ -199,8 +199,8 @@ const PaymentSuccess = () => {
                                         <p className="text-sm text-[#64748B] mb-4">{statusMsg}</p>
 
                                         <div className="flex flex-col sm:flex-row justify-center gap-3">
-                                            <button onClick={goToDeliveries} className="px-6 py-3 bg-[#00B75A] text-white rounded-xl">My Deliveries</button>
-                                            <button onClick={() => { if (!success) window.location.reload(); else history.push('/'); }} className="px-6 py-3 bg-white border border-gray-200 rounded-xl">{success ? 'Close' : 'Refresh'}</button>
+                                            <button onClick={goToDeliveries} className="px-6 py-3 bg-[#00B75A] text-white rounded-full">My Deliveries</button>
+                                            <button onClick={() => { if (!success) window.location.reload(); else history.push('/'); }} className="px-6 py-3 bg-white border border-gray-200 rounded-full">{success ? 'Close' : 'Refresh'}</button>
                                         </div>
                                     </div>
                                 )}
