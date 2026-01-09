@@ -7,7 +7,7 @@ import CustomerLayout from '../components/CustomerLayout';
 import { YummyText } from '../../../components/YummyText';
 import { createDelivery, isAuthenticated } from '../../../utils/authApi';
 import axios from 'axios';
-import { getCookie } from '../../../utils/cookies';
+import { getCookie, setCookie, setJSONCookie, getJSONCookie } from '../../../utils/cookies';
 
 const API_BASE = import.meta.env.VITE_API_BASE_URL || 'https://api.swiftlyxpress.com';
 
@@ -113,6 +113,24 @@ const Book = () => {
         router.push('/auth/customer/login', 'root', 'replace');
       }, 2000);
     }
+
+    // Listen for postMessage from payment callback popup
+    const handlePaymentMessage = (event) => {
+      console.log('[Book] Received postMessage:', event.data);
+      if (event.data?.type === 'PAYMENT_REDIRECT') {
+        const targetUrl = event.data.url || event.data.fullUrl;
+        console.log('[Book] Payment redirect requested to:', targetUrl);
+        if (targetUrl) {
+          // Extract path from full URL if needed
+          const path = targetUrl.startsWith('http') ? new URL(targetUrl).pathname + new URL(targetUrl).search : targetUrl;
+          console.log('[Book] Navigating to:', path);
+          router.push(path, 'root', 'replace');
+        }
+      }
+    };
+
+    window.addEventListener('message', handlePaymentMessage);
+    return () => window.removeEventListener('message', handlePaymentMessage);
   }, [router]);
 
   useEffect(() => {
@@ -392,12 +410,14 @@ const Book = () => {
             amount: calculateTotal(),
             currency: 'NGN',
             email: formData.recipientEmail || 'customer@swiftlyxpress.com',
-            callback_url: `${window.location.origin}/customer/payment/callback`, // ← Add this line
+            // prefer the global frontend callback route so Paystack returns straight to SPA
+            callback_url: `${window.location.origin}/customer/payment/callback`,
             metadata: { deliveryId }
           });
 
           console.log('Payment initialization response (axios):', initJson);
           const initPayload = initJson?.data || initJson; // axios response -> .data is server payload
+          console.log('Returned authorizationUrl (inspect):', initPayload?.data?.payment?.authorizationUrl || initPayload?.payment?.authorizationUrl || initPayload?.data?.authorizationUrl || initPayload?.authorizationUrl);
 
           // Backend returns shape like: { success: true, message: '', data: { payment: { id, amount, currency, status, authorizationUrl, reference } } }
           const paymentObj = initPayload?.data?.payment || initPayload?.payment || initPayload?.data;
@@ -415,10 +435,10 @@ const Book = () => {
             return;
           }
 
-          // Store pending data
+          // Store pending data in cookies (so callback/opened windows can access them)
           try {
-            if (deliveryId) localStorage.setItem('pending_payment_delivery_id', deliveryId);
-            if (paymentIdReturned) localStorage.setItem('pending_payment_id', paymentIdReturned);
+            if (deliveryId) setCookie('pending_payment_delivery_id', String(deliveryId), 1);
+            if (paymentIdReturned) setCookie('pending_payment_id', String(paymentIdReturned), 1);
           } catch (e) { /* ignore */ }
 
           // Dynamically import Paystack and open modal or navigate hosted checkout (prefer hosted authorizationUrl)
@@ -476,8 +496,8 @@ const Book = () => {
                     // Ensure pending identifiers are stored so the success page can verify
                     try {
                       const pid = paymentReference || transaction?.reference || transaction?.trxref || transaction?.id;
-                      if (pid) localStorage.setItem('pending_payment_id', pid);
-                      if (deliveryId) localStorage.setItem('pending_payment_delivery_id', deliveryId);
+                      if (pid) setCookie('pending_payment_id', String(pid), 1);
+                      if (deliveryId) setCookie('pending_payment_delivery_id', String(deliveryId), 1);
                     } catch (e) { /* ignore */ }
 
                     // Close the Paystack iframe/modal if available
@@ -531,6 +551,8 @@ const Book = () => {
           console.error('Payment initialize error', e);
           setToastMsg(e.message || 'Payment initialization failed');
           setShowToast(true);
+          // Close popup if it was opened and an error occurred
+          try { if (paymentWindow && !paymentWindow.closed) paymentWindow.close(); } catch (closeErr) { /* ignore */ }
           setIsProcessingPayment(false);
           setIsSubmitting(false);
         }
@@ -563,15 +585,15 @@ const Book = () => {
   const saveDraft = async () => {
     setIsSubmitting(true);
     try {
-      const draftsRaw = localStorage.getItem('delivery_drafts');
-      const drafts = draftsRaw ? JSON.parse(draftsRaw) : [];
+      const draftsRaw = getJSONCookie('delivery_drafts');
+      const drafts = draftsRaw ? draftsRaw : [];
       drafts.push({
         id: `draft-${Date.now()}`,
         data: formData,
         createdAt: new Date().toISOString()
       });
-      localStorage.setItem('delivery_drafts', JSON.stringify(drafts));
-      setToastMsg('Draft saved locally');
+      setJSONCookie('delivery_drafts', drafts, 30);
+      setToastMsg('Draft saved');
       setShowToast(true);
     } catch (e) {
       setToastMsg('Failed to save draft');

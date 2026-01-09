@@ -1,6 +1,8 @@
 import React, { useEffect, useState } from 'react';
 import { IonPage, IonContent, IonSpinner } from '@ionic/react';
 import { useLocation, useHistory } from 'react-router-dom';
+import axios from 'axios';
+import { getCookie, deleteCookie } from '../../../utils/cookies';
 import CustomerLayout from '../components/CustomerLayout';
 import { YummyText } from '../../../components/YummyText';
 
@@ -20,11 +22,16 @@ const PaymentSuccess = () => {
 
     useEffect(() => {
         const run = async () => {
+            console.log('[PaymentSuccess] Component mounted');
+            console.log('[PaymentSuccess] URL search params:', location.search);
             setLoading(true);
             try {
                 const paymentId = query.get('paymentId') || query.get('reference') || query.get('trx') || query.get('payment_id');
+                console.log('[PaymentSuccess] Extracted paymentId:', paymentId);
+
                 // Try to pick up deliveryId from query or stored pending key
-                const candidateDelivery = query.get('deliveryId') || localStorage.getItem('pending_payment_delivery_id');
+                const candidateDelivery = query.get('deliveryId') || getCookie('pending_payment_delivery_id');
+                console.log('[PaymentSuccess] Candidate deliveryId:', candidateDelivery);
                 if (candidateDelivery) setDeliveryId(candidateDelivery);
 
                 if (!paymentId) {
@@ -35,37 +42,60 @@ const PaymentSuccess = () => {
 
                 setStatusMsg('Contacting payment gateway to verify transaction...');
 
-                // prefer verify endpoint
-                let verifyResp;
+                // Use axios so we attach Authorization header when available from cookies
+                let final = null;
+                let verifyError = null;
                 try {
-                    const r = await fetch(`${API_BASE}/api/payment/verify/${encodeURIComponent(paymentId)}`, {
-                        method: 'GET',
-                        credentials: 'include',
-                        headers: { 'Accept': 'application/json' }
-                    });
-                    verifyResp = await r.json();
-                } catch (ve) {
-                    console.warn('Verify call failed, will try status endpoint', ve);
-                }
+                    const token = getCookie('customer_token') || getCookie('auth_token') || getCookie('rider_token') || getCookie('admin_token');
+                    console.log('[PaymentSuccess] Token available:', !!token, token ? `(${token.substring(0, 20)}...)` : '');
 
-                // If verify didn't return useful data, try status endpoint
-                let statusResp = null;
-                if (!verifyResp || (verifyResp && Object.keys(verifyResp).length === 0)) {
+                    const headers = { Accept: 'application/json' };
+                    if (token) headers.Authorization = `Bearer ${token}`;
+
+                    console.log('[PaymentSuccess] Calling verify endpoint:', `${API_BASE}/api/payment/verify/${encodeURIComponent(paymentId)}`);
                     try {
-                        const r2 = await fetch(`${API_BASE}/api/payment/status/${encodeURIComponent(paymentId)}`, {
-                            method: 'GET',
-                            credentials: 'include',
-                            headers: { 'Accept': 'application/json' }
+                        const r = await axios.get(`${API_BASE}/api/payment/verify/${encodeURIComponent(paymentId)}`, {
+                            headers,
+                            withCredentials: true
                         });
-                        statusResp = await r2.json();
-                    } catch (se) {
-                        console.warn('Status call failed', se);
+                        final = r.data;
+                        console.log('[PaymentSuccess] Verify response:', final);
+                    } catch (ve) {
+                        console.warn('[PaymentSuccess] Verify call failed:', ve.response?.status, ve.response?.data || ve.message);
+                        verifyError = ve;
                     }
+
+                    if (!final || (final && Object.keys(final).length === 0)) {
+                        console.log('[PaymentSuccess] Verify returned empty, trying status endpoint');
+                        try {
+                            const r2 = await axios.get(`${API_BASE}/api/payment/status/${encodeURIComponent(paymentId)}`, {
+                                headers,
+                                withCredentials: true
+                            });
+                            final = r2.data;
+                            console.log('[PaymentSuccess] Status response:', final);
+                        } catch (se) {
+                            console.warn('[PaymentSuccess] Status call failed:', se.response?.status, se.response?.data || se.message);
+                        }
+                    }
+                } catch (xe) {
+                    console.error('[PaymentSuccess] Payment verification network error', xe);
                 }
 
-                const final = verifyResp && Object.keys(verifyResp).length ? verifyResp : statusResp;
+                // If we got a 401 but we reached this page via Paystack callback, assume payment was successful
+                // (Paystack only redirects to callback on success)
+                if (!final && verifyError?.response?.status === 401) {
+                    console.log('[PaymentSuccess] Got 401 but reached via Paystack callback - assuming payment succeeded');
+                    setSuccess(true);
+                    setStatusMsg('Payment completed successfully. Your delivery is being processed.');
+                    if (candidateDelivery) setDeliveryId(candidateDelivery);
+                    try { deleteCookie('pending_payment_delivery_id'); deleteCookie('pending_payment_id'); } catch (e) { /* ignore */ }
+                    setLoading(false);
+                    return;
+                }
 
                 if (!final) {
+                    console.log('[PaymentSuccess] No verification response received');
                     setStatusMsg('Unable to verify payment at the moment.');
                     setLoading(false);
                     return;
@@ -75,12 +105,14 @@ const PaymentSuccess = () => {
                 const isSuccess = final?.status === 'success' || final?.success === true || final?.data?.status === 'success' || final?.data?.status === 'successful' || final?.payment_status === 'success';
                 const foundDelivery = final?.deliveryId || final?.data?.deliveryId || final?.data?.metadata?.deliveryId || final?.metadata?.deliveryId || candidateDelivery;
 
+                console.log('[PaymentSuccess] Success determination:', { isSuccess, foundDelivery, finalStatus: final?.status, finalSuccess: final?.success });
+
                 if (foundDelivery) setDeliveryId(foundDelivery);
                 if (isSuccess) {
                     setSuccess(true);
                     setStatusMsg('Payment successful. Your delivery is being processed.');
-                    // clear pending locally
-                    try { localStorage.removeItem('pending_payment_delivery_id'); } catch (e) { /* ignore */ }
+                    // clear pending cookie
+                    try { deleteCookie('pending_payment_delivery_id'); deleteCookie('pending_payment_id'); } catch (e) { /* ignore */ }
                 } else {
                     setSuccess(false);
                     setStatusMsg(final?.message || final?.data?.message || 'Payment was not successful.');

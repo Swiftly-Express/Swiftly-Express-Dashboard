@@ -8,6 +8,23 @@ const PORT = process.env.PORT || 8080;
 app.use(cors());
 app.use(bodyParser.json());
 
+// Development convenience: redirect malformed Paystack callback URLs to frontend
+// This preserves the Paystack query string and forwards to the SPA callback route.
+app.get('/api/payment/callback*', (req, res) => {
+  try {
+    const orig = req.originalUrl || req.url || '';
+    const qIndex = orig.indexOf('?');
+    const qs = qIndex !== -1 ? orig.slice(qIndex + 1) : '';
+    const frontend = process.env.FRONTEND_URL || 'http://localhost:8080';
+    const redirectTo = `${frontend.replace(/\/$/, '')}/payment/callback${qs ? `?${qs}` : ''}`;
+    console.log('[dev-server] Redirecting Paystack callback ->', redirectTo, 'original:', orig);
+    return res.redirect(302, redirectTo);
+  } catch (e) {
+    console.error('[dev-server] Failed to redirect Paystack callback', e);
+    return res.status(500).send('Redirect failed');
+  }
+});
+
 // Simple in-memory users store (for local testing only)
 const users = [];
 
