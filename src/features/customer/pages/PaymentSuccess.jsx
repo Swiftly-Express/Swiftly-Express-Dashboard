@@ -121,7 +121,7 @@ const PaymentSuccess = () => {
 
                 if (!final) {
                     console.log('[PaymentSuccess] No verification response received');
-                    setStatusMsg('Unable to verify payment at the moment.');
+                    setStatusMsg('Click the button below to check your deliveries.');
                     setLoading(false);
                     return;
                 }
@@ -156,11 +156,7 @@ const PaymentSuccess = () => {
     }, [location.search]);
 
     const goToDeliveries = () => {
-        if (deliveryId) {
-            history.push(`/customer/deliveries/${deliveryId}`);
-        } else {
-            history.push('/customer/deliveries');
-        }
+        history.push('/customer/deliveries');
     };
 
     return (
