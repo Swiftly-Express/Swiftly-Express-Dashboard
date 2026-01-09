@@ -586,6 +586,16 @@ export async function createDelivery(payload) {
   return apiClient.post('/api/customer/deliveries', payload);
 }
 
+// Payment-related client helpers
+export async function getPaymentStatus(paymentId) {
+  if (!paymentId) throw new Error('paymentId is required');
+  return apiClient.get(`/api/payment/status/${paymentId}`);
+}
+
+export async function getCustomerPayments(page = 1, limit = 20, filters = {}) {
+  return apiClient.get('/api/payment/customer', { params: { page, limit, ...filters } });
+}
+
 export async function getCustomerDeliveries(options = {}) {
   const { page = 1, limit = 10, ...filters } = options || {};
   return apiClient.get('/api/customer/deliveries', { params: { page, limit, ...filters } });
@@ -764,5 +774,7 @@ export default {
   isAuthenticated,
   getAuthToken,
   getPendingUserId,
-  getPendingUserData
+  getPendingUserData,
+  getPaymentStatus,
+  getCustomerPayments
 };

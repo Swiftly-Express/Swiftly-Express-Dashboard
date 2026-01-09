@@ -5,9 +5,9 @@ import StyledDropdown from '../../../components/StyledDropdown';
 import GoogleMapsAutocomplete from '../../../components/GoogleMapsAutocomplete';
 import CustomerLayout from '../components/CustomerLayout';
 import { YummyText } from '../../../components/YummyText';
-import { createDelivery, isAuthenticated } from '../../../utils/authApi';
+import { createDelivery, isAuthenticated, cancelDelivery } from '../../../utils/authApi';
 import axios from 'axios';
-import { getCookie, setCookie, setJSONCookie, getJSONCookie } from '../../../utils/cookies';
+import { getCookie, setCookie, setJSONCookie, getJSONCookie, deleteCookie } from '../../../utils/cookies';
 
 const API_BASE = import.meta.env.VITE_API_BASE_URL || 'https://api.swiftlyxpress.com';
 
@@ -441,6 +441,22 @@ const Book = () => {
             if (paymentIdReturned) setCookie('pending_payment_id', String(paymentIdReturned), 1);
           } catch (e) { /* ignore */ }
 
+          // helper: cancel delivery if payment not completed
+          const cleanupOnPaymentCancel = async (did) => {
+            try {
+              console.log('[Book] Cleaning up delivery due to payment cancel:', did);
+              // call backend cancel endpoint (best-effort)
+              if (did) await cancelDelivery(did, { reason: 'payment_cancelled' });
+            } catch (cleanupErr) {
+              console.warn('[Book] Failed to cancel delivery on backend:', cleanupErr);
+            }
+            try { deleteCookie('pending_payment_delivery_id'); deleteCookie('pending_payment_id'); } catch (e) { /* ignore */ }
+            setIsProcessingPayment(false);
+            setIsSubmitting(false);
+            setToastMsg('Payment was not completed. Your booking was cancelled.');
+            setShowToast(true);
+          };
+
           // Dynamically import Paystack and open modal or navigate hosted checkout (prefer hosted authorizationUrl)
           try {
             const PaystackPop = (await import('@paystack/inline-js')).default;
@@ -458,6 +474,25 @@ const Book = () => {
                   window.open(authorizationUrl, '_blank');
                 }
                 setIsProcessingPayment(false);
+                // Monitor popup closure - if user closes it without completing payment, cancel the delivery
+                try {
+                  const popupInterval = setInterval(() => {
+                    try {
+                      if (!paymentWindow || paymentWindow.closed) {
+                        clearInterval(popupInterval);
+                        // if pending cookie still exists, treat as cancelled
+                        const pending = getCookie('pending_payment_id');
+                        if (pending) {
+                          cleanupOnPaymentCancel(deliveryId);
+                        }
+                      }
+                    } catch (e) {
+                      clearInterval(popupInterval);
+                    }
+                  }, 1000);
+                } catch (monErr) {
+                  console.warn('[Book] Failed to monitor payment popup:', monErr);
+                }
                 // Do not proceed further; payment will complete on hosted page
                 return;
               } catch (navErr) {
@@ -522,12 +557,10 @@ const Book = () => {
                     setIsSubmitting(false);
                   }
                 },
-                onCancel: () => {
+                onCancel: async () => {
                   console.log('Payment cancelled by user');
-                  setToastMsg('Payment cancelled');
-                  setShowToast(true);
-                  setIsProcessingPayment(false);
-                  setIsSubmitting(false);
+                  // rollback delivery on cancel
+                  try { await cleanupOnPaymentCancel(deliveryId); } catch (e) { console.warn(e); }
                 }
               });
 

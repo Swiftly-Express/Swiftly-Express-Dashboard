@@ -3,6 +3,7 @@ import { IonPage, IonContent, IonSpinner } from '@ionic/react';
 import { useLocation, useHistory } from 'react-router-dom';
 import axios from 'axios';
 import { getCookie, deleteCookie } from '../../../utils/cookies';
+import { getPaymentStatus } from '../../../utils/authApi';
 import CustomerLayout from '../components/CustomerLayout';
 import { YummyText } from '../../../components/YummyText';
 
@@ -93,14 +94,11 @@ const PaymentSuccess = () => {
                     if (!final || (final && Object.keys(final).length === 0)) {
                         console.log('[PaymentSuccess] Verify returned empty, trying status endpoint');
                         try {
-                            const r2 = await axios.get(`${API_BASE}/api/payment/status/${encodeURIComponent(paymentId)}`, {
-                                headers,
-                                withCredentials: true
-                            });
-                            final = r2.data;
-                            console.log('[PaymentSuccess] Status response:', final);
+                            // use api helper for status endpoint
+                            final = await getPaymentStatus(paymentId);
+                            console.log('[PaymentSuccess] Status response (via api):', final);
                         } catch (se) {
-                            console.warn('[PaymentSuccess] Status call failed:', se.response?.status, se.response?.data || se.message);
+                            console.warn('[PaymentSuccess] Status call failed:', se?.status || se?.message || se);
                         }
                     }
                 } catch (xe) {
