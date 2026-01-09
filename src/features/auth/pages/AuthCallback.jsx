@@ -11,7 +11,7 @@ const AuthCallback = () => {
         const processAuth = async () => {
             console.log('[AuthCallback] URL:', window.location.href);
             console.log('[AuthCallback] Query string:', location.search);
-            
+
             // Parse query params manually (react-router v5)
             const params = new URLSearchParams(location.search);
             const token = params.get('token') || params.get('accessToken');
@@ -22,11 +22,11 @@ const AuthCallback = () => {
             const error = params.get('error');
             const message = params.get('message');
 
-            console.log('[AuthCallback] Parsed params:', { 
-                hasToken: !!token, 
-                hasCode: !!code, 
-                role, 
-                hasError: !!error 
+            console.log('[AuthCallback] Parsed params:', {
+                hasToken: !!token,
+                hasCode: !!code,
+                role,
+                hasError: !!error
             });
 
             if (error) {
@@ -42,16 +42,16 @@ const AuthCallback = () => {
             if (code) {
                 console.log('[AuthCallback] Exchanging authorization code with backend...');
                 setStatus('Exchanging authorization code...');
-                
+
                 const rawBase = import.meta.env.VITE_API_BASE_URL || 'https://api.swiftlyxpress.com';
                 const base = (typeof window !== 'undefined' && rawBase.startsWith('/'))
                     ? `${window.location.origin}${rawBase.replace(/\/$/, '')}`
                     : rawBase.replace(/\/$/, '');
                 const exchangeUrl = `${base}/api/auth/google/exchange-code`;
-                
+
                 console.log('[AuthCallback] Exchange URL:', exchangeUrl);
                 console.log('[AuthCallback] Payload:', { code: code.substring(0, 20) + '...', redirectUri: window.location.origin + '/auth/callback', role });
-                
+
                 try {
                     const resp = await fetch(exchangeUrl, {
                         method: 'POST',
@@ -59,16 +59,23 @@ const AuthCallback = () => {
                         body: JSON.stringify({ code, redirectUri: window.location.origin + '/auth/callback', role })
                     });
                     const data = await resp.json();
-                    
+
                     console.log('[AuthCallback] Exchange response status:', resp.status);
                     console.log('[AuthCallback] Exchange response data:', data);
-                    
+
                     if (!resp.ok) throw new Error(data?.message || 'OAuth exchange failed');
 
-                    const { token: exToken, refreshToken: exRefresh, user: exUser, role: exRole } = data;
+                    // Extract from multiple possible response structures
+                    console.log('user data from response...');
+                    const exToken = data?.token || data?.accessToken || data?.data?.token;
+                    const exRefresh = data?.refreshToken || data?.refresh_token || data?.data?.refreshToken;
+                    const exUser = data?.user || data?.data?.user || data?.data;
+                    // Try multiple locations for role: direct, data.role, user.role, or fallback to URL param
                     
-                    console.log('[AuthCallback] Extracted:', { hasToken: !!exToken, hasRefresh: !!exRefresh, hasUser: !!exUser, role: exRole });
-                    
+                    const exRole = data?.role || data?.data?.role || exUser?.role || role;
+                    console.log('role from response...');
+                    console.log('[AuthCallback] Extracted:', { hasToken: !!exToken, hasRefresh: !!exRefresh, hasUser: !!exUser, role: exRole, rawRole: data?.role, userRole: exUser?.role });
+
                     if (exToken) {
                         setStatus('Saving authentication data...');
                         if (exRole === 'customer') setCookie('customer_token', exToken, 7);
@@ -89,7 +96,7 @@ const AuthCallback = () => {
 
                     setStatus('Redirecting to dashboard...');
                     console.log('[AuthCallback] Redirecting to dashboard for role:', exRole);
-                    
+
                     setTimeout(() => {
                         if (exRole === 'customer') history.push('/customer/dashboard');
                         else if (exRole === 'rider' || exRole === 'driver') history.push('/rider/dashboard');
@@ -107,37 +114,63 @@ const AuthCallback = () => {
                 }
             }
 
+            // Handle direct token (UNCOMMENTED AND FIXED)
             if (token) {
                 console.log('[AuthCallback] Direct token provided in callback');
                 setStatus('Saving authentication data...');
                 try {
-                    if (role === 'customer') setCookie('customer_token', token, 7);
-                    else if (role === 'rider' || role === 'driver') setCookie('rider_token', token, 7);
-                    else if (role === 'admin') setCookie('admin_token', token, 7);
-
-                    setCookie('auth_token', token, 7);
-
-                    if (refreshToken) setCookie('refresh_token', refreshToken, 30);
-
+                    // Parse user param FIRST to extract role if URL role param is missing
+                    let parsedUser = null;
                     if (userParam) {
                         try {
                             const decoded = decodeURIComponent(userParam);
-                            const parsed = JSON.parse(decoded);
-                            setJSONCookie('user_data', parsed, 7);
-                            if (parsed.role) setCookie('userRole', parsed.role, 7);
+                            parsedUser = JSON.parse(decoded);
+                            setJSONCookie('user_data', parsedUser, 7);
+                            console.log('[AuthCallback] ✓ User data parsed:', parsedUser);
                         } catch (e) {
                             console.warn('[AuthCallback] Failed to parse user param', e);
                         }
                     }
 
+                    // Determine final role: prefer URL param, then user.role from parsed data
+                    const finalRole = role || (parsedUser && parsedUser.role) || null;
+                    console.log('[AuthCallback] Final role determined:', finalRole, '(from URL role:', role, ', user.role:', parsedUser?.role, ')');
+
+                    // Save role cookie if we have one
+                    if (finalRole) {
+                        setCookie('userRole', finalRole, 7);
+                    }
+
+                    // Save token cookies based on role
+                    if (finalRole === 'customer') setCookie('customer_token', token, 7);
+                    else if (finalRole === 'rider' || finalRole === 'driver') setCookie('rider_token', token, 7);
+                    else if (finalRole === 'admin') setCookie('admin_token', token, 7);
+
+                    setCookie('auth_token', token, 7);
+                    console.log('[AuthCallback] ✓ Token saved for role:', finalRole);
+
+                    if (refreshToken) {
+                        setCookie('refresh_token', refreshToken, 30);
+                        console.log('[AuthCallback] ✓ Refresh token saved');
+                    }
+
                     setStatus('Redirecting to dashboard...');
-                    console.log('[AuthCallback] Redirecting to dashboard for role:', role);
-                    
+                    console.log('[AuthCallback] Redirecting to dashboard for role:', finalRole);
+
                     setTimeout(() => {
-                        if (role === 'customer') history.push('/customer/dashboard');
-                        else if (role === 'rider' || role === 'driver') history.push('/rider/dashboard');
-                        else if (role === 'admin') history.push('/admin/dashboard');
-                        else history.push('/');
+                        if (finalRole === 'customer') {
+                            console.log('[AuthCallback] → Redirecting to /customer/dashboard');
+                            history.push('/customer/dashboard');
+                        } else if (finalRole === 'rider' || finalRole === 'driver') {
+                            console.log('[AuthCallback] → Redirecting to /rider/dashboard');
+                            history.push('/rider/dashboard');
+                        } else if (finalRole === 'admin') {
+                            console.log('[AuthCallback] → Redirecting to /admin/dashboard');
+                            history.push('/admin/dashboard');
+                        } else {
+                            console.log('[AuthCallback] → No valid role, redirecting to home');
+                            history.push('/');
+                        }
                     }, 500);
                 } catch (e) {
                     console.error('[AuthCallback] Auth callback handling failed', e);
@@ -156,7 +189,7 @@ const AuthCallback = () => {
         };
 
         processAuth();
-    }, [location.search, history]);
+    }, []);
 
     return (
         <div className="min-h-screen flex items-center justify-center bg-gray-50">
