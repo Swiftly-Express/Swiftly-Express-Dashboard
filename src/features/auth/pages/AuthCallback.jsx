@@ -1,13 +1,35 @@
 import React, { useEffect, useState } from 'react';
 import { useHistory, useLocation } from 'react-router-dom';
 import { setCookie, setJSONCookie } from '../../../utils/cookies';
+import { getCurrentUser } from '../../../utils/authApi';
 
 const AuthCallback = () => {
     const history = useHistory();
     const location = useLocation();
     const [status, setStatus] = useState('Processing authentication...');
 
+    // Helper function to decode JWT token
+    const decodeJWT = (token) => {
+        try {
+            const base64Url = token.split('.')[1];
+            const base64 = base64Url.replace(/-/g, '+').replace(/_/g, '/');
+            const jsonPayload = decodeURIComponent(
+                atob(base64)
+                    .split('')
+                    .map(c => '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2))
+                    .join('')
+            );
+            return JSON.parse(jsonPayload);
+        } catch (e) {
+            console.error('[AuthCallback] Failed to decode JWT:', e);
+            return null;
+        }
+    };
+
     useEffect(() => {
+        console.log('🚀🚀🚀 AUTH CALLBACK COMPONENT MOUNTED 🚀🚀🚀');
+        console.log('🚀 CODE VERSION: 3.0 - WITH JWT DECODER');
+
         const processAuth = async () => {
             console.log('[AuthCallback] URL:', window.location.href);
             console.log('[AuthCallback] Query string:', location.search);
@@ -71,7 +93,7 @@ const AuthCallback = () => {
                     const exRefresh = data?.refreshToken || data?.refresh_token || data?.data?.refreshToken;
                     const exUser = data?.user || data?.data?.user || data?.data;
                     // Try multiple locations for role: direct, data.role, user.role, or fallback to URL param
-                    
+
                     const exRole = data?.role || data?.data?.role || exUser?.role || role;
                     console.log('role from response...');
                     console.log('[AuthCallback] Extracted:', { hasToken: !!exToken, hasRefresh: !!exRefresh, hasUser: !!exUser, role: exRole, rawRole: data?.role, userRole: exUser?.role });
@@ -114,40 +136,84 @@ const AuthCallback = () => {
                 }
             }
 
+            // DEBUG: Check what's happening with token and code
+            console.log('[AuthCallback] === DEBUG TOKEN CHECK ===');
+            console.log('[AuthCallback] token value:', token);
+            console.log('[AuthCallback] token type:', typeof token);
+            console.log('[AuthCallback] token length:', token?.length);
+            console.log('[AuthCallback] token truthy?', !!token);
+            console.log('[AuthCallback] code value:', code);
+            console.log('[AuthCallback] code type:', typeof code);
+            console.log('[AuthCallback] code truthy?', !!code);
+            console.log('[AuthCallback] Will enter token block?', !!token);
+            console.log('[AuthCallback] === END DEBUG ===');
+
             // Handle direct token (UNCOMMENTED AND FIXED)
             if (token) {
+                console.log('[AuthCallback] ✓✓✓ ENTERED TOKEN BLOCK ✓✓✓');
                 console.log('[AuthCallback] Direct token provided in callback');
                 setStatus('Saving authentication data...');
                 try {
-                    // Parse user param FIRST to extract role if URL role param is missing
+                    // Decode JWT token to extract user info and role
+                    const decodedToken = decodeJWT(token);
+                    console.log('[AuthCallback] Decoded token:', decodedToken);
+
+                    // Parse user param if available
                     let parsedUser = null;
                     if (userParam) {
                         try {
                             const decoded = decodeURIComponent(userParam);
                             parsedUser = JSON.parse(decoded);
-                            setJSONCookie('user_data', parsedUser, 7);
-                            console.log('[AuthCallback] ✓ User data parsed:', parsedUser);
+                            console.log('[AuthCallback] ✓ User data parsed from param:', parsedUser);
                         } catch (e) {
                             console.warn('[AuthCallback] Failed to parse user param', e);
                         }
                     }
 
-                    // Determine final role: prefer URL param, then user.role from parsed data
-                    const finalRole = role || (parsedUser && parsedUser.role) || null;
-                    console.log('[AuthCallback] Final role determined:', finalRole, '(from URL role:', role, ', user.role:', parsedUser?.role, ')');
-
-                    // Save role cookie if we have one
-                    if (finalRole) {
-                        setCookie('userRole', finalRole, 7);
+                    // Attempt to fetch authoritative user profile from backend using token
+                    let fetchedUser = null;
+                    try {
+                        const me = await getCurrentUser(token);
+                        console.log('[AuthCallback] getCurrentUser returned:', me);
+                        fetchedUser = me?.user || me?.data || me;
+                        if (fetchedUser) {
+                            setJSONCookie('user_data', fetchedUser, 7);
+                            if (fetchedUser.role) setCookie('userRole', fetchedUser.role, 7);
+                        }
+                    } catch (meErr) {
+                        console.warn('[AuthCallback] getCurrentUser failed:', meErr);
                     }
 
-                    // Save token cookies based on role
-                    if (finalRole === 'customer') setCookie('customer_token', token, 7);
-                    else if (finalRole === 'rider' || finalRole === 'driver') setCookie('rider_token', token, 7);
-                    else if (finalRole === 'admin') setCookie('admin_token', token, 7);
+                    // Determine final role with priority:
+                    // 1. URL role parameter
+                    // 2. fetched user role (from API)
+                    // 3. Decoded JWT token role
+                    // 4. Parsed user data role
+                    const finalRole = role || (fetchedUser && fetchedUser.role) || decodedToken?.role || parsedUser?.role || null;
+                    console.log('[AuthCallback] Final role determined:', finalRole);
+                    console.log('[AuthCallback] Role sources - URL:', role, ', fetched:', fetchedUser?.role, ', JWT:', decodedToken?.role, ', User:', parsedUser?.role);
+
+                    // Ensure user_data exists and contains role
+                    const userData = fetchedUser || parsedUser || decodedToken || null;
+                    if (userData) {
+                        if (!userData.role && finalRole) userData.role = finalRole;
+                        try { setJSONCookie('user_data', userData, 7); } catch (e) { /* ignore */ }
+                    }
+
+                    // Save token cookies based on finalRole
+                    if (finalRole === 'customer') {
+                        setCookie('customer_token', token, 7);
+                        console.log('[AuthCallback] ✓ Customer token saved');
+                    } else if (finalRole === 'rider' || finalRole === 'driver') {
+                        setCookie('rider_token', token, 7);
+                        console.log('[AuthCallback] ✓ Rider/Driver token saved');
+                    } else if (finalRole === 'admin') {
+                        setCookie('admin_token', token, 7);
+                        console.log('[AuthCallback] ✓ Admin token saved');
+                    }
 
                     setCookie('auth_token', token, 7);
-                    console.log('[AuthCallback] ✓ Token saved for role:', finalRole);
+                    console.log('[AuthCallback] ✓ General auth token saved');
 
                     if (refreshToken) {
                         setCookie('refresh_token', refreshToken, 30);
@@ -155,7 +221,7 @@ const AuthCallback = () => {
                     }
 
                     setStatus('Redirecting to dashboard...');
-                    console.log('[AuthCallback] Redirecting to dashboard for role:', finalRole);
+                    console.log('[AuthCallback] Preparing redirect for role:', finalRole);
 
                     setTimeout(() => {
                         if (finalRole === 'customer') {
@@ -168,7 +234,7 @@ const AuthCallback = () => {
                             console.log('[AuthCallback] → Redirecting to /admin/dashboard');
                             history.push('/admin/dashboard');
                         } else {
-                            console.log('[AuthCallback] → No valid role, redirecting to home');
+                            console.warn('[AuthCallback] → No valid role found, redirecting to home');
                             history.push('/');
                         }
                     }, 500);

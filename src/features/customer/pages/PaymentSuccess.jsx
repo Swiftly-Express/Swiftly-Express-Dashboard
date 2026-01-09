@@ -26,8 +26,17 @@ const PaymentSuccess = () => {
             console.log('[PaymentSuccess] URL search params:', location.search);
             setLoading(true);
             try {
-                const paymentId = query.get('paymentId') || query.get('reference') || query.get('trx') || query.get('payment_id');
-                console.log('[PaymentSuccess] Extracted paymentId:', paymentId);
+                const rawPaymentId = query.get('paymentId') || query.get('reference') || query.get('trx') || query.get('payment_id');
+                console.log('[PaymentSuccess] Extracted raw paymentId/reference:', rawPaymentId);
+
+                // If provider returned a delivery-like id (e.g. DEL-...), prefer the stored pending payment id (DB id)
+                let paymentId = rawPaymentId;
+                const pendingCookie = getCookie('pending_payment_id');
+                if (paymentId && /^DEL[-_]/i.test(paymentId) && pendingCookie) {
+                    console.log('[PaymentSuccess] Detected delivery-style id in paymentId; using pending_payment_id cookie instead:', pendingCookie);
+                    paymentId = pendingCookie;
+                }
+                console.log('[PaymentSuccess] Using paymentId for verification:', paymentId);
 
                 // Try to pick up deliveryId from query or stored pending key
                 const candidateDelivery = query.get('deliveryId') || getCookie('pending_payment_delivery_id');
@@ -63,6 +72,22 @@ const PaymentSuccess = () => {
                     } catch (ve) {
                         console.warn('[PaymentSuccess] Verify call failed:', ve.response?.status, ve.response?.data || ve.message);
                         verifyError = ve;
+                        // If backend failed because we passed a delivery identifier where it expected an ObjectId,
+                        // retry using the pending_payment_id cookie if available and different from the attempted id.
+                        const msg = ve.response?.data?.message || ve.message || '';
+                        if (/Cast to ObjectId failed/i.test(msg) && pendingCookie && pendingCookie !== paymentId) {
+                            try {
+                                console.log('[PaymentSuccess] Retrying verify with pending_payment_id cookie:', pendingCookie);
+                                const r2 = await axios.get(`${API_BASE}/api/payment/verify/${encodeURIComponent(pendingCookie)}`, {
+                                    headers,
+                                    withCredentials: true
+                                });
+                                final = r2.data;
+                                console.log('[PaymentSuccess] Verify (retry) response:', final);
+                            } catch (retryErr) {
+                                console.warn('[PaymentSuccess] Verify retry failed:', retryErr.response?.status, retryErr.response?.data || retryErr.message);
+                            }
+                        }
                     }
 
                     if (!final || (final && Object.keys(final).length === 0)) {
