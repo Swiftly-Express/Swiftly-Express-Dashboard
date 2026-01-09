@@ -162,37 +162,53 @@ const PaymentSuccess = () => {
     return (
         <IonPage>
             <CustomerLayout>
-                <IonContent className="ion-padding flex flex-col items-center justify-center min-h-[60vh]">
-                    {loading ? (
-                        <div className="flex flex-col items-center gap-4">
-                            <IonSpinner name="crescent" />
-                            <YummyText className="text-base text-[#64748B]">{statusMsg}</YummyText>
-                        </div>
-                    ) : (
-                        <div className="max-w-xl text-center p-6 bg-white rounded-2xl shadow-md">
-                            <div className="flex items-center justify-center mb-4">
-                                {success ? (
-                                    <div className="w-20 h-20 rounded-full bg-[#ECFDF5] flex items-center justify-center">
-                                        <svg width="36" height="36" viewBox="0 0 24 24" fill="none">
-                                            <path d="M20 6L9 17l-5-5" stroke="#059669" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" />
-                                        </svg>
+                <IonContent className="ion-padding min-h-[60vh]">
+                    {/* Glassmorphism modal overlay */}
+                    <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+                        {/* dimmed blurred backdrop */}
+                        <div className="absolute inset-0 bg-black/40 backdrop-blur-sm" />
+
+                        {/* modal container */}
+                        <div className="relative w-full max-w-xl mx-auto">
+                            <div className={`relative overflow-hidden ${/* full-height on small screens, centered box on larger */ ''} h-full sm:h-auto`}></div>
+
+                            <div className="relative bg-white/75 backdrop-blur-md border border-white/20 shadow-lg w-full h-full sm:h-auto rounded-none sm:rounded-2xl p-6">
+                                {loading ? (
+                                    <div className="flex flex-col items-center gap-4 min-h-[240px] justify-center">
+                                        <IonSpinner name="crescent" />
+                                        <YummyText className="text-base text-[#64748B]">{statusMsg}</YummyText>
                                     </div>
                                 ) : (
-                                    <div className="w-20 h-20 rounded-full bg-[#FEF3F2] flex items-center justify-center">
-                                        <svg width="36" height="36" viewBox="0 0 24 24" fill="none">
-                                            <path d="M12 9v4" stroke="#DC2626" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" />
-                                            <circle cx="12" cy="12" r="9" stroke="#DC2626" strokeWidth="2.5" />
-                                        </svg>
+                                    <div className="max-w-full text-center">
+                                        <div className="flex items-center justify-center mb-4">
+                                            {success ? (
+                                                <div className="w-20 h-20 rounded-full bg-[#ECFDF5] flex items-center justify-center">
+                                                    <svg width="36" height="36" viewBox="0 0 24 24" fill="none">
+                                                        <path d="M20 6L9 17l-5-5" stroke="#059669" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" />
+                                                    </svg>
+                                                </div>
+                                            ) : (
+                                                <div className="w-20 h-20 rounded-full bg-[#FEF3F2] flex items-center justify-center">
+                                                    <svg width="36" height="36" viewBox="0 0 24 24" fill="none">
+                                                        <path d="M12 9v4" stroke="#DC2626" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" />
+                                                        <circle cx="12" cy="12" r="9" stroke="#DC2626" strokeWidth="2.5" />
+                                                    </svg>
+                                                </div>
+                                            )}
+                                        </div>
+
+                                        <YummyText className="text-xl font-semibold mb-2">{success ? 'Payment Confirmed' : 'Payment Status'}</YummyText>
+                                        <p className="text-sm text-[#64748B] mb-4">{statusMsg}</p>
+
+                                        <div className="flex flex-col sm:flex-row justify-center gap-3">
+                                            <button onClick={goToDeliveries} className="px-6 py-3 bg-[#00B75A] text-white rounded-xl">My Deliveries</button>
+                                            <button onClick={() => { if (!success) window.location.reload(); else history.push('/'); }} className="px-6 py-3 bg-white border border-gray-200 rounded-xl">{success ? 'Close' : 'Refresh'}</button>
+                                        </div>
                                     </div>
                                 )}
                             </div>
-                            <YummyText className="text-xl font-semibold mb-2">{success ? 'Payment Confirmed' : 'Payment Status'}</YummyText>
-                            <p className="text-sm text-[#64748B] mb-4">{statusMsg}</p>
-                            <div className="flex justify-center gap-3">
-                                <button onClick={goToDeliveries} className="px-6 py-3 bg-[#00B75A] text-white rounded-xl">My Deliveries</button>
-                            </div>
                         </div>
-                    )}
+                    </div>
                 </IonContent>
             </CustomerLayout>
         </IonPage>
