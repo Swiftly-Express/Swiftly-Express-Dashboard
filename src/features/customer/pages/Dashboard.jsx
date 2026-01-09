@@ -4,6 +4,7 @@ import { arrowForward } from 'ionicons/icons';
 import CustomerLayout from '../components/CustomerLayout';
 import { YummyText } from '../../../components/YummyText';
 import { getCustomerDeliveries } from '../../../utils/authApi';
+import { getJSONCookie } from '../../../utils/cookies';
 import BlockIcon from '../../../icons/Blockicon';
 import CheckIcon from '../../../icons/Checkicon';
 import ClockIcon from '../../../icons/Clockicon';
@@ -40,7 +41,7 @@ const DeliveryItem = ({ packageName, status, statusColor, statusBg, from, to, et
         <div className="text-sm font-medium text-[#0F172A]">{etaTime}</div>
       </div>
     </div>
-    
+
     <YummyText>
       <div className="text-medium font-[400] text-[#4A5565] mb-3 -mt-4 flex items-center gap-1">
         <span>{from}</span>
@@ -51,7 +52,7 @@ const DeliveryItem = ({ packageName, status, statusColor, statusBg, from, to, et
 
     {/* Progress Bar */}
     <div className="relative w-full h-2 bg-gray-200 rounded-full overflow-hidden">
-      <div 
+      <div
         className="absolute top-0 left-0 h-full bg-[#0F172A] rounded-full transition-all duration-300"
         style={{ width: `${progress}%` }}
       ></div>
@@ -63,55 +64,70 @@ const DeliveryItem = ({ packageName, status, statusColor, statusBg, from, to, et
 const getUserFirstName = () => {
   try {
     if (typeof window === 'undefined') return 'Customer';
-    
-    const userDataRaw = localStorage.getItem('user_data');
-    if (!userDataRaw) return 'Customer';
-    
-    const userData = JSON.parse(userDataRaw);
+
+    // Prefer cookie-based user_data (frontend stores profile in a cookie), fallback to localStorage
+    const cookieUser = getJSONCookie('user_data');
+    let userData = null;
+
+    if (cookieUser) {
+      userData = cookieUser;
+    } else {
+      const userDataRaw = localStorage.getItem('user_data');
+      if (userDataRaw) {
+        try {
+          userData = JSON.parse(userDataRaw);
+        } catch (e) {
+          console.warn('[Dashboard] Failed to parse localStorage user_data:', e);
+        }
+      }
+    }
+
+    if (!userData) return 'Customer';
+
     console.log('[Dashboard] User data:', userData);
-    
+
     // Try multiple possible field names and structures
-    const fullName = 
-      userData?.fullName || 
-      userData?.full_name || 
-      userData?.name || 
-      userData?.user?.fullName || 
-      userData?.user?.full_name || 
+    const fullName =
+      userData?.fullName ||
+      userData?.full_name ||
+      userData?.name ||
+      userData?.user?.fullName ||
+      userData?.user?.full_name ||
       userData?.user?.name ||
       userData?.data?.fullName ||
       userData?.data?.full_name ||
       userData?.data?.name;
-    
-    const firstName = 
-      userData?.firstName || 
-      userData?.first_name || 
-      userData?.user?.firstName || 
+
+    const firstName =
+      userData?.firstName ||
+      userData?.first_name ||
+      userData?.user?.firstName ||
       userData?.user?.first_name ||
       userData?.data?.firstName ||
       userData?.data?.first_name;
-    
+
     // If we have a first name field, use it
     if (firstName) {
       return firstName;
     }
-    
+
     // If we have a full name, extract the first name
     if (fullName) {
       const nameParts = fullName.trim().split(/\s+/);
       return nameParts[0];
     }
-    
+
     // Fallback to email username if available
-    const email = 
-      userData?.email || 
+    const email =
+      userData?.email ||
       userData?.user?.email ||
       userData?.data?.email;
-    
+
     if (email) {
       const emailUsername = email.split('@')[0];
       return emailUsername.charAt(0).toUpperCase() + emailUsername.slice(1);
     }
-    
+
     return 'Customer';
   } catch (error) {
     console.error('[Dashboard] Error extracting user name:', error);
@@ -135,7 +151,7 @@ const CustomerDashboard = () => {
     const name = getUserFirstName();
     setUserName(name);
     console.log('[Dashboard] Extracted user name:', name);
-    
+
     // Fetch real deliveries data
     fetchDashboardData();
   }, []);
@@ -146,17 +162,17 @@ const CustomerDashboard = () => {
       console.log('[Dashboard] Received refresh event');
       fetchDashboardData();
     };
-    
+
     const handleDeliveryCreated = (event) => {
       console.log('[Dashboard] Delivery created:', event.detail);
       fetchDashboardData();
     };
-    
+
     const handleDeliveryUpdated = (event) => {
       console.log('[Dashboard] Delivery updated:', event.detail);
       fetchDashboardData();
     };
-    
+
     const handleProfileUpdated = (event) => {
       console.log('[Dashboard] Profile updated:', event.detail);
       // Update user name immediately
@@ -183,10 +199,10 @@ const CustomerDashboard = () => {
     try {
       // Fetch all deliveries to calculate accurate stats (not just limit to 6)
       const response = await getCustomerDeliveries({ page: 1, limit: 50 });
-      
+
       // Handle different possible response structures (same as MyDeliveries)
       let deliveries = [];
-      
+
       if (Array.isArray(response)) {
         deliveries = response;
       } else if (response?.data) {
@@ -198,21 +214,21 @@ const CustomerDashboard = () => {
       } else if (response?.results) {
         deliveries = response.results;
       }
-      
+
       console.log('[Dashboard] Fetched deliveries:', deliveries);
-      
+
       // Get current time for 24-hour check
       const now = new Date();
       const twentyFourHoursAgo = new Date(now.getTime() - 24 * 60 * 60 * 1000);
-      
+
       // Calculate stats from all deliveries
       const activeDeliveries = deliveries.filter(d => {
         const status = d?.status?.toLowerCase() || 'pending';
         const isActive = status !== 'delivered' && status !== 'completed' && status !== 'cancelled';
-        
+
         // If it's active, include it
         if (isActive) return true;
-        
+
         // If it's completed, only include if completed within last 24 hours
         if (status === 'delivered' || status === 'completed') {
           const completedAt = d?.deliveredAt || d?.updatedAt || d?.completedAt;
@@ -221,32 +237,32 @@ const CustomerDashboard = () => {
             return completedDate > twentyFourHoursAgo;
           }
         }
-        
+
         return false;
       });
-      
+
       const inTransitDeliveries = deliveries.filter(d => {
         const status = d?.status?.toLowerCase() || '';
         return status === 'in-transit' || status === 'in_transit' || status === 'intransit';
       });
-      
+
       const completedDeliveries = deliveries.filter(d => {
         const status = d?.status?.toLowerCase() || '';
         return status === 'delivered' || status === 'completed';
       });
-      
+
       const total = response?.total || response?.meta?.total || deliveries.length;
-      
+
       setStats({
         active: activeDeliveries.length,
         inTransit: inTransitDeliveries.length,
         completed: completedDeliveries.length,
         successRate: total > 0 ? Math.round((completedDeliveries.length / total) * 100) : 0
       });
-      
+
       // Show only the 6 most recent for display
       const recentSix = activeDeliveries.slice(0, 6);
-      
+
       // Map backend data to UI format
       const mappedDeliveries = recentSix.map((d) => ({
         id: d.id || d._id || d.trackingId || 'N/A',
@@ -260,9 +276,9 @@ const CustomerDashboard = () => {
         etaTime: d.estimatedDelivery || 'TBD',
         progress: getProgress(d.status)
       }));
-      
+
       setRecentDeliveries(mappedDeliveries);
-      
+
     } catch (err) {
       console.error('[Dashboard] Failed to fetch deliveries:', err);
     } finally {
@@ -298,7 +314,7 @@ const CustomerDashboard = () => {
     return 10;
   };
 
-  
+
 
   return (
     <IonPage>
@@ -370,12 +386,12 @@ const CustomerDashboard = () => {
                 </YummyText>
               </div>
               <YummyText>
-              <button
-                onClick={() => window.location.href = '/customer/deliveries'}
-                className="px-4 py-2 whitespace-nowrap text-sm md:text-xs sm:text-sm lg:text-sm font-medium text-[#00B75A] hover:text-[#009647] transition-colors border border-[#00B75A] hover:border-[#009647] rounded-lg"
-              >
-                View All
-              </button>
+                <button
+                  onClick={() => window.location.href = '/customer/deliveries'}
+                  className="px-4 py-2 whitespace-nowrap text-sm md:text-xs sm:text-sm lg:text-sm font-medium text-[#00B75A] hover:text-[#009647] transition-colors border border-[#00B75A] hover:border-[#009647] rounded-lg"
+                >
+                  View All
+                </button>
               </YummyText>
             </div>
 
