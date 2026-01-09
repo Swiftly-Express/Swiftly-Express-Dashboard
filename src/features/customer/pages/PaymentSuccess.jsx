@@ -198,9 +198,8 @@ const PaymentSuccess = () => {
                                         <YummyText className="text-xl font-semibold mb-2">{success ? 'Payment Confirmed' : 'Payment Status'}
                                             <p className="text-sm text-[#64748B] mb-4">{statusMsg}</p>
 
-                                            <div className="flex flex-col sm:flex-row justify-center gap-3">
+                                            <div className="flex justify-center">
                                                 <button onClick={goToDeliveries} className="px-6 py-3 bg-[#00B75A] text-white rounded-full">My Deliveries</button>
-                                                <button onClick={() => { if (!success) window.location.reload(); else history.push('/'); }} className="px-6 py-3 bg-white border border-gray-200 rounded-full">{success ? 'Close' : 'Refresh'}</button>
                                             </div>
                                         </YummyText>
                                     </div>
