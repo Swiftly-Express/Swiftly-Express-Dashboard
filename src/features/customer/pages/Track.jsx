@@ -123,6 +123,16 @@ const Track = () => {
     }
   };
 
+  // Helper to read recipient fields from multiple possible shapes returned by API
+  const getRecipient = (data) => {
+    if (!data) return { name: null, phone: null, email: null };
+    const r = data.recipient || {};
+    const name = r.name || r.fullName || r.full_name || data.recipientName || data.recipient_name || data.recipientFullName || data.recipientFullname || null;
+    const phone = r.phone || r.phoneNumber || r.phone_number || data.recipientPhone || data.recipient_phone || data.recipientPhoneNumber || null;
+    const email = r.email || data.recipientEmail || data.recipient_email || null;
+    return { name, phone, email };
+  };
+
   // Derive status flags to control timeline rendering
   // Order: assigned → picked-up → in-transit → delivered
   const statusLower = deliveryData?.status?.toLowerCase() || '';
@@ -298,39 +308,38 @@ const Track = () => {
                       Recipient Information
                     </div>
                     <div className="space-y-3">
-                      <div className="flex justify-between items-center">
-                        <span className="text-sm text-[#64748B]">Name</span>
-                        <span className="text-sm font-medium text-[#0F172A]">
-                          {deliveryData.recipient?.name || 'N/A'}
-                        </span>
-                      </div>
+                      {(() => {
+                        const recip = getRecipient(deliveryData);
+                        return (
+                          <>
+                            <div className="flex justify-between items-center">
+                              <span className="text-sm text-[#64748B]">Name</span>
+                              <span className="text-sm font-medium text-[#0F172A]">{recip.name || deliveryData.recipient?.fullName || deliveryData.recipientName || 'N/A'}</span>
+                            </div>
 
-                      <div className="border-t border-gray-200 my-3"></div>
+                            <div className="border-t border-gray-200 my-3"></div>
 
-                      <div className="flex justify-between items-center">
-                        <span className="text-sm text-[#64748B]">Phone</span>
-                        <span className="text-sm font-medium text-[#0F172A]">
-                          {deliveryData.recipient?.phone || 'N/A'}
-                        </span>
-                      </div>
+                            <div className="flex justify-between items-center">
+                              <span className="text-sm text-[#64748B]">Phone</span>
+                              <span className="text-sm font-medium text-[#0F172A]">{recip.phone || deliveryData.recipientPhone || 'N/A'}</span>
+                            </div>
 
-                      <div className="border-t border-gray-200 my-3"></div>
+                            <div className="border-t border-gray-200 my-3"></div>
 
-                      <div className="flex justify-between items-center">
-                        <span className="text-sm text-[#64748B]">Email</span>
-                        <span className="text-sm font-medium text-[#0F172A]">
-                          {deliveryData.recipient?.email || 'N/A'}
-                        </span>
-                      </div>
+                            <div className="flex justify-between items-center">
+                              <span className="text-sm text-[#64748B]">Email</span>
+                              <span className="text-sm font-medium text-[#0F172A]">{recip.email || deliveryData.recipientEmail || 'N/A'}</span>
+                            </div>
 
-                      <div className="border-t border-gray-200 my-3"></div>
+                            <div className="border-t border-gray-200 my-3"></div>
 
-                      <div className="flex justify-between items-start">
-                        <span className="text-sm text-[#64748B]">Address</span>
-                        <span className="text-sm font-medium text-[#0F172A] text-right max-w-[60%]">
-                          {deliveryData.deliveryAddress?.street}, {deliveryData.deliveryAddress?.city}, {deliveryData.deliveryAddress?.state}
-                        </span>
-                      </div>
+                            <div className="flex justify-between items-start">
+                              <span className="text-sm text-[#64748B]">Address</span>
+                              <span className="text-sm font-medium text-[#0F172A] text-right max-w-[60%]">{deliveryData.deliveryAddress?.street || deliveryData.deliveryAddress?.line1 || ''}{(deliveryData.deliveryAddress?.street || deliveryData.deliveryAddress?.line1) ? ', ' : ''}{deliveryData.deliveryAddress?.city || deliveryData.deliveryAddress?.town || ''}{deliveryData.deliveryAddress?.state ? ', ' + deliveryData.deliveryAddress.state : ''}</span>
+                            </div>
+                          </>
+                        );
+                      })()}
                     </div>
                   </YummyText>
                 </div>
