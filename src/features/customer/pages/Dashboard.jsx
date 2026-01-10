@@ -28,22 +28,24 @@ const StatCard = ({ icon, iconBg, title, value, subtitle, subtitleColor }) => (
 );
 
 const DeliveryItem = ({ packageName, status, statusColor, statusBg, from, to, eta, etaTime, progress }) => (
+  <YummyText>
   <div className="mb-6 last:mb-0">
     <div className="flex items-start justify-between mb-2">
-      <div className="flex items-center gap-2">
-        <div className="text-base font-medium text-[#00B75A]">{packageName}</div>
+      <div className="flex items-center gap-2 mt-1.5">
+        <div className="text-medium font-medium text-[#00B75A]">{packageName}</div>
         <span className={`px-3 py-1 rounded-full text-xs font-medium ${statusBg} ${statusColor}`}>
           {status}
         </span>
       </div>
-      <div className="text-right">
+      <div className="text-right mt-2">
         <div className="text-xs text-[#64748B]">ETA</div>
         <div className="text-sm font-medium text-[#0F172A]">{etaTime}</div>
       </div>
     </div>
+  
 
     <YummyText>
-      <div className="text-medium font-[400] text-[#4A5565] mb-3 -mt-4 flex items-center gap-1">
+      <div className="text-medium font-[400] text-[#4A5565] mb-2 -mt-1 flex items-center gap-1">
         <span>{from}</span>
         <IonIcon icon={arrowForward} className="text-medium" />
         <span>{to}</span>
@@ -58,7 +60,9 @@ const DeliveryItem = ({ packageName, status, statusColor, statusBg, from, to, et
       ></div>
     </div>
   </div>
+  </YummyText>
 );
+
 
 // Helper function to extract user's first name from various possible data structures
 const getUserFirstName = () => {
@@ -378,11 +382,13 @@ const CustomerDashboard = () => {
           <div className="bg-white rounded-2xl p-6 md:p-6 sm:p-6 lg:p-6" style={sideBottomShadow}>
             <div className="mb-6 flex items-start justify-between">
               <div>
-                <YummyText className="text-lg md:text-xl sm:text-xl lg:text-xl font-semibold text-[#0F172A] mb-1">
-                  Recent Deliveries
+                <YummyText> 
+                <h2 className="text-lg md:text-xl sm:text-xl lg:text-xl font-semibold text-[#0F172A] mb-0">Recent Deliveries</h2>
                 </YummyText>
-                <YummyText className="text-sm md:text-xl sm:text-xl lg:text-xl font-[400] text-[#717182]">
-                  Track your latest shipments
+                <YummyText>
+                  <p className="text-sm md:text-lg sm:text-lg lg:text-lg font-[400] text-[#1E1E1E]">
+                    Track your latest shipments
+                  </p>
                 </YummyText>
               </div>
               <YummyText>
@@ -394,7 +400,8 @@ const CustomerDashboard = () => {
                 </button>
               </YummyText>
             </div>
-
+            
+            <YummyText>
             <div>
               {recentDeliveries.map((delivery, index) => (
                 <DeliveryItem
@@ -411,6 +418,7 @@ const CustomerDashboard = () => {
                 />
               ))}
             </div>
+            </YummyText>
           </div>
         </IonContent>
       </CustomerLayout>
