@@ -88,7 +88,8 @@ const PaymentCallback = () => {
                     console.log('[PaymentCallback] Closing popup after postMessage');
                     window.close();
                   } catch (err) {
-                    console.warn('[PaymentCallback] Could not close after postMessage:', err);
+                    -
+                      console.warn('[PaymentCallback] Could not close after postMessage:', err);
                   }
                 }, 300);
                 return;
