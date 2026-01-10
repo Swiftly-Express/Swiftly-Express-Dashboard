@@ -11,23 +11,24 @@ const sideBottomShadow = {
 const SupportCard = ({ icon, iconBg, title, subtitle, action, actionText }) => (
   <div className="bg-white rounded-2xl p-6 text-center" style={sideBottomShadow}>
     <YummyText>
-    <div className={`w-16 h-16 ${iconBg} rounded-full flex items-center justify-center mx-auto mb-4`}>
-      {icon}
-    </div>
-    <div className="text-base font-medium text-[#0F172A] mb-2">{title}</div>
-    <div className="text-sm text-[#64748B] mb-2">{subtitle}</div>
-    <button
-      onClick={action}
-      className="text-[#007BFF] font-medium text-sm hover:text-[#00B876] transition-colors"
-    >
-      {actionText}
-    </button>
+      <div className={`w-16 h-16 ${iconBg} rounded-full flex items-center justify-center mx-auto mb-4`}>
+        {icon}
+      </div>
+      <div className="text-base font-medium text-[#0F172A] mb-2">{title}</div>
+      <div className="text-sm text-[#64748B] mb-2">{subtitle}</div>
+      <button
+        onClick={action}
+        className="text-[#007BFF] font-medium text-sm hover:text-[#00B876] transition-colors"
+      >
+        {actionText}
+      </button>
     </YummyText>
   </div>
 );
 
 const Support = () => {
   const [openIndex, setOpenIndex] = useState(null);
+  const [chatClicked, setChatClicked] = useState(false);
   const [formData, setFormData] = useState({
     name: '',
     email: '',
@@ -85,16 +86,16 @@ const Support = () => {
   };
 
   const handlePhoneSupport = () => {
-    window.location.href = 'tel:+18005943589'; // +1 (800) SWIFTLY
+    window.location.href = 'tel:+2348089000013';
   };
 
   const handleEmailSupport = () => {
-    window.location.href = 'mailto:support@swiftlyexpress.com';
+    window.location.href = 'mailto:support@swiftlyxpress.com';
   };
 
   const handleLiveChat = () => {
-    // Implement live chat functionality
-    alert('Live chat will open here');
+    setChatClicked(true);
+    setTimeout(() => setChatClicked(false), 3000); // Reset after 3 seconds
   };
 
   return (
@@ -104,12 +105,12 @@ const Support = () => {
           {/* Header */}
           <div className="mb-8">
             <YummyText>
-            <div className="text-3xl font-medium text-[#0F172A] mb-2 text-center md:text-left">
-              Support Center
-            </div>
-            <div className="text-[#4A5565] text-[15px] font-[400] text-center md:text-left">
-              We're here to help you with any questions
-            </div>
+              <div className="text-3xl font-medium text-[#0F172A] mb-2 text-center md:text-left">
+                Support Center
+              </div>
+              <div className="text-[#4A5565] text-[15px] font-[400] text-center md:text-left">
+                We're here to help you with any questions
+              </div>
             </YummyText>
           </div>
 
@@ -123,7 +124,7 @@ const Support = () => {
               title="Phone Support"
               subtitle="Available 24/7"
               action={handlePhoneSupport}
-              actionText="+1 (800) SWIFTLY"
+              actionText="+234 08089000013"
             />
 
             <SupportCard
@@ -134,7 +135,7 @@ const Support = () => {
               title="Email Support"
               subtitle="Response within 2 hours"
               action={handleEmailSupport}
-              actionText="support@swiftlyexpress.com"
+              actionText="support@swiftlyxpress.com"
             />
 
             <SupportCard
@@ -145,7 +146,7 @@ const Support = () => {
               title="Live Chat"
               subtitle="Instant assistance"
               action={handleLiveChat}
-              actionText="Start Chat"
+              actionText={chatClicked ? "Coming Soon" : "Start Chat"}
             />
           </div>
 
@@ -153,82 +154,82 @@ const Support = () => {
           <div className="bg-white rounded-2xl p-6 mb-8 border border-gray-100" style={sideBottomShadow}>
             <div className="mb-6">
               <YummyText>
-              <div className="text-xl font-normal text-[#0F172A] mb-1">
-                Send us a Message
-              </div>
-              <div className="text-sm text-[#64748B]">
-                Fill out the form below and we'll get back to you soon
-              </div>
+                <div className="text-xl font-normal text-[#0F172A] mb-1">
+                  Send us a Message
+                </div>
+                <div className="text-sm text-[#64748B]">
+                  Fill out the form below and we'll get back to you soon
+                </div>
               </YummyText>
             </div>
 
             <form onSubmit={handleSubmit}>
               <YummyText>
-              <div className="space-y-6"> 
-                {/* Name & Email */}
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="space-y-6">
+                  {/* Name & Email */}
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                      <label className="block text-sm text-[#0F172A] mb-2">Name</label>
+                      <input
+                        type="text"
+                        name="name"
+                        value={formData.name}
+                        onChange={handleInputChange}
+                        placeholder="Your name"
+                        required
+                        className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl text-[#0F172A] placeholder:text-[#94A3B8] focus:outline-none focus:border-[#00D68F]"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-sm text-[#0F172A] mb-2">Email</label>
+                      <input
+                        type="email"
+                        name="email"
+                        value={formData.email}
+                        onChange={handleInputChange}
+                        placeholder="your@email.com"
+                        required
+                        className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl text-[#0F172A] placeholder:text-[#94A3B8] focus:outline-none focus:border-[#00D68F]"
+                      />
+                    </div>
+                  </div>
+
+                  {/* Subject */}
                   <div>
-                    <label className="block text-sm text-[#0F172A] mb-2">Name</label>
+                    <label className="block text-sm text-[#0F172A] mb-2">Subject</label>
                     <input
                       type="text"
-                      name="name"
-                      value={formData.name}
+                      name="subject"
+                      value={formData.subject}
                       onChange={handleInputChange}
-                      placeholder="Your name"
+                      placeholder="How can we help?"
                       required
                       className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl text-[#0F172A] placeholder:text-[#94A3B8] focus:outline-none focus:border-[#00D68F]"
                     />
                   </div>
+
+                  {/* Message */}
                   <div>
-                    <label className="block text-sm text-[#0F172A] mb-2">Email</label>
-                    <input
-                      type="email"
-                      name="email"
-                      value={formData.email}
+                    <label className="block text-sm text-[#0F172A] mb-2">Message</label>
+                    <textarea
+                      name="message"
+                      value={formData.message}
                       onChange={handleInputChange}
-                      placeholder="your@email.com"
+                      placeholder="Describe your issue or question in detail..."
                       required
-                      className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl text-[#0F172A] placeholder:text-[#94A3B8] focus:outline-none focus:border-[#00D68F]"
-                    />
+                      rows="6"
+                      className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl text-[#0F172A] placeholder:text-[#94A3B8] focus:outline-none focus:border-[#00D68F] resize-none"
+                    ></textarea>
                   </div>
-                </div>
 
-                {/* Subject */}
-                <div>
-                  <label className="block text-sm text-[#0F172A] mb-2">Subject</label>
-                  <input
-                    type="text"
-                    name="subject"
-                    value={formData.subject}
-                    onChange={handleInputChange}
-                    placeholder="How can we help?"
-                    required
-                    className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl text-[#0F172A] placeholder:text-[#94A3B8] focus:outline-none focus:border-[#00D68F]"
-                  />
+                  {/* Submit Button */}
+                  <button
+                    type="submit"
+                    className="bg-[#00B75A] hover:bg-[#00B876] text-white px-6 py-3 rounded-xl transition-colors font-[300]"
+                  >
+                    Send Message
+                  </button>
                 </div>
-
-                {/* Message */}
-                <div>
-                  <label className="block text-sm text-[#0F172A] mb-2">Message</label>
-                  <textarea
-                    name="message"
-                    value={formData.message}
-                    onChange={handleInputChange}
-                    placeholder="Describe your issue or question in detail..."
-                    required
-                    rows="6"
-                    className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl text-[#0F172A] placeholder:text-[#94A3B8] focus:outline-none focus:border-[#00D68F] resize-none"
-                  ></textarea>
-                </div>
-
-                {/* Submit Button */}
-                <button
-                  type="submit"
-                  className="bg-[#00B75A] hover:bg-[#00B876] text-white px-6 py-3 rounded-xl transition-colors font-[300]"
-                >
-                  Send Message
-                </button>
-              </div>
               </YummyText>
             </form>
           </div>
@@ -253,33 +254,32 @@ const Support = () => {
               </YummyText>
             </div>
 
-            
+
             <div className="space-y-3">
               {faqs.map((faq, index) => (
-                
+
                 <div
                   className="border border-gray-200 rounded-xl overflow-hidden"
                 >
                   <YummyText>
-                  <button
-                    onClick={() => setOpenIndex(openIndex === index ? null : index)}
-                    className="w-full flex justify-between items-center px-5 py-4 text-left hover:bg-gray-50 transition-colors"
-                  >
-                    <span className="text-base font-normal text-[#0F172A]">{faq.question}</span>
-                    <ChevronDown
-                      className={`w-5 h-5 text-[#64748B] transition-transform ${
-                        openIndex === index ? 'transform rotate-180' : ''
-                      }`}
-                    />
-                  </button>
+                    <button
+                      onClick={() => setOpenIndex(openIndex === index ? null : index)}
+                      className="w-full flex justify-between items-center px-5 py-4 text-left hover:bg-gray-50 transition-colors"
+                    >
+                      <span className="text-base font-normal text-[#0F172A]">{faq.question}</span>
+                      <ChevronDown
+                        className={`w-5 h-5 text-[#64748B] transition-transform ${openIndex === index ? 'transform rotate-180' : ''
+                          }`}
+                      />
+                    </button>
 
-                  {openIndex === index && (
-                    <div className="px-5 pb-4 pt-2">
-                      <p className="text-sm text-[#64748B] leading-relaxed">
-                        {faq.answer}
-                      </p>
-                    </div>
-                  )}
+                    {openIndex === index && (
+                      <div className="px-5 pb-4 pt-2">
+                        <p className="text-sm text-[#64748B] leading-relaxed">
+                          {faq.answer}
+                        </p>
+                      </div>
+                    )}
                   </YummyText>
                 </div>
               ))}
