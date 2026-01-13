@@ -135,7 +135,7 @@ const CustomerLogin = () => {
   };
 
   const handleForgotPassword = () => {
-    console.log('Navigate to forgot password');
+    router.push('/forgot-password');
   };
 
   const handleCreateAccount = () => {

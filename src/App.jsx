@@ -29,6 +29,7 @@ import RiderLogin from "./features/auth/pages/RiderLogin";
 import RiderSignUp from "./features/auth/pages/RiderSignUp";
 import VerifyEmail from "./features/auth/pages/VerifyEmail";
 import ForgotPassword from "./features/auth/pages/ForgotPassword";
+import ResetPassword from "./features/auth/pages/ResetPassword";
 import AdminLogin from "./features/auth/pages/AdminLogin";
 import AuthCallback from "./features/auth/pages/AuthCallback";
 import PaymentCallback from "./features/customer/pages/PaymentCallback";
@@ -139,7 +140,7 @@ const App = () => {
                   <MyDeliveries />
                 </CustomerRouteGuard>
               </Route>
-              
+
               {/* Payment Routes - Should be accessible without auth guard for callback */}
               <Route exact path="/customer/payment/callback">
                 <PaymentCallback />
@@ -147,7 +148,7 @@ const App = () => {
               <Route exact path="/customer/payment/success">
                 <PaymentSuccess />
               </Route>
-              
+
               <Route exact path="/customer/book">
                 <CustomerRouteGuard>
                   <Book />
@@ -242,6 +243,9 @@ const App = () => {
               </Route>
               <Route exact path="/forgot-password">
                 <ForgotPassword />
+              </Route>
+              <Route exact path="/reset-password">
+                <ResetPassword />
               </Route>
 
               <Route exact path="/">

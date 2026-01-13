@@ -78,7 +78,7 @@ const RiderSignIn = () => {
   };
 
   const handleForgotPassword = () => {
-    console.log('Navigate to forgot password');
+    history.push('/forgot-password');
   };
 
   const handleCreateAccount = () => {
