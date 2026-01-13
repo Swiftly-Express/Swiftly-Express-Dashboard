@@ -151,7 +151,7 @@ const ResetPassword = () => {
                                 </div>
 
                                 <div>
-                                    <label htmlFor="confirmPassword" className="block text-sm font-medium text-gray-700 mb-2">
+                                    <label htmlFor="confirmPassword" className="block text-sm font-medium text-gray-700 mb-4">
                                         Confirm New Password
                                     </label>
                                     <div className="relative">
@@ -193,7 +193,7 @@ const ResetPassword = () => {
                                 <button
                                     type="submit"
                                     disabled={loading || !token || !password || !confirmPassword}
-                                    className="w-full bg-[#00D68F] text-white py-3 rounded-xl font-medium hover:bg-[#00B876] transition-colors disabled:bg-gray-300 disabled:cursor-not-allowed"
+                                    className="w-full bg-[#00D68F] text-white py-3 mt-3 rounded-xl font-medium hover:bg-[#00B876] transition-colors disabled:bg-gray-300 disabled:cursor-not-allowed"
                                 >
                                     {loading ? 'Resetting Password...' : 'Reset Password'}
                                 </button>
