@@ -239,128 +239,117 @@ const GoogleMapsAutocomplete = ({
                 const { latitude, longitude } = position.coords;
 
                 try {
-                    if (!isLoaded) {
-                        throw new Error("Google Maps not loaded");
-                    }
+                    if (!isLoaded) throw new Error("Google Maps not loaded");
 
-                    // Use Google Maps Geocoding API for reverse geocoding
-                    const { Geocoder } = await window.google.maps.importLibrary("geocoding");
-
-                    const geocoder = new Geocoder();
+                    const geocoder = new window.google.maps.Geocoder();
 
                     const response = await geocoder.geocode({
                         location: { lat: latitude, lng: longitude },
                     });
 
-                    if (response.results && response.results.length > 0) {
-                        // Pick the most specific/relevant result: prefer street_address, premise, establishment
-                        const preferredTypes = ['street_address', 'premise', 'establishment', 'route', 'postal_town', 'locality'];
-                        let result = response.results.find(r => r.types && r.types.some(t => preferredTypes.includes(t)));
-                        if (!result) result = response.results[0];
-                        const components = result.address_components || [];
-
-                        const extract = (componentsList) => {
-                            const out = { streetNumber: '', route: '', premise: '', subpremise: '', name: '', city: '', state: '', postal_code: '', country: '' };
-                            componentsList.forEach(component => {
-                                const types = component.types || [];
-                                if (types.includes('street_number')) out.streetNumber = component.long_name;
-                                if (types.includes('route')) out.route = component.long_name;
-                                if (types.includes('premise')) out.premise = component.long_name;
-                                if (types.includes('subpremise')) out.subpremise = component.long_name;
-                                if (types.includes('establishment')) out.name = component.long_name;
-                                if (types.includes('locality') || types.includes('postal_town')) {
-                                    if (!out.city) out.city = component.long_name;
-                                }
-                                if (types.includes('administrative_area_level_1')) out.state = component.long_name;
-                                if (types.includes('postal_code')) out.postal_code = component.long_name;
-                                if (types.includes('country')) out.country = component.long_name;
-                            });
-                            return out;
-                        };
-
-                        const c = extract(components);
-
-                        let streetLine = '';
-                        if (c.premise) streetLine = c.premise;
-                        else if (c.name) streetLine = c.name;
-                        else if (c.streetNumber || c.route) streetLine = [c.streetNumber, c.route].filter(Boolean).join(' ');
-                        else if (c.route) streetLine = c.route;
-                        if (!streetLine) {
-                            streetLine = result.name || result.formatted_address || '';
-                        }
-
-                        if (!c.city) {
-                            const alt = components.find(comp => comp.types && (comp.types.includes('administrative_area_level_2') || comp.types.includes('neighborhood') || comp.types.includes('sublocality_level_1')));
-                            if (alt) c.city = alt.long_name;
-                        }
-
-                        const cleanAddress = [streetLine, c.city, c.state].filter(Boolean).join(', ') || result.formatted_address;
-
-                        const placeResult = {
-                            street: streetLine || result.formatted_address,
-                            city: c.city || '',
-                            state: c.state || '',
-                            zipCode: c.postal_code || '',
-                            country: c.country || '',
-                            coordinates: {
-                                lat: latitude,
-                                lng: longitude,
-                            },
-                            place_id: result.place_id,
-                        };
-
-                        onChange(cleanAddress);
-                        onPlaceSelect?.(placeResult);
-                    } else {
-                        throw new Error("No address found for current location");
+                    if (!response.results || response.results.length === 0) {
+                        throw new Error("No address found");
                     }
-                } catch (error) {
-                    console.error("Error getting address from coordinates:", error);
-                    // Fallback: Use coordinates as address
-                    const fallbackAddress = `${latitude.toFixed(6)}, ${longitude.toFixed(6)}`;
-                    const fallbackPlace = {
-                        formatted_address: fallbackAddress,
-                        geometry: {
-                            location: {
-                                lat: latitude,
-                                lng: longitude,
-                            },
-                        },
-                        place_id: `custom_${latitude}_${longitude}`,
+
+                    /**
+                     * ✅ FILTER RULES
+                     * - Exclude plus_code
+                     * - Prefer ROOFTOP + street_address
+                     */
+                    const validResult = response.results.find(r =>
+                        r.geometry?.location_type === "ROOFTOP" &&
+                        !r.plus_code &&
+                        r.types?.includes("street_address")
+                    ) ||
+                    response.results.find(r =>
+                        !r.plus_code &&
+                        (r.types?.includes("premise") ||
+                        r.types?.includes("route"))
+                    );
+
+                    if (!validResult) {
+                        throw new Error("Only plus-code or area-level address found");
+                    }
+
+                    const components = validResult.address_components || [];
+
+                    const extract = () => {
+                        const out = {
+                            streetNumber: "",
+                            route: "",
+                            city: "",
+                            state: "",
+                            postal_code: "",
+                            country: ""
+                        };
+
+                        components.forEach(c => {
+                            if (c.types.includes("street_number")) out.streetNumber = c.long_name;
+                            if (c.types.includes("route")) out.route = c.long_name;
+                            if (c.types.includes("locality")) out.city = c.long_name;
+                            if (c.types.includes("administrative_area_level_1")) out.state = c.long_name;
+                            if (c.types.includes("postal_code")) out.postal_code = c.long_name;
+                            if (c.types.includes("country")) out.country = c.long_name;
+                        });
+
+                        return out;
                     };
 
-                    onChange(fallbackAddress);
-                    onPlaceSelect?.(fallbackPlace);
+                    const c = extract();
+
+                    // 🚫 Prevent Plus Code leakage
+                    const street =
+                        [c.streetNumber, c.route].filter(Boolean).join(" ");
+
+                    if (!street || street.match(/[A-Z0-9]{4}\+[A-Z0-9]{3}/)) {
+                        throw new Error("Invalid street address");
+                    }
+
+                    const cleanAddress = [
+                        street,
+                        c.city,
+                        c.state,
+                        c.postal_code
+                    ].filter(Boolean).join(", ");
+
+                    const placeResult = {
+                        street,
+                        city: c.city,
+                        state: c.state,
+                        zipCode: c.postal_code,
+                        country: c.country,
+                        coordinates: {
+                            lat: latitude,
+                            lng: longitude,
+                        },
+                        place_id: validResult.place_id,
+                    };
+
+                    onChange(cleanAddress);
+                    onPlaceSelect?.(placeResult);
+
+                } catch (error) {
+                    console.error("Location error:", error);
+                    alert(
+                        "We couldn’t detect a precise street address. Please enter your address manually."
+                    );
                 } finally {
                     setIsLocationLoading(false);
                 }
             },
             (error) => {
-                console.error("Error getting location:", error);
-                let errorMessage = "Failed to get current location.";
-
-                switch (error.code) {
-                    case error.PERMISSION_DENIED:
-                        errorMessage = "Location access denied. Please enable location permissions.";
-                        break;
-                    case error.POSITION_UNAVAILABLE:
-                        errorMessage = "Location information is unavailable.";
-                        break;
-                    case error.TIMEOUT:
-                        errorMessage = "Location request timed out.";
-                        break;
-                }
-
-                alert(errorMessage);
+                console.error("Geolocation error:", error);
+                alert("Failed to get current location.");
                 setIsLocationLoading(false);
             },
             {
                 enableHighAccuracy: true,
                 timeout: 15000,
-                maximumAge: 0 // force fresh reading
+                maximumAge: 0,
             }
         );
     };
+
 
     return (
         <div className="relative w-full">
