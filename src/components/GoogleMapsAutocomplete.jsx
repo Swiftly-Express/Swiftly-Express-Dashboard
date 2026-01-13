@@ -244,11 +244,11 @@ const GoogleMapsAutocomplete = ({
                         !r.plus_code &&
                         r.types?.includes("street_address")
                     ) ||
-                    response.results.find(r =>
-                        !r.plus_code &&
-                        (r.types?.includes("premise") ||
-                        r.types?.includes("route"))
-                    );
+                        response.results.find(r =>
+                            !r.plus_code &&
+                            (r.types?.includes("premise") ||
+                                r.types?.includes("route"))
+                        );
 
                     if (!validResult) {
                         throw new Error("Only plus-code or area-level address found");
