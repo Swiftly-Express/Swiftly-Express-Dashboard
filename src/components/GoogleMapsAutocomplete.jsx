@@ -109,9 +109,13 @@ const GoogleMapsAutocomplete = ({
     const handleSelect = async (prediction) => {
         setIsOpen(false);
 
+        // ✅ ALWAYS use the original autocomplete suggestion text as the display value
+        // This preserves the full place name, building/estate name, and complete address
+        onChange(prediction.description);
+
         if (onPlaceSelect && isLoaded) {
             try {
-                // Use Geocoder to get detailed address components
+                // Use Geocoder to get coordinates and structured components (city, state, etc.)
                 const geocoder = new window.google.maps.Geocoder();
 
                 const response = await geocoder.geocode({
@@ -123,14 +127,9 @@ const GoogleMapsAutocomplete = ({
                     const components = result.address_components || [];
 
                     const extract = (componentsList) => {
-                        const out = { streetNumber: '', route: '', premise: '', subpremise: '', name: '', city: '', state: '', postal_code: '', country: '' };
+                        const out = { city: '', state: '', postal_code: '', country: '' };
                         componentsList.forEach(component => {
                             const types = component.types || [];
-                            if (types.includes('street_number')) out.streetNumber = component.long_name;
-                            if (types.includes('route')) out.route = component.long_name;
-                            if (types.includes('premise')) out.premise = component.long_name;
-                            if (types.includes('subpremise')) out.subpremise = component.long_name;
-                            if (types.includes('establishment')) out.name = component.long_name;
                             if (types.includes('locality') || types.includes('postal_town')) {
                                 if (!out.city) out.city = component.long_name;
                             }
@@ -143,30 +142,15 @@ const GoogleMapsAutocomplete = ({
 
                     const c = extract(components);
 
-                    // Build street: prefer premise/name, then street_number + route, then route
-                    let streetLine = '';
-                    if (c.premise) streetLine = c.premise;
-                    else if (c.name) streetLine = c.name;
-                    else if (c.streetNumber || c.route) streetLine = [c.streetNumber, c.route].filter(Boolean).join(' ');
-                    else if (c.route) streetLine = c.route;
-
-                    // Fallback to result.name or formatted_address if still empty
-                    if (!streetLine) {
-                        streetLine = result.name || result.formatted_address || '';
-                    }
-
                     // City fallback: try administrative_area_level_2 or neighborhood
                     if (!c.city) {
                         const alt = components.find(comp => comp.types && (comp.types.includes('administrative_area_level_2') || comp.types.includes('neighborhood') || comp.types.includes('sublocality_level_1')));
                         if (alt) c.city = alt.long_name;
                     }
 
-                    const cleanAddress = [streetLine, c.city, c.state].filter(Boolean).join(', ') || result.formatted_address;
-
-                    onChange(cleanAddress);
-
                     const placeResult = {
-                        street: streetLine || result.formatted_address,
+                        // ✅ Use the full autocomplete description as the street/address
+                        street: prediction.description,
                         city: c.city || '',
                         state: c.state || '',
                         zipCode: c.postal_code || '',
@@ -180,29 +164,28 @@ const GoogleMapsAutocomplete = ({
 
                     onPlaceSelect(placeResult);
                 } else {
-                    // Fallback to prediction
-                    onChange(prediction.description);
+                    // Fallback: minimal place data with description
+                    onPlaceSelect({
+                        street: prediction.description,
+                        city: '',
+                        state: '',
+                        zipCode: '',
+                        country: '',
+                        place_id: prediction.place_id,
+                    });
                 }
             } catch (error) {
                 console.error("Error fetching place details:", error);
-                // Fallback - use the prediction data
-                onChange(prediction.description);
-                if (prediction.lat && prediction.lng) {
-                    const place = {
-                        formatted_address: prediction.description,
-                        geometry: {
-                            location: {
-                                lat: prediction.lat,
-                                lng: prediction.lng,
-                            },
-                        },
-                        place_id: prediction.place_id,
-                    };
-                    onPlaceSelect(place);
-                }
+                // Fallback - provide minimal place data
+                onPlaceSelect({
+                    street: prediction.description,
+                    city: '',
+                    state: '',
+                    zipCode: '',
+                    country: '',
+                    place_id: prediction.place_id,
+                });
             }
-        } else {
-            onChange(prediction.description);
         }
     };
 

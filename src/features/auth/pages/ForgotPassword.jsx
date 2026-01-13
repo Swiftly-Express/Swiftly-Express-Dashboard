@@ -54,7 +54,7 @@ const ForgotPassword = () => {
                   if (role === 'customer' || role === 'rider') history.push(`/auth/${role}/login`);
                   else history.push(`/auth/${role}/login`);
                 }}
-                className="w-full bg-[#00D68F] text-white py-3 rounded-xl font-medium hover:bg-[#00B876] transition-colors"
+                className="w-full bg-[#00D68F] text-white py-3 rounded-full font-medium hover:bg-[#00B876] transition-colors"
               >
                 Back to Login
               </button>
