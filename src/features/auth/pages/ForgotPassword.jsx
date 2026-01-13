@@ -53,7 +53,7 @@ const ForgotPassword = () => {
                   const params = new URLSearchParams(location.search);
                   const role = params.get('role');
                   if (role === 'customer' || role === 'rider') history.push(`/auth/${role}/login`);
-                  else history.push('/auth/role-select');
+                  else history.push('/auth/login');
                 }}
                 className="w-full bg-[#00D68F] text-white py-3 rounded-xl font-medium hover:bg-[#00B876] transition-colors"
               >
