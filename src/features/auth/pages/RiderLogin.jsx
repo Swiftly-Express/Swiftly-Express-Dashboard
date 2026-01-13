@@ -78,7 +78,7 @@ const RiderSignIn = () => {
   };
 
   const handleForgotPassword = () => {
-    history.push('/forgot-password');
+    history.push('/forgot-password?role=rider');
   };
 
   const handleCreateAccount = () => {
