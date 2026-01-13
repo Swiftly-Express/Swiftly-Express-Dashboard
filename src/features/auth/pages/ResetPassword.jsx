@@ -3,6 +3,7 @@ import React, { useState, useEffect } from 'react';
 import { useHistory, useLocation } from 'react-router-dom';
 import { YummyText } from '../../../components/YummyText';
 import { resetPassword } from '../../../utils/authApi';
+import { getCookie } from '../../../utils/cookies';
 
 const ResetPassword = () => {
     const history = useHistory();
@@ -56,10 +57,24 @@ const ResetPassword = () => {
             // Redirect to role-specific login after 3 seconds (respect ?role=customer|rider)
             setTimeout(() => {
                 const params = new URLSearchParams(location.search);
-                const role = params.get('role');
+                let role = params.get('role');
+                // Fallback: try cookies or localStorage
+                if (!role) {
+                    role = getCookie('userRole') || getCookie('user_type');
+                    if (!role) {
+                        try {
+                            const stored = JSON.parse(localStorage.getItem('user_data') || '{}');
+                            role = stored?.role || role;
+                        } catch (e) {
+                            // ignore
+                        }
+                    }
+                }
+
+                const message = encodeURIComponent('Password reset successful. Please log in with your new password.');
                 const dest = (role === 'customer' || role === 'rider')
-                    ? `/auth/${role}/login?message=${encodeURIComponent('Password reset successful. Please log in with your new password.')}`
-                    : `/auth/login?message=${encodeURIComponent('Password reset successful. Please log in with your new password.')}`;
+                    ? `/auth/${role}/login?message=${message}`
+                    : `/auth/role-select?message=${message}`;
                 history.push(dest);
             }, 3000);
         } catch (err) {
@@ -203,9 +218,16 @@ const ResetPassword = () => {
                                         type="button"
                                         onClick={() => {
                                             const params = new URLSearchParams(location.search);
-                                            const role = params.get('role');
+                                            let role = params.get('role');
+                                            if (!role) role = getCookie('userRole') || getCookie('user_type');
+                                            if (!role) {
+                                                try {
+                                                    const stored = JSON.parse(localStorage.getItem('user_data') || '{}');
+                                                    role = stored?.role || role;
+                                                } catch (e) { }
+                                            }
                                             if (role === 'customer' || role === 'rider') history.push(`/auth/${role}/login`);
-                                            else history.push('/auth/login');
+                                            else history.push('/auth/role-select');
                                         }}
                                         className="text-[#00D68F] hover:text-[#00B876] font-medium text-sm"
                                     >
