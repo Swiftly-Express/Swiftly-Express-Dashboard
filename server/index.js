@@ -1,3 +1,10 @@
+// Load local environment variables if available (optional)
+try {
+  require('dotenv').config();
+} catch (e) {
+  // dotenv not installed in production - ignore
+}
+
 const express = require('express');
 const cors = require('cors');
 const bodyParser = require('body-parser');

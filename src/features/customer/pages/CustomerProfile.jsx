@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import { IonPage, IonContent, IonToast } from '@ionic/react';
+import { IonPage, IonContent, IonToast, IonIcon } from '@ionic/react';
+import { eyeOutline, eyeOffOutline } from 'ionicons/icons';
 import CustomerLayout from '../components/CustomerLayout';
 import { YummyText } from '../../../components/YummyText';
 import Loader from '../../../components/Loader';
@@ -44,6 +45,11 @@ const CustomerProfile = () => {
     pushNotifications: true,
     marketingEmails: false,
     newsletter: false
+  });
+  const [showPasswords, setShowPasswords] = useState({
+    currentPassword: false,
+    newPassword: false,
+    confirmPassword: false
   });
 
   // Fetch profile on component mount
@@ -433,8 +439,8 @@ const CustomerProfile = () => {
               <button
                 onClick={() => setActiveTab('personal')}
                 className={`px-6 md:px-12 py-2 rounded-full text-xs md:text-sm font-normal transition-colors whitespace-nowrap flex-shrink-0 md:flex-shrink ${activeTab === 'personal'
-                    ? 'text-[#0F172A] bg-white shadow-sm'
-                    : 'text-[#64748B]'
+                  ? 'text-[#0F172A] bg-white shadow-sm'
+                  : 'text-[#64748B]'
                   }`}
               >
                 Personal
@@ -442,8 +448,8 @@ const CustomerProfile = () => {
               <button
                 onClick={() => setActiveTab('security')}
                 className={`px-6 md:px-12 py-2 rounded-full text-xs md:text-sm font-normal transition-colors whitespace-nowrap flex-shrink-0 md:flex-shrink ${activeTab === 'security'
-                    ? 'text-[#0F172A] bg-white shadow-sm'
-                    : 'text-[#64748B]'
+                  ? 'text-[#0F172A] bg-white shadow-sm'
+                  : 'text-[#64748B]'
                   }`}
               >
                 Security
@@ -451,8 +457,8 @@ const CustomerProfile = () => {
               <button
                 onClick={() => setActiveTab('notifications')}
                 className={`px-8 md:px-12 py-2 rounded-full text-xs md:text-sm font-normal transition-colors whitespace-nowrap flex-shrink-0 md:flex-shrink ${activeTab === 'notifications'
-                    ? 'text-[#0F172A] bg-white shadow-sm'
-                    : 'text-[#64748B]'
+                  ? 'text-[#0F172A] bg-white shadow-sm'
+                  : 'text-[#64748B]'
                   }`}
               >
                 Notifications
@@ -670,40 +676,70 @@ const CustomerProfile = () => {
                         <label className="block text-sm font-medium text-[#0F172A] mb-2">
                           Current Password
                         </label>
-                        <input
-                          type="password"
-                          name="currentPassword"
-                          value={passwordData.currentPassword}
-                          onChange={handlePasswordChange}
-                          className="w-full px-4 py-3 rounded-xl bg-[#F8F9FA] text-[#0F172A] focus:outline-none focus:ring-2 focus:ring-[#00D68F] border-none"
-                          required
-                        />
+                        <div className="relative">
+                          <input
+                            type={showPasswords.currentPassword ? 'text' : 'password'}
+                            name="currentPassword"
+                            value={passwordData.currentPassword}
+                            onChange={handlePasswordChange}
+                            className="w-full px-4 py-3 rounded-xl bg-[#F8F9FA] text-[#0F172A] focus:outline-none focus:ring-2 focus:ring-[#00D68F] border-none"
+                            required
+                          />
+                          <button
+                            type="button"
+                            onClick={() => setShowPasswords(prev => ({ ...prev, currentPassword: !prev.currentPassword }))}
+                            className="absolute right-3 top-3 text-gray-500"
+                            aria-label={showPasswords.currentPassword ? 'Hide password' : 'Show password'}
+                          >
+                            <IonIcon icon={showPasswords.currentPassword ? eyeOffOutline : eyeOutline} className="w-5 h-5 text-[#1E1E1E]" />
+                          </button>
+                        </div>
                       </div>
                       <div>
                         <label className="block text-sm font-medium text-[#0F172A] mb-2">
                           New Password
                         </label>
-                        <input
-                          type="password"
-                          name="newPassword"
-                          value={passwordData.newPassword}
-                          onChange={handlePasswordChange}
-                          className="w-full px-4 py-3 rounded-xl bg-[#F8F9FA] text-[#0F172A] focus:outline-none focus:ring-2 focus:ring-[#00D68F] border-none"
-                          required
-                        />
+                        <div className="relative">
+                          <input
+                            type={showPasswords.newPassword ? 'text' : 'password'}
+                            name="newPassword"
+                            value={passwordData.newPassword}
+                            onChange={handlePasswordChange}
+                            className="w-full px-4 py-3 rounded-xl bg-[#F8F9FA] text-[#0F172A] focus:outline-none focus:ring-2 focus:ring-[#00D68F] border-none"
+                            required
+                          />
+                          <button
+                            type="button"
+                            onClick={() => setShowPasswords(prev => ({ ...prev, newPassword: !prev.newPassword }))}
+                            className="absolute right-3 top-3 text-gray-500"
+                            aria-label={showPasswords.newPassword ? 'Hide password' : 'Show password'}
+                          >
+                            <IonIcon icon={showPasswords.newPassword ? eyeOffOutline : eyeOutline} className="w-5 h-5 text-[#1E1E1E]" />
+                          </button>
+                        </div>
                       </div>
                       <div>
                         <label className="block text-sm font-medium text-[#0F172A] mb-2">
                           Confirm New Password
                         </label>
-                        <input
-                          type="password"
-                          name="confirmPassword"
-                          value={passwordData.confirmPassword}
-                          onChange={handlePasswordChange}
-                          className="w-full px-4 py-3 rounded-xl bg-[#F8F9FA] text-[#0F172A] focus:outline-none focus:ring-2 focus:ring-[#00D68F] border-none"
-                          required
-                        />
+                        <div className="relative">
+                          <input
+                            type={showPasswords.confirmPassword ? 'text' : 'password'}
+                            name="confirmPassword"
+                            value={passwordData.confirmPassword}
+                            onChange={handlePasswordChange}
+                            className="w-full px-4 py-3 rounded-xl bg-[#F8F9FA] text-[#0F172A] focus:outline-none focus:ring-2 focus:ring-[#00D68F] border-none"
+                            required
+                          />
+                          <button
+                            type="button"
+                            onClick={() => setShowPasswords(prev => ({ ...prev, confirmPassword: !prev.confirmPassword }))}
+                            className="absolute right-3 top-3 text-gray-500"
+                            aria-label={showPasswords.confirmPassword ? 'Hide password' : 'Show password'}
+                          >
+                            <IonIcon icon={showPasswords.confirmPassword ? eyeOffOutline : eyeOutline} className="w-5 h-5 text-[#1E1E1E]" />
+                          </button>
+                        </div>
                       </div>
                     </div>
 

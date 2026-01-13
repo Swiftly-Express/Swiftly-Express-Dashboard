@@ -3,6 +3,7 @@ import React, { useState } from 'react';
 import { useHistory, useLocation } from 'react-router-dom';
 import { YummyText } from '../../../components/YummyText';
 import { forgotPassword } from '../../../utils/authApi';
+import Checkicon from '../../../icons/Checkicon';
 
 const ForgotPassword = () => {
   const history = useHistory();
@@ -35,17 +36,15 @@ const ForgotPassword = () => {
           <div className="min-h-screen flex items-center justify-center bg-gray-50 px-4">
             <div className="max-w-md w-full bg-white rounded-2xl shadow-lg p-8 text-center">
               <div className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-4">
-                <svg className="w-8 h-8 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-                </svg>
+                <Checkicon width={32} height={32} stroke="#00D68F" />
               </div>
               <YummyText>
                 <h2 className="text-2xl font-semibold text-gray-900 mb-2">Check Your Email</h2>
-                <p className="text-gray-600 mb-6">
-                  We've sent a password reset link to <strong>{email}</strong>. Please check your inbox and follow the instructions.
+                <p className="text-gray-600 text-medium mb-6">
+                  We've sent a password reset link to <strong className="text-[#00D68F]">{email}</strong>. <br /> Please check your inbox and follow the instructions.
                 </p>
-                <p className="text-sm text-gray-500 mb-6">
-                  Didn't receive the email? Check your spam folder or try again in a few minutes.
+                <p className="text-xs text-gray-500 mb-6">
+                  Didn't receive the email? <br /> Check your spam folder or try again in a few minutes.
                 </p>
               </YummyText>
               <button
@@ -70,12 +69,12 @@ const ForgotPassword = () => {
     <IonPage>
       <IonContent className="ion-padding">
         <div className="min-h-screen flex items-center justify-center bg-gray-50 px-4">
-          <div className="max-w-md w-full bg-white rounded-2xl shadow-lg p-8">
+          <div className="max-w-md w-full bg-white rounded-3xl shadow-lg p-8">
             <YummyText>
               <div className="text-center mb-8">
-                <h1 className="text-3xl font-semibold text-gray-900 mb-2">Forgot Password?</h1>
-                <p className="text-gray-600">
-                  Enter your email address and we'll send you a link to reset your password.
+                <h1 className="text-2xl font-medium text-gray-900 mb-2">Forgot Password?</h1>
+                <p className="text-gray-600 text-sm">
+                  Enter your email address and we'll send <br /> you a link to reset your password.
                 </p>
               </div>
             </YummyText>
@@ -93,12 +92,12 @@ const ForgotPassword = () => {
                     onChange={(e) => setEmail(e.target.value)}
                     placeholder="your@email.com"
                     required
-                    className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#00D68F] focus:border-transparent"
+                    className="w-full px-4 py-3 border border-gray-300 rounded-full focus:outline-none focus:ring-2 focus:ring-[#00D68F] focus:border-transparent"
                   />
                 </div>
 
                 {error && (
-                  <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-xl text-sm">
+                  <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-full text-sm">
                     {error}
                   </div>
                 )}
@@ -106,7 +105,7 @@ const ForgotPassword = () => {
                 <button
                   type="submit"
                   disabled={loading || !email}
-                  className="w-full bg-[#00D68F] text-white py-3 rounded-xl font-medium hover:bg-[#00B876] transition-colors disabled:bg-gray-300 disabled:cursor-not-allowed"
+                  className="w-full bg-[#00D68F] text-white py-3 mt-4 rounded-full font-medium hover:bg-[#00B876] transition-colors disabled:bg-gray-300 disabled:cursor-not-allowed"
                 >
                   {loading ? 'Sending...' : 'Send Reset Link'}
                 </button>
@@ -120,9 +119,9 @@ const ForgotPassword = () => {
                       if (role === 'customer' || role === 'rider') history.push(`/auth/${role}/login`);
                       else history.push('/auth/login');
                     }}
-                    className="text-[#00D68F] hover:text-[#00B876] font-medium text-sm"
+                    className="text-[#00D68F] hover:text-[#00B876] mt-4 font-medium text-sm"
                   >
-                    ← Back to Login
+                    Back to Login
                   </button>
                 </div>
               </YummyText>
