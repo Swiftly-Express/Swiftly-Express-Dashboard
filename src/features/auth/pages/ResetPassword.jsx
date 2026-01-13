@@ -53,9 +53,14 @@ const ResetPassword = () => {
         try {
             await resetPassword({ token, password, confirmPassword });
             setSuccess(true);
-            // Redirect to login after 3 seconds
+            // Redirect to role-specific login after 3 seconds (respect ?role=customer|rider)
             setTimeout(() => {
-                history.push('/auth/login?message=Password reset successful. Please log in with your new password.');
+                const params = new URLSearchParams(location.search);
+                const role = params.get('role');
+                const dest = (role === 'customer' || role === 'rider')
+                    ? `/auth/${role}/login?message=${encodeURIComponent('Password reset successful. Please log in with your new password.')}`
+                    : `/auth/login?message=${encodeURIComponent('Password reset successful. Please log in with your new password.')}`;
+                history.push(dest);
             }, 3000);
         } catch (err) {
             console.error('Reset password error:', err);
@@ -196,7 +201,12 @@ const ResetPassword = () => {
                                 <div className="text-center">
                                     <button
                                         type="button"
-                                        onClick={() => history.push('/auth/login')}
+                                        onClick={() => {
+                                            const params = new URLSearchParams(location.search);
+                                            const role = params.get('role');
+                                            if (role === 'customer' || role === 'rider') history.push(`/auth/${role}/login`);
+                                            else history.push('/auth/login');
+                                        }}
                                         className="text-[#00D68F] hover:text-[#00B876] font-medium text-sm"
                                     >
                                         ← Back to Login
