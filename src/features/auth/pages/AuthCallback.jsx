@@ -27,13 +27,7 @@ const AuthCallback = () => {
     };
 
     useEffect(() => {
-        console.log('🚀🚀🚀 AUTH CALLBACK COMPONENT MOUNTED 🚀🚀🚀');
-        console.log('🚀 CODE VERSION: 3.0 - WITH JWT DECODER');
-
         const processAuth = async () => {
-            console.log('[AuthCallback] URL:', window.location.href);
-            console.log('[AuthCallback] Query string:', location.search);
-
             // Parse query params manually (react-router v5)
             const params = new URLSearchParams(location.search);
             const token = params.get('token') || params.get('accessToken');
@@ -52,7 +46,6 @@ const AuthCallback = () => {
             });
 
             if (error) {
-                console.error('[AuthCallback] Error in callback:', error, message);
                 setStatus('Authentication failed: ' + (message || error));
                 setTimeout(() => {
                     history.push('/auth/role-select?error=' + encodeURIComponent(message || error));
