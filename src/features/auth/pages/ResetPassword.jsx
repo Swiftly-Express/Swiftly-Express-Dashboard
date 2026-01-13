@@ -51,7 +51,7 @@ const ResetPassword = () => {
         setLoading(true);
 
         try {
-            await resetPassword({ token, newPassword: password });
+            await resetPassword({ token, password, confirmPassword });
             setSuccess(true);
             // Redirect to login after 3 seconds
             setTimeout(() => {
@@ -59,7 +59,9 @@ const ResetPassword = () => {
             }, 3000);
         } catch (err) {
             console.error('Reset password error:', err);
-            setError(err?.message || 'Failed to reset password. The link may have expired.');
+            // Prefer server-provided validation messages when available
+            const serverMsg = err?.data?.message || err?.message || (err?.data && JSON.stringify(err.data)) || 'Failed to reset password. The link may have expired.';
+            setError(serverMsg);
         } finally {
             setLoading(false);
         }
