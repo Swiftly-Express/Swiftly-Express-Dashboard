@@ -155,7 +155,7 @@ const PaymentSuccess = () => {
 
     const goToDeliveries = () => {
         // Add bypassAuth flag so users coming from payment flow can view deliveries
-        history.push('/customer/deliveries?bypassAuth=1');
+        history.push('/customer/deliveries');
     };
 
     return (
