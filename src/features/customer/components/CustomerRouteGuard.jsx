@@ -1,8 +1,13 @@
 import React from 'react';
-import { Redirect } from 'react-router-dom';
+import { Redirect, useLocation } from 'react-router-dom';
 import { getCookie, getJSONCookie } from '../../../utils/cookies';
 
 const CustomerRouteGuard = ({ children }) => {
+    const location = useLocation();
+    const params = new URLSearchParams(location.search);
+    // If bypassAuth=1 is present (e.g. coming from payment success), allow through
+    if (params.get('bypassAuth') === '1') return <>{children}</>;
+
     const authToken = getCookie('auth_token');
     const userData = getJSONCookie('user_data');
 

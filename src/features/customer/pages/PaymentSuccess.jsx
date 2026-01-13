@@ -2,7 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { IonPage, IonContent, IonSpinner } from '@ionic/react';
 import { useLocation, useHistory } from 'react-router-dom';
 import axios from 'axios';
-import { getCookie, deleteCookie, getJSONCookie } from '../../../utils/cookies';
+import { getCookie, deleteCookie } from '../../../utils/cookies';
 import { getPaymentStatus } from '../../../utils/authApi';
 import CustomerLayout from '../components/CustomerLayout';
 import { YummyText } from '../../../components/YummyText';
@@ -154,23 +154,8 @@ const PaymentSuccess = () => {
     }, [location.search]);
 
     const goToDeliveries = () => {
-        const authToken = getCookie('auth_token') || getCookie('customer_token') || getCookie('rider_token') || getCookie('admin_token');
-        const userData = getJSONCookie('user_data');
-
-        // If authenticated as customer, go straight to deliveries
-        if (authToken && userData?.role === 'customer') {
-            history.push('/customer/deliveries');
-            return;
-        }
-
-        // If we have user data but not a customer, send to role select
-        if (userData && userData.role && userData.role !== 'customer') {
-            history.push('/auth/role-select');
-            return;
-        }
-
-        // Otherwise, direct to customer login and include a redirect back to deliveries
-        history.push('/auth/customer/login?redirect=/customer/deliveries');
+        // Add bypassAuth flag so users coming from payment flow can view deliveries
+        history.push('/customer/deliveries?bypassAuth=1');
     };
 
     return (
