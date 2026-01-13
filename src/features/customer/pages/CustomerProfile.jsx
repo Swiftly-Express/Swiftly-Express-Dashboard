@@ -7,8 +7,10 @@ import Loader from '../../../components/Loader';
 import {
   getCustomerProfile,
   updateCustomerProfile,
-  uploadProfileImage
+  uploadProfileImage,
+  changePassword
 } from '../../../utils/authApi';
+import { useHistory } from 'react-router-dom';
 
 const sideBottomShadow = {
   boxShadow: '2px 4px 4px rgba(0,0,0,0.06), -2px 4px 4px rgba(0,0,0,0.06), 0 4px 8px rgba(0,0,0,0.08)'
@@ -51,6 +53,7 @@ const CustomerProfile = () => {
     newPassword: false,
     confirmPassword: false
   });
+  const history = useHistory();
 
   // Fetch profile on component mount
   useEffect(() => {
@@ -358,9 +361,10 @@ const CustomerProfile = () => {
     try {
       console.log('[Profile] Updating password...');
 
-      const response = await updateCustomerProfile({
-        currentPassword: passwordData.currentPassword,
-        newPassword: passwordData.newPassword
+      // Use dedicated change-password endpoint. Backend expects `password` and `confirmPassword`.
+      const response = await changePassword({
+        password: passwordData.newPassword,
+        confirmPassword: passwordData.confirmPassword
       });
 
       console.log('[Profile] Password update response:', response);
@@ -743,13 +747,23 @@ const CustomerProfile = () => {
                       </div>
                     </div>
 
-                    <button
-                      type="submit"
-                      disabled={loading}
-                      className={`mt-6 px-6 py-2.5 bg-[#00B75A] ${loading ? 'opacity-50 cursor-not-allowed' : 'hover:bg-[#00B876]'} text-white rounded-xl transition-colors font-normal`}
-                    >
-                      {loading ? 'Updating...' : 'Update Password'}
-                    </button>
+                    <div className="flex items-center gap-3 mt-6">
+                      <button
+                        type="submit"
+                        disabled={loading}
+                        className={`px-4 py-2.5 bg-[#00B75A] ${loading ? 'opacity-50 cursor-not-allowed' : 'hover:bg-[#00B876]'} text-white rounded-full transition-colors font-normal`}
+                      >
+                        {loading ? 'Updating...' : 'Update Password'}
+                      </button>
+
+                      <button
+                        type="button"
+                        onClick={() => history.push('/forgot-password?role=customer')}
+                        className="px-4 py-2.5 bg-white border border-gray-200 text-[#0F172A] rounded-full transition-colors hover:bg-gray-50"
+                      >
+                        Forgot Password
+                      </button>
+                    </div>
                   </YummyText>
                 </form>
               </div>

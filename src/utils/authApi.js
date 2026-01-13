@@ -686,6 +686,11 @@ export async function resetPassword(payload) {
   return apiClient.post('/api/auth/reset-password', payload);
 }
 
+export async function changePassword(payload) {
+  // Server-side endpoint to change password for authenticated users
+  return apiClient.post('/api/auth/change-password', payload);
+}
+
 export function isAuthenticated(role = null) {
   if (typeof window === 'undefined') return false;
 
@@ -748,6 +753,7 @@ export default {
   refreshToken,
   forgotPassword,
   resetPassword,
+  changePassword,
   getCurrentUser,
   logout,
   createDelivery,
