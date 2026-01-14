@@ -9,6 +9,7 @@ import BanIcon from '../../../icons/Banicon';
 import { copyOutline } from 'ionicons/icons';
 import { useDelivery } from '../../../contexts/DeliveryContext';
 import { getRiderDeliveries, updateDeliveryStatus, uploadDeliveryProof } from '../../../utils/authApi';
+import socketService from '../../../services/socket.service';
 import './ActiveDeliveries.css';
 
 // Shadow only on left, right and bottom
@@ -17,7 +18,8 @@ const sideBottomShadow = {
 };
 
 
-const ActiveDeliveries = () => {
+const ActiveDeliveries = () =>
+{
   const { activeDeliveries, updateDeliveryStatus: contextUpdateStatus } = useDelivery();
   const [deliveries, setDeliveries] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -27,37 +29,90 @@ const ActiveDeliveries = () => {
   const [isMobile, setIsMobile] = useState(false);
 
   // Fetch rider's active deliveries on mount
-  useEffect(() => {
+  useEffect(() =>
+  {
     fetchActiveDeliveries();
 
     // Listen for delivery acceptance events
-    const handleDeliveryAccepted = () => {
+    const handleDeliveryAccepted = () =>
+    {
       fetchActiveDeliveries();
     };
 
     // Listen for delivery status updates
-    const handleDeliveryStatusChanged = () => {
+    const handleDeliveryStatusChanged = () =>
+    {
       fetchActiveDeliveries();
     };
 
     window.addEventListener('delivery:accepted', handleDeliveryAccepted);
     window.addEventListener('delivery:statusChanged', handleDeliveryStatusChanged);
 
-    return () => {
+    return () =>
+    {
       window.removeEventListener('delivery:accepted', handleDeliveryAccepted);
       window.removeEventListener('delivery:statusChanged', handleDeliveryStatusChanged);
     };
   }, []);
 
+  // Live Location Tracking
+  useEffect(() =>
+  {
+    // Only track if there are deliveries 'in-transit'
+    const inTransitDeliveries = deliveries.filter(d =>
+      (d.status?.toLowerCase() === 'in-transit' || d.status?.toLowerCase() === 'in transit')
+    );
+
+    let watchId;
+
+    if (inTransitDeliveries.length > 0) {
+      console.log('[ActiveDeliveries] 🟢 Starting live tracking for', inTransitDeliveries.length, 'deliveries');
+
+      socketService.connect();
+
+      if (navigator.geolocation) {
+        watchId = navigator.geolocation.watchPosition(
+          (position) =>
+          {
+            const { latitude, longitude } = position.coords;
+            const location = { lat: latitude, lng: longitude };
+
+            inTransitDeliveries.forEach(delivery =>
+            {
+              const deliveryId = delivery._id || delivery.id;
+              socketService.emit('driver:location:update', {
+                deliveryId,
+                location
+              });
+            });
+          },
+          (error) => console.error('[ActiveDeliveries] Location tracking error:', error),
+          {
+            enableHighAccuracy: true,
+            maximumAge: 10000,
+            timeout: 5000
+          }
+        );
+      }
+    }
+
+    return () =>
+    {
+      if (watchId) navigator.geolocation.clearWatch(watchId);
+    };
+  }, [deliveries]);
+
   // detect mobile view (small screens) to render mobile-optimized layout
-  useEffect(() => {
+  useEffect(() =>
+  {
     const check = () => setIsMobile(window.innerWidth <= 768);
     check();
     window.addEventListener('resize', check);
     return () => window.removeEventListener('resize', check);
   }, []);
 
-  const fetchActiveDeliveries = async () => {
+  const fetchActiveDeliveries = async () =>
+  {
     setLoading(true);
     try {
       const response = await getRiderDeliveries(1, 10);
@@ -77,7 +132,8 @@ const ActiveDeliveries = () => {
     }
   };
 
-  const handleStatusUpdate = async (deliveryId, newStatus) => {
+  const handleStatusUpdate = async (deliveryId, newStatus) =>
+  {
     setUpdatingStatus(deliveryId);
     try {
       // Backend requires: status and currentLocation (lat/lng)
@@ -88,7 +144,8 @@ const ActiveDeliveries = () => {
       // Get rider's current location (REQUIRED by backend)
       if (navigator.geolocation) {
         try {
-          const position = await new Promise((resolve, reject) => {
+          const position = await new Promise((resolve, reject) =>
+          {
             navigator.geolocation.getCurrentPosition(resolve, reject, { timeout: 5000 });
           });
           statusUpdate.currentLocation = {
@@ -156,7 +213,8 @@ const ActiveDeliveries = () => {
     }
   };
 
-  const handleActionClick = (delivery) => {
+  const handleActionClick = (delivery) =>
+  {
     const status = (delivery.status || '').toLowerCase();
     let newStatus = 'in-transit';
 
@@ -174,7 +232,8 @@ const ActiveDeliveries = () => {
     handleStatusUpdate(delivery._id || delivery.id, newStatus);
   };
 
-  const handleProofUpload = async (deliveryId, file) => {
+  const handleProofUpload = async (deliveryId, file) =>
+  {
     try {
       const formData = new FormData();
       formData.append('proof', file);
@@ -220,9 +279,11 @@ const ActiveDeliveries = () => {
                 </div>
               </div>
             ) : deliveries.length > 0 ? (
-              deliveries.map((delivery) => {
+              deliveries.map((delivery) =>
+              {
                 // Map status to color
-                const getStatusColor = (status) => {
+                const getStatusColor = (status) =>
+                {
                   const statusLower = status?.toLowerCase() || '';
                   if (statusLower.includes('picked') || statusLower.includes('transit')) return 'bg-blue-100 text-blue-600';
                   if (statusLower.includes('delivered') || statusLower.includes('completed')) return 'bg-green-100 text-green-600';
@@ -232,7 +293,8 @@ const ActiveDeliveries = () => {
                 };
 
                 // Format status text
-                const formatStatus = (status) => {
+                const formatStatus = (status) =>
+                {
                   if (!status) return 'Unknown';
                   return status.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
                 };
@@ -248,7 +310,8 @@ const ActiveDeliveries = () => {
                   (delivery.lastKnownLocation && [delivery.lastKnownLocation.lng, delivery.lastKnownLocation.lat]) || null;
 
                 // Get action button text based on status
-                const getActionButtonText = (status) => {
+                const getActionButtonText = (status) =>
+                {
                   const statusLower = status?.toLowerCase() || '';
                   if (statusLower.includes('assigned') || statusLower.includes('pending')) return 'Start Pickup';
                   if (statusLower.includes('route') && statusLower.includes('pickup')) return 'Arrived at Pickup';
@@ -263,7 +326,8 @@ const ActiveDeliveries = () => {
                 const pickupPhone = delivery.pickup?.phone || delivery.senderPhone || delivery.sender?.phone || delivery.pickupPhone || delivery.senderPhoneNumber || null;
                 const deliveryPhone = delivery.dropoff?.phone || delivery.recipientPhone || delivery.receiver?.phone || delivery.deliveryPhone || delivery.recipientPhoneNumber || null;
 
-                const formatAddr = (addr) => {
+                const formatAddr = (addr) =>
+                {
                   if (!addr) return 'Address not available';
                   if (typeof addr === 'string') return addr;
                   // addr is likely an object with street, city, state, zipCode
@@ -378,7 +442,8 @@ const DeliveryCard = ({
               {isMobile ? packageId.substring(0, 12) + '...' : packageId}
             </div>
             <button
-              onClick={() => {
+              onClick={() =>
+              {
                 try {
                   navigator.clipboard.writeText(packageId);
                   alert('Package ID copied to clipboard');
@@ -446,7 +511,8 @@ const DeliveryCard = ({
             </div>
             <div className="flex gap-2">
               <button
-                onClick={() => {
+                onClick={() =>
+                {
                   if (!pickupPhone) { alert('Phone number not available'); return; }
                   try {
                     window.location.href = `tel:${pickupPhone}`;
@@ -461,7 +527,8 @@ const DeliveryCard = ({
                 Call
               </button>
               <button
-                onClick={() => {
+                onClick={() =>
+                {
                   if (packageId) {
                     window.location.href = `/rider/track/${packageId}`;
                   } else if (pickupCoords && deliveryCoords) {
@@ -499,7 +566,8 @@ const DeliveryCard = ({
             </div>
             <div className="flex gap-2">
               <button
-                onClick={() => {
+                onClick={() =>
+                {
                   if (!deliveryPhone) { alert('Phone number not available'); return; }
                   try {
                     window.location.href = `tel:${deliveryPhone}`;
@@ -514,7 +582,8 @@ const DeliveryCard = ({
                 Call
               </button>
               <button
-                onClick={() => {
+                onClick={() =>
+                {
                   if (deliveryPhone) {
                     const num = deliveryPhone.replace(/[^0-9+]/g, '');
                     window.open(`https://wa.me/${num.replace(/^\+/, '')}`, '_blank');

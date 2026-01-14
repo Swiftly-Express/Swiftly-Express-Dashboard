@@ -4,11 +4,12 @@ import { eyeOutline, eyeOffOutline } from 'ionicons/icons';
 import { YummyText } from '../../../components/YummyText';
 import Button from '../../../components/Button';
 import { useHistory } from 'react-router-dom';
-import { login } from '../../../utils/authApi';
+import { login, logout } from '../../../utils/authApi';
 import { setCookie, setJSONCookie } from '../../../utils/cookies';
 import { getCookie, deleteCookie } from '../../../utils/cookies';
 
-const RiderSignIn = () => {
+const RiderSignIn = () =>
+{
   const history = useHistory();
   const [formData, setFormData] = useState({
     email: '',
@@ -22,7 +23,14 @@ const RiderSignIn = () => {
   const [isLoading, setIsLoading] = useState(false);
   const [googleLoading, setGoogleLoading] = useState(false);
 
-  useEffect(() => {
+  // Resend Verification State
+  const [showResend, setShowResend] = useState(false);
+  const [unverifiedUserId, setUnverifiedUserId] = useState(null);
+  const [unverifiedEmail, setUnverifiedEmail] = useState('');
+  const [resendLoading, setResendLoading] = useState(false);
+
+  useEffect(() =>
+  {
     const needsLogin = getCookie('emailVerifiedNeedsLogin') === 'true';
     const verifiedEmail = getCookie('verifiedEmail');
 
@@ -30,13 +38,15 @@ const RiderSignIn = () => {
       setShowVerifiedBanner(true);
       deleteCookie('emailVerifiedNeedsLogin');
       deleteCookie('verifiedEmail');
-      setTimeout(() => {
+      setTimeout(() =>
+      {
         setShowVerifiedBanner(false);
       }, 5000);
     }
   }, []);
 
-  const handleSubmit = async (e) => {
+  const handleSubmit = async (e) =>
+  {
     e.preventDefault();
     setError('');
 
@@ -46,6 +56,8 @@ const RiderSignIn = () => {
     }
 
     setIsLoading(true);
+
+
     try {
       const response = await login({
         email: formData.email,
@@ -55,6 +67,32 @@ const RiderSignIn = () => {
 
       console.log('[RiderLogin] ✓ Login successful', response);
 
+      // Check for role mismatch (Customers shouldn't login here)
+      const currentUserRole = (
+        (response?.user?.role || response?.data?.user?.role || response?.data?.role) ||
+        // If not in response, check cookies as last resort
+        (document.cookie.split('; ').find(row => row.startsWith('userRole='))?.split('=')[1]) ||
+        (document.cookie.split('; ').find(row => row.startsWith('user_type='))?.split('=')[1]) ||
+        'driver'
+      ).toString().toLowerCase();
+
+      if (currentUserRole !== 'driver' && currentUserRole !== 'rider' && currentUserRole !== 'admin') {
+        console.warn('[RiderLogin] ⚠️ Customer attempted login on rider page');
+
+        await logout(); // Clear cookies
+
+        setError(
+          <span>
+            Access Denied. You are a Customer.<br />
+            <a href="/auth/customer/login" className="text-[#00B75A] font-medium underline mt-1 block">
+              Click here to go to Customer Login
+            </a>
+          </span>
+        );
+        setIsLoading(false);
+        return;
+      }
+
       // Clear verified email cookie after successful login
       deleteCookie('verifiedEmail');
 
@@ -63,13 +101,67 @@ const RiderSignIn = () => {
 
     } catch (error) {
       console.error('[RiderLogin] ❌ Login failed:', error);
-      setError(error?.message || 'Login failed. Please check your credentials.');
+      const message = error?.message || 'Login failed. Please check your credentials';
+      setError(message);
+
+      // Handle unverified email error
+      if (error?.status === 403 && (message.toLowerCase().includes('verify') || message.toLowerCase().includes('email'))) {
+        console.log('[RiderLogin] User email not verified');
+
+        // Store email/userId for resending
+        // Check both nested data (standard) and direct property (fallback)
+        const userId = error.data?.data?.userId || error.data?.userId;
+
+        if (userId) {
+          setUnverifiedUserId(userId);
+          console.log('[RiderLogin] Captured unverified userId:', userId);
+        } else {
+          console.warn('[RiderLogin] Could not capture userId from error response:', error.data);
+        }
+        setUnverifiedEmail(formData.email);
+        setShowResend(true);
+      }
     } finally {
       setIsLoading(false);
     }
   };
 
-  const handleChange = (field, value) => {
+
+
+  const handleResendVerification = async () =>
+  {
+    if (!unverifiedUserId) {
+      history.push('/auth/verify-email');
+      return;
+    }
+
+    try {
+      setResendLoading(true);
+      const { resendVerification } = await import('../../../utils/authApi');
+      await resendVerification({ userId: unverifiedUserId });
+
+      // Show success message somehow (maybe using error state as a hack or just alert)
+      setError('Verification code sent! Redirecting...');
+
+      // Store cookie for the next page
+      setCookie('pendingVerificationEmail', unverifiedEmail, 1);
+      setCookie('pendingVerificationType', 'rider', 1);
+      setCookie('pendingVerificationUserId', unverifiedUserId, 1);
+
+      setTimeout(() =>
+      {
+        history.push('/auth/verify-email');
+      }, 1500);
+    } catch (err) {
+      console.error('Resend failed', err);
+      setError('Failed to resend code. Please try again.');
+      setResendLoading(false); // Only stop loading on error
+    }
+    // Do not stop loading on success, let it persist until redirect
+  };
+
+  const handleChange = (field, value) =>
+  {
     setError(''); // Clear error when user makes changes
     setFormData({
       ...formData,
@@ -77,11 +169,13 @@ const RiderSignIn = () => {
     });
   };
 
-  const handleForgotPassword = () => {
+  const handleForgotPassword = () =>
+  {
     history.push('/forgot-password?role=rider');
   };
 
-  const handleCreateAccount = () => {
+  const handleCreateAccount = () =>
+  {
     if (document && document.activeElement) document.activeElement.blur();
     history.push('/auth/rider/signup');
   };
@@ -92,13 +186,15 @@ const RiderSignIn = () => {
     ? `${window.location.origin.replace(/\/$/, '')}${rawBase.replace(/\/$/, '')}`
     : rawBase.replace(/\/$/, '');
 
-  const handleGoogleLogin = (e) => {
+  const handleGoogleLogin = (e) =>
+  {
     e.preventDefault();
     try {
       setGoogleLoading(true);
       const googleUrl = `${apiBase}/api/auth/google?role=rider`;
       console.log('[RiderLogin] Redirecting to:', googleUrl);
-      setTimeout(() => {
+      setTimeout(() =>
+      {
         window.location.href = googleUrl;
       }, 200);
     } catch (err) {
@@ -135,10 +231,9 @@ const RiderSignIn = () => {
                 </div>
               )}
 
-              {/* Error Banner */}
               {error && (
-                <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-full">
-                  <YummyText className="text-sm text-red-600">{error}</YummyText>
+                <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-lg text-left">
+                  <div className="text-sm text-red-600 leading-normal">{error}</div>
                 </div>
               )}
 
@@ -214,6 +309,20 @@ const RiderSignIn = () => {
                 >
                   <YummyText className="font-[300] text-sm">{isLoading ? 'Logging in...' : 'Log In'}</YummyText>
                 </Button>
+
+                {/* Resend Verification Button - Only shown when needed */}
+                {showResend && (
+                  <Button
+                    variant="primary" // Reusing primary variant but customized style
+                    onClick={handleResendVerification}
+                    disabled={resendLoading}
+                    className="!w-full !py-3 !bg-white !border !border-[#00B75A] !text-[#00B75A] hover:!bg-green-50 !mb-3 rounded-full transition-all duration-300"
+                  >
+                    <YummyText className="font-[300] text-sm">
+                      {resendLoading ? 'Sending...' : 'Resend Verification Code'}
+                    </YummyText>
+                  </Button>
+                )}
 
                 {/* Divider */}
                 <div className="relative my-6">

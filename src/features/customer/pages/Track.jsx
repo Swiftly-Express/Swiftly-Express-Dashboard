@@ -3,8 +3,9 @@ import { IonPage, IonContent, IonToast } from '@ionic/react';
 import CustomerLayout from '../components/CustomerLayout';
 import { YummyText } from '../../../components/YummyText';
 import Loader from '../../../components/Loader';
-import MapboxMap from '../../../components/MapboxMap';
+import TrackingMap from '../../../components/TrackingMap'; // NEW
 import { getDeliveryByTracking } from '../../../utils/authApi';
+import socketService from '../../../services/socket.service'; // NEW
 import BlockIcon from '../../../icons/Blockicon';
 import CheckIcon from '../../../icons/Checkicon';
 import LocationIcon from '../../../icons/Locationicon';
@@ -14,7 +15,8 @@ const sideBottomShadow = {
   boxShadow: '2px 2px 4px rgba(0,0,0,0.06), -2px 2px 4px rgba(0,0,0,0.06), 0 4px 8px rgba(0,0,0,0.08)'
 };
 
-const Track = () => {
+const Track = () =>
+{
   const [trackingId, setTrackingId] = useState('');
   const [deliveryData, setDeliveryData] = useState(null);
   const [loading, setLoading] = useState(false);
@@ -22,8 +24,10 @@ const Track = () => {
   const [showToast, setShowToast] = useState(false);
 
   // Listen for delivery updates and refresh if the current delivery changes
-  useEffect(() => {
-    const handleDeliveryUpdated = (event) => {
+  useEffect(() =>
+  {
+    const handleDeliveryUpdated = (event) =>
+    {
       if (deliveryData && event.detail) {
         const updatedDeliveryId = event.detail.deliveryId || event.detail.id;
         const currentDeliveryId = deliveryData._id || deliveryData.id;
@@ -45,10 +49,55 @@ const Track = () => {
     };
 
     window.addEventListener('delivery:updated', handleDeliveryUpdated);
-    return () => window.removeEventListener('delivery:updated', handleDeliveryUpdated);
+
+    // Socket.io integration
+    let socketCleanup = () => { };
+
+    if (deliveryData) {
+      const deliveryId = deliveryData._id || deliveryData.id;
+
+      socketService.connect();
+      socketService.joinRoom(deliveryId);
+
+      const handleLocationUpdate = (data) =>
+      {
+        if (data && data.location) {
+          console.log('[Track] Driver location updated:', data.location);
+          setDriverLocation(data.location);
+        }
+      };
+
+      socketService.on('delivery:location:updated', handleLocationUpdate);
+
+      // Initialize driver location from deliveryData if available
+      if (deliveryData.currentLocation) {
+        const loc = deliveryData.currentLocation;
+        // Handle GeoJSON [lng, lat] or {lat, lng}
+        if (Array.isArray(loc)) {
+          setDriverLocation({ lat: loc[1], lng: loc[0] });
+        } else if (loc.lat && loc.lng) {
+          setDriverLocation(loc);
+        } else if (loc.coordinates) {
+          setDriverLocation({ lat: loc.coordinates[1], lng: loc.coordinates[0] });
+        }
+      }
+
+      socketCleanup = () =>
+      {
+        socketService.leaveRoom(deliveryId);
+        socketService.off('delivery:location:updated', handleLocationUpdate);
+      };
+    }
+
+    return () =>
+    {
+      window.removeEventListener('delivery:updated', handleDeliveryUpdated);
+      socketCleanup();
+    };
   }, [deliveryData]);
 
-  const handleTrack = async (e) => {
+  const handleTrack = async (e) =>
+  {
     e.preventDefault();
 
     if (!trackingId.trim()) {
@@ -78,7 +127,8 @@ const Track = () => {
     }
   };
 
-  const getStatusColor = (status) => {
+  const getStatusColor = (status) =>
+  {
     const statusLower = status?.toLowerCase() || '';
     if (statusLower === 'delivered') return 'bg-green-500';
     if (statusLower === 'in-transit' || statusLower === 'in transit') return 'bg-blue-500';
@@ -87,7 +137,8 @@ const Track = () => {
     return 'bg-gray-400';
   };
 
-  const getStatusBadge = (status) => {
+  const getStatusBadge = (status) =>
+  {
     const statusLower = status?.toLowerCase() || '';
     if (statusLower === 'delivered') return 'bg-green-100 text-green-700';
     if (statusLower === 'in-transit' || statusLower === 'in transit') return 'bg-[#00B75A] text-[#FFFFFF]';
@@ -96,7 +147,8 @@ const Track = () => {
     return 'bg-gray-100 text-gray-700';
   };
 
-  const formatDate = (dateString) => {
+  const formatDate = (dateString) =>
+  {
     if (!dateString) return 'N/A';
     try {
       const date = new Date(dateString);
@@ -110,7 +162,8 @@ const Track = () => {
     }
   };
 
-  const formatTime = (dateString) => {
+  const formatTime = (dateString) =>
+  {
     if (!dateString) return '';
     try {
       const date = new Date(dateString);
@@ -198,26 +251,16 @@ const Track = () => {
               <div className="bg-white rounded-2xl overflow-hidden" style={sideBottomShadow}>
                 <div className="h-64 relative">
                   {deliveryData.pickupAddress?.coordinates && deliveryData.deliveryAddress?.coordinates ? (
-                    <MapboxMap
-                      pickupCoords={[
-                        deliveryData.pickupAddress.coordinates.lng,
-                        deliveryData.pickupAddress.coordinates.lat
-                      ]}
-                      deliveryCoords={[
-                        deliveryData.deliveryAddress.coordinates.lng,
-                        deliveryData.deliveryAddress.coordinates.lat
-                      ]}
-                      height="256px"
-                      showRoute={true}
-                      showRandomCars={false}
-                      // pass package id so MapboxMap can listen for rider:position events for this package
-                      packageId={deliveryData.trackingNumber || deliveryData.trackingId || deliveryData.id || deliveryData._id}
-                      // pass vehicle coords if backend provides last known location
-                      vehicleCoords={
-                        (deliveryData.currentLocation && [deliveryData.currentLocation.lng, deliveryData.currentLocation.lat]) ||
-                        (deliveryData.lastKnownLocation && [deliveryData.lastKnownLocation.lng, deliveryData.lastKnownLocation.lat]) ||
-                        null
-                      }
+                    <TrackingMap
+                      pickupLocation={{
+                        lat: deliveryData.pickupAddress.coordinates.lat || deliveryData.pickupAddress.coordinates[1],
+                        lng: deliveryData.pickupAddress.coordinates.lng || deliveryData.pickupAddress.coordinates[0]
+                      }}
+                      dropoffLocation={{
+                        lat: deliveryData.deliveryAddress.coordinates.lat || deliveryData.deliveryAddress.coordinates[1],
+                        lng: deliveryData.deliveryAddress.coordinates.lng || deliveryData.deliveryAddress.coordinates[0]
+                      }}
+                      driverLocation={driverLocation}
                     />
                   ) : (
                     <div className="h-64 bg-gradient-to-br from-[#E5F5E5] to-[#C8E6C9] flex items-center justify-center">
