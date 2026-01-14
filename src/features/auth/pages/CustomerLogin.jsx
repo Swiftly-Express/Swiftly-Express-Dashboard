@@ -6,7 +6,8 @@ import Button from '../../../components/Button';
 import { login, getCurrentUser } from '../../../utils/authApi';
 import { setCookie, setJSONCookie } from '../../../utils/cookies';
 
-const CustomerLogin = () => {
+const CustomerLogin = () =>
+{
   const router = useIonRouter();
   const [formData, setFormData] = useState({
     email: '',
@@ -18,7 +19,14 @@ const CustomerLogin = () => {
   const [showToast, setShowToast] = useState(false);
   const [googleLoading, setGoogleLoading] = useState(false);
 
-  const handleSubmit = async (e) => {
+  // Resend Verification State
+  const [showResend, setShowResend] = useState(false);
+  const [unverifiedUserId, setUnverifiedUserId] = useState(null);
+  const [unverifiedEmail, setUnverifiedEmail] = useState('');
+  const [resendLoading, setResendLoading] = useState(false);
+
+  const handleSubmit = async (e) =>
+  {
     e.preventDefault();
     setError('');
 
@@ -131,14 +139,70 @@ const CustomerLogin = () => {
       setError(message);
       setToastMsg(message);
       setShowToast(true);
+
+      // Handle unverified email error
+      if (err?.status === 403 && (message.toLowerCase().includes('verify') || message.toLowerCase().includes('email'))) {
+        console.log('[CustomerLogin] User email not verified');
+
+        // Store email/userId for resending
+        // Check both nested data (standard) and direct property (fallback)
+        const userId = err.data?.data?.userId || err.data?.userId;
+
+        if (userId) {
+          setUnverifiedUserId(userId);
+          console.log('[CustomerLogin] Captured unverified userId:', userId);
+        } else {
+          console.warn('[CustomerLogin] Could not capture userId from error response:', err.data);
+        }
+        setUnverifiedEmail(formData.email);
+        setShowResend(true); // Trigger UI to show button
+      }
+    } finally {
+      setGoogleLoading(false); // Ensure loading state is cleared
     }
   };
 
-  const handleForgotPassword = () => {
+  const handleResendVerification = async () =>
+  {
+    if (!unverifiedUserId) {
+      // Fallback to simple redirect if we somehow don't have ID
+      router.push('/auth/verify-email', 'forward', 'push');
+      return;
+    }
+
+    try {
+      setResendLoading(true);
+      // We need to import resendVerification from utils/authApi
+      const { resendVerification } = await import('../../../utils/authApi');
+      await resendVerification({ userId: unverifiedUserId });
+
+      setToastMsg('Verification code sent! Redirecting...');
+      setShowToast(true);
+
+      // Store cookie for the next page
+      setCookie('pendingVerificationEmail', unverifiedEmail, 1);
+      setCookie('pendingVerificationType', 'customer', 1);
+      setCookie('pendingVerificationUserId', unverifiedUserId, 1);
+
+      setTimeout(() =>
+      {
+        router.push('/auth/verify-email', 'forward', 'push');
+      }, 1500);
+    } catch (err) {
+      console.error('Resend failed', err);
+      setToastMsg('Failed to resend code. Please try again.');
+      setShowToast(true);
+      setResendLoading(false); // Only stop loading on error
+    }
+  };
+
+  const handleForgotPassword = () =>
+  {
     router.push('/forgot-password?role=customer');
   };
 
-  const handleCreateAccount = () => {
+  const handleCreateAccount = () =>
+  {
     if (document && document.activeElement) document.activeElement.blur();
     router.push('/auth/customer/signup');
   };
@@ -149,13 +213,15 @@ const CustomerLogin = () => {
     ? `${window.location.origin.replace(/\/$/, '')}${rawBase.replace(/\/$/, '')}`
     : rawBase.replace(/\/$/, '');
 
-  const handleGoogleLogin = (e) => {
+  const handleGoogleLogin = (e) =>
+  {
     e.preventDefault();
     try {
       setGoogleLoading(true);
       const googleUrl = `${apiBase}/api/auth/google?role=customer`;
       console.log('[CustomerLogin] Redirecting to:', googleUrl);
-      setTimeout(() => {
+      setTimeout(() =>
+      {
         window.location.href = googleUrl;
       }, 200);
     } catch (err) {
@@ -164,7 +230,8 @@ const CustomerLogin = () => {
     }
   };
 
-  const handleChange = (fieldOrEvent, value) => {
+  const handleChange = (fieldOrEvent, value) =>
+  {
     setError('');
     // support both (e) event handlers or (field, value) calls
     if (typeof fieldOrEvent === 'string') {
@@ -280,6 +347,20 @@ const CustomerLogin = () => {
                 >
                   <YummyText className="font-[300] text-sm">Log In</YummyText>
                 </Button>
+
+                {/* Resend Verification Button - Only shown when needed */}
+                {showResend && (
+                  <Button
+                    variant="outline"
+                    onClick={handleResendVerification}
+                    disabled={resendLoading}
+                    className="!w-full !py-3 !border-[#00B75A] !text-[#00B75A] hover:!bg-green-50 !mb-3 rounded-full transition-all duration-300"
+                  >
+                    <YummyText className="font-[300] text-sm">
+                      {resendLoading ? 'Sending...' : 'Resend Verification Code'}
+                    </YummyText>
+                  </Button>
+                )}
 
                 {/* Divider */}
                 <div className="relative my-6">

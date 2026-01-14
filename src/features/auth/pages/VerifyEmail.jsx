@@ -1,27 +1,63 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { IonContent, IonPage, IonIcon } from '@ionic/react';
 import { useIonRouter } from '@ionic/react';
+import { useLocation } from 'react-router-dom';
 import { alertCircleOutline, checkmarkCircleOutline } from 'ionicons/icons';
 import { YummyText } from '../../../components/YummyText';
 import { verifyEmail, resendVerification } from '../../../utils/authApi';
 import { getCookie, setCookie, deleteCookie, getJSONCookie } from '../../../utils/cookies';
 
-const VerifyEmail = () => {
+const VerifyEmail = () =>
+{
   const router = useIonRouter();
+  const location = useLocation(); // Gets the current location object
   const [otp, setOtp] = useState(['', '', '', '', '', '']);
   const [isResending, setIsResending] = useState(false);
   const [countdown, setCountdown] = useState(60);
   const [isVerifying, setIsVerifying] = useState(false);
   const [showLoginPrompt, setShowLoginPrompt] = useState(false);
   const inputRefs = useRef([]);
+  // Ref to track if we've already attempted auto-verification to prevent double calls
+  const autoVerifyAttempted = useRef(false);
+
+  // Parse query parameters
+  const queryParams = new URLSearchParams(location.search);
+  const urlCode = queryParams.get('code');
+  const urlUserId = queryParams.get('userId');
 
   // Get email and user type from navigation state or cookies
   const email = getCookie('pendingVerificationEmail') || getCookie('verifiedEmail') || 'user@email.com';
   const userType = getCookie('pendingVerificationType') || 'customer';
-  const pendingVerificationUserId = getCookie('pendingVerificationUserId') || null;
+  // Prefer the URL userId if available, otherwise fall back to cookie
+  const pendingVerificationUserId = urlUserId || getCookie('pendingVerificationUserId') || null;
+
+  // Effect to handle URL parameters and Auto-Verification
+  useEffect(() =>
+  {
+    // 1. Hydrate userId cookie for resilience (Resend OTP support)
+    if (urlUserId) {
+      setCookie('pendingVerificationUserId', urlUserId, 1);
+      console.log('[VerifyEmail] Hydrated pendingVerificationUserId from URL:', urlUserId);
+    }
+
+    // 2. Auto-fill OTP if code is present
+    if (urlCode && urlCode.length === 6) {
+      const codeArray = urlCode.split('').slice(0, 6);
+      setOtp(codeArray);
+
+      // 3. Auto-trigger verification if both code and userId are present
+      // Only verify if we haven't tried yet and aren't currently verifying
+      if (urlUserId && !isVerifying && !showLoginPrompt && !autoVerifyAttempted.current) {
+        console.log('[VerifyEmail] Auto-triggering verification from URL params');
+        autoVerifyAttempted.current = true;
+        handleVerify(urlCode, urlUserId);
+      }
+    }
+  }, [urlCode, urlUserId]);
 
   // Countdown timer for resend button
-  useEffect(() => {
+  useEffect(() =>
+  {
     if (countdown > 0 && !showLoginPrompt) {
       const timer = setTimeout(() => setCountdown(countdown - 1), 1000);
       return () => clearTimeout(timer);
@@ -29,7 +65,8 @@ const VerifyEmail = () => {
   }, [countdown, showLoginPrompt]);
 
   // Handle OTP input change
-  const handleChange = (index, value) => {
+  const handleChange = (index, value) =>
+  {
     // Only allow numbers
     if (value && !/^\d+$/.test(value)) return;
 
@@ -44,35 +81,42 @@ const VerifyEmail = () => {
   };
 
   // Handle backspace
-  const handleKeyDown = (index, e) => {
+  const handleKeyDown = (index, e) =>
+  {
     if (e.key === 'Backspace' && !otp[index] && index > 0) {
       inputRefs.current[index - 1]?.focus();
     }
   };
 
   // Handle paste
-  const handlePaste = (e) => {
+  const handlePaste = (e) =>
+  {
     e.preventDefault();
     const pastedData = e.clipboardData.getData('text').replace(/\D/g, '').slice(0, 6);
-    
+
     if (!pastedData) return;
 
     const newOtp = ['', '', '', '', '', ''];
-    pastedData.split('').forEach((char, index) => {
+    pastedData.split('').forEach((char, index) =>
+    {
       if (index < 6) newOtp[index] = char;
     });
     setOtp(newOtp);
 
     // Focus the last filled input or the next empty one
     const nextIndex = Math.min(pastedData.length, 5);
-    setTimeout(() => {
+    setTimeout(() =>
+    {
       inputRefs.current[nextIndex]?.focus();
     }, 0);
   };
 
-  // Handle verify
-  const handleVerify = async () => {
-    const otpCode = otp.join('');
+  // Handle verify - optionally accepts arguments for auto-verification
+  const handleVerify = async (codeOverride = null, userIdOverride = null) =>
+  {
+    const otpCode = codeOverride || otp.join('');
+    const userIdToUse = userIdOverride || pendingVerificationUserId;
+
     if (otpCode.length !== 6) {
       alert('Please enter the complete 6-digit code');
       return;
@@ -80,39 +124,43 @@ const VerifyEmail = () => {
 
     setIsVerifying(true);
     try {
-      const response = await verifyEmail({ 
-        code: otpCode, 
-        userId: pendingVerificationUserId 
+      const response = await verifyEmail({
+        code: otpCode,
+        userId: userIdToUse
       });
-      
+
       console.log('[VerifyEmail] ✓ Verification response:', response);
-      
+
       // Check if we got tokens (authenticated) or need to login
       if (response.authenticated === false || response.requiresLogin === true) {
         console.log('[VerifyEmail] ⚠ Email verified but requires login');
         setShowLoginPrompt(true);
       } else {
         // Check if tokens were stored
-        const storedToken = userType === 'rider' || userType === 'driver' 
+        const storedToken = userType === 'rider' || userType === 'driver'
           ? getCookie('rider_token')
           : getCookie('customer_token');
-        
+
         if (storedToken) {
           console.log('[VerifyEmail] ✓ Authenticated - redirecting to dashboard');
-          
+
           // Clear pending data
           deleteCookie('pendingVerificationEmail');
           deleteCookie('pendingVerificationType');
           deleteCookie('pendingVerificationUserId');
-          
-          alert('Email verified successfully!');
-          
-          // Redirect to dashboard
-          if (userType === 'rider' || userType === 'driver') {
-            router.push('/rider/dashboard', 'root', 'replace');
-          } else {
-            router.push('/customer/dashboard', 'root', 'replace');
-          }
+
+          // Use a small timeout to ensure cookies are set before redirect
+          setTimeout(() =>
+          {
+            alert('Email verified successfully!');
+            // Redirect to dashboard
+            if (userType === 'rider' || userType === 'driver') {
+              router.push('/rider/dashboard', 'root', 'replace');
+            } else {
+              router.push('/customer/dashboard', 'root', 'replace');
+            }
+          }, 500);
+
         } else {
           console.warn('[VerifyEmail] ⚠ Verification succeeded but no token found');
           setShowLoginPrompt(true);
@@ -121,6 +169,8 @@ const VerifyEmail = () => {
 
     } catch (err) {
       console.error('[VerifyEmail] ❌ Verification failed:', err);
+      // Don't show alert for auto-verification failures, just log it and let user try manually?
+      // Actually, better to show it so they know why it didn't work.
       alert(err?.message || 'Verification failed. Please try again.');
     } finally {
       setIsVerifying(false);
@@ -128,8 +178,15 @@ const VerifyEmail = () => {
   };
 
   // Handle resend OTP
-  const handleResend = async () => {
+  const handleResend = async () =>
+  {
     if (countdown > 0) return;
+
+    // Ensure we have a userId to resend to
+    if (!pendingVerificationUserId) {
+      alert("Cannot resend code: Missing User ID. Please try logging in again.");
+      return;
+    }
 
     setIsResending(true);
     try {
@@ -146,12 +203,13 @@ const VerifyEmail = () => {
     }
   };
 
-  const handleProceedToLogin = () => {
+  const handleProceedToLogin = () =>
+  {
     // Use correct login routes
-    const loginPath = userType === 'rider' || userType === 'driver' 
-      ? '/auth/rider/login' 
+    const loginPath = userType === 'rider' || userType === 'driver'
+      ? '/auth/rider/login'
       : '/auth/customer/login';
-    
+
     router.push(loginPath, 'root', 'replace');
   };
 
@@ -169,7 +227,7 @@ const VerifyEmail = () => {
                 className="flex items-center gap-2 text-[#64748B] hover:text-[#0F172A] mb-8 transition-colors"
               >
                 <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                  <path d="M15 18l-6-6 6-6" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                  <path d="M15 18l-6-6 6-6" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
                 </svg>
                 <YummyText>
                   <span className="text-sm font-medium">Back</span>
@@ -209,13 +267,12 @@ const VerifyEmail = () => {
 
                 {/* Verify Button */}
                 <button
-                  onClick={handleVerify}
+                  onClick={() => handleVerify()}
                   disabled={isVerifying || otp.join('').length !== 6 || showLoginPrompt}
-                  className={`py-3 rounded-xl font-medium transition-colors mb-4 ${
-                    isVerifying || otp.join('').length !== 6 || showLoginPrompt
-                      ? 'bg-[#00B75A] text-[#FFFFFF] opacity-[50%] cursor-not-allowed'
-                      : 'bg-[#00B75A] hover:bg-[#00B876] text-white'
-                  }`}
+                  className={`py-3 rounded-xl font-medium transition-colors mb-4 ${isVerifying || otp.join('').length !== 6 || showLoginPrompt
+                    ? 'bg-[#00B75A] text-[#FFFFFF] opacity-[50%] cursor-not-allowed'
+                    : 'bg-[#00B75A] hover:bg-[#00B876] text-white'
+                    }`}
                   style={{ width: `${otp.length * 80 + (otp.length - 1) * 8}px` }}
                 >
                   {isVerifying ? 'Verifying...' : 'Verify Email'}
@@ -228,17 +285,16 @@ const VerifyEmail = () => {
                     <button
                       onClick={handleResend}
                       disabled={countdown > 0 || isResending || showLoginPrompt}
-                      className={`font-medium transition-colors ${
-                        countdown > 0 || isResending || showLoginPrompt
-                          ? 'text-[#00B75A] cursor-not-allowed'
-                          : 'text-[#00D68F] hover:text-[#00B876]'
-                      }`}
+                      className={`font-medium transition-colors ${countdown > 0 || isResending || showLoginPrompt
+                        ? 'text-[#00B75A] cursor-not-allowed'
+                        : 'text-[#00D68F] hover:text-[#00B876]'
+                        }`}
                     >
                       {isResending
                         ? 'Sending...'
                         : countdown > 0
-                        ? `Resend OTP (${countdown}s)`
-                        : 'Resend OTP'}
+                          ? `Resend OTP (${countdown}s)`
+                          : 'Resend OTP'}
                     </button>
                   </p>
                 </div>
@@ -257,30 +313,30 @@ const VerifyEmail = () => {
           {/* Right Side - Image - ORIGINAL UI */}
           <div className="hidden lg:flex h-full bg-[#1E1E1E] relative overflow-hidden">
             {/* Zigzag decoration - top left */}
-            <img 
-              src="/zig-zag.svg" 
-              alt="" 
+            <img
+              src="/zig-zag.svg"
+              alt=""
               className="absolute top-0 left-0 w-24 h-auto"
             />
-            
+
             {/* Flower decoration - top right */}
-            <img 
-              src="/flowers.svg" 
-              alt="" 
+            <img
+              src="/flowers.svg"
+              alt=""
               className="absolute top-20 left-80 ml-60 w-20 h-auto z-20"
             />
-            
+
             {/* Main flying envelope - center */}
-            <img 
-              src="/bigenvelope.svg" 
-              alt="Email Verification" 
+            <img
+              src="/bigenvelope.svg"
+              alt="Email Verification"
               className="absolute top-60 mt-20 left-80 mr-12 -translate-x-1/2 -translate-y-1/2 w-80 h-auto"
             />
-            
+
             {/* Small flying envelope - bottom right */}
-            <img 
-              src="/smallenvelope.svg" 
-              alt="" 
+            <img
+              src="/smallenvelope.svg"
+              alt=""
               className="absolute top-80 mt-40 right-20 ml-80 w-44 h-auto"
             />
           </div>
@@ -294,22 +350,22 @@ const VerifyEmail = () => {
                 <div className="w-20 h-20 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-6">
                   <IonIcon icon={checkmarkCircleOutline} className="text-green-600 text-5xl" />
                 </div>
-                
+
                 <h2 className="text-2xl font-semibold text-[#0F172A] mb-3">
                   Email Verified Successfully! ✓
                 </h2>
-                
+
                 <p className="text-[#64748B] mb-6">
                   Your email has been verified. Please log in with your credentials to access your account.
                 </p>
-                
+
                 <div className="bg-blue-50 border border-blue-200 rounded-xl p-4 mb-6">
                   <p className="text-sm text-[#1E40AF] flex items-start gap-2">
                     <IonIcon icon={alertCircleOutline} className="text-lg flex-shrink-0 mt-0.5" />
                     <span>Use the same email and password you registered with to sign in.</span>
                   </p>
                 </div>
-                
+
                 <button
                   onClick={handleProceedToLogin}
                   className="w-full py-4 bg-[#00B75A] hover:bg-[#00B876] text-white rounded-xl font-semibold transition-colors text-lg"
