@@ -207,7 +207,7 @@ const VerifyEmail = () => {
       <IonContent className="ion-no-padding !fullscreen">
         <div className="!h-full grid grid-cols-1 lg:grid-cols-2 overflow-hidden">
           {/* Left Side - Verification Form */}
-          <div className="bg-white flex items-center justify-center p-4 sm:p-6 md:p-8 lg:p-12 min-h-screen lg:min-h-0 overflow-y-auto">
+          <div className="bg-white flex items-start justify-center p-4 sm:p-6 md:p-8 lg:p-12 pt-8 sm:pt-12 md:pt-16 min-h-screen lg:min-h-0 overflow-y-auto">
             <div className="w-full max-w-md">
               {/* Back Button */}
               <button
