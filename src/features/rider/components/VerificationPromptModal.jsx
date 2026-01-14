@@ -457,24 +457,29 @@ const VerificationPromptModal = ({ isOpen, onClose }) => {
   };
 
   const isStep1Valid = () => {
-    return formData.phoneNumber.trim() !== '' &&
-      formData.streetAddress.trim() !== '' &&
-      formData.lat !== 0 &&
-      formData.lng !== 0;
+    // Allow progressing after phone and street are provided even if coords are not set.
+    // Coordinates are nice-to-have for better matching but not required to continue.
+    const phone = (formData.phoneNumber || '').toString().trim();
+    const street = (formData.streetAddress || '').toString().trim();
+    return phone !== '' && street !== '';
   };
 
   const isStep2Valid = () => {
-    return formData.idType !== '' &&
-      formData.idNumber.trim() !== '' &&
+    const idNumber = (formData.idNumber || '').toString().trim();
+    return (formData.idType || '') !== '' &&
+      idNumber !== '' &&
       formData.idDocument !== null &&
       formData.profilePhoto !== null;
   };
 
   const isStep3Valid = () => {
-    return formData.vehicleType !== '' &&
-      formData.makeModel.trim() !== '' &&
-      formData.year.trim() !== '' &&
-      formData.licensePlate.trim() !== '' &&
+    const makeModel = (formData.makeModel || '').toString().trim();
+    const year = (formData.year || '').toString().trim();
+    const license = (formData.licensePlate || '').toString().trim();
+    return (formData.vehicleType || '') !== '' &&
+      makeModel !== '' &&
+      year !== '' &&
+      license !== '' &&
       formData.driversLicense !== null;
   };
 
