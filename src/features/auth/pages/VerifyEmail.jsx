@@ -54,7 +54,7 @@ const VerifyEmail = () => {
   const handlePaste = (e) => {
     e.preventDefault();
     const pastedData = e.clipboardData.getData('text').replace(/\D/g, '').slice(0, 6);
-    
+
     if (!pastedData) return;
 
     const newOtp = ['', '', '', '', '', ''];
@@ -80,33 +80,33 @@ const VerifyEmail = () => {
 
     setIsVerifying(true);
     try {
-      const response = await verifyEmail({ 
-        code: otpCode, 
-        userId: pendingVerificationUserId 
+      const response = await verifyEmail({
+        code: otpCode,
+        userId: pendingVerificationUserId
       });
-      
+
       console.log('[VerifyEmail] ✓ Verification response:', response);
-      
+
       // Check if we got tokens (authenticated) or need to login
       if (response.authenticated === false || response.requiresLogin === true) {
         console.log('[VerifyEmail] ⚠ Email verified but requires login');
         setShowLoginPrompt(true);
       } else {
         // Check if tokens were stored
-        const storedToken = userType === 'rider' || userType === 'driver' 
+        const storedToken = userType === 'rider' || userType === 'driver'
           ? getCookie('rider_token')
           : getCookie('customer_token');
-        
+
         if (storedToken) {
           console.log('[VerifyEmail] ✓ Authenticated - redirecting to dashboard');
-          
+
           // Clear pending data
           deleteCookie('pendingVerificationEmail');
           deleteCookie('pendingVerificationType');
           deleteCookie('pendingVerificationUserId');
-          
+
           alert('Email verified successfully!');
-          
+
           // Redirect to dashboard
           if (userType === 'rider' || userType === 'driver') {
             router.push('/rider/dashboard', 'root', 'replace');
@@ -148,10 +148,10 @@ const VerifyEmail = () => {
 
   const handleProceedToLogin = () => {
     // Use correct login routes
-    const loginPath = userType === 'rider' || userType === 'driver' 
-      ? '/auth/rider/login' 
+    const loginPath = userType === 'rider' || userType === 'driver'
+      ? '/auth/rider/login'
       : '/auth/customer/login';
-    
+
     router.push(loginPath, 'root', 'replace');
   };
 
@@ -169,7 +169,7 @@ const VerifyEmail = () => {
                 className="flex items-center gap-2 text-[#64748B] hover:text-[#0F172A] mb-8 transition-colors"
               >
                 <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                  <path d="M15 18l-6-6 6-6" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                  <path d="M15 18l-6-6 6-6" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
                 </svg>
                 <YummyText>
                   <span className="text-sm font-medium">Back</span>
@@ -211,11 +211,10 @@ const VerifyEmail = () => {
                 <button
                   onClick={handleVerify}
                   disabled={isVerifying || otp.join('').length !== 6 || showLoginPrompt}
-                  className={`w-full py-3 sm:py-4 rounded-xl font-medium transition-colors mb-4 text-sm sm:text-base ${
-                    isVerifying || otp.join('').length !== 6 || showLoginPrompt
+                  className={`w-full py-3 sm:py-4 rounded-xl font-medium transition-colors mb-4 text-sm sm:text-base ${isVerifying || otp.join('').length !== 6 || showLoginPrompt
                       ? 'bg-[#00B75A] text-[#FFFFFF] opacity-[50%] cursor-not-allowed'
                       : 'bg-[#00B75A] hover:bg-[#00B876] text-white'
-                  }`}
+                    }`}
                 >
                   {isVerifying ? 'Verifying...' : 'Verify Email'}
                 </button>
@@ -227,17 +226,16 @@ const VerifyEmail = () => {
                     <button
                       onClick={handleResend}
                       disabled={countdown > 0 || isResending || showLoginPrompt}
-                      className={`font-medium transition-colors ${
-                        countdown > 0 || isResending || showLoginPrompt
+                      className={`font-medium transition-colors ${countdown > 0 || isResending || showLoginPrompt
                           ? 'text-[#00B75A] cursor-not-allowed'
                           : 'text-[#00D68F] hover:text-[#00B876]'
-                      }`}
+                        }`}
                     >
                       {isResending
                         ? 'Sending...'
                         : countdown > 0
-                        ? `Resend OTP (${countdown}s)`
-                        : 'Resend OTP'}
+                          ? `Resend OTP (${countdown}s)`
+                          : 'Resend OTP'}
                     </button>
                   </p>
                 </div>
@@ -256,30 +254,30 @@ const VerifyEmail = () => {
           {/* Right Side - Image - ORIGINAL UI */}
           <div className="hidden lg:flex h-full bg-[#1E1E1E] relative overflow-hidden">
             {/* Zigzag decoration - top left */}
-            <img 
-              src="/zig-zag.svg" 
-              alt="" 
+            <img
+              src="/zig-zag.svg"
+              alt=""
               className="absolute top-0 left-0 w-24 h-auto"
             />
-            
+
             {/* Flower decoration - top right */}
-            <img 
-              src="/flowers.svg" 
-              alt="" 
+            <img
+              src="/flowers.svg"
+              alt=""
               className="absolute top-20 left-80 ml-60 w-20 h-auto z-20"
             />
-            
+
             {/* Main flying envelope - center */}
-            <img 
-              src="/bigenvelope.svg" 
-              alt="Email Verification" 
+            <img
+              src="/bigenvelope.svg"
+              alt="Email Verification"
               className="absolute top-60 mt-20 left-80 mr-12 -translate-x-1/2 -translate-y-1/2 w-80 h-auto"
             />
-            
+
             {/* Small flying envelope - bottom right */}
-            <img 
-              src="/smallenvelope.svg" 
-              alt="" 
+            <img
+              src="/smallenvelope.svg"
+              alt=""
               className="absolute top-80 mt-40 right-20 ml-80 w-44 h-auto"
             />
           </div>
@@ -293,22 +291,22 @@ const VerifyEmail = () => {
                 <div className="w-16 h-16 sm:w-20 sm:h-20 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-4 sm:mb-6">
                   <IonIcon icon={checkmarkCircleOutline} className="text-green-600 text-4xl sm:text-5xl" />
                 </div>
-                
+
                 <h2 className="text-xl sm:text-2xl font-semibold text-[#0F172A] mb-2 sm:mb-3">
                   Email Verified Successfully! ✓
                 </h2>
-                
+
                 <p className="text-sm sm:text-base text-[#64748B] mb-4 sm:mb-6">
                   Your email has been verified. Please log in with your credentials to access your account.
                 </p>
-                
+
                 <div className="bg-blue-50 border border-blue-200 rounded-xl p-4 mb-6">
                   <p className="text-sm text-[#1E40AF] flex items-start gap-2">
                     <IonIcon icon={alertCircleOutline} className="text-lg flex-shrink-0 mt-0.5" />
                     <span>Use the same email and password you registered with to sign in.</span>
                   </p>
                 </div>
-                
+
                 <button
                   onClick={handleProceedToLogin}
                   className="w-full py-3 sm:py-4 bg-[#00B75A] hover:bg-[#00B876] text-white rounded-xl font-semibold transition-colors text-base sm:text-lg"
