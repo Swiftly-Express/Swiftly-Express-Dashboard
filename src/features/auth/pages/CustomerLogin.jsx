@@ -3,10 +3,11 @@ import React, { useState } from 'react';
 import { eyeOutline, eyeOffOutline } from 'ionicons/icons';
 import { YummyText } from '../../../components/YummyText';
 import Button from '../../../components/Button';
-import { login, getCurrentUser } from '../../../utils/authApi';
+import { login, getCurrentUser, logout } from '../../../utils/authApi';
 import { setCookie, setJSONCookie } from '../../../utils/cookies';
 
-const CustomerLogin = () => {
+const CustomerLogin = () =>
+{
   const router = useIonRouter();
   const [formData, setFormData] = useState({
     email: '',
@@ -18,7 +19,14 @@ const CustomerLogin = () => {
   const [showToast, setShowToast] = useState(false);
   const [googleLoading, setGoogleLoading] = useState(false);
 
-  const handleSubmit = async (e) => {
+  // Resend Verification State
+  const [showResend, setShowResend] = useState(false);
+  const [unverifiedUserId, setUnverifiedUserId] = useState(null);
+  const [unverifiedEmail, setUnverifiedEmail] = useState('');
+  const [resendLoading, setResendLoading] = useState(false);
+
+  const handleSubmit = async (e) =>
+  {
     e.preventDefault();
     setError('');
 
@@ -37,81 +45,51 @@ const CustomerLogin = () => {
 
     try {
       setError('');
-      // Call backend login - tokens are automatically stored by the login function
+      // Call backend login with intended role
       const res = await login({
         email: formData.email.trim(),
-        password: formData.password
+        password: formData.password,
+        role: 'customer' // Enforce intention
       });
 
-      console.log('[CustomerLogin] Login response:', res);
-
-      // Try to fetch fresh user data from the API to get complete profile
-      try {
-        const me = await getCurrentUser();
-        console.log('[CustomerLogin] getCurrentUser response:', me);
-
-        // Handle different response structures
-        const userData = me?.data || me?.user || me;
-
-        if (userData && (userData.email || userData.fullName || userData.name)) {
-          // Store complete user data
-          const userToStore = {
-            ...userData,
-            fullName: userData.fullName || userData.full_name || userData.name,
-            email: userData.email,
-            phone: userData.phone || userData.phoneNumber || userData.phone_number,
-            role: userData.role || 'customer'
-          };
-
-          setJSONCookie('user_data', userToStore, 7);
-          setCookie('user_type', userToStore.role || 'customer', 7);
-          setCookie('userRole', userToStore.role || 'customer', 7);
-          console.log('[CustomerLogin] Stored user data (cookies):', userToStore);
-        } else {
-          // Fallback: try to extract from login response
-          const loginUser = res?.user || res?.data?.user || res?.data;
-          if (loginUser && (loginUser.email || loginUser.fullName)) {
-            const userToStore = {
-              ...loginUser,
-              fullName: loginUser.fullName || loginUser.full_name || loginUser.name,
-              role: loginUser.role || 'customer'
-            };
-            setJSONCookie('user_data', userToStore, 7);
-            setCookie('user_type', userToStore.role || 'customer', 7);
-            setCookie('userRole', userToStore.role || 'customer', 7);
-            console.log('[CustomerLogin] Stored user from login response (cookies):', userToStore);
-          } else {
-            localStorage.setItem('user_type', 'customer');
-            console.warn('[CustomerLogin] No user data available');
-          }
-        }
-      } catch (e) {
-        console.error('[CustomerLogin] Failed to fetch current user after login', e);
-        // Try extracting from login response as fallback
-        const loginUser = res?.user || res?.data?.user || res?.data;
-        if (loginUser && (loginUser.email || loginUser.fullName)) {
-          const userToStore = {
-            ...loginUser,
-            fullName: loginUser.fullName || loginUser.full_name || loginUser.name,
-            role: loginUser.role || 'customer'
-          };
-          setJSONCookie('user_data', userToStore, 7);
-          setCookie('user_type', userToStore.role || 'customer', 7);
-          setCookie('userRole', userToStore.role || 'customer', 7);
-          console.log('[CustomerLogin] Stored user from login response (fallback, cookies):', userToStore);
-        } else {
-          setCookie('user_type', 'customer', 7);
-          setCookie('userRole', 'customer', 7);
-        }
-      }
-
       console.log('[CustomerLogin] Login successful, user_data stored');
+
+      // Fetch user profile to ensure everything is synced (optional but good)
+      try { await getCurrentUser(); } catch (e) { /* ignore */ }
 
       // Redirect to customer dashboard
       if (document && document.activeElement) document.activeElement.blur();
       router.push('/customer/dashboard', 'forward', 'push');
     } catch (err) {
       console.error('Login error:', err);
+
+      // Handle Role Mismatch
+      if (err.code === 'ROLE_MISMATCH') {
+        console.warn('[CustomerLogin] ⚠️ Role Mismatch caught');
+        const isRider = err.actualRole === 'rider' || err.actualRole === 'driver';
+
+        const redirectPath = isRider ? '/auth/rider/login' : '/auth/login';
+        const redirectLabel = isRider ? 'Rider Login' : 'Login';
+
+        setError(
+          <span>
+            Access Denied. You are a {err.actualRole}.<br />
+            Redirecting you to {redirectLabel} in 3 seconds...<br />
+            <a href={redirectPath} className="text-[#00B75A] font-medium underline mt-1 block">
+              Click here to go now
+            </a>
+          </span>
+        );
+
+        // Auto-redirect
+        setTimeout(() =>
+        {
+          window.location.href = redirectPath;
+        }, 3000);
+        setGoogleLoading(false);
+        return;
+      }
+
       console.error('Error details:', {
         message: err?.message,
         status: err?.status,
@@ -131,14 +109,70 @@ const CustomerLogin = () => {
       setError(message);
       setToastMsg(message);
       setShowToast(true);
+
+      // Handle unverified email error
+      if (err?.status === 403 && (message.toLowerCase().includes('verify') || message.toLowerCase().includes('email'))) {
+        console.log('[CustomerLogin] User email not verified');
+
+        // Store email/userId for resending
+        // Check both nested data (standard) and direct property (fallback)
+        const userId = err.data?.data?.userId || err.data?.userId;
+
+        if (userId) {
+          setUnverifiedUserId(userId);
+          console.log('[CustomerLogin] Captured unverified userId:', userId);
+        } else {
+          console.warn('[CustomerLogin] Could not capture userId from error response:', err.data);
+        }
+        setUnverifiedEmail(formData.email);
+        setShowResend(true); // Trigger UI to show button
+      }
+    } finally {
+      setGoogleLoading(false); // Ensure loading state is cleared
     }
   };
 
-  const handleForgotPassword = () => {
+  const handleResendVerification = async () =>
+  {
+    if (!unverifiedUserId) {
+      // Fallback to simple redirect if we somehow don't have ID
+      router.push('/auth/verify-email', 'forward', 'push');
+      return;
+    }
+
+    try {
+      setResendLoading(true);
+      // We need to import resendVerification from utils/authApi
+      const { resendVerification } = await import('../../../utils/authApi');
+      await resendVerification({ userId: unverifiedUserId });
+
+      setToastMsg('Verification code sent! Redirecting...');
+      setShowToast(true);
+
+      // Store cookie for the next page
+      setCookie('pendingVerificationEmail', unverifiedEmail, 1);
+      setCookie('pendingVerificationType', 'customer', 1);
+      setCookie('pendingVerificationUserId', unverifiedUserId, 1);
+
+      setTimeout(() =>
+      {
+        router.push('/auth/verify-email', 'forward', 'push');
+      }, 1500);
+    } catch (err) {
+      console.error('Resend failed', err);
+      setToastMsg('Failed to resend code. Please try again.');
+      setShowToast(true);
+      setResendLoading(false); // Only stop loading on error
+    }
+  };
+
+  const handleForgotPassword = () =>
+  {
     router.push('/forgot-password?role=customer');
   };
 
-  const handleCreateAccount = () => {
+  const handleCreateAccount = () =>
+  {
     if (document && document.activeElement) document.activeElement.blur();
     router.push('/auth/customer/signup');
   };
@@ -149,13 +183,15 @@ const CustomerLogin = () => {
     ? `${window.location.origin.replace(/\/$/, '')}${rawBase.replace(/\/$/, '')}`
     : rawBase.replace(/\/$/, '');
 
-  const handleGoogleLogin = (e) => {
+  const handleGoogleLogin = (e) =>
+  {
     e.preventDefault();
     try {
       setGoogleLoading(true);
       const googleUrl = `${apiBase}/api/auth/google?role=customer`;
       console.log('[CustomerLogin] Redirecting to:', googleUrl);
-      setTimeout(() => {
+      setTimeout(() =>
+      {
         window.location.href = googleUrl;
       }, 200);
     } catch (err) {
@@ -164,7 +200,8 @@ const CustomerLogin = () => {
     }
   };
 
-  const handleChange = (fieldOrEvent, value) => {
+  const handleChange = (fieldOrEvent, value) =>
+  {
     setError('');
     // support both (e) event handlers or (field, value) calls
     if (typeof fieldOrEvent === 'string') {
@@ -280,6 +317,20 @@ const CustomerLogin = () => {
                 >
                   <YummyText className="font-[300] text-sm">Log In</YummyText>
                 </Button>
+
+                {/* Resend Verification Button - Only shown when needed */}
+                {showResend && (
+                  <Button
+                    variant="outline"
+                    onClick={handleResendVerification}
+                    disabled={resendLoading}
+                    className="!w-full !py-3 !border-[#00B75A] !text-[#00B75A] hover:!bg-green-50 !mb-3 rounded-full transition-all duration-300"
+                  >
+                    <YummyText className="font-[300] text-sm">
+                      {resendLoading ? 'Sending...' : 'Resend Verification Code'}
+                    </YummyText>
+                  </Button>
+                )}
 
                 {/* Divider */}
                 <div className="relative my-6">
