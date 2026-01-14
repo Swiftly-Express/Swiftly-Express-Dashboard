@@ -4,7 +4,7 @@ import { eyeOutline, eyeOffOutline } from 'ionicons/icons';
 import { YummyText } from '../../../components/YummyText';
 import Button from '../../../components/Button';
 import { useHistory } from 'react-router-dom';
-import { login } from '../../../utils/authApi';
+import { login, logout } from '../../../utils/authApi';
 import { setCookie, setJSONCookie } from '../../../utils/cookies';
 import { getCookie, deleteCookie } from '../../../utils/cookies';
 
@@ -56,6 +56,8 @@ const RiderSignIn = () =>
     }
 
     setIsLoading(true);
+
+
     try {
       const response = await login({
         email: formData.email,
@@ -64,6 +66,32 @@ const RiderSignIn = () =>
       });
 
       console.log('[RiderLogin] ✓ Login successful', response);
+
+      // Check for role mismatch (Customers shouldn't login here)
+      const currentUserRole = (
+        (response?.user?.role || response?.data?.user?.role || response?.data?.role) ||
+        // If not in response, check cookies as last resort
+        (document.cookie.split('; ').find(row => row.startsWith('userRole='))?.split('=')[1]) ||
+        (document.cookie.split('; ').find(row => row.startsWith('user_type='))?.split('=')[1]) ||
+        'driver'
+      ).toString().toLowerCase();
+
+      if (currentUserRole !== 'driver' && currentUserRole !== 'rider' && currentUserRole !== 'admin') {
+        console.warn('[RiderLogin] ⚠️ Customer attempted login on rider page');
+
+        await logout(); // Clear cookies
+
+        setError(
+          <span>
+            Access Denied. You are a Customer.<br />
+            <a href="/auth/customer/login" className="text-[#00B75A] font-medium underline mt-1 block">
+              Click here to go to Customer Login
+            </a>
+          </span>
+        );
+        setIsLoading(false);
+        return;
+      }
 
       // Clear verified email cookie after successful login
       deleteCookie('verifiedEmail');
@@ -203,10 +231,9 @@ const RiderSignIn = () =>
                 </div>
               )}
 
-              {/* Error Banner */}
               {error && (
-                <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-full">
-                  <YummyText className="text-sm text-red-600">{error}</YummyText>
+                <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-lg text-left">
+                  <div className="text-sm text-red-600 leading-normal">{error}</div>
                 </div>
               )}
 

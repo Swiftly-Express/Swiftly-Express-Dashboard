@@ -402,51 +402,66 @@ export async function verifyEmail(payload) {
 export async function login(payload) {
   console.log('[authApi] → Logging in:', payload.email);
 
-  // Remove role from payload - backend determines it from email
-  const { role, ...loginData } = payload;
+  // Remove role from payload for backend call, but keep it for validation
+  const { role: intendedRole, ...loginData } = payload;
 
   const response = await apiClient.post('/api/auth/login', loginData);
 
   console.log('[authApi] ← Login response:', response);
-  console.log('[authApi] Response type:', typeof response);
-  console.log('[authApi] Response keys:', Object.keys(response || {}));
 
   if (typeof window !== 'undefined' && response) {
-    // Clear any existing auth tokens to avoid role/token conflicts before storing new ones
-    try {
-      deleteCookie('auth_token');
-      deleteCookie('customer_token');
-      deleteCookie('rider_token');
-      deleteCookie('admin_token');
-      deleteCookie('refresh_token');
-      deleteCookie('customer_refresh_token');
-      deleteCookie('rider_refresh_token');
-      deleteCookie('admin_refresh_token');
-      deleteCookie('user_data');
-      deleteCookie('userRole');
-      deleteCookie('user_type');
-      console.log('[authApi] Cleared existing auth tokens before login');
-    } catch (e) {
-      console.warn('[authApi] Failed to clear tokens before login:', e);
-    }
     // Extract user from various possible locations
     const user = response?.user ||
       response?.data?.user ||
       response?.data;
 
-    // Get role from user object, fallback to 'customer'
+    // Get actual role from user object
     let userRole = user?.role || user?.userRole || response?.role;
+
+    // Normalize role (driver -> rider)
+    const normalizedUserRole = (userRole === 'driver') ? 'rider' : (userRole || 'customer');
+    const normalizedIntendedRole = (intendedRole === 'driver') ? 'rider' : (intendedRole || 'customer');
+
+    // Strict Role Enforcement
+    if (intendedRole && normalizedUserRole !== normalizedIntendedRole) {
+      if (normalizedIntendedRole !== 'admin') { // Allow admins to potentially login anywhere if needed, or restrict too
+        console.warn(`[authApi] ⛔ ROLE MISMATCH: Intended ${normalizedIntendedRole} but user is ${normalizedUserRole}`);
+        
+        // Throw special error object that UI can catch
+        const mismatchError = new Error(`Access Denied: You are a ${normalizedUserRole}, not a ${normalizedIntendedRole}.`);
+        mismatchError.code = 'ROLE_MISMATCH';
+        mismatchError.actualRole = normalizedUserRole;
+        mismatchError.intendedRole = normalizedIntendedRole;
+        throw mismatchError;
+      }
+    }
+
+    // Clear any existing auth tokens to avoid role/token conflicts before storing new ones
+    try {
+      deleteCookie('auth_token');
+      deleteCookie('customer_token');
+      // ... (rest of clear logic is fine, calling logout() logic essentially)
+       deleteCookie('rider_token');
+       deleteCookie('admin_token');
+       deleteCookie('refresh_token');
+       deleteCookie('customer_refresh_token');
+       deleteCookie('rider_refresh_token');
+       deleteCookie('admin_refresh_token');
+       deleteCookie('user_data');
+       deleteCookie('userRole');
+       deleteCookie('user_type');
+    } catch (e) {
+      console.warn('[authApi] Failed to clear tokens before login:', e);
+    }
 
     // If still no role, default to customer
     if (!userRole) {
       userRole = 'customer';
     }
 
-    console.log('[authApi] ✓ Login successful');
-    console.log('[authApi] Extracted user object:', user);
-    console.log('[authApi] Extracted role from user.role:', user?.role);
-    console.log('[authApi] Final role being stored:', userRole);
-
+    console.log('[authApi] ✓ Login successful, Role validated');
+    
+    // Only save data if role validation passed
     const tokenStored = saveAuthData(response, userRole);
 
     if (tokenStored) {
