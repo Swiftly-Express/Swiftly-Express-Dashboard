@@ -7,8 +7,7 @@ import { YummyText } from '../../../components/YummyText';
 import { verifyEmail, resendVerification } from '../../../utils/authApi';
 import { getCookie, setCookie, deleteCookie, getJSONCookie } from '../../../utils/cookies';
 
-const VerifyEmail = () =>
-{
+const VerifyEmail = () => {
   const router = useIonRouter();
   const location = useLocation(); // Gets the current location object
   const [otp, setOtp] = useState(['', '', '', '', '', '']);
@@ -32,8 +31,7 @@ const VerifyEmail = () =>
   const pendingVerificationUserId = urlUserId || getCookie('pendingVerificationUserId') || null;
 
   // Effect to handle URL parameters and Auto-Verification
-  useEffect(() =>
-  {
+  useEffect(() => {
     // 1. Hydrate userId cookie for resilience (Resend OTP support)
     if (urlUserId) {
       setCookie('pendingVerificationUserId', urlUserId, 1);
@@ -56,8 +54,7 @@ const VerifyEmail = () =>
   }, [urlCode, urlUserId]);
 
   // Countdown timer for resend button
-  useEffect(() =>
-  {
+  useEffect(() => {
     if (countdown > 0 && !showLoginPrompt) {
       const timer = setTimeout(() => setCountdown(countdown - 1), 1000);
       return () => clearTimeout(timer);
@@ -65,8 +62,7 @@ const VerifyEmail = () =>
   }, [countdown, showLoginPrompt]);
 
   // Handle OTP input change
-  const handleChange = (index, value) =>
-  {
+  const handleChange = (index, value) => {
     // Only allow numbers
     if (value && !/^\d+$/.test(value)) return;
 
@@ -81,39 +77,34 @@ const VerifyEmail = () =>
   };
 
   // Handle backspace
-  const handleKeyDown = (index, e) =>
-  {
+  const handleKeyDown = (index, e) => {
     if (e.key === 'Backspace' && !otp[index] && index > 0) {
       inputRefs.current[index - 1]?.focus();
     }
   };
 
   // Handle paste
-  const handlePaste = (e) =>
-  {
+  const handlePaste = (e) => {
     e.preventDefault();
     const pastedData = e.clipboardData.getData('text').replace(/\D/g, '').slice(0, 6);
 
     if (!pastedData) return;
 
     const newOtp = ['', '', '', '', '', ''];
-    pastedData.split('').forEach((char, index) =>
-    {
+    pastedData.split('').forEach((char, index) => {
       if (index < 6) newOtp[index] = char;
     });
     setOtp(newOtp);
 
     // Focus the last filled input or the next empty one
     const nextIndex = Math.min(pastedData.length, 5);
-    setTimeout(() =>
-    {
+    setTimeout(() => {
       inputRefs.current[nextIndex]?.focus();
     }, 0);
   };
 
   // Handle verify - optionally accepts arguments for auto-verification
-  const handleVerify = async (codeOverride = null, userIdOverride = null) =>
-  {
+  const handleVerify = async (codeOverride = null, userIdOverride = null) => {
     const otpCode = codeOverride || otp.join('');
     const userIdToUse = userIdOverride || pendingVerificationUserId;
 
@@ -150,8 +141,7 @@ const VerifyEmail = () =>
           deleteCookie('pendingVerificationUserId');
 
           // Use a small timeout to ensure cookies are set before redirect
-          setTimeout(() =>
-          {
+          setTimeout(() => {
             alert('Email verified successfully!');
             // Redirect to dashboard
             if (userType === 'rider' || userType === 'driver') {
@@ -178,8 +168,7 @@ const VerifyEmail = () =>
   };
 
   // Handle resend OTP
-  const handleResend = async () =>
-  {
+  const handleResend = async () => {
     if (countdown > 0) return;
 
     // Ensure we have a userId to resend to
@@ -203,8 +192,7 @@ const VerifyEmail = () =>
     }
   };
 
-  const handleProceedToLogin = () =>
-  {
+  const handleProceedToLogin = () => {
     // Use correct login routes
     const loginPath = userType === 'rider' || userType === 'driver'
       ? '/auth/rider/login'
@@ -269,32 +257,32 @@ const VerifyEmail = () =>
                 <button
                   onClick={() => handleVerify()}
                   disabled={isVerifying || otp.join('').length !== 6 || showLoginPrompt}
-<<<<<<< HEAD
                   className={`w-full py-3 sm:py-4 rounded-xl font-medium transition-colors mb-4 text-sm sm:text-base ${isVerifying || otp.join('').length !== 6 || showLoginPrompt
-                      ? 'bg-[#00B75A] text-[#FFFFFF] opacity-[50%] cursor-not-allowed'
-                      : 'bg-[#00B75A] hover:bg-[#00B876] text-white'
-                    }`}
-=======
-                  className={`py-3 rounded-xl font-medium transition-colors mb-4 ${isVerifying || otp.join('').length !== 6 || showLoginPrompt
                     ? 'bg-[#00B75A] text-[#FFFFFF] opacity-[50%] cursor-not-allowed'
                     : 'bg-[#00B75A] hover:bg-[#00B876] text-white'
                     }`}
-                  style={{ width: `${otp.length * 80 + (otp.length - 1) * 8}px` }}
-                  className={`w-full py-3 sm:py-4 rounded-xl font-medium transition-colors mb-4 text-sm sm:text-base ${isVerifying || otp.join('').length !== 6 || showLoginPrompt
-                      ? 'bg-[#00B75A] text-[#FFFFFF] opacity-[50%] cursor-not-allowed'
-                      : 'bg-[#00B75A] hover:bg-[#00B876] text-white'
-                    }`} isResending || showLoginPrompt}
+                >
+                  {isVerifying ? 'Verifying...' : 'Verify Email'}
+                </button>
+
+                {/* Resend Code */}
+                <div className="text-center">
+                  <p className="text-sm text-[#64748B] inline">
+                    Didn't receive the code?{' '}
+                    <button
+                      onClick={handleResend}
+                      disabled={countdown > 0 || isResending || showLoginPrompt}
                       className={`font-medium transition-colors ${countdown > 0 || isResending || showLoginPrompt
-<<<<<<< HEAD
-                          ? 'text-[#00B75A] cursor-not-allowed'
-                          : 'text-[#00D68F] hover:text-[#00B876]'
-=======
                         ? 'text-[#00B75A] cursor-not-allowed'
                         : 'text-[#00D68F] hover:text-[#00B876]'
->>>>>>> a0dd79cbaa67c0f101149cc074731305ad3a0477
                         }`}
-                          ? 'text-[#00B75A] cursor-not-allowed'
-                          : 'text-[#00D68F] hover:text-[#00B876]'
+                    >
+                      {isResending
+                        ? 'Sending...'
+                        : countdown > 0
+                          ? `Resend OTP (${countdown}s)`
+                          : 'Resend OTP'}
+                    </button>
                   </p>
                 </div>
 
@@ -350,16 +338,16 @@ const VerifyEmail = () =>
                   <IonIcon icon={checkmarkCircleOutline} className="text-green-600 text-4xl sm:text-5xl" />
                 </div>
 
-<<<<<<< HEAD
                 <h2 className="text-xl sm:text-2xl font-semibold text-[#0F172A] mb-2 sm:mb-3">
                   Email Verified Successfully! ✓
                 </h2>
 
-                <h2 className="text-xl sm:text-2xl font-semibold text-[#0F172A] mb-2 sm:mb-3">
-                  Email Verified Successfully! ✓
-                </h2>
+                <p className="text-sm sm:text-base text-[#64748B] mb-4 sm:mb-6">
+                  Your email has been verified. Please log in with your credentials to access your account.
+                </p>
 
-                <p className="text-sm sm:text-base text-[#64748B] mb-4 sm:mb-6">E40AF] flex items-start gap-2">
+                <div className="bg-blue-50 border border-blue-200 rounded-xl p-4 mb-6">
+                  <p className="text-sm text-[#1E40AF] flex items-start gap-2">
                     <IonIcon icon={alertCircleOutline} className="text-lg flex-shrink-0 mt-0.5" />
                     <span>Use the same email and password you registered with to sign in.</span>
                   </p>
