@@ -160,8 +160,8 @@ const VerifyEmail = () => {
     <IonPage>
       <IonContent className="ion-no-padding !fullscreen">
         <div className="!h-full grid grid-cols-1 lg:grid-cols-2 overflow-hidden">
-          {/* Left Side - Verification Form - ORIGINAL UI */}
-          <div className="bg-white flex items-center justify-start !p-12 !lg:p-2 !h-full overflow-y-auto">
+          {/* Left Side - Verification Form */}
+          <div className="bg-white flex items-center justify-center p-4 sm:p-6 md:p-8 lg:p-12 min-h-screen lg:min-h-0 overflow-y-auto">
             <div className="w-full max-w-md">
               {/* Back Button */}
               <button
@@ -179,16 +179,16 @@ const VerifyEmail = () => {
               <YummyText>
                 {/* Heading */}
                 <div className="items-center justify-center mb-6">
-                  <h1 className="text-2xl font-medium text-[#00B75A] mb-2">
+                  <h1 className="text-xl sm:text-2xl font-medium text-[#00B75A] mb-2">
                     Email Verification
                   </h1>
-                  <p className="text-sm text-[#0A0A0A]">
+                  <p className="text-xs sm:text-sm text-[#0A0A0A]">
                     We've sent a One-Time Password (OTP) to your email. Please enter the code to complete your account verification.
                   </p>
                 </div>
 
                 {/* OTP Input */}
-                <div className="flex gap-2 mb-5">
+                <div className="flex gap-1.5 sm:gap-2 mb-5 justify-center sm:justify-start">
                   {otp.map((digit, index) => (
                     <input
                       key={index}
@@ -200,7 +200,7 @@ const VerifyEmail = () => {
                       onChange={(e) => handleChange(index, e.target.value)}
                       onKeyDown={(e) => handleKeyDown(index, e)}
                       onPaste={handlePaste}
-                      className="w-20 h-20 text-center text-xl font-medium border-2 border-[#F3F4F6] rounded-xl focus:border-[#00D68F] focus:outline-none transition-colors"
+                      className="w-12 h-12 sm:w-16 sm:h-16 md:w-20 md:h-20 text-center text-lg sm:text-xl font-medium border-2 border-[#F3F4F6] rounded-lg sm:rounded-xl focus:border-[#00D68F] focus:outline-none transition-colors"
                       autoFocus={index === 0}
                       disabled={showLoginPrompt}
                     />
@@ -211,12 +211,11 @@ const VerifyEmail = () => {
                 <button
                   onClick={handleVerify}
                   disabled={isVerifying || otp.join('').length !== 6 || showLoginPrompt}
-                  className={`py-3 rounded-xl font-medium transition-colors mb-4 ${
+                  className={`w-full py-3 sm:py-4 rounded-xl font-medium transition-colors mb-4 text-sm sm:text-base ${
                     isVerifying || otp.join('').length !== 6 || showLoginPrompt
                       ? 'bg-[#00B75A] text-[#FFFFFF] opacity-[50%] cursor-not-allowed'
                       : 'bg-[#00B75A] hover:bg-[#00B876] text-white'
                   }`}
-                  style={{ width: `${otp.length * 80 + (otp.length - 1) * 8}px` }}
                 >
                   {isVerifying ? 'Verifying...' : 'Verify Email'}
                 </button>
@@ -244,10 +243,10 @@ const VerifyEmail = () => {
                 </div>
 
                 {/* Help Text */}
-                <div className="mt-6 p-3 bg-blue-50 rounded-xl flex gap-2">
-                  <IonIcon icon={alertCircleOutline} className="text-[#193CB8] text-lg flex-shrink-0" />
-                  <p className="text-xs text-[#193CB8]">
-                    Check your inbox (and spam folder) for your verification code. <br /> Enter it below to activate your account and start sending deliveries.
+                <div className="mt-6 p-3 sm:p-4 bg-blue-50 rounded-xl flex gap-2 sm:gap-3">
+                  <IonIcon icon={alertCircleOutline} className="text-[#193CB8] text-base sm:text-lg flex-shrink-0 mt-0.5" />
+                  <p className="text-xs sm:text-sm text-[#193CB8]">
+                    Check your inbox (and spam folder) for your verification code. Enter it below to activate your account and start sending deliveries.
                   </p>
                 </div>
               </YummyText>
@@ -286,20 +285,20 @@ const VerifyEmail = () => {
           </div>
         </div>
 
-        {/* Login Prompt Overlay - NEW: Only shows when needed */}
+        {/* Login Prompt Overlay - Only shows when needed */}
         {showLoginPrompt && (
           <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm">
-            <div className="bg-white rounded-3xl shadow-2xl max-w-md w-full p-8 text-center animate-scale-in">
+            <div className="bg-white rounded-2xl sm:rounded-3xl shadow-2xl max-w-md w-full p-6 sm:p-8 text-center animate-scale-in">
               <YummyText>
-                <div className="w-20 h-20 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-6">
-                  <IonIcon icon={checkmarkCircleOutline} className="text-green-600 text-5xl" />
+                <div className="w-16 h-16 sm:w-20 sm:h-20 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-4 sm:mb-6">
+                  <IonIcon icon={checkmarkCircleOutline} className="text-green-600 text-4xl sm:text-5xl" />
                 </div>
                 
-                <h2 className="text-2xl font-semibold text-[#0F172A] mb-3">
+                <h2 className="text-xl sm:text-2xl font-semibold text-[#0F172A] mb-2 sm:mb-3">
                   Email Verified Successfully! ✓
                 </h2>
                 
-                <p className="text-[#64748B] mb-6">
+                <p className="text-sm sm:text-base text-[#64748B] mb-4 sm:mb-6">
                   Your email has been verified. Please log in with your credentials to access your account.
                 </p>
                 
@@ -312,7 +311,7 @@ const VerifyEmail = () => {
                 
                 <button
                   onClick={handleProceedToLogin}
-                  className="w-full py-4 bg-[#00B75A] hover:bg-[#00B876] text-white rounded-xl font-semibold transition-colors text-lg"
+                  className="w-full py-3 sm:py-4 bg-[#00B75A] hover:bg-[#00B876] text-white rounded-xl font-semibold transition-colors text-base sm:text-lg"
                 >
                   Continue to Login
                 </button>
