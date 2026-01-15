@@ -22,6 +22,7 @@ const Track = () =>
   const [loading, setLoading] = useState(false);
   const [toastMsg, setToastMsg] = useState('');
   const [showToast, setShowToast] = useState(false);
+  const [driverLocation, setDriverLocation] = useState(null);
 
   // Listen for delivery updates and refresh if the current delivery changes
   useEffect(() =>

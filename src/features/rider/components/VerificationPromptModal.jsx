@@ -33,6 +33,9 @@ const VerificationPromptModal = ({ isOpen, onClose }) => {
     // Contact Information
     phoneNumber: '',
     streetAddress: '',
+    city: '',
+    state: '',
+    zipCode: '',
     // Coordinates from autocomplete
     lat: 0,
     lng: 0,
@@ -301,8 +304,9 @@ const VerificationPromptModal = ({ isOpen, onClose }) => {
       // Add all form fields
       submitData.append('contactInfo[phone]', formData.phoneNumber || '');
       submitData.append('contactInfo[streetAddress]', formData.streetAddress || '');
-      submitData.append('contactInfo[lat]', formData.lat || 0);
-      submitData.append('contactInfo[lng]', formData.lng || 0);
+      submitData.append('contactInfo[city]', formData.city || '');
+      submitData.append('contactInfo[state]', formData.state || '');
+      submitData.append('contactInfo[zipCode]', formData.zipCode || '');
 
       submitData.append('identity[idType]', formData.idType || '');
       submitData.append('identity[idNumber]', formData.idNumber || '');
@@ -578,9 +582,12 @@ const VerificationPromptModal = ({ isOpen, onClose }) => {
                       onChange={(value) => handleInputChange('streetAddress', value)}
                       placeholder="Enter your address"
                       onPlaceSelect={(place) => {
-                        handleInputChange('streetAddress', place.formatted_address);
-                        handleInputChange('lat', place.geometry.location.lat);
-                        handleInputChange('lng', place.geometry.location.lng);
+                        handleInputChange('streetAddress', place.street || place.formatted_address || place);
+                        handleInputChange('lat', place.coordinates?.lat || 0);
+                        handleInputChange('lng', place.coordinates?.lng || 0);
+                        handleInputChange('city', place.city || '');
+                        handleInputChange('state', place.state || '');
+                        handleInputChange('zipCode', place.zipCode || '');
                       }}
                     />
                   </div>
