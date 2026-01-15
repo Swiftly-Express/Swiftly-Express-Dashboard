@@ -247,6 +247,10 @@ const App = () =>
               <Route exact path="/payment/callback">
                 <PaymentCallback />
               </Route>
+              {/* Public direct tracking link (email links like /track/SX-...) */}
+              <Route exact path="/track/:trackingId">
+                <Track />
+              </Route>
               <Route exact path="/forgot-password">
                 <ForgotPassword />
               </Route>

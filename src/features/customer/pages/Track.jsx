@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { useParams } from 'react-router-dom';
 import { IonPage, IonContent, IonToast } from '@ionic/react';
 import CustomerLayout from '../components/CustomerLayout';
 import { YummyText } from '../../../components/YummyText';
@@ -22,6 +23,36 @@ const Track = () => {
   const [toastMsg, setToastMsg] = useState('');
   const [showToast, setShowToast] = useState(false);
   const [driverLocation, setDriverLocation] = useState(null);
+  const params = useParams();
+
+  // Auto-fetch when a trackingId is present in the URL (e.g. /track/SX-...)
+  useEffect(() => {
+    const paramId = params?.trackingId;
+    if (!paramId) return;
+
+    const fetchByParam = async () => {
+      if (paramId && paramId !== trackingId) {
+        setTrackingId(paramId);
+        setLoading(true);
+        try {
+          console.log('[Track] Auto-fetching delivery for param:', paramId);
+          const response = await getDeliveryByTracking(paramId);
+          const data = response?.data?.delivery || response?.delivery || response?.data || response;
+          setDeliveryData(data);
+        } catch (err) {
+          console.error('[Track] Auto-fetch failed:', err);
+          setToastMsg(err?.message || 'Tracking number not found');
+          setShowToast(true);
+          setDeliveryData(null);
+        } finally {
+          setLoading(false);
+        }
+      }
+    };
+
+    fetchByParam();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [params?.trackingId]);
 
   // Listen for delivery updates and refresh if the current delivery changes
   useEffect(() => {
