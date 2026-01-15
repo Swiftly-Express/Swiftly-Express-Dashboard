@@ -1,10 +1,9 @@
 import React from "react";
-import
-  {
-    IonApp,
-    IonRouterOutlet,
-    setupIonicReact,
-  } from "@ionic/react";
+import {
+IonApp,
+IonRouterOutlet,
+setupIonicReact,
+} from "@ionic/react";
 import { IonReactRouter } from "@ionic/react-router";
 import { Route, Redirect } from "react-router-dom";
 import "@ionic/react/css/core.css";
@@ -77,8 +76,7 @@ try {
   throw error;
 }
 
-const App = () =>
-{
+const App = () => {
   console.log('[App] App component rendering...');
   return (
     <DeliveryProvider>
