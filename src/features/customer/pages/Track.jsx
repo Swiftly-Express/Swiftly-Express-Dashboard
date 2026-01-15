@@ -15,8 +15,7 @@ const sideBottomShadow = {
   boxShadow: '2px 2px 4px rgba(0,0,0,0.06), -2px 2px 4px rgba(0,0,0,0.06), 0 4px 8px rgba(0,0,0,0.08)'
 };
 
-const Track = () =>
-{
+const Track = () => {
   const [trackingId, setTrackingId] = useState('');
   const [deliveryData, setDeliveryData] = useState(null);
   const [loading, setLoading] = useState(false);
@@ -25,10 +24,8 @@ const Track = () =>
   const [driverLocation, setDriverLocation] = useState(null);
 
   // Listen for delivery updates and refresh if the current delivery changes
-  useEffect(() =>
-  {
-    const handleDeliveryUpdated = (event) =>
-    {
+  useEffect(() => {
+    const handleDeliveryUpdated = (event) => {
       if (deliveryData && event.detail) {
         const updatedDeliveryId = event.detail.deliveryId || event.detail.id;
         const currentDeliveryId = deliveryData._id || deliveryData.id;
@@ -60,8 +57,7 @@ const Track = () =>
       socketService.connect();
       socketService.joinRoom(deliveryId);
 
-      const handleLocationUpdate = (data) =>
-      {
+      const handleLocationUpdate = (data) => {
         if (data && data.location) {
           console.log('[Track] Driver location updated:', data.location);
           setDriverLocation(data.location);
@@ -83,22 +79,19 @@ const Track = () =>
         }
       }
 
-      socketCleanup = () =>
-      {
+      socketCleanup = () => {
         socketService.leaveRoom(deliveryId);
         socketService.off('delivery:location:updated', handleLocationUpdate);
       };
     }
 
-    return () =>
-    {
+    return () => {
       window.removeEventListener('delivery:updated', handleDeliveryUpdated);
       socketCleanup();
     };
   }, [deliveryData]);
 
-  const handleTrack = async (e) =>
-  {
+  const handleTrack = async (e) => {
     e.preventDefault();
 
     if (!trackingId.trim()) {
@@ -128,8 +121,7 @@ const Track = () =>
     }
   };
 
-  const getStatusColor = (status) =>
-  {
+  const getStatusColor = (status) => {
     const statusLower = status?.toLowerCase() || '';
     if (statusLower === 'delivered') return 'bg-green-500';
     if (statusLower === 'in-transit' || statusLower === 'in transit') return 'bg-blue-500';
@@ -138,8 +130,7 @@ const Track = () =>
     return 'bg-gray-400';
   };
 
-  const getStatusBadge = (status) =>
-  {
+  const getStatusBadge = (status) => {
     const statusLower = status?.toLowerCase() || '';
     if (statusLower === 'delivered') return 'bg-green-100 text-green-700';
     if (statusLower === 'in-transit' || statusLower === 'in transit') return 'bg-[#00B75A] text-[#FFFFFF]';
@@ -148,8 +139,7 @@ const Track = () =>
     return 'bg-gray-100 text-gray-700';
   };
 
-  const formatDate = (dateString) =>
-  {
+  const formatDate = (dateString) => {
     if (!dateString) return 'N/A';
     try {
       const date = new Date(dateString);
@@ -163,8 +153,7 @@ const Track = () =>
     }
   };
 
-  const formatTime = (dateString) =>
-  {
+  const formatTime = (dateString) => {
     if (!dateString) return '';
     try {
       const date = new Date(dateString);
