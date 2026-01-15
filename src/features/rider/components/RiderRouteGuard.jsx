@@ -2,12 +2,13 @@ import React from 'react';
 import { Redirect } from 'react-router-dom';
 import { getCookie, getJSONCookie } from '../../../utils/cookies';
 
-const RiderRouteGuard = ({ children }) => {
+const RiderRouteGuard = ({ children }) =>
+{
     const authToken = getCookie('auth_token');
     const userData = getJSONCookie('user_data');
 
-    // Check if user is logged in and is a rider
-    const isRider = authToken && userData?.role === 'rider';
+    // Check if user is logged in and is a rider or driver
+    const isRider = authToken && (userData?.role === 'rider' || userData?.role === 'driver');
 
     if (!isRider) {
         console.warn('[RiderRouteGuard] Access denied - user is not logged in as rider');
