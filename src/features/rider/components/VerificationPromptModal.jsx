@@ -16,6 +16,7 @@ import { YummyText } from '../../../components/YummyText';
 import { removeVerificationNotification } from '../../../utils/verificationNotifications';
 import { submitRiderVerification, getRiderProfile } from '../../../utils/authApi';
 import { getCookie, setCookie, deleteCookie, setJSONCookie, getJSONCookie } from '../../../utils/cookies';
+import StyledDropdown from '../../../components/StyledDropdown';
 
 const VerificationPromptModal = ({ isOpen, onClose }) => {
   const router = useIonRouter();
@@ -602,17 +603,13 @@ const VerificationPromptModal = ({ isOpen, onClose }) => {
 
                   <div>
                     <label className="block text-sm font-medium text-[#0F172A] mb-2 mt-5">ID Type *</label>
-                    <select
-                      value={formData.idType}
-                      onChange={(e) => handleInputChange('idType', e.target.value)}
-                      className="w-full px-4 py-3 bg-[#F3F3F5] placeholder:text-[#717182] border-none rounded-lg focus:ring-2 focus:ring-[#00D68F] outline-none appearance-none"
-                    >
-                      <option value="">Select ID type</option>
-                      <option value="drivers-license">Driver's License</option>
-                      <option value="passport">International Passport</option>
-                      <option value="national-id">National ID Card</option>
-                      <option value="voters-card">Voter's Card</option>
-                    </select>
+                    <StyledDropdown
+                      value={formData.idType || 'Select ID type'}
+                      onChange={(val) => handleInputChange('idType', val === 'Select ID type' ? '' : val)}
+                      options={['Select ID type', 'Driver\'s License', 'International Passport', 'National ID Card', 'Voter\'s Card']}
+                      className="w-full"
+                      width="w-full"
+                    />
                   </div>
 
                   <div>
@@ -678,18 +675,13 @@ const VerificationPromptModal = ({ isOpen, onClose }) => {
 
                   <div>
                     <label className="block text-sm font-medium text-[#0F172A] mb-2 mt-5">Vehicle Type *</label>
-                    <select
-                      value={formData.vehicleType}
-                      onChange={(e) => handleInputChange('vehicleType', e.target.value)}
-                      className="w-full px-4 py-3 placeholder:text-[#717182] bg-[#F8F9FA] border-none rounded-lg focus:ring-2 focus:ring-[#00D68F] outline-none appearance-none"
-                    >
-                      <option value="">Select vehicle type</option>
-                      <option value="motorcycle">Motorcycle</option>
-                      <option value="scooter">Scooter</option>
-                      <option value="bicycle">Bicycle</option>
-                      <option value="car">Car</option>
-                      <option value="van">Van</option>
-                    </select>
+                    <StyledDropdown
+                      value={formData.vehicleType || 'Select vehicle type'}
+                      onChange={(val) => handleInputChange('vehicleType', val === 'Select vehicle type' ? '' : val)}
+                      options={['Select vehicle type', 'Motorcycle', 'Scooter', 'Bicycle', 'Car', 'Van']}
+                      className="w-full"
+                      width="w-full"
+                    />
                   </div>
 
                   <div className="grid grid-cols-2 gap-4">

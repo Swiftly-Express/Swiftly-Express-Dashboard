@@ -26,7 +26,7 @@ const StyledDropdown = ({ value, onChange, options = [], tooltips = {}, classNam
     const popoverPositionClass = width === 'w-full' ? 'left-0' : 'left-1/2 transform -translate-x-1/2';
 
     const isFull = width === 'w-full';
-    const buttonBase = isFull ? 'justify-between w-full px-4 py-2 rounded-full bg-transparent border-none' : 'gap-2 px-4 py-2 rounded-lg bg-white border border-gray-200 hover:bg-gray-50';
+    const buttonBase = isFull ? 'justify-between w-full px-4 py-2 rounded-full bg-white border border-gray-700' : 'gap-2 px-4 py-2 rounded-lg bg-white border border-gray-200 hover:bg-gray-50';
 
     return (
         <div ref={ref} className={`relative ${className}`}>

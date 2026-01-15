@@ -9,6 +9,7 @@ import PauseIcon from '../../../icons/Pauseicon';
 import ClockIcon from '../../../icons/Clockicon';
 import BanIcon from '../../../icons/Banicon';
 import { getApprovedRiders } from '../../../utils/adminApi';
+import StyledDropdown from '../../../components/StyledDropdown';
 
 const ManageRiders = () => {
   const [searchQuery, setSearchQuery] = useState('');
@@ -20,6 +21,8 @@ const ManageRiders = () => {
   const [currentPage, setCurrentPage] = useState(1);
   const [itemsPerPage] = useState(10);
   const [isMobile, setIsMobile] = useState(typeof window !== 'undefined' ? window.innerWidth < 768 : false);
+  const statusOptions = ['All Status', 'Active', 'Inactive', 'Suspended'];
+  const kycOptions = ['All KYC', 'Approved', 'Pending', 'Rejected'];
 
   // Fetch riders data
   useEffect(() => {
@@ -332,32 +335,30 @@ const ManageRiders = () => {
                           className="w-full pl-10 pr-4 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                         />
                       </div>
-                      <select
-                        value={statusFilter}
-                        onChange={(e) => {
-                          setStatusFilter(e.target.value);
-                          setCurrentPage(1);
-                        }}
-                        className="w-full md:w-auto flex items-center gap-2 px-4 py-2 border border-gray-200 rounded-lg text-sm text-gray-700 hover:bg-gray-50 cursor-pointer focus:outline-none focus:ring-2 focus:ring-blue-500"
-                      >
-                        <option value="All Status">All Status</option>
-                        <option value="Active">Active</option>
-                        <option value="Inactive">Inactive</option>
-                        <option value="Suspended">Suspended</option>
-                      </select>
-                      <select
-                        value={kycFilter}
-                        onChange={(e) => {
-                          setKycFilter(e.target.value);
-                          setCurrentPage(1);
-                        }}
-                        className="w-full md:w-auto flex items-center gap-2 px-4 py-2 border border-gray-200 rounded-lg text-sm text-gray-700 hover:bg-gray-50 cursor-pointer focus:outline-none focus:ring-2 focus:ring-blue-500"
-                      >
-                        <option value="All KYC">All KYC</option>
-                        <option value="Approved">Approved</option>
-                        <option value="Pending">Pending</option>
-                        <option value="Rejected">Rejected</option>
-                      </select>
+                      <div className="w-full md:w-auto">
+                        <StyledDropdown
+                          value={statusFilter}
+                          onChange={(val) => {
+                            setStatusFilter(val);
+                            setCurrentPage(1);
+                          }}
+                          options={statusOptions}
+                          className="w-full md:w-auto"
+                          width="w-44"
+                        />
+                      </div>
+                      <div className="w-full md:w-auto">
+                        <StyledDropdown
+                          value={kycFilter}
+                          onChange={(val) => {
+                            setKycFilter(val);
+                            setCurrentPage(1);
+                          }}
+                          options={kycOptions}
+                          className="w-full md:w-auto"
+                          width="w-44"
+                        />
+                      </div>
                     </div>
                   </div>
                 </div>
