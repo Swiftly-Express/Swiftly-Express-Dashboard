@@ -1,7 +1,13 @@
 import React, { useState, useEffect } from 'react';
 import RiderSidebar from './RiderSidebar';
 import { YummyText } from '../../../components/YummyText';
-import { getRiderProfile } from '../../../utils/authApi';
+import {
+  getRiderProfile,
+  getUnreadNotificationCount,
+  getNotifications,
+  markNotificationAsRead,
+  markAllNotificationsAsRead
+} from '../../../utils/authApi';
 import { getCookie, setCookie, getJSONCookie } from '../../../utils/cookies';
 
 // Generate mock avatar based on user name
@@ -54,6 +60,9 @@ const RiderLayout = ({ children }) => {
   const [showNotifications, setShowNotifications] = useState(false);
   const [notifications, setNotifications] = useState([]);
   const [unreadCount, setUnreadCount] = useState(0);
+  const [notificationPage, setNotificationPage] = useState(1);
+  const [hasMoreNotifications, setHasMoreNotifications] = useState(false);
+  const [loadingNotifications, setLoadingNotifications] = useState(false);
 
   // Keep a simple cookie copy of the profile image so mobile sidebar can read the same image key
   useEffect(() => {
@@ -67,6 +76,11 @@ const RiderLayout = ({ children }) => {
   useEffect(() => {
     fetchUserProfile();
     checkNotifications();
+
+    // Poll notification count every 30 seconds
+    const notificationInterval = setInterval(() => {
+      checkNotifications();
+    }, 30000);
 
     // Listen for profile updates
     const handleProfileUpdate = (event) => {
@@ -90,12 +104,38 @@ const RiderLayout = ({ children }) => {
       fetchUserProfile();
     };
 
+    // Listen for delivery status changes to check for new notifications
+    const handleDeliveryUpdated = () => {
+      checkNotifications();
+    };
+
+    const handleOrderAvailable = () => {
+      checkNotifications();
+    };
+
+    const handleEarningsUpdated = () => {
+      checkNotifications();
+    };
+
     window.addEventListener('profile:updated', handleProfileUpdate);
     window.addEventListener('verification:completed', handleVerificationComplete);
+    window.addEventListener('delivery:updated', handleDeliveryUpdated);
+    window.addEventListener('delivery:accepted', handleDeliveryUpdated);
+    window.addEventListener('delivery:completed', handleDeliveryUpdated);
+    window.addEventListener('order:available', handleOrderAvailable);
+    window.addEventListener('earnings:updated', handleEarningsUpdated);
+    window.addEventListener('payout:scheduled', handleEarningsUpdated);
 
     return () => {
       window.removeEventListener('profile:updated', handleProfileUpdate);
       window.removeEventListener('verification:completed', handleVerificationComplete);
+      window.removeEventListener('delivery:updated', handleDeliveryUpdated);
+      window.removeEventListener('delivery:accepted', handleDeliveryUpdated);
+      window.removeEventListener('delivery:completed', handleDeliveryUpdated);
+      window.removeEventListener('order:available', handleOrderAvailable);
+      window.removeEventListener('earnings:updated', handleEarningsUpdated);
+      window.removeEventListener('payout:scheduled', handleEarningsUpdated);
+      clearInterval(notificationInterval);
     };
   }, []);
 
@@ -151,27 +191,45 @@ const RiderLayout = ({ children }) => {
 
   const checkNotifications = async () => {
     try {
-      const response = await getRiderProfile();
-      const profile = response?.data?.driver || response?.driver || response?.data;
-      const notificationsList = [];
+      // Fetch unread count
+      const countResponse = await getUnreadNotificationCount();
+      const count = countResponse?.data?.count || countResponse?.count || 0;
+      setUnreadCount(count);
+      console.log('[RiderLayout] Unread notification count:', count);
+    } catch (error) {
+      console.error('[RiderLayout] Failed to fetch notification count:', error);
+    }
+  };
 
-      // Check verification status
-      const verificationStatus = profile?.verificationStatus || getCookie('riderVerificationStatus');
-      if (verificationStatus === 'pending' || getCookie('verificationSubmitted') === 'true') {
-        notificationsList.push({
-          id: 'verification-pending',
-          type: 'warning',
-          title: 'Verification Pending Approval',
-          message: 'Your verification documents are under review. This usually takes 24-48 hours.',
-          timestamp: new Date().toISOString(),
-          read: false
-        });
+  const fetchNotifications = async (page = 1, append = false) => {
+    try {
+      setLoadingNotifications(true);
+      console.log('[RiderLayout] Fetching notifications, page:', page);
+
+      const response = await getNotifications(page, 20);
+      const data = response?.data || response;
+      const notificationsList = data?.notifications || data?.data || [];
+      const totalPages = data?.totalPages || data?.pages || 1;
+
+      console.log('[RiderLayout] Notifications fetched:', {
+        count: notificationsList.length,
+        page,
+        totalPages,
+        hasMore: page < totalPages
+      });
+
+      if (append) {
+        setNotifications(prev => [...prev, ...notificationsList]);
+      } else {
+        setNotifications(notificationsList);
       }
 
-      setNotifications(notificationsList);
-      setUnreadCount(notificationsList.filter(n => !n.read).length);
+      setHasMoreNotifications(page < totalPages);
+      setNotificationPage(page);
     } catch (error) {
-      console.error('[RiderLayout] Failed to check notifications:', error);
+      console.error('[RiderLayout] Failed to fetch notifications:', error);
+    } finally {
+      setLoadingNotifications(false);
     }
   };
 
@@ -180,12 +238,55 @@ const RiderLayout = ({ children }) => {
     // TODO: Call updateRiderAvailability API
   };
 
-  const toggleNotifications = () => {
-    setShowNotifications(!showNotifications);
-    if (!showNotifications) {
-      // Mark all as read when opening
-      setNotifications(prev => prev.map(n => ({ ...n, read: true })));
+  const toggleNotifications = async () => {
+    const newState = !showNotifications;
+    setShowNotifications(newState);
+
+    if (newState) {
+      // Opening notifications - fetch them
+      await fetchNotifications(1, false);
+    }
+  };
+
+  const handleMarkAllAsRead = async () => {
+    try {
+      console.log('[RiderLayout] Marking all notifications as read...');
+      const response = await markAllNotificationsAsRead();
+      console.log('[RiderLayout] Mark all as read response:', response);
+      // Update local state
+      setNotifications(prev => prev.map(n => ({ ...n, isRead: true, read: true })));
       setUnreadCount(0);
+      console.log('[RiderLayout] All notifications marked as read successfully');
+    } catch (error) {
+      console.error('[RiderLayout] Failed to mark all as read:', error);
+      console.error('[RiderLayout] Error details:', error.response?.data || error.message);
+    }
+  };
+
+  const handleMarkAsRead = async (notificationId, e) => {
+    if (e) {
+      e.stopPropagation();
+    }
+    try {
+      console.log('[RiderLayout] Marking notification as read:', notificationId);
+      const response = await markNotificationAsRead(notificationId);
+      console.log('[RiderLayout] Mark as read response:', response);
+      // Update local state
+      setNotifications(prev =>
+        prev.map(n => n._id === notificationId || n.id === notificationId ? { ...n, isRead: true, read: true } : n)
+      );
+      // Refresh count
+      await checkNotifications();
+      console.log('[RiderLayout] Notification marked as read successfully');
+    } catch (error) {
+      console.error('[RiderLayout] Failed to mark as read:', error);
+      console.error('[RiderLayout] Error details:', error.response?.data || error.message);
+    }
+  };
+
+  const loadMoreNotifications = () => {
+    if (!loadingNotifications && hasMoreNotifications) {
+      fetchNotifications(notificationPage + 1, true);
     }
   };
 
@@ -214,7 +315,9 @@ const RiderLayout = ({ children }) => {
                     <path d="M12 22c1.1 0 2-.9 2-2h-4c0 1.1.9 2 2 2zm6-6v-5c0-3.07-1.63-5.64-4.5-6.32V4c0-.83-.67-1.5-1.5-1.5s-1.5.67-1.5 1.5v.68C7.64 5.36 6 7.92 6 11v5l-2 2v1h16v-1l-2-2zm-2 1H8v-6c0-2.48 1.51-4.5 4-4.5s4 2.02 4 4.5v6z" fill="#64748B" />
                   </svg>
                   {unreadCount > 0 && (
-                    <span className="absolute top-1 right-2 w-2 h-2 bg-[#FF6B00] rounded-full"></span>
+                    <span className="absolute top-1 right-1 min-w-[18px] h-[18px] bg-[#FF6B00] text-white text-[10px] rounded-full flex items-center justify-center font-medium px-1">
+                      {unreadCount > 99 ? '99+' : unreadCount}
+                    </span>
                   )}
                 </button>
 
@@ -271,7 +374,9 @@ const RiderLayout = ({ children }) => {
                     <path d="M12 22c1.1 0 2-.9 2-2h-4c0 1.1.9 2 2 2zm6-6v-5c0-3.07-1.63-5.64-4.5-6.32V4c0-.83-.67-1.5-1.5-1.5s-1.5.67-1.5 1.5v.68C7.64 5.36 6 7.92 6 11v5l-2 2v1h16v-1l-2-2zm-2 1H8v-6c0-2.48 1.51-4.5 4-4.5s4 2.02 4 4.5v6z" fill="#64748B" />
                   </svg>
                   {unreadCount > 0 && (
-                    <span className="absolute top-1 right-1 w-5 h-5 bg-[#FF6B00] text-white text-xs rounded-full flex items-center justify-center font-medium">{unreadCount}</span>
+                    <span className="absolute top-1 right-1 min-w-[18px] h-[18px] bg-[#FF6B00] text-white text-[10px] rounded-full flex items-center justify-center font-medium px-1">
+                      {unreadCount > 99 ? '99+' : unreadCount}
+                    </span>
                   )}
                 </button>
 
@@ -298,12 +403,25 @@ const RiderLayout = ({ children }) => {
         {showNotifications && (
           <>
             <div className="fixed inset-0 z-[9998]" onClick={() => setShowNotifications(false)} />
-            <div className="fixed top-16 md:top-20 right-4 md:right-8 w-96 max-w-[calc(100vw-2rem)] bg-white rounded-xl shadow-2xl border border-gray-200 z-[9999] max-h-[500px] overflow-hidden">
-              <div className="p-4 border-b border-gray-200">
+            <div className="fixed top-16 md:top-20 right-4 md:right-8 w-96 max-w-[calc(100vw-2rem)] bg-white rounded-xl shadow-2xl border border-gray-200 z-[9999] max-h-[500px] overflow-hidden flex flex-col">
+              <div className="p-4 border-b border-gray-200 flex items-center justify-between">
                 <YummyText className="text-lg font-semibold text-[#0F172A]">Notifications</YummyText>
+                {notifications.length > 0 && (
+                  <button
+                    onClick={handleMarkAllAsRead}
+                    className="text-xs text-[#00B75A] hover:text-[#00a352] font-medium transition-colors"
+                  >
+                    Mark all read
+                  </button>
+                )}
               </div>
-              <div className="overflow-y-auto max-h-[420px]">
-                {notifications.length === 0 ? (
+              <div className="overflow-y-auto flex-1">
+                {loadingNotifications && notifications.length === 0 ? (
+                  <div className="p-8 text-center">
+                    <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-[#00D68F] mx-auto mb-3"></div>
+                    <YummyText className="text-sm text-gray-400">Loading notifications...</YummyText>
+                  </div>
+                ) : notifications.length === 0 ? (
                   <div className="p-8 text-center text-gray-400">
                     <svg width="48" height="48" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" className="mx-auto mb-3 opacity-50">
                       <path d="M12 22c1.1 0 2-.9 2-2h-4c0 1.1.9 2 2 2zm6-6v-5c0-3.07-1.63-5.64-4.5-6.32V4c0-.83-.67-1.5-1.5-1.5s-1.5.67-1.5 1.5v.68C7.64 5.36 6 7.92 6 11v5l-2 2v1h16v-1l-2-2z" fill="currentColor" />
@@ -311,26 +429,89 @@ const RiderLayout = ({ children }) => {
                     <YummyText className="text-sm">No notifications yet</YummyText>
                   </div>
                 ) : (
-                  <div className="divide-y divide-gray-100">
-                    {notifications.map(notification => (
-                      <div key={notification.id} className={`p-4 hover:bg-gray-50 transition-colors ${!notification.read ? 'bg-blue-50' : ''
-                        }`}>
-                        <div className="flex items-start gap-3">
-                          <div className={`w-10 h-10 rounded-full flex items-center justify-center flex-shrink-0 ${notification.type === 'warning' ? 'bg-amber-100' : 'bg-blue-100'
-                            }`}>
-                            {notification.type === 'warning' ? '⏳' : '🔔'}
+                  <>
+                    <div className="divide-y divide-gray-100">
+                      {notifications.map(notification => {
+                        const notifId = notification._id || notification.id;
+                        const isRead = notification.isRead || notification.read;
+                        const notifType = notification.type || 'info';
+                        const title = notification.title || notification.message?.substring(0, 50) || 'Notification';
+                        const message = notification.message || notification.body || '';
+                        const timestamp = notification.createdAt || notification.timestamp || new Date().toISOString();
+
+                        // Icon based on type
+                        const getIcon = () => {
+                          if (notifType === 'order' || notifType === 'available_order') return '📋';
+                          if (notifType === 'delivery' || notifType === 'active_delivery') return '📦';
+                          if (notifType === 'earning' || notifType === 'earnings') return '💰';
+                          if (notifType === 'payout') return '💵';
+                          if (notifType === 'payment') return '💳';
+                          if (notifType === 'warning' || notifType === 'alert') return '⚠️';
+                          if (notifType === 'success') return '✅';
+                          if (notifType === 'verification') return '🔐';
+                          return '🔔';
+                        };
+
+                        const getBgColor = () => {
+                          if (notifType === 'order' || notifType === 'available_order') return 'bg-indigo-100';
+                          if (notifType === 'delivery' || notifType === 'active_delivery') return 'bg-blue-100';
+                          if (notifType === 'earning' || notifType === 'earnings') return 'bg-green-100';
+                          if (notifType === 'payout') return 'bg-emerald-100';
+                          if (notifType === 'payment') return 'bg-teal-100';
+                          if (notifType === 'warning' || notifType === 'alert') return 'bg-amber-100';
+                          if (notifType === 'success') return 'bg-lime-100';
+                          if (notifType === 'verification') return 'bg-purple-100';
+                          return 'bg-gray-100';
+                        };
+
+                        return (
+                          <div
+                            key={notifId}
+                            className={`p-4 hover:bg-gray-50 transition-colors cursor-pointer ${!isRead ? 'bg-blue-50' : ''}`}
+                            onClick={(e) => {
+                              if (!isRead) {
+                                handleMarkAsRead(notifId, e);
+                              }
+                            }}
+                          >
+                            <div className="flex items-start gap-3">
+                              <div className={`w-10 h-10 rounded-full flex items-center justify-center flex-shrink-0 ${getBgColor()}`}>
+                                <span className="text-lg">{getIcon()}</span>
+                              </div>
+                              <div className="flex-1 min-w-0">
+                                <div className="flex items-start justify-between gap-2 mb-1">
+                                  <YummyText className="font-medium text-[#0F172A] text-sm">{title}</YummyText>
+                                  {!isRead && (
+                                    <div className="w-2 h-2 bg-[#00B75A] rounded-full flex-shrink-0 mt-1"></div>
+                                  )}
+                                </div>
+                                <YummyText className="text-xs text-[#64748B] leading-relaxed line-clamp-2">{message}</YummyText>
+                                <YummyText className="text-xs text-gray-400 mt-2">
+                                  {new Date(timestamp).toLocaleString('en-US', {
+                                    month: 'short',
+                                    day: 'numeric',
+                                    hour: '2-digit',
+                                    minute: '2-digit'
+                                  })}
+                                </YummyText>
+                              </div>
+                            </div>
                           </div>
-                          <div className="flex-1 min-w-0">
-                            <YummyText className="font-medium text-[#0F172A] text-sm mb-1">{notification.title}</YummyText>
-                            <YummyText className="text-xs text-[#64748B] leading-relaxed">{notification.message}</YummyText>
-                            <YummyText className="text-xs text-gray-400 mt-2">
-                              {new Date(notification.timestamp).toLocaleString()}
-                            </YummyText>
-                          </div>
-                        </div>
+                        );
+                      })}
+                    </div>
+                    {hasMoreNotifications && (
+                      <div className="p-3 border-t border-gray-100">
+                        <button
+                          onClick={loadMoreNotifications}
+                          disabled={loadingNotifications}
+                          className="w-full py-2 text-sm text-[#00B75A] hover:text-[#00a352] font-medium transition-colors disabled:opacity-50"
+                        >
+                          {loadingNotifications ? 'Loading...' : 'Load more'}
+                        </button>
                       </div>
-                    ))}
-                  </div>
+                    )}
+                  </>
                 )}
               </div>
             </div>

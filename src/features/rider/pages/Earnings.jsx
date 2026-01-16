@@ -112,9 +112,9 @@ const Earnings = () => {
   const monthlyDeliveries = earnings?.monthlyDeliveries || 0;
   const avgPerDeliveryRaw = earnings?.averagePerDelivery || earnings?.avgPerDelivery || earnings?.average || 0;
 
-  // Format currency values
-  const todayEarnings = formatCurrency(todayEarningsRaw || totalEarningsRaw);
-  const weeklyEarnings = formatCurrency(weeklyEarningsRaw || monthlyEarningsRaw);
+  // Format currency values - no fallbacks, use actual values
+  const todayEarnings = formatCurrency(todayEarningsRaw);
+  const weeklyEarnings = formatCurrency(weeklyEarningsRaw);
   const monthlyEarnings = formatCurrency(monthlyEarningsRaw);
   const avgPerDelivery = formatCurrency(avgPerDeliveryRaw);
 
