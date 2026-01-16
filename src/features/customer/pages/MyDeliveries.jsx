@@ -2,7 +2,6 @@ import React, { useState, useEffect } from 'react';
 import { IonContent, IonPage, IonIcon, IonToast } from '@ionic/react';
 import { eye, eyeOff, arrowForward, copy } from 'ionicons/icons';
 import CustomerLayout from '../components/CustomerLayout';
-import RatingModal from '../components/RatingModal';
 import PaymentFailedModal from '../components/PaymentFailedModal';
 import { YummyText } from '../../../components/YummyText';
 import Loader from '../../../components/Loader';
@@ -463,7 +462,6 @@ const MyDeliveries = () => {
   const [error, setError] = useState('');
   const [page, setPage] = useState(1);
   const [limit] = useState(10);
-  const [showRatingModal, setShowRatingModal] = useState(false);
   const [selectedDeliveryForRating, setSelectedDeliveryForRating] = useState(null);
   const [toastMessage, setToastMessage] = useState('');
   const [showToast, setShowToast] = useState(false);
@@ -731,18 +729,7 @@ const MyDeliveries = () => {
             position="top"
           />
 
-          {/* Rating Modal */}
-          {selectedDeliveryForRating && (
-            <RatingModal
-              isOpen={showRatingModal}
-              onClose={() => {
-                setShowRatingModal(false);
-                setSelectedDeliveryForRating(null);
-              }}
-              delivery={selectedDeliveryForRating}
-              onSubmitRating={handleSubmitRating}
-            />
-          )}
+          {/* Rating handled by global RatingModal mounted in CustomerLayout. */}
 
           {/* Payment Failed Modal */}
           <PaymentFailedModal

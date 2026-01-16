@@ -26,6 +26,7 @@ const ActiveDeliveries = () => {
   const [showToast, setShowToast] = useState(false);
   const [updatingStatus, setUpdatingStatus] = useState(null);
   const [isMobile, setIsMobile] = useState(false);
+  const [activeTab, setActiveTab] = useState('in-progress'); // in-progress, yet-to-start, completed
 
   // Fetch rider's active deliveries on mount
   useEffect(() => {
@@ -310,6 +311,32 @@ const ActiveDeliveries = () => {
     }
   };
 
+  // Filter deliveries by tab
+  const filterDeliveriesByTab = () => {
+    if (activeTab === 'yet-to-start') {
+      // Deliveries that are assigned but not yet picked up
+      return deliveries.filter(d => {
+        const status = (d.status || '').toLowerCase();
+        return status.includes('assigned') || status.includes('pending');
+      });
+    } else if (activeTab === 'in-progress') {
+      // Deliveries that are picked up or in transit
+      return deliveries.filter(d => {
+        const status = (d.status || '').toLowerCase();
+        return status.includes('picked') || status.includes('transit');
+      });
+    } else if (activeTab === 'completed') {
+      // Completed/delivered deliveries
+      return deliveries.filter(d => {
+        const status = (d.status || '').toLowerCase();
+        return status.includes('delivered') || status.includes('completed');
+      });
+    }
+    return deliveries;
+  };
+
+  const filteredDeliveries = filterDeliveriesByTab();
+
   return (
     <IonPage>
       <RiderLayout>
@@ -326,6 +353,48 @@ const ActiveDeliveries = () => {
             </div>
           </YummyText>
 
+          {/* Tab Navigation */}
+          <div className={isMobile ? "mb-4 px-1" : "mb-6"}>
+            <div className="flex items-center gap-2 bg-gray-100 p-1 rounded-full w-full">
+              <button
+                onClick={() => setActiveTab('yet-to-start')}
+                className={`flex-1 px-4 py-2.5 whitespace-nowrap rounded-full text-sm font-normal transition-colors ${activeTab === 'yet-to-start'
+                    ? 'text-[#0F172A] bg-white shadow-sm'
+                    : 'text-[#64748B]'
+                  }`}
+              >
+                Yet to Start ({deliveries.filter(d => {
+                  const status = (d.status || '').toLowerCase();
+                  return status.includes('assigned') || status.includes('pending');
+                }).length})
+              </button>
+              <button
+                onClick={() => setActiveTab('in-progress')}
+                className={`flex-1 px-4 py-2.5 whitespace-nowrap rounded-full text-sm font-normal transition-colors ${activeTab === 'in-progress'
+                    ? 'text-[#0F172A] bg-white shadow-sm'
+                    : 'text-[#64748B]'
+                  }`}
+              >
+                In Progress ({deliveries.filter(d => {
+                  const status = (d.status || '').toLowerCase();
+                  return status.includes('picked') || status.includes('transit');
+                }).length})
+              </button>
+              <button
+                onClick={() => setActiveTab('completed')}
+                className={`flex-1 px-4 py-2.5 whitespace-nowrap rounded-full text-sm font-normal transition-colors ${activeTab === 'completed'
+                    ? 'text-[#0F172A] bg-white shadow-sm'
+                    : 'text-[#64748B]'
+                  }`}
+              >
+                Completed ({deliveries.filter(d => {
+                  const status = (d.status || '').toLowerCase();
+                  return status.includes('delivered') || status.includes('completed');
+                }).length})
+              </button>
+            </div>
+          </div>
+
           {/* Deliveries List */}
           <div className={isMobile ? "pb-4" : "max-h-[900px] overflow-y-auto pr-2"}>
             {loading ? (
@@ -335,8 +404,8 @@ const ActiveDeliveries = () => {
                   <p className="text-[#64748B]">Loading active deliveries...</p>
                 </div>
               </div>
-            ) : deliveries.length > 0 ? (
-              deliveries.map((delivery) => {
+            ) : filteredDeliveries.length > 0 ? (
+              filteredDeliveries.map((delivery) => {
                 // Map status to color
                 const getStatusColor = (status) => {
                   const statusLower = status?.toLowerCase() || '';
@@ -429,17 +498,23 @@ const ActiveDeliveries = () => {
               <div className={isMobile ? "text-center py-12 px-6" : "text-center py-20 rounded-2xl px-6"} style={!isMobile ? sideBottomShadow : {}}>
                 <BanIcon className="w-16 h-16 mx-auto mb-4 text-[#FF6B00]" />
                 <div className={isMobile ? "text-lg font-medium text-[#0F172A] mb-2" : "text-xl font-medium text-[#0F172A] mb-3"}>
-                  No Active Deliveries Yet
+                  {activeTab === 'yet-to-start' && 'No Deliveries Yet to Start'}
+                  {activeTab === 'in-progress' && 'No Deliveries In Progress'}
+                  {activeTab === 'completed' && 'No Completed Deliveries Yet'}
                 </div>
                 <div className={isMobile ? "text-sm text-[#64748B] mb-4 max-w-md mx-auto" : "text-sm text-[#64748B] mb-6 max-w-md mx-auto"}>
-                  You don't have any active deliveries at the moment. Head over to the Available Orders page to accept new delivery requests.
+                  {activeTab === 'yet-to-start' && "You don't have any assigned deliveries waiting to start. Check the Available Orders page for new requests."}
+                  {activeTab === 'in-progress' && "You don't have any deliveries currently in progress. Start a delivery from the 'Yet to Start' tab."}
+                  {activeTab === 'completed' && "You haven't completed any deliveries yet. Keep delivering to see your completed orders here."}
                 </div>
-                <button
-                  onClick={() => window.location.href = '/rider/available-orders'}
-                  className={isMobile ? "bg-[#00B75A] hover:bg-[#00B876] text-white px-6 py-3 rounded-full transition-colors font-medium w-full" : "bg-[#00B75A] hover:bg-[#00B876] text-white px-6 py-3 rounded-full transition-colors font-medium"}
-                >
-                  View Available Orders
-                </button>
+                {activeTab !== 'completed' && (
+                  <button
+                    onClick={() => window.location.href = '/rider/available-orders'}
+                    className={isMobile ? "bg-[#00B75A] hover:bg-[#00B876] text-white px-6 py-3 rounded-full transition-colors font-medium w-full" : "bg-[#00B75A] hover:bg-[#00B876] text-white px-6 py-3 rounded-full transition-colors font-medium"}
+                  >
+                    View Available Orders
+                  </button>
+                )}
               </div>
             )}
           </div>

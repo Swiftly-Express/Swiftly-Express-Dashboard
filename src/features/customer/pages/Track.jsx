@@ -5,7 +5,7 @@ import CustomerLayout from '../components/CustomerLayout';
 import { YummyText } from '../../../components/YummyText';
 import Loader from '../../../components/Loader';
 import TrackingMap from '../../../components/TrackingMap'; // NEW
-import RatingModal from '../components/RatingModal';
+// RatingModal is mounted globally in CustomerLayout and triggered via window events
 import { getDeliveryByTracking, rateDriver } from '../../../utils/authApi';
 import socketService from '../../../services/socket.service'; // NEW
 import BlockIcon from '../../../icons/Blockicon';
@@ -24,7 +24,6 @@ const Track = () => {
   const [toastMsg, setToastMsg] = useState('');
   const [showToast, setShowToast] = useState(false);
   const [driverLocation, setDriverLocation] = useState(null);
-  const [showRatingModal, setShowRatingModal] = useState(false);
   const [hasRated, setHasRated] = useState(false);
   const params = useParams();
 
@@ -84,7 +83,9 @@ const Track = () => {
             !hasRated &&
             !deliveryData.rating &&
             !deliveryData.customerRating) {
-            setTimeout(() => setShowRatingModal(true), 1500);
+            setTimeout(() => {
+              window.dispatchEvent(new CustomEvent('rating:show', { detail: deliveryData }));
+            }, 1500);
           }
         }
       }
@@ -161,7 +162,9 @@ const Track = () => {
       const alreadyRated = data.rating || data.customerRating || data.hasRated;
 
       if (isCompleted && !alreadyRated && !hasRated) {
-        setTimeout(() => setShowRatingModal(true), 2000);
+        setTimeout(() => {
+          window.dispatchEvent(new CustomEvent('rating:show', { detail: data }));
+        }, 2000);
       }
 
     } catch (err) {
@@ -558,15 +561,7 @@ const Track = () => {
             </div>
           )}
 
-          {/* Rating Modal */}
-          {deliveryData && (
-            <RatingModal
-              isOpen={showRatingModal}
-              onClose={() => setShowRatingModal(false)}
-              delivery={deliveryData}
-              onSubmitRating={handleSubmitRating}
-            />
-          )}
+          {/* Rating handled by global RatingModal mounted in CustomerLayout. */}
         </IonContent>
       </CustomerLayout>
     </IonPage>

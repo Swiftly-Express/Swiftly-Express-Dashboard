@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import CustomerSidebar from './CustomerSidebar';
 import { YummyText } from '../../../components/YummyText';
+import RatingModal from './RatingModal';
 import {
   getUnreadNotificationCount,
   getNotifications,
@@ -353,6 +354,9 @@ const CustomerLayout = ({ children }) => {
             </div>
           </>
         )}
+
+        {/* Global Rating Modal (glass card) - mounted so it can be shown from anywhere */}
+        <RatingModal />
       </div>
     </div>
   );
