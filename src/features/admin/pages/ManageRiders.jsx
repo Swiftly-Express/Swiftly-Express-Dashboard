@@ -108,9 +108,21 @@ const ManageRiders = () => {
 
   // Transform API data to UI format
   const transformedRiders = useMemo(() => {
-    return ridersData.map(rider => {
+    console.log('[ManageRiders] Raw ridersData:', ridersData);
+    return ridersData.map((rider, idx) => {
       // Prefer merged/profile data when available (some APIs return nested user/profile objects)
       const profile = rider._merged || rider.user || rider.driver || rider.profile || rider.account || rider;
+
+      console.log(`[ManageRiders] Rider ${idx}:`, {
+        rawRider: rider,
+        profile: profile,
+        vehicle: rider.vehicle,
+        vehicleType: rider.vehicleType,
+        phone: profile.phone,
+        phoneNumber: profile.phoneNumber,
+        totalDeliveries: rider.totalDeliveries,
+        deliveryCount: rider.deliveryCount
+      });
 
       const kycStatus = getKycStatus(rider);
       const riderStatus = getRiderStatus(rider);
@@ -132,11 +144,20 @@ const ManageRiders = () => {
       // Vehicle and license extraction from KYC/driver object
       let vehicle = 'Not specified';
       let license = 'N/A';
-      // Try to extract from KYC/driver fields
+      // Try to extract vehicle from multiple possible locations
       if (rider.vehicleType) vehicle = rider.vehicleType;
-      else if (rider.vehicle && typeof rider.vehicle === 'object') vehicle = rider.vehicle.type || rider.vehicle.name || rider.vehicle.model || vehicle;
+      else if (typeof rider.vehicle === 'string' && rider.vehicle) vehicle = rider.vehicle;
+      else if (rider.vehicle && typeof rider.vehicle === 'object') {
+        vehicle = rider.vehicle.type || rider.vehicle.vehicleType || rider.vehicle.name || rider.vehicle.model || rider.vehicle.make || vehicle;
+      }
       else if (profile.vehicleType) vehicle = profile.vehicleType;
-      else if (profile.vehicle && typeof profile.vehicle === 'object') vehicle = profile.vehicle.type || profile.vehicle.name || profile.vehicle.model || vehicle;
+      else if (typeof profile.vehicle === 'string' && profile.vehicle) vehicle = profile.vehicle;
+      else if (profile.vehicle && typeof profile.vehicle === 'object') {
+        vehicle = profile.vehicle.type || profile.vehicle.vehicleType || profile.vehicle.name || profile.vehicle.model || profile.vehicle.make || vehicle;
+      }
+      else if (rider.vehicleDetails?.type) vehicle = rider.vehicleDetails.type;
+      else if (rider.bikeType) vehicle = rider.bikeType;
+      else if (profile.bikeType) vehicle = profile.bikeType;
 
       if (rider.licenseNumber) license = rider.licenseNumber;
       else if (rider.license) license = rider.license;
@@ -149,10 +170,22 @@ const ManageRiders = () => {
         name: profile.name || profile.fullName || `${profile.firstName || ''} ${profile.lastName || ''}`.trim() || 'Unknown',
         joined: formatDate(profile.createdAt || profile.joinedDate || profile.registeredAt || rider.createdAt),
         email: profile.email || profile.contactEmail || rider.email || 'N/A',
-        phone: profile.phone || profile.phoneNumber || profile.mobile || rider.phone || 'N/A',
+        phone: profile.phone || profile.phoneNumber || profile.mobile || profile.contact || profile.tel || profile.telephone || rider.phone || rider.phoneNumber || rider.mobile || 'N/A',
         vehicle,
         license,
-        deliveries: formatNumber(rider.totalDeliveries || rider.deliveryCount || rider.completedTrips || profile.totalDeliveries || 0),
+        deliveries: formatNumber(
+          rider.totalDeliveries ||
+          rider.deliveryCount ||
+          rider.completedDeliveries ||
+          rider.completedTrips ||
+          rider.deliveries ||
+          rider.totalOrders ||
+          rider.completedOrders ||
+          profile.totalDeliveries ||
+          profile.deliveryCount ||
+          profile.completedDeliveries ||
+          0
+        ),
         earnings: formatCurrency(rider.totalEarnings || rider.earnings || profile.totalEarnings || 0),
         kyc: kycStatus,
         kycColor: kycColor,

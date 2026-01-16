@@ -2,9 +2,10 @@ import React, { useState, useEffect } from 'react';
 import { IonContent, IonPage, IonIcon } from '@ionic/react';
 import { arrowForward } from 'ionicons/icons';
 import CustomerLayout from '../components/CustomerLayout';
+import PaymentFailedModal from '../components/PaymentFailedModal';
 import { YummyText } from '../../../components/YummyText';
-import { getCustomerDeliveries } from '../../../utils/authApi';
-import { getJSONCookie } from '../../../utils/cookies';
+import { getCustomerDeliveries, cancelDelivery } from '../../../utils/authApi';
+import { getJSONCookie, getCookie, deleteCookie } from '../../../utils/cookies';
 import BlockIcon from '../../../icons/Blockicon';
 import CheckIcon from '../../../icons/Checkicon';
 import ClockIcon from '../../../icons/Clockicon';
@@ -29,37 +30,37 @@ const StatCard = ({ icon, iconBg, title, value, subtitle, subtitleColor }) => (
 
 const DeliveryItem = ({ packageName, status, statusColor, statusBg, from, to, eta, etaTime, progress }) => (
   <YummyText>
-  <div className="mb-6 last:mb-0">
-    <div className="flex items-start justify-between mb-2">
-      <div className="flex items-center gap-2 mt-1.5">
-        <div className="text-medium font-medium text-[#00B75A]">{packageName}</div>
-        <span className={`px-3 py-1 rounded-full text-xs font-medium ${statusBg} ${statusColor}`}>
-          {status}
-        </span>
+    <div className="mb-6 last:mb-0">
+      <div className="flex items-start justify-between mb-2">
+        <div className="flex items-center gap-2 mt-1.5">
+          <div className="text-medium font-medium text-[#00B75A]">{packageName}</div>
+          <span className={`px-3 py-1 rounded-full text-xs font-medium ${statusBg} ${statusColor}`}>
+            {status}
+          </span>
+        </div>
+        <div className="text-right mt-2">
+          <div className="text-xs text-[#64748B]">ETA</div>
+          <div className="text-sm font-medium text-[#0F172A]">{etaTime}</div>
+        </div>
       </div>
-      <div className="text-right mt-2">
-        <div className="text-xs text-[#64748B]">ETA</div>
-        <div className="text-sm font-medium text-[#0F172A]">{etaTime}</div>
+
+
+      <YummyText>
+        <div className="text-medium font-[400] text-[#4A5565] mb-2 -mt-1 flex items-center gap-1">
+          <span>{from}</span>
+          <IonIcon icon={arrowForward} className="text-medium" />
+          <span>{to}</span>
+        </div>
+      </YummyText>
+
+      {/* Progress Bar */}
+      <div className="relative w-full h-2 bg-gray-200 rounded-full overflow-hidden">
+        <div
+          className="absolute top-0 left-0 h-full bg-[#0F172A] rounded-full transition-all duration-300"
+          style={{ width: `${progress}%` }}
+        ></div>
       </div>
     </div>
-  
-
-    <YummyText>
-      <div className="text-medium font-[400] text-[#4A5565] mb-2 -mt-1 flex items-center gap-1">
-        <span>{from}</span>
-        <IonIcon icon={arrowForward} className="text-medium" />
-        <span>{to}</span>
-      </div>
-    </YummyText>
-
-    {/* Progress Bar */}
-    <div className="relative w-full h-2 bg-gray-200 rounded-full overflow-hidden">
-      <div
-        className="absolute top-0 left-0 h-full bg-[#0F172A] rounded-full transition-all duration-300"
-        style={{ width: `${progress}%` }}
-      ></div>
-    </div>
-  </div>
   </YummyText>
 );
 
@@ -149,6 +150,46 @@ const CustomerDashboard = () => {
     successRate: 0
   });
   const [loading, setLoading] = useState(false);
+  const [showPaymentFailedModal, setShowPaymentFailedModal] = useState(false);
+  const [cancelledOrder, setCancelledOrder] = useState(null);
+
+  // Check for pending payment and cancel order if payment not completed
+  useEffect(() => {
+    const checkPendingPayment = async () => {
+      const pendingDeliveryId = getCookie('pending_payment_delivery_id');
+      const pendingPaymentId = getCookie('pending_payment_id');
+
+      if (pendingDeliveryId) {
+        console.log('[Dashboard] Found pending payment delivery:', pendingDeliveryId);
+
+        try {
+          // Cancel the delivery since payment was not completed
+          await cancelDelivery(pendingDeliveryId, {
+            reason: 'payment_not_completed',
+            autoCancel: true
+          });
+
+          console.log('[Dashboard] Cancelled unpaid delivery:', pendingDeliveryId);
+
+          // Show modal
+          setCancelledOrder({
+            id: pendingDeliveryId,
+            trackingNumber: pendingDeliveryId
+          });
+          setShowPaymentFailedModal(true);
+
+        } catch (error) {
+          console.error('[Dashboard] Failed to cancel unpaid delivery:', error);
+        } finally {
+          // Clean up cookies
+          deleteCookie('pending_payment_delivery_id');
+          deleteCookie('pending_payment_id');
+        }
+      }
+    };
+
+    checkPendingPayment();
+  }, []);
 
   useEffect(() => {
     // Get user name on component mount
@@ -221,12 +262,30 @@ const CustomerDashboard = () => {
 
       console.log('[Dashboard] Fetched deliveries:', deliveries);
 
+      // Filter out cancelled and unpaid orders
+      const validDeliveries = deliveries.filter(d => {
+        const status = (d.status || '').toLowerCase();
+        const paymentStatus = (d.paymentStatus || '').toLowerCase();
+
+        // Exclude cancelled orders
+        if (status === 'cancelled' || status === 'canceled') {
+          return false;
+        }
+
+        // Exclude orders with unpaid/pending payment status
+        if (paymentStatus === 'pending' || paymentStatus === 'unpaid' || paymentStatus === 'failed') {
+          return false;
+        }
+
+        return true;
+      });
+
       // Get current time for 24-hour check
       const now = new Date();
       const twentyFourHoursAgo = new Date(now.getTime() - 24 * 60 * 60 * 1000);
 
-      // Calculate stats from all deliveries
-      const activeDeliveries = deliveries.filter(d => {
+      // Calculate stats from valid deliveries only
+      const activeDeliveries = validDeliveries.filter(d => {
         const status = d?.status?.toLowerCase() || 'pending';
         const isActive = status !== 'delivered' && status !== 'completed' && status !== 'cancelled';
 
@@ -245,17 +304,17 @@ const CustomerDashboard = () => {
         return false;
       });
 
-      const inTransitDeliveries = deliveries.filter(d => {
+      const inTransitDeliveries = validDeliveries.filter(d => {
         const status = d?.status?.toLowerCase() || '';
         return status === 'in-transit' || status === 'in_transit' || status === 'intransit';
       });
 
-      const completedDeliveries = deliveries.filter(d => {
+      const completedDeliveries = validDeliveries.filter(d => {
         const status = d?.status?.toLowerCase() || '';
         return status === 'delivered' || status === 'completed';
       });
 
-      const total = response?.total || response?.meta?.total || deliveries.length;
+      const total = response?.total || response?.meta?.total || validDeliveries.length;
 
       setStats({
         active: activeDeliveries.length,
@@ -382,8 +441,8 @@ const CustomerDashboard = () => {
           <div className="bg-white rounded-2xl p-6 md:p-6 sm:p-6 lg:p-6" style={sideBottomShadow}>
             <div className="mb-6 flex items-start justify-between">
               <div>
-                <YummyText> 
-                <h2 className="text-lg md:text-xl sm:text-xl lg:text-xl font-semibold text-[#0F172A] mb-0">Recent Deliveries</h2>
+                <YummyText>
+                  <h2 className="text-lg md:text-xl sm:text-xl lg:text-xl font-semibold text-[#0F172A] mb-0">Recent Deliveries</h2>
                 </YummyText>
                 <YummyText>
                   <p className="text-sm md:text-lg sm:text-lg lg:text-lg font-[400] text-[#1E1E1E]">
@@ -400,26 +459,33 @@ const CustomerDashboard = () => {
                 </button>
               </YummyText>
             </div>
-            
+
             <YummyText>
-            <div>
-              {recentDeliveries.map((delivery, index) => (
-                <DeliveryItem
-                  key={index}
-                  packageName={delivery.packageName}
-                  status={delivery.status}
-                  statusColor={delivery.statusColor}
-                  statusBg={delivery.statusBg}
-                  from={delivery.from}
-                  to={delivery.to}
-                  eta={delivery.eta}
-                  etaTime={delivery.etaTime}
-                  progress={delivery.progress}
-                />
-              ))}
-            </div>
+              <div>
+                {recentDeliveries.map((delivery, index) => (
+                  <DeliveryItem
+                    key={index}
+                    packageName={delivery.packageName}
+                    status={delivery.status}
+                    statusColor={delivery.statusColor}
+                    statusBg={delivery.statusBg}
+                    from={delivery.from}
+                    to={delivery.to}
+                    eta={delivery.eta}
+                    etaTime={delivery.etaTime}
+                    progress={delivery.progress}
+                  />
+                ))}
+              </div>
             </YummyText>
           </div>
+
+          {/* Payment Failed Modal */}
+          <PaymentFailedModal
+            isOpen={showPaymentFailedModal}
+            onClose={() => setShowPaymentFailedModal(false)}
+            orderDetails={cancelledOrder}
+          />
         </IonContent>
       </CustomerLayout>
     </IonPage>

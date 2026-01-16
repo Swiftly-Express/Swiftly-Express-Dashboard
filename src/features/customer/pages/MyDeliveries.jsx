@@ -2,9 +2,12 @@ import React, { useState, useEffect } from 'react';
 import { IonContent, IonPage, IonIcon, IonToast } from '@ionic/react';
 import { eye, eyeOff, arrowForward, copy } from 'ionicons/icons';
 import CustomerLayout from '../components/CustomerLayout';
+import RatingModal from '../components/RatingModal';
+import PaymentFailedModal from '../components/PaymentFailedModal';
 import { YummyText } from '../../../components/YummyText';
 import Loader from '../../../components/Loader';
-import { getCustomerDeliveries } from '../../../utils/authApi';
+import { getCustomerDeliveries, rateDriver, cancelDelivery } from '../../../utils/authApi';
+import { getCookie, deleteCookie } from '../../../utils/cookies';
 
 const sideBottomShadow = {
   boxShadow: '2px 4px 4px rgba(0,0,0,0.06), -2px 4px 4px rgba(0,0,0,0.06), 0 4px 8px rgba(0,0,0,0.08)'
@@ -328,6 +331,8 @@ const CompletedDeliveryRow = ({ delivery }) => {
   const [isOpen, setIsOpen] = useState(false);
   const [showCopyToast, setShowCopyToast] = useState(false);
 
+  const hasRated = delivery.rating || delivery.customerRating || delivery.hasRated;
+
   const handleToggleDetails = () => {
     const newIsOpen = !isOpen;
     setIsOpen(newIsOpen);
@@ -381,14 +386,19 @@ const CompletedDeliveryRow = ({ delivery }) => {
           </span>
         </td>
         <td className="py-4 px-4">
-          <div className="flex items-center justify-center gap-6">
+          <div className="flex items-center justify-center gap-3">
             <button
               onClick={handleToggleDetails}
               className="text-[#0A0A0A] hover:text-[#0F172A] transition-colors"
             >
               <IonIcon icon={isOpen ? eyeOff : eye} className="text-xl" />
             </button>
-            <button className="text-[#0A0A0A] -mt-2 hover:text-[#0F172A] transition-colors">
+            {hasRated && (
+              <span className="text-xs text-green-600 flex items-center gap-1">
+                ⭐ {delivery.rating || delivery.customerRating}
+              </span>
+            )}
+            <button className="text-[#0A0A0A] hover:text-[#0F172A] transition-colors">
               <img src="/downloadicon.svg" alt="Download" className="w-5 h-5" />
             </button>
           </div>
@@ -453,9 +463,50 @@ const MyDeliveries = () => {
   const [error, setError] = useState('');
   const [page, setPage] = useState(1);
   const [limit] = useState(10);
+  const [showRatingModal, setShowRatingModal] = useState(false);
+  const [selectedDeliveryForRating, setSelectedDeliveryForRating] = useState(null);
+  const [toastMessage, setToastMessage] = useState('');
+  const [showToast, setShowToast] = useState(false);
+  const [showPaymentFailedModal, setShowPaymentFailedModal] = useState(false);
+  const [cancelledOrder, setCancelledOrder] = useState(null);
 
   useEffect(() => {
     fetchDeliveries();
+
+    // Check for pending payment and cancel order if payment not completed
+    const checkPendingPayment = async () => {
+      const pendingDeliveryId = getCookie('pending_payment_delivery_id');
+
+      if (pendingDeliveryId) {
+        console.log('[MyDeliveries] Found pending payment delivery:', pendingDeliveryId);
+
+        try {
+          // Cancel the delivery since payment was not completed
+          await cancelDelivery(pendingDeliveryId, {
+            reason: 'payment_not_completed',
+            autoCancel: true
+          });
+
+          console.log('[MyDeliveries] Cancelled unpaid delivery:', pendingDeliveryId);
+
+          // Show modal
+          setCancelledOrder({
+            id: pendingDeliveryId,
+            trackingNumber: pendingDeliveryId
+          });
+          setShowPaymentFailedModal(true);
+
+        } catch (error) {
+          console.error('[MyDeliveries] Failed to cancel unpaid delivery:', error);
+        } finally {
+          // Clean up cookies
+          deleteCookie('pending_payment_delivery_id');
+          deleteCookie('pending_payment_id');
+        }
+      }
+    };
+
+    checkPendingPayment();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [page]);
 
@@ -510,12 +561,30 @@ const MyDeliveries = () => {
 
       console.log('[MyDeliveries] Parsed items:', items);
 
-      const active = items.filter((d) => {
+      // Filter out cancelled and unpaid orders
+      const validDeliveries = items.filter(d => {
+        const status = (d.status || '').toLowerCase();
+        const paymentStatus = (d.paymentStatus || '').toLowerCase();
+
+        // Exclude cancelled orders
+        if (status === 'cancelled' || status === 'canceled') {
+          return false;
+        }
+
+        // Exclude orders with unpaid/pending payment status
+        if (paymentStatus === 'pending' || paymentStatus === 'unpaid' || paymentStatus === 'failed') {
+          return false;
+        }
+
+        return true;
+      });
+
+      const active = validDeliveries.filter((d) => {
         const status = d?.status?.toLowerCase() || 'pending';
         return status !== 'delivered' && status !== 'completed' && status !== 'cancelled';
       });
 
-      const completed = items.filter((d) => {
+      const completed = validDeliveries.filter((d) => {
         const status = d?.status?.toLowerCase() || '';
         return status === 'delivered' || status === 'completed';
       });
@@ -558,8 +627,8 @@ const MyDeliveries = () => {
             <button
               onClick={() => setActiveTab('active')}
               className={`flex-1 md:flex-none md:px-14 px-6 py-3 md:py-2 whitespace-nowrap rounded-full text-sm font-normal transition-colors ${activeTab === 'active'
-                  ? 'text-[#0F172A] bg-white shadow-sm'
-                  : 'text-[#64748B]'
+                ? 'text-[#0F172A] bg-white shadow-sm'
+                : 'text-[#64748B]'
                 }`}
             >
               Active ({activeDeliveries.length})
@@ -567,8 +636,8 @@ const MyDeliveries = () => {
             <button
               onClick={() => setActiveTab('completed')}
               className={`flex-1 md:flex-none md:px-14 px-6 py-3 md:py-2 whitespace-nowrap rounded-full text-sm font-normal transition-colors ${activeTab === 'completed'
-                  ? 'text-[#0F172A] bg-white shadow-sm'
-                  : 'text-[#64748B]'
+                ? 'text-[#0F172A] bg-white shadow-sm'
+                : 'text-[#64748B]'
                 }`}
             >
               Completed ({completedDeliveries.length})
@@ -640,7 +709,10 @@ const MyDeliveries = () => {
                       </thead>
                       <tbody>
                         {completedDeliveries.map((delivery, index) => (
-                          <CompletedDeliveryRow key={delivery._id || delivery.id || index} delivery={delivery} />
+                          <CompletedDeliveryRow
+                            key={delivery._id || delivery.id || index}
+                            delivery={delivery}
+                          />
                         ))}
                       </tbody>
                     </table>
@@ -649,10 +721,81 @@ const MyDeliveries = () => {
               </div>
             </>
           )}
+
+          {/* Toast */}
+          <IonToast
+            isOpen={showToast}
+            onDidDismiss={() => setShowToast(false)}
+            message={toastMessage}
+            duration={3000}
+            position="top"
+          />
+
+          {/* Rating Modal */}
+          {selectedDeliveryForRating && (
+            <RatingModal
+              isOpen={showRatingModal}
+              onClose={() => {
+                setShowRatingModal(false);
+                setSelectedDeliveryForRating(null);
+              }}
+              delivery={selectedDeliveryForRating}
+              onSubmitRating={handleSubmitRating}
+            />
+          )}
+
+          {/* Payment Failed Modal */}
+          <PaymentFailedModal
+            isOpen={showPaymentFailedModal}
+            onClose={() => setShowPaymentFailedModal(false)}
+            orderDetails={cancelledOrder}
+          />
         </IonContent>
       </CustomerLayout>
     </IonPage>
   );
+
+  // Handle rating submission
+  async function handleSubmitRating(ratingData) {
+    try {
+      console.log('[MyDeliveries] Submitting rating:', ratingData);
+      // Only send rating field - backend doesn't accept comment or driverId
+      const response = await rateDriver(ratingData.deliveryId, {
+        rating: ratingData.rating
+      });
+
+      console.log('[MyDeliveries] Rating submitted successfully:', response);
+
+      // Update the delivery in the list to reflect rating
+      setCompletedDeliveries(prev => prev.map(d => {
+        if ((d._id || d.id) === ratingData.deliveryId) {
+          return {
+            ...d,
+            rating: ratingData.rating,
+            customerRating: ratingData.rating,
+            hasRated: true
+          };
+        }
+        return d;
+      }));
+
+      // Show success toast
+      setToastMessage('⭐ Thank you for your feedback!');
+      setShowToast(true);
+
+      // Dispatch event to notify rider and update UI
+      window.dispatchEvent(new CustomEvent('rating:submitted', {
+        detail: {
+          deliveryId: ratingData.deliveryId,
+          rating: ratingData.rating
+        }
+      }));
+    } catch (error) {
+      console.error('[MyDeliveries] Failed to submit rating:', error);
+      setToastMessage(error.message || 'Failed to submit rating');
+      setShowToast(true);
+    }
+  }
 };
 
 export default MyDeliveries;
