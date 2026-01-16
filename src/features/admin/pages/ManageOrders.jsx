@@ -116,8 +116,19 @@ const ManageOrders = () => {
 
   const filteredOrders = orders.filter(order => {
     const orderId = order.deliveryId || order._id || order.id || '';
-    const customerName = order.customer?.name || order.customerName || '';
-    const driverName = order.driver?.name || order.driverName || order.rider?.name || '';
+    // Extract customer name from various possible structures
+    const customerName = order.customer?.name ||
+      order.customer?.fullName ||
+      order.customerName ||
+      order.sender?.name ||
+      order.senderName || '';
+    // Extract driver/rider name from various possible structures
+    const driverName = order.driver?.name ||
+      order.driver?.fullName ||
+      order.driverName ||
+      order.rider?.name ||
+      order.riderName ||
+      order.assignedDriver?.name || '';
 
     const matchesSearch = !searchQuery ||
       orderId.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -165,7 +176,7 @@ const ManageOrders = () => {
       const timeStr = date.toLocaleTimeString('en-US', {
         hour: '2-digit',
         minute: '2-digit',
-        hour12: false
+        hour12: true
       });
       return { date: dateStr, time: timeStr };
     } catch (e) {
@@ -181,6 +192,56 @@ const ManageOrders = () => {
   const formatDistance = (distance) => {
     if (!distance && distance !== 0) return 'N/A';
     return `${Number(distance).toFixed(1)} km`;
+  };
+
+  // Calculate actual delivery distance from coordinates if available
+  const calculateDeliveryDistance = (order) => {
+    // Priority 1: Use real-time tracked/recorded distance from completed delivery
+    if (order.actualDistance && order.actualDistance > 0) return order.actualDistance;
+    if (order.deliveredDistance && order.deliveredDistance > 0) return order.deliveredDistance;
+    if (order.totalDistance && order.totalDistance > 0) return order.totalDistance;
+    if (order.completedDistance && order.completedDistance > 0) return order.completedDistance;
+
+    // Priority 2: Use estimated or recorded distance
+    if (order.distance && order.distance > 0) return order.distance;
+    if (order.estimatedDistance && order.estimatedDistance > 0) return order.estimatedDistance;
+
+    // Priority 3: Calculate from coordinates if no recorded distance
+    const pickupLat = order.pickupLocation?.coordinates?.latitude ||
+      order.pickupLocation?.lat ||
+      order.pickupCoordinates?.lat ||
+      order.pickup?.latitude;
+    const pickupLng = order.pickupLocation?.coordinates?.longitude ||
+      order.pickupLocation?.lng ||
+      order.pickupCoordinates?.lng ||
+      order.pickup?.longitude;
+    const deliveryLat = order.deliveryLocation?.coordinates?.latitude ||
+      order.deliveryLocation?.lat ||
+      order.deliveryCoordinates?.lat ||
+      order.delivery?.latitude;
+    const deliveryLng = order.deliveryLocation?.coordinates?.longitude ||
+      order.deliveryLocation?.lng ||
+      order.deliveryCoordinates?.lng ||
+      order.delivery?.longitude;
+
+    if (pickupLat && pickupLng && deliveryLat && deliveryLng) {
+      // Haversine formula to calculate distance
+      const R = 6371; // Earth's radius in km
+      const dLat = (deliveryLat - pickupLat) * Math.PI / 180;
+      const dLng = (deliveryLng - pickupLng) * Math.PI / 180;
+      const a = Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+        Math.cos(pickupLat * Math.PI / 180) * Math.cos(deliveryLat * Math.PI / 180) *
+        Math.sin(dLng / 2) * Math.sin(dLng / 2);
+      const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+      const calculatedDistance = R * c;
+
+      // Return calculated distance only if it's reasonable (between 0.1 and 1000 km)
+      if (calculatedDistance >= 0.1 && calculatedDistance <= 1000) {
+        return calculatedDistance;
+      }
+    }
+
+    return 0;
   };
 
   const handlePreviousPage = () => {
@@ -303,181 +364,203 @@ const ManageOrders = () => {
               </div>
             </div>
 
-            <YummyText>
-              {loading ? (
-                <div className="p-8 text-center">
-                  <p className="text-gray-500">Loading orders...</p>
-                </div>
-              ) : filteredOrders.length === 0 ? (
-                <div className="p-8 text-center">
-                  <p className="text-gray-500">No orders found</p>
-                </div>
-              ) : isMobile ? (
-                <div className="space-y-4 p-4">
-                  {filteredOrders.map((order, idx) => {
-                    const orderId = order.deliveryId || order._id || order.id || 'N/A';
-                    const customerName = order.customer?.name || order.customerName || 'N/A';
-                    const driverName = order.driver?.name || order.driverName || order.rider?.name || 'Unassigned';
-                    const pickupAddressRaw = order.pickupLocation?.address || order.pickupAddress || order.from || '';
-                    const deliveryAddressRaw = order.deliveryLocation?.address || order.deliveryAddress || order.to || '';
-                    const pickupAddress = formatAddress(pickupAddressRaw) || 'N/A';
-                    const deliveryAddress = formatAddress(deliveryAddressRaw) || 'N/A';
-                    const distance = order.distance || 0;
-                    const amount = order.price || order.amount || order.totalAmount || 0;
-                    const deliveryStatus = getDeliveryStatus(order);
-                    const dateTime = formatDateTime(order.createdAt || order.created_at || order.dateTime);
+            {loading ? (
+              <div className="p-8 text-center">
+                <p className="text-gray-500">Loading orders...</p>
+              </div>
+            ) : filteredOrders.length === 0 ? (
+              <div className="p-8 text-center">
+                <p className="text-gray-500">No orders found</p>
+              </div>
+            ) : isMobile ? (
+              <div className="space-y-4 p-4">
+                {filteredOrders.map((order, idx) => {
+                  const orderId = order.deliveryId || order._id || order.id || 'N/A';
+                  // Extract real-time customer name
+                  const customerName = order.customer?.name ||
+                    order.customer?.fullName ||
+                    order.customerName ||
+                    order.sender?.name ||
+                    order.senderName || 'N/A';
+                  // Extract real-time rider name
+                  const driverName = order.driver?.name ||
+                    order.driver?.fullName ||
+                    order.driverName ||
+                    order.rider?.name ||
+                    order.riderName ||
+                    order.assignedDriver?.name || 'Unassigned';
+                  const pickupAddressRaw = order.pickupLocation?.address || order.pickupAddress || order.from || '';
+                  const deliveryAddressRaw = order.deliveryLocation?.address || order.deliveryAddress || order.to || '';
+                  const pickupAddress = formatAddress(pickupAddressRaw) || 'N/A';
+                  const deliveryAddress = formatAddress(deliveryAddressRaw) || 'N/A';
+                  // Calculate actual delivery distance
+                  const distance = calculateDeliveryDistance(order);
+                  const amount = order.price || order.amount || order.totalAmount || 0;
+                  const deliveryStatus = getDeliveryStatus(order);
+                  const dateTime = formatDateTime(order.createdAt || order.created_at || order.dateTime);
 
-                    return (
-                      <div key={order._id || order.id || idx} className="bg-white rounded-lg p-4 border border-gray-100 shadow-sm">
-                        <div className="flex items-start justify-between">
-                          <div className="flex-1 pr-3">
-                            <YummyText className="text-sm font-medium text-gray-900 truncate">{customerName}</YummyText>
-                            <div className="text-xs text-gray-600 mt-1 truncate">{orderId}</div>
-                            <div className="text-xs text-gray-600 mt-1 whitespace-normal break-words">{pickupAddress} → {deliveryAddress}</div>
-                            <div className="mt-2 text-xs text-gray-600">{formatCurrency(amount)} • {formatDistance(distance)}</div>
-                          </div>
-                          <div className="text-right flex-shrink-0">
-                            <span className={`inline-block px-2 py-1 rounded-full text-xs font-medium ${deliveryStatus.color}`}>{deliveryStatus.status}</span>
-                            <div className="text-xs text-gray-400 mt-2">{dateTime.date}</div>
-                            <div className="text-xs text-gray-400">{dateTime.time}</div>
-                          </div>
+                  return (
+                    <div key={order._id || order.id || idx} className="bg-white rounded-lg p-4 border border-gray-100 shadow-sm">
+                      <div className="flex items-start justify-between">
+                        <div className="flex-1 pr-3">
+                          <YummyText className="text-sm font-medium text-gray-900 truncate">{customerName}</YummyText>
+                          <div className="text-xs text-gray-600 mt-1 truncate">{orderId}</div>
+                          <div className="text-xs text-gray-600 mt-1 whitespace-normal break-words">{pickupAddress} → {deliveryAddress}</div>
+                          <div className="mt-2 text-xs text-gray-600">{formatCurrency(amount)} • {formatDistance(distance)}</div>
                         </div>
-                        <div className="mt-3 flex items-center justify-end gap-2">
-                          <button className="text-gray-400 hover:text-gray-600">
-                            <MoreVertical className="w-5 h-5" />
-                          </button>
+                        <div className="text-right flex-shrink-0">
+                          <span className={`inline-block px-2 py-1 rounded-full text-xs font-medium ${deliveryStatus.color}`}>{deliveryStatus.status}</span>
+                          <div className="text-xs text-gray-400 mt-2">{dateTime.date}</div>
+                          <div className="text-xs text-gray-400">{dateTime.time}</div>
                         </div>
                       </div>
-                    );
-                  })}
-                </div>
-              ) : (
-                <div className="overflow-hidden">
-                  <div className="overflow-x-auto">
-                    <table className="w-full table-fixed">
-                      <thead className="border-b border-gray-100 sticky top-0 bg-white z-10">
-                        <tr>
-                          <th className="w-[9%] px-2 py-3 text-left text-[10.5px] font-[500] text-[#0A0A0A] uppercase tracking-wider">
-                            Order ID
-                          </th>
-                          <th className="w-[11%] px-3 py-3 text-left text-[10.5px] font-[500] text-[#0A0A0A] uppercase tracking-wider">
-                            Customer
-                          </th>
-                          <th className="w-[11%] px-4 py-3 text-left text-[10.5px] font-[500] text-[#0A0A0A] uppercase tracking-wider">
-                            Rider
-                          </th>
-                          <th className="w-[22%] px-3 py-3 text-left text-[10.5px] font-[500] text-[#0A0A0A] uppercase tracking-wider">
-                            Route
-                          </th>
-                          <th className="w-[9%] px-2 py-3 text-left text-[10.5px] font-[500] text-[#0A0A0A] uppercase tracking-wider">
-                            Distance
-                          </th>
-                          <th className="w-[9%] px-3 py-3 text-left text-[10.5px] font-[500] text-[#0A0A0A] uppercase tracking-wider">
-                            Amount
-                          </th>
-                          <th className="w-[11%] px-6 py-3 text-left text-[10.5px] font-[500] text-[#0A0A0A] uppercase tracking-wider">
-                            Status
-                          </th>
-                          <th className="w-[13%] px-6 py-3 text-left text-[10.5px] font-[500] text-[#0A0A0A] uppercase tracking-wider">
-                            Date
-                          </th>
-                          <th className="w-[6%] px-0 py-3 text-left text-[10.5px] font-[500] text-[#0A0A0A] uppercase tracking-wider">
-                            Actions
-                          </th>
-                        </tr>
-                      </thead>
-                      <tbody className="bg-white divide-y divide-gray-200">
-                        {filteredOrders.map((order, index) => {
-                          const orderId = order.deliveryId || order._id || order.id || 'N/A';
-                          const customerName = order.customer?.name || order.customerName || 'N/A';
-                          const customerId = order.customer?.id || order.customerId || '';
-                          const driverName = order.driver?.name || order.driverName || order.rider?.name || 'Unassigned';
-                          const driverId = order.driver?.id || order.driverId || order.riderId || '';
-                          const pickupAddressRaw = order.pickupLocation?.address || order.pickupAddress || order.from || '';
-                          const deliveryAddressRaw = order.deliveryLocation?.address || order.deliveryAddress || order.to || '';
-                          const pickupAddress = formatAddress(pickupAddressRaw) || 'N/A';
-                          const deliveryAddress = formatAddress(deliveryAddressRaw) || 'N/A';
-                          const distance = order.distance || 0;
-                          const amount = order.price || order.amount || order.totalAmount || 0;
-                          const deliveryStatus = getDeliveryStatus(order);
-                          const dateTime = formatDateTime(order.createdAt || order.created_at || order.dateTime);
+                      <div className="mt-3 flex items-center justify-end gap-2">
+                        <button className="text-gray-400 hover:text-gray-600">
+                          <MoreVertical className="w-5 h-5" />
+                        </button>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            ) : (
+              <div className="overflow-hidden">
+                <div className="overflow-x-auto">
+                  <table className="w-full table-fixed">
+                    <thead className="border-b border-gray-100 sticky top-0 bg-white z-10">
+                      <tr>
+                        <th className="w-[9%] px-2 py-3 text-left text-[10.5px] font-[500] text-[#0A0A0A] uppercase tracking-wider">
+                          Order ID
+                        </th>
+                        <th className="w-[11%] px-3 py-3 text-left text-[10.5px] font-[500] text-[#0A0A0A] uppercase tracking-wider">
+                          Customer
+                        </th>
+                        <th className="w-[11%] px-4 py-3 text-left text-[10.5px] font-[500] text-[#0A0A0A] uppercase tracking-wider">
+                          Rider
+                        </th>
+                        <th className="w-[22%] px-3 py-3 text-left text-[10.5px] font-[500] text-[#0A0A0A] uppercase tracking-wider">
+                          Route
+                        </th>
+                        <th className="w-[9%] px-2 py-3 text-left text-[10.5px] font-[500] text-[#0A0A0A] uppercase tracking-wider">
+                          Distance
+                        </th>
+                        <th className="w-[9%] px-3 py-3 text-left text-[10.5px] font-[500] text-[#0A0A0A] uppercase tracking-wider">
+                          Amount
+                        </th>
+                        <th className="w-[11%] px-6 py-3 text-left text-[10.5px] font-[500] text-[#0A0A0A] uppercase tracking-wider">
+                          Status
+                        </th>
+                        <th className="w-[13%] px-6 py-3 text-left text-[10.5px] font-[500] text-[#0A0A0A] uppercase tracking-wider">
+                          Date
+                        </th>
+                        <th className="w-[6%] px-0 py-3 text-left text-[10.5px] font-[500] text-[#0A0A0A] uppercase tracking-wider">
+                          Actions
+                        </th>
+                      </tr>
+                    </thead>
+                    <tbody className="bg-white divide-y divide-gray-200">
+                      {filteredOrders.map((order, index) => {
+                        const orderId = order.deliveryId || order._id || order.id || 'N/A';
+                        // Extract real-time customer name
+                        const customerName = order.customer?.name ||
+                          order.customer?.fullName ||
+                          order.customerName ||
+                          order.sender?.name ||
+                          order.senderName || 'N/A';
+                        const customerId = order.customer?.id || order.customer?._id || order.customerId || '';
+                        // Extract real-time rider name
+                        const driverName = order.driver?.name ||
+                          order.driver?.fullName ||
+                          order.driverName ||
+                          order.rider?.name ||
+                          order.riderName ||
+                          order.assignedDriver?.name || 'Unassigned';
+                        const driverId = order.driver?.id || order.driver?._id || order.driverId || order.riderId || '';
+                        const pickupAddressRaw = order.pickupLocation?.address || order.pickupAddress || order.from || '';
+                        const deliveryAddressRaw = order.deliveryLocation?.address || order.deliveryAddress || order.to || '';
+                        const pickupAddress = formatAddress(pickupAddressRaw) || 'N/A';
+                        const deliveryAddress = formatAddress(deliveryAddressRaw) || 'N/A';
+                        // Calculate actual delivery distance
+                        const distance = calculateDeliveryDistance(order);
+                        const amount = order.price || order.amount || order.totalAmount || 0;
+                        const deliveryStatus = getDeliveryStatus(order);
+                        const dateTime = formatDateTime(order.createdAt || order.created_at || order.dateTime);
 
-                          return (
-                            <tr key={order._id || order.id || index} className="hover:bg-gray-50 transition-colors">
-                              <td className="w-[9%] px-2 py-4 whitespace-nowrap">
-                                <YummyText className="text-[12px] font-medium text-gray-900">
-                                  {orderId.length > 12 ? `${orderId.substring(0, 12)}...` : orderId}
-                                </YummyText>
-                              </td>
-                              <td className="w-[11%] px-2 py-4 whitespace-nowrap">
-                                <div className="flex items-center">
-                                  <User className="w-3 h-3 mr-1 text-gray-400 flex-shrink-0" />
-                                  <div>
-                                    <YummyText className="text-xs font-medium text-gray-900 truncate">{customerName}</YummyText>
-                                    {customerId && (
-                                      <YummyText className="text-xs text-gray-500 truncate">{customerId.substring(0, 8)}</YummyText>
-                                    )}
-                                  </div>
-                                </div>
-                              </td>
-                              <td className="w-[11%] px-2 py-4 whitespace-nowrap">
-                                <div className="flex items-center">
-                                  <Bike className="w-3 h-3 mr-1 text-gray-400 flex-shrink-0" />
-                                  <div>
-                                    <YummyText className="text-xs font-medium text-gray-900 truncate">{driverName}</YummyText>
-                                    {driverId && (
-                                      <YummyText className="text-xs text-gray-500 truncate">{driverId.substring(0, 8)}</YummyText>
-                                    )}
-                                  </div>
-                                </div>
-                              </td>
-                              <td className="w-[22%] px-2 py-4">
-                                <div className="space-y-1">
-                                  <div className="text-xs text-gray-900">
-                                    <span className="font-medium">From:</span>{' '}
-                                    <span className="truncate inline-block max-w-[180px] align-bottom">
-                                      {pickupAddress}
-                                    </span>
-                                  </div>
-                                  <div className="text-xs text-gray-900">
-                                    <span className="font-medium">To:</span>{' '}
-                                    <span className="truncate inline-block max-w-[180px] align-bottom">
-                                      {deliveryAddress}
-                                    </span>
-                                  </div>
-                                </div>
-                              </td>
-                              <td className="w-[9%] px-2 py-4 whitespace-nowrap">
-                                <YummyText className="text-xs text-gray-900">{formatDistance(distance)}</YummyText>
-                              </td>
-                              <td className="w-[9%] px-2 py-4 whitespace-nowrap">
-                                <YummyText className="text-xs font-medium text-gray-900">{formatCurrency(amount)}</YummyText>
-                              </td>
-                              <td className="w-[11%] px-2 py-4 whitespace-nowrap">
-                                <span className={`px-2 py-1 rounded-full text-xs font-medium ${deliveryStatus.color}`}>
-                                  {deliveryStatus.status}
-                                </span>
-                              </td>
-                              <td className="w-[13%] px-5 py-4 whitespace-nowrap">
+                        return (
+                          <tr key={order._id || order.id || index} className="hover:bg-gray-50 transition-colors">
+                            <td className="w-[9%] px-2 py-4 whitespace-nowrap">
+                              <YummyText className="text-[12px] font-medium text-gray-900">
+                                {orderId.length > 12 ? `${orderId.substring(0, 12)}...` : orderId}
+                              </YummyText>
+                            </td>
+                            <td className="w-[11%] px-2 py-4 whitespace-nowrap">
+                              <div className="flex items-center">
+                                <User className="w-3 h-3 mr-1 text-gray-400 flex-shrink-0" />
                                 <div>
-                                  <YummyText className="text-xs text-gray-900">{dateTime.date}</YummyText>
-                                  <YummyText className="text-xs text-gray-500">{dateTime.time}</YummyText>
+                                  <YummyText className="text-xs font-medium text-gray-900 truncate">{customerName}</YummyText>
+                                  {customerId && (
+                                    <YummyText className="text-xs text-gray-500 truncate">{customerId.substring(0, 8)}</YummyText>
+                                  )}
                                 </div>
-                              </td>
-                              <td className="w-[5%] px-0 py-4 whitespace-nowrap text-center">
-                                <button className="text-gray-400 hover:text-gray-600">
-                                  <MoreVertical className="w-5 h-5" />
-                                </button>
-                              </td>
-                            </tr>
-                          );
-                        })}
-                      </tbody>
-                    </table>
-                  </div>
+                              </div>
+                            </td>
+                            <td className="w-[11%] px-2 py-4 whitespace-nowrap">
+                              <div className="flex items-center">
+                                <Bike className="w-3 h-3 mr-1 text-gray-400 flex-shrink-0" />
+                                <div>
+                                  <YummyText className="text-xs font-medium text-gray-900 truncate">{driverName}</YummyText>
+                                  {driverId && (
+                                    <YummyText className="text-xs text-gray-500 truncate">{driverId.substring(0, 8)}</YummyText>
+                                  )}
+                                </div>
+                              </div>
+                            </td>
+                            <td className="w-[22%] px-2 py-4">
+                              <div className="space-y-1">
+                                <div className="text-xs text-gray-900">
+                                  <span className="font-medium">From:</span>{' '}
+                                  <span className="truncate inline-block max-w-[180px] align-bottom">
+                                    {pickupAddress}
+                                  </span>
+                                </div>
+                                <div className="text-xs text-gray-900">
+                                  <span className="font-medium">To:</span>{' '}
+                                  <span className="truncate inline-block max-w-[180px] align-bottom">
+                                    {deliveryAddress}
+                                  </span>
+                                </div>
+                              </div>
+                            </td>
+                            <td className="w-[9%] px-2 py-4 whitespace-nowrap">
+                              <YummyText className="text-xs text-gray-900">{formatDistance(distance)}</YummyText>
+                            </td>
+                            <td className="w-[9%] px-2 py-4 whitespace-nowrap">
+                              <YummyText className="text-xs font-medium text-gray-900">{formatCurrency(amount)}</YummyText>
+                            </td>
+                            <td className="w-[11%] px-2 py-4 whitespace-nowrap">
+                              <span className={`px-2 py-1 rounded-full text-xs font-medium ${deliveryStatus.color}`}>
+                                {deliveryStatus.status}
+                              </span>
+                            </td>
+                            <td className="w-[13%] px-5 py-4 whitespace-nowrap">
+                              <div>
+                                <YummyText className="text-xs text-gray-900">{dateTime.date}</YummyText>
+                                <YummyText className="text-xs text-gray-500">{dateTime.time}</YummyText>
+                              </div>
+                            </td>
+                            <td className="w-[5%] px-0 py-4 whitespace-nowrap text-center">
+                              <button className="text-gray-400 hover:text-gray-600">
+                                <MoreVertical className="w-5 h-5" />
+                              </button>
+                            </td>
+                          </tr>
+                        );
+                      })}
+                    </tbody>
+                  </table>
                 </div>
-              )}
-            </YummyText>
+              </div>
+            )}
 
             {!loading && filteredOrders.length > 0 && totalPages > 1 && (
               <div className="px-6 py-4 border-t border-gray-100">
