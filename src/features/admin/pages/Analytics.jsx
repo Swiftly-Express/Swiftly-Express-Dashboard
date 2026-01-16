@@ -170,7 +170,7 @@ const AnalyticsReports = () => {
           monthlyRevenue: overview.revenue?.monthly || 0,
           todayRevenue: overview.revenue?.today || 0,
           averageRevenue: overview.revenue?.average || 0,
-          
+
           // Order metrics
           totalOrders: overview.deliveries?.total || 0,
           previousOrders: overview.deliveries?.total ? Math.floor(overview.deliveries.total * 0.85) : 0, // Mock 15% growth
@@ -179,14 +179,14 @@ const AnalyticsReports = () => {
           pendingOrders: overview.deliveries?.pending || 0,
           activeOrders: overview.deliveries?.active || 0,
           cancelledOrders: overview.deliveries?.cancelled || 0,
-          
+
           // User metrics
           totalUsers: overview.users?.total || 0,
           activeUsers: overview.users?.customers || 0,
           previousUsers: overview.users?.customers ? Math.floor(overview.users.customers * 0.9) : 0, // Mock 10% growth
           totalCustomers: overview.users?.customers || 0,
           customers: overview.users?.customers || 0,
-          
+
           // Driver metrics
           totalDrivers: overview.users?.drivers || 0,
           activeDrivers: overview.users?.drivers || 0,
@@ -194,15 +194,15 @@ const AnalyticsReports = () => {
           previousDrivers: overview.users?.drivers ? Math.floor(overview.users.drivers * 0.9) : 0, // Mock 10% growth
           previousRiders: overview.users?.drivers ? Math.floor(overview.users.drivers * 0.9) : 0,
           verifiedDrivers: overview.users?.verifiedDrivers || 0,
-          
+
           // Store original deliveries data for order status
           deliveries: overview.deliveries || {},
-          
+
           // Other data
           commissions: overview.commissions || {},
           verifications: overview.verifications || {}
         };
-        
+
         console.log('[Analytics] Transformed overview data:', transformedData);
         setOverviewData(transformedData);
       }
@@ -302,7 +302,7 @@ const AnalyticsReports = () => {
   useEffect(() => {
     const data = processRevenueOrdersData();
     console.log('[Analytics] Building chart with processed data:', data);
-    
+
     if (!data || data.length === 0) {
       console.log('[Analytics] No data to build chart');
       setRevenueOrdersChartData(null);
@@ -342,33 +342,33 @@ const AnalyticsReports = () => {
   // Process order status data
   const processOrderStatusData = () => {
     if (!overviewData) return [];
-    
+
     // Try different possible locations for order status data
     const statusData = overviewData?.ordersByStatus || overviewData?.deliveries || {};
-    
+
     const statuses = [
-      { 
-        name: 'Completed', 
-        value: statusData.completed || statusData.delivered || overviewData?.completedOrders || 0, 
-        color: '#10B981' 
+      {
+        name: 'Completed',
+        value: statusData.completed || statusData.delivered || overviewData?.completedOrders || 0,
+        color: '#10B981'
       },
-      { 
-        name: 'Active', 
-        value: statusData.active || statusData.in_transit || statusData.inTransit || statusData.ongoing || overviewData?.activeOrders || 0, 
-        color: '#3B82F6' 
+      {
+        name: 'Active',
+        value: statusData.active || statusData.in_transit || statusData.inTransit || statusData.ongoing || overviewData?.activeOrders || 0,
+        color: '#3B82F6'
       },
-      { 
-        name: 'Pending', 
-        value: statusData.pending || overviewData?.pendingOrders || 0, 
-        color: '#F59E0B' 
+      {
+        name: 'Pending',
+        value: statusData.pending || overviewData?.pendingOrders || 0,
+        color: '#F59E0B'
       },
-      { 
-        name: 'Cancelled', 
-        value: statusData.cancelled || statusData.canceled || overviewData?.cancelledOrders || 0, 
-        color: '#EF4444' 
+      {
+        name: 'Cancelled',
+        value: statusData.cancelled || statusData.canceled || overviewData?.cancelledOrders || 0,
+        color: '#EF4444'
       }
     ];
-    
+
     const filtered = statuses.filter(item => item.value > 0);
     console.log('[Analytics] Processed order status data:', filtered);
     return filtered;
@@ -431,7 +431,7 @@ const AnalyticsReports = () => {
         const totalCustomers = overviewData?.customers || 0;
         const totalDrivers = overviewData?.totalDrivers || 0;
         const progress = (index + 1) / dataArray.length;
-        
+
         return {
           month: monthLabel,
           customers: item.customerCount || item.customers || Math.floor(totalCustomers * progress),
