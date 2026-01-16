@@ -39,25 +39,25 @@ const AuthCallback = () => {
     // Helper to save Google profile data
     const saveGoogleProfileData = (userData, role) => {
         addLog('💾 Starting to save Google profile data', { role, hasUserData: !!userData });
-        
+
         const googleName = userData.name || userData.displayName || userData.fullName || '';
         const googleEmail = userData.email || '';
         const googlePhoto = userData.profilePhoto || userData.picture || userData.avatar || userData.image || '';
         const googleId = userData.id || userData._id || userData.googleId || userData.sub || '';
-        
-        addLog('📝 Extracted Google fields', { 
-            name: googleName, 
-            email: googleEmail, 
+
+        addLog('📝 Extracted Google fields', {
+            name: googleName,
+            email: googleEmail,
             hasPhoto: !!googlePhoto,
-            id: googleId 
+            id: googleId
         });
-        
+
         const nameParts = googleName.split(' ');
         const firstName = userData.firstName || userData.given_name || nameParts[0] || '';
         const lastName = userData.lastName || userData.family_name || nameParts.slice(1).join(' ') || '';
-        
+
         addLog('👤 Parsed name', { firstName, lastName });
-        
+
         const completeUserData = {
             id: googleId,
             googleId: googleId,
@@ -75,23 +75,23 @@ const AuthCallback = () => {
             riderId: userData.riderId || userData.driverId || (googleId ? `RD-${googleId}` : ''),
             driverId: userData.driverId || userData.riderId || (googleId ? `RD-${googleId}` : ''),
         };
-        
+
         addLog('✅ Complete user data prepared', completeUserData);
-        
+
         try {
             setJSONCookie('user_data', completeUserData, 7);
             addLog('✅ user_data cookie saved');
         } catch (e) {
             addLog('❌ Failed to save user_data cookie', e.message);
         }
-        
+
         try {
             setCookie('userRole', role, 7);
             addLog('✅ userRole cookie saved', role);
         } catch (e) {
             addLog('❌ Failed to save userRole cookie', e.message);
         }
-        
+
         if (googlePhoto) {
             try {
                 setCookie('profile_image', googlePhoto, 7);
@@ -103,7 +103,7 @@ const AuthCallback = () => {
                 addLog('❌ Failed to save profile photo', e.message);
             }
         }
-        
+
         if (googleName) {
             try {
                 setCookie('user_name', googleName, 7);
@@ -113,7 +113,7 @@ const AuthCallback = () => {
                 addLog('❌ Failed to save user name', e.message);
             }
         }
-        
+
         addLog('✅ Google profile data save complete');
         return completeUserData;
     };
@@ -146,10 +146,10 @@ const AuthCallback = () => {
             if (justAuthenticated) {
                 addLog('⚠️ Auth already processed in session, cleaning up and redirecting');
                 sessionStorage.removeItem('auth_processing');
-                
+
                 const role = getCookie('userRole');
                 addLog('🔍 Retrieved role from cookie', role);
-                
+
                 if (role === 'customer') history.replace('/customer/dashboard');
                 else if (role === 'rider' || role === 'driver') history.replace('/rider/dashboard');
                 else if (role === 'admin') history.replace('/admin/dashboard');
@@ -216,12 +216,12 @@ const AuthCallback = () => {
 
                 const rawBase = import.meta.env.VITE_API_BASE_URL || 'https://api.swiftlyxpress.com';
                 addLog('🌐 Raw API base URL from env', rawBase);
-                
+
                 const base = (typeof window !== 'undefined' && rawBase.startsWith('/'))
                     ? `${window.location.origin}${rawBase.replace(/\/$/, '')}`
                     : rawBase.replace(/\/$/, '');
                 addLog('🌐 Computed API base URL', base);
-                
+
                 const exchangeUrl = `${base}/api/auth/google/exchange-code`;
                 addLog('🌐 Exchange endpoint URL', exchangeUrl);
 
@@ -230,17 +230,17 @@ const AuthCallback = () => {
 
                 try {
                     setStatus('Exchanging authorization code...');
-                    
-                    const requestBody = { 
-                        code, 
+
+                    const requestBody = {
+                        code,
                         redirectUri,
-                        role 
+                        role
                     };
-                    
-                    addLog('📤 Request body being sent', { 
-                        code: code.substring(0, 30) + '...', 
-                        redirectUri, 
-                        role 
+
+                    addLog('📤 Request body being sent', {
+                        code: code.substring(0, 30) + '...',
+                        redirectUri,
+                        role
                     });
 
                     addLog('⏳ Sending POST request to backend...');
@@ -248,7 +248,7 @@ const AuthCallback = () => {
 
                     const resp = await fetch(exchangeUrl, {
                         method: 'POST',
-                        headers: { 
+                        headers: {
                             'Content-Type': 'application/json'
                         },
                         body: JSON.stringify(requestBody)
@@ -269,7 +269,7 @@ const AuthCallback = () => {
 
                     let data;
                     const contentType = resp.headers.get('content-type');
-                    
+
                     if (contentType && contentType.includes('application/json')) {
                         addLog('📄 Response is JSON, parsing...');
                         data = await resp.json();
@@ -296,11 +296,11 @@ const AuthCallback = () => {
                     const exRefresh = data?.refreshToken || data?.refresh_token || data?.data?.refreshToken;
                     const exUser = data?.user || data?.data?.user || data?.data;
                     const exRole = data?.role || data?.data?.role || exUser?.role || role;
-                    
-                    addLog('📦 Extracted exchange data', { 
+
+                    addLog('📦 Extracted exchange data', {
                         hasToken: !!exToken,
                         tokenPreview: exToken ? exToken.substring(0, 30) + '...' : null,
-                        hasRefresh: !!exRefresh, 
+                        hasRefresh: !!exRefresh,
                         hasUser: !!exUser,
                         userKeys: exUser ? Object.keys(exUser) : [],
                         role: exRole,
@@ -315,7 +315,7 @@ const AuthCallback = () => {
 
                     addLog('💾 Starting to save tokens...');
                     setStatus('Saving authentication data...');
-                    
+
                     try {
                         setCookie('auth_token', exToken, 7);
                         addLog('✅ Saved auth_token');
@@ -333,7 +333,7 @@ const AuthCallback = () => {
                         setCookie('admin_token', exToken, 7);
                         addLog('✅ Saved admin_token');
                     }
-                    
+
                     if (exRefresh) {
                         try {
                             setCookie('refresh_token', exRefresh, 30);
@@ -342,7 +342,7 @@ const AuthCallback = () => {
                             addLog('❌ Failed to save refresh_token', e.message);
                         }
                     }
-                    
+
                     if (exUser) {
                         addLog('💾 Saving Google profile data...');
                         saveGoogleProfileData(exUser, exRole);
@@ -353,14 +353,14 @@ const AuthCallback = () => {
                     hasProcessedRef.current = true;
                     sessionStorage.setItem('auth_just_completed', 'true');
                     addLog('✅ Set completion flags');
-                    
+
                     setStatus('Success! Redirecting...');
                     addLog('🎯 Preparing to redirect', { role: exRole });
 
                     setTimeout(() => {
                         sessionStorage.removeItem('auth_processing');
                         addLog('🚀 REDIRECTING NOW', { role: exRole });
-                        
+
                         if (exRole === 'customer') {
                             addLog('➡️ Redirecting to /customer/dashboard');
                             history.replace('/customer/dashboard');
@@ -382,10 +382,10 @@ const AuthCallback = () => {
                         message: err.message,
                         stack: err.stack
                     });
-                    
+
                     setStatus('Authentication failed: ' + (err?.message || 'Unable to complete sign-in'));
                     sessionStorage.removeItem('auth_processing');
-                    
+
                     setTimeout(() => {
                         history.replace('/auth/role-select?error=' + encodeURIComponent(err?.message || 'OAuth exchange failed'));
                     }, 3000);
@@ -397,7 +397,7 @@ const AuthCallback = () => {
             if (token) {
                 addLog('🔑 DIRECT TOKEN FLOW - Token provided in URL');
                 setStatus('Saving authentication data...');
-                
+
                 try {
                     const decodedToken = decodeJWT(token);
                     addLog('🔓 Decoded JWT', decodedToken);
@@ -426,13 +426,13 @@ const AuthCallback = () => {
                     }
 
                     const bestUserData = fetchedUser || parsedUser || decodedToken || {};
-                    addLog('🎯 Best user data selected', { 
+                    addLog('🎯 Best user data selected', {
                         source: fetchedUser ? 'fetched' : parsedUser ? 'parsed' : 'decoded',
-                        data: bestUserData 
+                        data: bestUserData
                     });
-                    
+
                     const finalRole = role || bestUserData.role || decodedToken?.role || 'rider';
-                    addLog('🎭 Final role', { 
+                    addLog('🎭 Final role', {
                         role: finalRole,
                         sources: { urlParam: role, userData: bestUserData.role, jwt: decodedToken?.role }
                     });
@@ -473,13 +473,13 @@ const AuthCallback = () => {
                     hasProcessedRef.current = true;
                     sessionStorage.setItem('auth_just_completed', 'true');
                     addLog('✅ Set completion flags');
-                    
+
                     setStatus('Success! Redirecting...');
 
                     setTimeout(() => {
                         sessionStorage.removeItem('auth_processing');
                         addLog('🚀 REDIRECTING NOW', { role: finalRole });
-                        
+
                         if (finalRole === 'customer') {
                             addLog('➡️ Redirecting to /customer/dashboard');
                             history.replace('/customer/dashboard');
@@ -502,7 +502,7 @@ const AuthCallback = () => {
                     });
                     setStatus('Authentication processing failed');
                     sessionStorage.removeItem('auth_processing');
-                    
+
                     setTimeout(() => {
                         history.replace('/auth/role-select?error=' + encodeURIComponent('Failed to process authentication'));
                     }, 2000);
@@ -511,7 +511,7 @@ const AuthCallback = () => {
                 addLog('❌ NO AUTH DATA - No token or code in URL');
                 setStatus('No authentication data received');
                 sessionStorage.removeItem('auth_processing');
-                
+
                 setTimeout(() => {
                     history.replace('/auth/role-select?error=' + encodeURIComponent('No authentication data received'));
                 }, 2000);
@@ -531,13 +531,13 @@ const AuthCallback = () => {
                 <p className="text-lg text-gray-700 font-medium mb-2">{status}</p>
                 <p className="text-sm text-gray-500">Please wait...</p>
             </div>
-            
+
             {/* Debug Logs Panel */}
             <div className="mt-8 bg-gray-900 text-green-400 p-4 rounded-lg max-w-4xl w-full max-h-96 overflow-y-auto font-mono text-xs">
                 <div className="mb-2 text-white font-bold">🔍 Debug Logs (Check Browser Console for Full Details)</div>
                 {debugLogs.map((log, idx) => (
                     <div key={idx} className="mb-1 border-b border-gray-700 pb-1">
-                        <span className="text-gray-500">{log.timestamp.split('T')[1]}</span> 
+                        <span className="text-gray-500">{log.timestamp.split('T')[1]}</span>
                         <span className="ml-2">{log.message}</span>
                         {log.data && (
                             <pre className="ml-4 text-xs text-blue-300 mt-1">
