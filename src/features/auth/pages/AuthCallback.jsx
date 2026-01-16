@@ -1,12 +1,22 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useRef } from 'react';
 import { useHistory, useLocation } from 'react-router-dom';
-import { setCookie, setJSONCookie } from '../../../utils/cookies';
+import { setCookie, setJSONCookie, getCookie } from '../../../utils/cookies';
 import { getCurrentUser } from '../../../utils/authApi';
 
 const AuthCallback = () => {
     const history = useHistory();
     const location = useLocation();
     const [status, setStatus] = useState('Processing authentication...');
+    const [debugLogs, setDebugLogs] = useState([]);
+    const processingRef = useRef(false);
+    const hasProcessedRef = useRef(false);
+
+    const addLog = (message, data = null) => {
+        const timestamp = new Date().toISOString();
+        const logEntry = `[${timestamp}] ${message}`;
+        console.log(logEntry, data || '');
+        setDebugLogs(prev => [...prev, { timestamp, message, data }]);
+    };
 
     // Helper function to decode JWT token
     const decodeJWT = (token) => {
@@ -21,15 +31,138 @@ const AuthCallback = () => {
             );
             return JSON.parse(jsonPayload);
         } catch (e) {
-            console.error('[AuthCallback] Failed to decode JWT:', e);
+            addLog('❌ Failed to decode JWT', e.message);
             return null;
         }
     };
 
+    // Helper to save Google profile data
+    const saveGoogleProfileData = (userData, role) => {
+        addLog('💾 Starting to save Google profile data', { role, hasUserData: !!userData });
+        
+        const googleName = userData.name || userData.displayName || userData.fullName || '';
+        const googleEmail = userData.email || '';
+        const googlePhoto = userData.profilePhoto || userData.picture || userData.avatar || userData.image || '';
+        const googleId = userData.id || userData._id || userData.googleId || userData.sub || '';
+        
+        addLog('📝 Extracted Google fields', { 
+            name: googleName, 
+            email: googleEmail, 
+            hasPhoto: !!googlePhoto,
+            id: googleId 
+        });
+        
+        const nameParts = googleName.split(' ');
+        const firstName = userData.firstName || userData.given_name || nameParts[0] || '';
+        const lastName = userData.lastName || userData.family_name || nameParts.slice(1).join(' ') || '';
+        
+        addLog('👤 Parsed name', { firstName, lastName });
+        
+        const completeUserData = {
+            id: googleId,
+            googleId: googleId,
+            email: googleEmail,
+            name: googleName,
+            fullName: googleName,
+            firstName: firstName,
+            lastName: lastName,
+            profilePhoto: googlePhoto,
+            picture: googlePhoto,
+            avatar: googlePhoto,
+            role: role,
+            ...userData,
+            phone: userData.phone || userData.phoneNumber || '',
+            riderId: userData.riderId || userData.driverId || (googleId ? `RD-${googleId}` : ''),
+            driverId: userData.driverId || userData.riderId || (googleId ? `RD-${googleId}` : ''),
+        };
+        
+        addLog('✅ Complete user data prepared', completeUserData);
+        
+        try {
+            setJSONCookie('user_data', completeUserData, 7);
+            addLog('✅ user_data cookie saved');
+        } catch (e) {
+            addLog('❌ Failed to save user_data cookie', e.message);
+        }
+        
+        try {
+            setCookie('userRole', role, 7);
+            addLog('✅ userRole cookie saved', role);
+        } catch (e) {
+            addLog('❌ Failed to save userRole cookie', e.message);
+        }
+        
+        if (googlePhoto) {
+            try {
+                setCookie('profile_image', googlePhoto, 7);
+                setCookie(`profile_image_${googleId}`, googlePhoto, 7);
+                setCookie(`profile_image_${googleEmail}`, googlePhoto, 7);
+                localStorage.setItem('profile_image', googlePhoto);
+                addLog('✅ Profile photo saved to all locations');
+            } catch (e) {
+                addLog('❌ Failed to save profile photo', e.message);
+            }
+        }
+        
+        if (googleName) {
+            try {
+                setCookie('user_name', googleName, 7);
+                localStorage.setItem('user_name', googleName);
+                addLog('✅ User name saved', googleName);
+            } catch (e) {
+                addLog('❌ Failed to save user name', e.message);
+            }
+        }
+        
+        addLog('✅ Google profile data save complete');
+        return completeUserData;
+    };
+
     useEffect(() => {
+        addLog('🚀 AuthCallback component mounted');
+        addLog('📍 Current URL', window.location.href);
+        addLog('📍 Location search', location.search);
+        addLog('📍 Location pathname', location.pathname);
+
+        if (processingRef.current) {
+            addLog('⚠️ Already processing, exiting');
+            return;
+        }
+
+        if (hasProcessedRef.current) {
+            addLog('⚠️ Already processed, exiting');
+            return;
+        }
+
+        processingRef.current = true;
+        addLog('✅ Set processing flag to true');
+
         const processAuth = async () => {
-            // Parse query params manually (react-router v5)
+            addLog('🔄 Starting processAuth function');
+
+            const justAuthenticated = sessionStorage.getItem('auth_processing');
+            addLog('🔍 Checking sessionStorage auth_processing', justAuthenticated);
+
+            if (justAuthenticated) {
+                addLog('⚠️ Auth already processed in session, cleaning up and redirecting');
+                sessionStorage.removeItem('auth_processing');
+                
+                const role = getCookie('userRole');
+                addLog('🔍 Retrieved role from cookie', role);
+                
+                if (role === 'customer') history.replace('/customer/dashboard');
+                else if (role === 'rider' || role === 'driver') history.replace('/rider/dashboard');
+                else if (role === 'admin') history.replace('/admin/dashboard');
+                else history.replace('/');
+                return;
+            }
+
+            sessionStorage.setItem('auth_processing', 'true');
+            addLog('✅ Set auth_processing in sessionStorage');
+
             const params = new URLSearchParams(location.search);
+            addLog('🔍 URL Search Params', location.search);
+
             const token = params.get('token') || params.get('accessToken');
             const refreshToken = params.get('refreshToken') || params.get('refresh_token');
             const code = params.get('code');
@@ -38,224 +171,381 @@ const AuthCallback = () => {
             const error = params.get('error');
             const message = params.get('message');
 
-            console.log('[AuthCallback] Parsed params:', {
+            // CRITICAL: If we have a code, immediately clear it from URL to prevent double exchange
+            if (code) {
+                addLog('🔒 CLEARING CODE FROM URL immediately to prevent reuse');
+                const newParams = new URLSearchParams();
+                if (role) newParams.set('role', role);
+                newParams.set('processing', 'true');
+                history.replace({
+                    pathname: location.pathname,
+                    search: `?${newParams.toString()}`
+                });
+                addLog('✅ Code cleared from URL, safe to proceed with exchange');
+            }
+
+            addLog('📦 Extracted URL parameters', {
                 hasToken: !!token,
+                tokenLength: token?.length,
+                tokenPreview: token ? token.substring(0, 30) + '...' : null,
                 hasCode: !!code,
-                role,
-                hasError: !!error
+                codeLength: code?.length,
+                codePreview: code ? code.substring(0, 30) + '...' : null,
+                role: role,
+                hasUserParam: !!userParam,
+                hasError: !!error,
+                errorMessage: error,
+                message: message,
+                hasRefreshToken: !!refreshToken
             });
 
             if (error) {
+                addLog('❌ Error found in URL params', { error, message });
                 setStatus('Authentication failed: ' + (message || error));
+                sessionStorage.removeItem('auth_processing');
                 setTimeout(() => {
-                    history.push('/auth/role-select?error=' + encodeURIComponent(message || error));
+                    history.replace('/auth/role-select?error=' + encodeURIComponent(message || error));
                 }, 2000);
                 return;
             }
 
-            // If we received an authorization code, exchange it with backend for tokens
-            if (code) {
-                console.log('[AuthCallback] Exchanging authorization code with backend...');
-                setStatus('Exchanging authorization code...');
+            // CODE EXCHANGE FLOW
+            if (code && !token) {
+                addLog('🔐 CODE EXCHANGE FLOW - Have authorization code, will exchange for tokens');
+                setStatus('Connecting to server...');
 
                 const rawBase = import.meta.env.VITE_API_BASE_URL || 'https://api.swiftlyxpress.com';
+                addLog('🌐 Raw API base URL from env', rawBase);
+                
                 const base = (typeof window !== 'undefined' && rawBase.startsWith('/'))
                     ? `${window.location.origin}${rawBase.replace(/\/$/, '')}`
                     : rawBase.replace(/\/$/, '');
+                addLog('🌐 Computed API base URL', base);
+                
                 const exchangeUrl = `${base}/api/auth/google/exchange-code`;
+                addLog('🌐 Exchange endpoint URL', exchangeUrl);
 
-                console.log('[AuthCallback] Exchange URL:', exchangeUrl);
-                console.log('[AuthCallback] Payload:', { code: code.substring(0, 20) + '...', redirectUri: window.location.origin + '/auth/callback', role });
+                const redirectUri = `${window.location.origin}/auth/callback`;
+                addLog('🔗 Redirect URI', redirectUri);
 
                 try {
+                    setStatus('Exchanging authorization code...');
+                    
+                    const requestBody = { 
+                        code, 
+                        redirectUri,
+                        role 
+                    };
+                    
+                    addLog('📤 Request body being sent', { 
+                        code: code.substring(0, 30) + '...', 
+                        redirectUri, 
+                        role 
+                    });
+
+                    addLog('⏳ Sending POST request to backend...');
+                    const startTime = Date.now();
+
                     const resp = await fetch(exchangeUrl, {
                         method: 'POST',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({ code, redirectUri: window.location.origin + '/auth/callback', role })
+                        headers: { 
+                            'Content-Type': 'application/json'
+                        },
+                        body: JSON.stringify(requestBody)
                     });
-                    const data = await resp.json();
 
-                    console.log('[AuthCallback] Exchange response status:', resp.status);
-                    console.log('[AuthCallback] Exchange response data:', data);
+                    const endTime = Date.now();
+                    addLog(`⏱️ Request completed in ${endTime - startTime}ms`);
 
-                    if (!resp.ok) throw new Error(data?.message || 'OAuth exchange failed');
+                    addLog('📥 Response received', {
+                        status: resp.status,
+                        statusText: resp.statusText,
+                        ok: resp.ok,
+                        headers: {
+                            contentType: resp.headers.get('content-type'),
+                            contentLength: resp.headers.get('content-length')
+                        }
+                    });
 
-                    // Extract from multiple possible response structures
-                    console.log('user data from response...');
+                    let data;
+                    const contentType = resp.headers.get('content-type');
+                    
+                    if (contentType && contentType.includes('application/json')) {
+                        addLog('📄 Response is JSON, parsing...');
+                        data = await resp.json();
+                        addLog('📄 Parsed JSON response', data);
+                    } else {
+                        addLog('⚠️ Response is NOT JSON!', { contentType });
+                        const text = await resp.text();
+                        addLog('📄 Raw response text', text);
+                        throw new Error('Server returned invalid response format: ' + contentType);
+                    }
+
+                    if (!resp.ok) {
+                        addLog('❌ Response not OK', {
+                            status: resp.status,
+                            statusText: resp.statusText,
+                            data
+                        });
+                        throw new Error(data?.message || data?.error || `Exchange failed with status ${resp.status}`);
+                    }
+
+                    addLog('✅ Response OK, extracting data...');
+
                     const exToken = data?.token || data?.accessToken || data?.data?.token;
                     const exRefresh = data?.refreshToken || data?.refresh_token || data?.data?.refreshToken;
                     const exUser = data?.user || data?.data?.user || data?.data;
-                    // Try multiple locations for role: direct, data.role, user.role, or fallback to URL param
-
                     const exRole = data?.role || data?.data?.role || exUser?.role || role;
-                    console.log('role from response...');
-                    console.log('[AuthCallback] Extracted:', { hasToken: !!exToken, hasRefresh: !!exRefresh, hasUser: !!exUser, role: exRole, rawRole: data?.role, userRole: exUser?.role });
+                    
+                    addLog('📦 Extracted exchange data', { 
+                        hasToken: !!exToken,
+                        tokenPreview: exToken ? exToken.substring(0, 30) + '...' : null,
+                        hasRefresh: !!exRefresh, 
+                        hasUser: !!exUser,
+                        userKeys: exUser ? Object.keys(exUser) : [],
+                        role: exRole,
+                        userEmail: exUser?.email,
+                        userName: exUser?.name || exUser?.fullName
+                    });
 
-                    if (exToken) {
-                        setStatus('Saving authentication data...');
-                        if (exRole === 'customer') setCookie('customer_token', exToken, 7);
-                        else if (exRole === 'rider' || exRole === 'driver') setCookie('rider_token', exToken, 7);
-                        else if (exRole === 'admin') setCookie('admin_token', exToken, 7);
+                    if (!exToken) {
+                        addLog('❌ No token in exchange response!');
+                        throw new Error('No authentication token received from server');
+                    }
+
+                    addLog('💾 Starting to save tokens...');
+                    setStatus('Saving authentication data...');
+                    
+                    try {
                         setCookie('auth_token', exToken, 7);
-                        console.log('[AuthCallback] ✓ Token saved for role:', exRole);
-                    }
-                    if (exRefresh) {
-                        setCookie('refresh_token', exRefresh, 30);
-                        console.log('[AuthCallback] ✓ Refresh token saved');
-                    }
-                    if (exUser) {
-                        setJSONCookie('user_data', exUser, 7);
-                        if (exUser.role) setCookie('userRole', exUser.role, 7);
-                        console.log('[AuthCallback] ✓ User data saved');
+                        addLog('✅ Saved auth_token');
+                    } catch (e) {
+                        addLog('❌ Failed to save auth_token', e.message);
                     }
 
-                    setStatus('Redirecting to dashboard...');
-                    console.log('[AuthCallback] Redirecting to dashboard for role:', exRole);
+                    if (exRole === 'customer') {
+                        setCookie('customer_token', exToken, 7);
+                        addLog('✅ Saved customer_token');
+                    } else if (exRole === 'rider' || exRole === 'driver') {
+                        setCookie('rider_token', exToken, 7);
+                        addLog('✅ Saved rider_token');
+                    } else if (exRole === 'admin') {
+                        setCookie('admin_token', exToken, 7);
+                        addLog('✅ Saved admin_token');
+                    }
+                    
+                    if (exRefresh) {
+                        try {
+                            setCookie('refresh_token', exRefresh, 30);
+                            addLog('✅ Saved refresh_token');
+                        } catch (e) {
+                            addLog('❌ Failed to save refresh_token', e.message);
+                        }
+                    }
+                    
+                    if (exUser) {
+                        addLog('💾 Saving Google profile data...');
+                        saveGoogleProfileData(exUser, exRole);
+                    } else {
+                        addLog('⚠️ No user data to save');
+                    }
+
+                    hasProcessedRef.current = true;
+                    sessionStorage.setItem('auth_just_completed', 'true');
+                    addLog('✅ Set completion flags');
+                    
+                    setStatus('Success! Redirecting...');
+                    addLog('🎯 Preparing to redirect', { role: exRole });
 
                     setTimeout(() => {
-                        if (exRole === 'customer') history.push('/customer/dashboard');
-                        else if (exRole === 'rider' || exRole === 'driver') history.push('/rider/dashboard');
-                        else if (exRole === 'admin') history.push('/admin/dashboard');
-                        else history.push('/');
+                        sessionStorage.removeItem('auth_processing');
+                        addLog('🚀 REDIRECTING NOW', { role: exRole });
+                        
+                        if (exRole === 'customer') {
+                            addLog('➡️ Redirecting to /customer/dashboard');
+                            history.replace('/customer/dashboard');
+                        } else if (exRole === 'rider' || exRole === 'driver') {
+                            addLog('➡️ Redirecting to /rider/dashboard');
+                            history.replace('/rider/dashboard');
+                        } else if (exRole === 'admin') {
+                            addLog('➡️ Redirecting to /admin/dashboard');
+                            history.replace('/admin/dashboard');
+                        } else {
+                            addLog('➡️ Redirecting to /');
+                            history.replace('/');
+                        }
                     }, 500);
                     return;
                 } catch (err) {
-                    console.error('[AuthCallback] OAuth code exchange failed:', err);
-                    setStatus('Authentication failed: ' + (err?.message || 'OAuth exchange failed'));
+                    addLog('❌ CODE EXCHANGE ERROR', {
+                        name: err.name,
+                        message: err.message,
+                        stack: err.stack
+                    });
+                    
+                    setStatus('Authentication failed: ' + (err?.message || 'Unable to complete sign-in'));
+                    sessionStorage.removeItem('auth_processing');
+                    
                     setTimeout(() => {
-                        history.push('/auth/role-select?error=' + encodeURIComponent(err?.message || 'OAuth exchange failed'));
-                    }, 2000);
+                        history.replace('/auth/role-select?error=' + encodeURIComponent(err?.message || 'OAuth exchange failed'));
+                    }, 3000);
                     return;
                 }
             }
 
-            // DEBUG: Check what's happening with token and code
-            console.log('[AuthCallback] === DEBUG TOKEN CHECK ===');
-            console.log('[AuthCallback] token value:', token);
-            console.log('[AuthCallback] token type:', typeof token);
-            console.log('[AuthCallback] token length:', token?.length);
-            console.log('[AuthCallback] token truthy?', !!token);
-            console.log('[AuthCallback] code value:', code);
-            console.log('[AuthCallback] code type:', typeof code);
-            console.log('[AuthCallback] code truthy?', !!code);
-            console.log('[AuthCallback] Will enter token block?', !!token);
-            console.log('[AuthCallback] === END DEBUG ===');
-
-            // Handle direct token (UNCOMMENTED AND FIXED)
+            // DIRECT TOKEN FLOW
             if (token) {
-                console.log('[AuthCallback] ✓✓✓ ENTERED TOKEN BLOCK ✓✓✓');
-                console.log('[AuthCallback] Direct token provided in callback');
+                addLog('🔑 DIRECT TOKEN FLOW - Token provided in URL');
                 setStatus('Saving authentication data...');
+                
                 try {
-                    // Decode JWT token to extract user info and role
                     const decodedToken = decodeJWT(token);
-                    console.log('[AuthCallback] Decoded token:', decodedToken);
+                    addLog('🔓 Decoded JWT', decodedToken);
 
-                    // Parse user param if available
                     let parsedUser = null;
                     if (userParam) {
                         try {
                             const decoded = decodeURIComponent(userParam);
                             parsedUser = JSON.parse(decoded);
-                            console.log('[AuthCallback] ✓ User data parsed from param:', parsedUser);
+                            addLog('✅ Parsed user param', parsedUser);
                         } catch (e) {
-                            console.warn('[AuthCallback] Failed to parse user param', e);
+                            addLog('⚠️ Failed to parse user param', e.message);
                         }
                     }
 
-                    // Attempt to fetch authoritative user profile from backend using token
                     let fetchedUser = null;
                     try {
+                        setStatus('Fetching your profile...');
+                        addLog('🌐 Calling getCurrentUser...');
                         const me = await getCurrentUser(token);
-                        console.log('[AuthCallback] getCurrentUser returned:', me);
-                        fetchedUser = me?.user || me?.data || me;
-                        if (fetchedUser) {
-                            setJSONCookie('user_data', fetchedUser, 7);
-                            if (fetchedUser.role) setCookie('userRole', fetchedUser.role, 7);
-                        }
+                        addLog('📥 getCurrentUser response', me);
+                        fetchedUser = me?.user || me?.data?.user || me?.data || me;
+                        addLog('✅ Fetched user data', fetchedUser);
                     } catch (meErr) {
-                        console.warn('[AuthCallback] getCurrentUser failed:', meErr);
+                        addLog('⚠️ getCurrentUser failed', meErr.message);
                     }
 
-                    // Determine final role with priority:
-                    // 1. URL role parameter
-                    // 2. fetched user role (from API)
-                    // 3. Decoded JWT token role
-                    // 4. Parsed user data role
-                    const finalRole = role || (fetchedUser && fetchedUser.role) || decodedToken?.role || parsedUser?.role || null;
-                    console.log('[AuthCallback] Final role determined:', finalRole);
-                    console.log('[AuthCallback] Role sources - URL:', role, ', fetched:', fetchedUser?.role, ', JWT:', decodedToken?.role, ', User:', parsedUser?.role);
+                    const bestUserData = fetchedUser || parsedUser || decodedToken || {};
+                    addLog('🎯 Best user data selected', { 
+                        source: fetchedUser ? 'fetched' : parsedUser ? 'parsed' : 'decoded',
+                        data: bestUserData 
+                    });
+                    
+                    const finalRole = role || bestUserData.role || decodedToken?.role || 'rider';
+                    addLog('🎭 Final role', { 
+                        role: finalRole,
+                        sources: { urlParam: role, userData: bestUserData.role, jwt: decodedToken?.role }
+                    });
 
-                    // Ensure user_data exists and contains role
-                    const userData = fetchedUser || parsedUser || decodedToken || null;
-                    if (userData) {
-                        if (!userData.role && finalRole) userData.role = finalRole;
-                        try { setJSONCookie('user_data', userData, 7); } catch (e) { /* ignore */ }
+                    try {
+                        setCookie('auth_token', token, 7);
+                        addLog('✅ Saved auth_token');
+                    } catch (e) {
+                        addLog('❌ Failed to save auth_token', e.message);
                     }
 
-                    // Save token cookies based on finalRole
                     if (finalRole === 'customer') {
                         setCookie('customer_token', token, 7);
-                        console.log('[AuthCallback] ✓ Customer token saved');
+                        addLog('✅ Saved customer_token');
                     } else if (finalRole === 'rider' || finalRole === 'driver') {
                         setCookie('rider_token', token, 7);
-                        console.log('[AuthCallback] ✓ Rider/Driver token saved');
+                        addLog('✅ Saved rider_token');
                     } else if (finalRole === 'admin') {
                         setCookie('admin_token', token, 7);
-                        console.log('[AuthCallback] ✓ Admin token saved');
+                        addLog('✅ Saved admin_token');
                     }
-
-                    setCookie('auth_token', token, 7);
-                    console.log('[AuthCallback] ✓ General auth token saved');
 
                     if (refreshToken) {
-                        setCookie('refresh_token', refreshToken, 30);
-                        console.log('[AuthCallback] ✓ Refresh token saved');
+                        try {
+                            setCookie('refresh_token', refreshToken, 30);
+                            addLog('✅ Saved refresh_token');
+                        } catch (e) {
+                            addLog('❌ Failed to save refresh_token', e.message);
+                        }
                     }
 
-                    setStatus('Redirecting to dashboard...');
-                    console.log('[AuthCallback] Preparing redirect for role:', finalRole);
+                    if (bestUserData && Object.keys(bestUserData).length > 0) {
+                        bestUserData.role = finalRole;
+                        addLog('💾 Saving Google profile data...');
+                        saveGoogleProfileData(bestUserData, finalRole);
+                    }
+
+                    hasProcessedRef.current = true;
+                    sessionStorage.setItem('auth_just_completed', 'true');
+                    addLog('✅ Set completion flags');
+                    
+                    setStatus('Success! Redirecting...');
 
                     setTimeout(() => {
+                        sessionStorage.removeItem('auth_processing');
+                        addLog('🚀 REDIRECTING NOW', { role: finalRole });
+                        
                         if (finalRole === 'customer') {
-                            console.log('[AuthCallback] → Redirecting to /customer/dashboard');
-                            history.push('/customer/dashboard');
+                            addLog('➡️ Redirecting to /customer/dashboard');
+                            history.replace('/customer/dashboard');
                         } else if (finalRole === 'rider' || finalRole === 'driver') {
-                            console.log('[AuthCallback] → Redirecting to /rider/dashboard');
-                            history.push('/rider/dashboard');
+                            addLog('➡️ Redirecting to /rider/dashboard');
+                            history.replace('/rider/dashboard');
                         } else if (finalRole === 'admin') {
-                            console.log('[AuthCallback] → Redirecting to /admin/dashboard');
-                            history.push('/admin/dashboard');
+                            addLog('➡️ Redirecting to /admin/dashboard');
+                            history.replace('/admin/dashboard');
                         } else {
-                            console.warn('[AuthCallback] → No valid role found, redirecting to home');
-                            history.push('/');
+                            addLog('➡️ Redirecting to /');
+                            history.replace('/');
                         }
                     }, 500);
                 } catch (e) {
-                    console.error('[AuthCallback] Auth callback handling failed', e);
-                    setStatus('Authentication failed');
+                    addLog('❌ DIRECT TOKEN ERROR', {
+                        name: e.name,
+                        message: e.message,
+                        stack: e.stack
+                    });
+                    setStatus('Authentication processing failed');
+                    sessionStorage.removeItem('auth_processing');
+                    
                     setTimeout(() => {
-                        history.push('/auth/role-select');
+                        history.replace('/auth/role-select?error=' + encodeURIComponent('Failed to process authentication'));
                     }, 2000);
                 }
             } else {
-                console.log('[AuthCallback] No token or code found, redirecting to role select');
+                addLog('❌ NO AUTH DATA - No token or code in URL');
                 setStatus('No authentication data received');
+                sessionStorage.removeItem('auth_processing');
+                
                 setTimeout(() => {
-                    history.push('/auth/role-select');
+                    history.replace('/auth/role-select?error=' + encodeURIComponent('No authentication data received'));
                 }, 2000);
             }
         };
 
-        processAuth();
+        processAuth().finally(() => {
+            processingRef.current = false;
+            addLog('✅ Processing complete, cleared processing flag');
+        });
     }, []);
 
     return (
-        <div className="min-h-screen flex items-center justify-center bg-gray-50">
-            <div className="text-center p-8">
+        <div className="min-h-screen flex flex-col items-center justify-center bg-gray-50 p-4">
+            <div className="text-center p-8 bg-white rounded-lg shadow-lg max-w-md w-full">
                 <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-[#00D68F] mx-auto mb-4"></div>
-                <p className="text-lg text-gray-700">{status}</p>
-                <p className="text-sm text-gray-500 mt-2">Please wait...</p>
+                <p className="text-lg text-gray-700 font-medium mb-2">{status}</p>
+                <p className="text-sm text-gray-500">Please wait...</p>
+            </div>
+            
+            {/* Debug Logs Panel */}
+            <div className="mt-8 bg-gray-900 text-green-400 p-4 rounded-lg max-w-4xl w-full max-h-96 overflow-y-auto font-mono text-xs">
+                <div className="mb-2 text-white font-bold">🔍 Debug Logs (Check Browser Console for Full Details)</div>
+                {debugLogs.map((log, idx) => (
+                    <div key={idx} className="mb-1 border-b border-gray-700 pb-1">
+                        <span className="text-gray-500">{log.timestamp.split('T')[1]}</span> 
+                        <span className="ml-2">{log.message}</span>
+                        {log.data && (
+                            <pre className="ml-4 text-xs text-blue-300 mt-1">
+                                {typeof log.data === 'object' ? JSON.stringify(log.data, null, 2) : log.data}
+                            </pre>
+                        )}
+                    </div>
+                ))}
             </div>
         </div>
     );

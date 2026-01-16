@@ -6,9 +6,41 @@ import DocumentIcon from "../../../icons/Documenticon";
 import UploadIcon from "../../../icons/Uploadicon";
 import { getRiderProfile, updateRiderProfile, uploadRiderProfileImage, getRiderEarnings, notifyAdminEmailChange } from '../../../utils/authApi';
 import { getCookie, setCookie, getJSONCookie, setJSONCookie } from '../../../utils/cookies';
+import { ca } from '@mapbox/mapbox-gl-geocoder/lib/exceptions';
 
 const sideBottomShadow = {
   boxShadow: '2px 4px 4px rgba(0,0,0,0.06), -2px 4px 4px rgba(0,0,0,0.06), 0 4px 8px rgba(0,0,0,0.08)'
+};
+
+const loadGoogleProfileData = () => {
+  console.log('loading google profile data...');
+
+  const cachedUserData = getJSONCookie('user_data');
+  if (cachedUserData) {
+    return null;
+  }
+
+  const googleName = cachedUserData.name || cachedUserData.fullName || cachedUserData.displayName || '';
+  const googleEmail = cachedUserData.email || '';
+  const googlePhoto = cachedUserData.profilePhoto || cachedUserData.picture || cachedUserData.avatar || '';
+  const googlePhone = cachedUserData.phone || cachedUserData.phoneNumber || '';
+
+  const nameParts = googleName.split(' ');
+  const firstName = cachedUserData.firstName || cachedUserData.given_name || nameParts[0] || '';
+  const lastName = cachedUserData.lastName || cachedUserData.family_name || nameParts.slice(1).join('') || '';
+  const googleId = cachedUserData.id || cachedUserData._id || cachedUserData.googleId || '';
+  const riderId = cachedUserData.riderId || cachedUserData.driverId || (googleId ? `RD-${googleId}` : '');
+
+  return {
+    name: googleName,
+    firstName,
+    lastName,
+    email: googleEmail,
+    phone: googlePhone,
+    Photo: googlePhoto,
+    riderId,
+    id: googleId
+  };
 };
 
 const generateMockAvatar = (name) => {
@@ -144,21 +176,77 @@ const RiderProfile = () => {
 
   // Load saved data from cookies on mount
   useEffect(() => {
-    // Load personal info
+    console.log('[Profile] === INITIAL DATA LOAD ===');
+  
+    // First, try to load Google profile data
+    const googleData = loadGoogleProfileData();
+    
+    if (googleData) {
+      console.log('[Profile] Loading from Google data');
+      
+      // Set user name and rider ID
+      if (googleData.name) {
+        setUserName(googleData.name);
+      }
+      if (googleData.riderId) {
+        setRiderId(googleData.riderId);
+      }
+      
+      // Set profile photo
+      if (googleData.photo && !googleData.photo.includes('dicebear')) {
+        setProfileImage(googleData.photo);
+        
+        // Save to all storage locations
+        const imageKey = getProfileImageKey();
+        setCookie(imageKey, googleData.photo, 7);
+        setCookie('profile_image', googleData.photo, 7);
+        localStorage.setItem('profile_image', googleData.photo);
+        
+        console.log('[Profile] ✓ Google profile photo loaded and saved');
+      } else if (googleData.name) {
+        // Generate mock avatar from name
+        const mockAvatar = generateMockAvatar(googleData.name);
+        setProfileImage(mockAvatar);
+      }
+      
+      // Set personal info from Google data
+      setPersonalInfo(prev => ({
+        ...prev,
+        firstName: googleData.firstName || prev.firstName,
+        lastName: googleData.lastName || prev.lastName,
+        email: googleData.email || prev.email,
+        phone: googleData.phone || prev.phone
+      }));
+      
+      console.log('[Profile] ✓ Personal info populated from Google data');
+    }
+    
+    // Load any saved personal info from cookies (this will merge with Google data)
     const savedPersonalInfo = getJSONCookie('riderPersonalInfo');
     if (savedPersonalInfo) {
       try {
-        setPersonalInfo(savedPersonalInfo);
+        setPersonalInfo(prev => ({
+          // Start with Google data
+          firstName: googleData?.firstName || prev.firstName,
+          lastName: googleData?.lastName || prev.lastName,
+          email: googleData?.email || prev.email,
+          phone: googleData?.phone || prev.phone,
+          // Override with saved data if available
+          ...savedPersonalInfo
+        }));
+        console.log('[Profile] ✓ Merged with saved personal info');
       } catch (e) {
         console.error('[Profile] Error parsing saved personal info:', e);
       }
     }
+
 
     // Load vehicle info
     const savedVehicleInfo = getJSONCookie('riderVehicleInfo');
     if (savedVehicleInfo) {
       try {
         setVehicleInfo(savedVehicleInfo);
+        console.log('[Profile] ✓ Vehicle info loaded');
       } catch (e) {
         console.error('[Profile] Error parsing saved vehicle info:', e);
       }
@@ -177,6 +265,7 @@ const RiderProfile = () => {
             phone: verificationData.contactInfo.phone || prev.phone,
             address: `${verificationData.contactInfo.streetAddress || ''}, ${verificationData.contactInfo.city || ''}, ${verificationData.contactInfo.state || ''} ${verificationData.contactInfo.zipCode || ''}`.trim() || prev.address
           }));
+          console.log('[Profile] ✓ Contact info from verification loaded');
         }
 
         // Update vehicle info
@@ -188,11 +277,14 @@ const RiderProfile = () => {
             year: verificationData.vehicle.year || prev.year,
             licensePlate: verificationData.vehicle.licensePlate || prev.licensePlate
           }));
+          console.log('[Profile] ✓ Vehicle info from verification loaded');
         }
       } catch (e) {
         console.error('[Profile] Error loading verification data:', e);
       }
     }
+    
+    console.log('[Profile] === INITIAL DATA LOAD COMPLETE ===');
   }, []);
 
   useEffect(() => {
@@ -258,18 +350,38 @@ const RiderProfile = () => {
       const cachedUserData = getJSONCookie('user_data');
       if (cachedUserData) {
         try {
-          const user = JSON.parse(cachedUserData);
-          const name = user.fullName || `${user.firstName || ''} ${user.lastName || ''}`.trim();
+          const user = typeof cachedUserData === 'string' ? JSON.parse(cachedUserData) : cachedUserData;
+          console.log('[Profile] Loaded cached user data:', user);
+
+          // Extract name from Google profile (name field) or split fullName
+          const name = user.name || user.fullName || `${user.firstName || ''} ${user.lastName || ''}`.trim();
           if (name) setUserName(name);
+
+          // Extract firstName and lastName from Google name or fullName
+          const nameParts = name.split(' ');
+          const firstName = user.firstName || user.given_name || nameParts[0] || '';
+          const lastName = user.lastName || user.family_name || nameParts.slice(1).join(' ') || '';
+
           if (user.riderId || user.driverId || user.id) {
             setRiderId(user.riderId || user.driverId || `RD-${user.id}`);
           }
+
+          // Load Google profile photo if available
+          if (user.profilePhoto || user.picture || user.avatar) {
+            const photoUrl = user.profilePhoto || user.picture || user.avatar;
+            setProfileImage(photoUrl);
+            const imageKey = getProfileImageKey();
+            setCookie(imageKey, photoUrl, 7);
+            localStorage.setItem('profile_image', photoUrl);
+            console.log('[Profile] Loaded Google profile photo:', photoUrl);
+          }
+
           setPersonalInfo(prev => ({
             ...prev,
-            firstName: user.firstName || prev.firstName,
-            lastName: user.lastName || prev.lastName,
+            firstName: firstName || prev.firstName,
+            lastName: lastName || prev.lastName,
             email: user.email || prev.email,
-            phone: user.phone || prev.phone
+            phone: user.phone || user.phoneNumber || prev.phone
           }));
         } catch (e) {
           console.error('[Profile] Failed to parse cached user data:', e);
@@ -314,7 +426,8 @@ const RiderProfile = () => {
       }
 
       if (profile) {
-        const name = profile.fullName || `${profile.firstName || ''} ${profile.lastName || ''}`.trim();
+        // Handle Google profile name format
+        const name = profile.name || profile.fullName || `${profile.firstName || ''} ${profile.lastName || ''}`.trim();
         if (name) {
           setUserName(name);
         }
@@ -323,12 +436,17 @@ const RiderProfile = () => {
           setRiderId(profile.riderId || profile.driverId || `RD-${profile.id}`);
         }
 
+        // Extract firstName and lastName from Google name if needed
+        const nameParts = name.split(' ');
+        const firstName = profile.firstName || profile.given_name || nameParts[0] || '';
+        const lastName = profile.lastName || profile.family_name || nameParts.slice(1).join(' ') || '';
+
         setPersonalInfo(prev => ({
           ...prev,
-          firstName: profile.firstName || prev.firstName,
-          lastName: profile.lastName || prev.lastName,
+          firstName: firstName || prev.firstName,
+          lastName: lastName || prev.lastName,
           email: profile.email || prev.email,
-          phone: profile.phone || profile.contactInfo?.phone || prev.phone,
+          phone: profile.phone || profile.phoneNumber || profile.contactInfo?.phone || prev.phone,
           address: profile.address || profile.contactInfo?.streetAddress || prev.address,
           emergencyContact: profile.emergencyContact || profile.contactInfo?.emergencyContact || prev.emergencyContact
         }));
