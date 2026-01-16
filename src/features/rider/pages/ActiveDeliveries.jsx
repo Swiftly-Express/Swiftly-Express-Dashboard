@@ -199,13 +199,13 @@ const ActiveDeliveries = () => {
 
           // Detailed troubleshooting message
           if (lastError.code === 1) {
-            setToastMsg('BROWSER BLOCKING LOCATION: 1) Click 🔒 icon in address bar 2) Set Location to "Allow" 3) REFRESH page (F5). Still failing? Try Chrome/Edge in private mode.');
+            setToastMsg('Location denied, please enable location and Turn off VPN if active');
           } else if (lastError.code === 2) {
-            setToastMsg('Device location unavailable. Windows: Settings → Privacy → Location → Turn ON');
+            setToastMsg('Device location unavailable.');
           } else if (lastError.code === 3) {
-            setToastMsg('Location timeout - GPS signal weak or location services disabled');
+            setToastMsg('Location timeout ');
           } else {
-            setToastMsg('Location error. Try: Refresh page, check browser permissions, or use different browser');
+            setToastMsg('Location error. Try: page Refresh, or use different browser');
           }
 
           setShowToast(true);

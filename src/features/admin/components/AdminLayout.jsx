@@ -104,8 +104,28 @@ const AdminLayout = ({ children }) => {
       checkNotifications();
     }, 30000);
 
+    const handleKycUpdate = () => {
+      console.log('[AdminLayout] kyc:updated event received');
+      checkNotifications();
+    };
+    const handleUserCreated = () => {
+      console.log('[AdminLayout] user:created event received');
+      checkNotifications();
+    };
+    const handleKycSubmitted = () => {
+      console.log('[AdminLayout] kyc:submitted event received');
+      checkNotifications();
+    };
+
+    window.addEventListener('kyc:updated', handleKycUpdate);
+    window.addEventListener('user:created', handleUserCreated);
+    window.addEventListener('kyc:submitted', handleKycSubmitted);
+
     return () => {
       clearInterval(notificationInterval);
+      window.removeEventListener('kyc:updated', handleKycUpdate);
+      window.removeEventListener('user:created', handleUserCreated);
+      window.removeEventListener('kyc:submitted', handleKycSubmitted);
     };
   }, []);
   return (
@@ -256,6 +276,11 @@ const AdminLayout = ({ children }) => {
                           <div
                             key={notifId}
                             className={`p-4 hover:bg-gray-50 transition-colors cursor-pointer ${!isRead ? 'bg-blue-50' : ''}`}
+                            onMouseEnter={(e) => {
+                              if (!isRead) {
+                                handleMarkAsRead(notifId, e);
+                              }
+                            }}
                             onClick={(e) => {
                               if (!isRead) {
                                 handleMarkAsRead(notifId, e);

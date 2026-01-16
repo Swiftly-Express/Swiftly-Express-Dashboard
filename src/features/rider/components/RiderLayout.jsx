@@ -468,6 +468,11 @@ const RiderLayout = ({ children }) => {
                           <div
                             key={notifId}
                             className={`p-4 hover:bg-gray-50 transition-colors cursor-pointer ${!isRead ? 'bg-blue-50' : ''}`}
+                            onMouseEnter={(e) => {
+                              if (!isRead) {
+                                handleMarkAsRead(notifId, e);
+                              }
+                            }}
                             onClick={(e) => {
                               if (!isRead) {
                                 handleMarkAsRead(notifId, e);
