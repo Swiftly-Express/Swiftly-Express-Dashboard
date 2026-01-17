@@ -5,7 +5,7 @@ import RiderLayout from '../components/RiderLayout';
 import { YummyText } from '../../../components/YummyText';
 import BanIcon from '../../../icons/Banicon';
 import MapboxMap from '../../../components/MapboxMap';
-import { getAvailableJobs, acceptDeliveryJob, getRiderProfile } from '../../../utils/authApi';
+import { getAvailableJobs, acceptDeliveryJob, getRiderProfile, getRiderDeliveries } from '../../../utils/authApi';
 import { getCookie, getJSONCookie, isRiderVerified, setCookie, setJSONCookie } from '../../../utils/cookies';
 
 
@@ -139,6 +139,7 @@ const AvailableOrders = () => {
   const [showToast, setShowToast] = useState(false);
   const [isVerified, setIsVerified] = useState(false);
   const [isAvailable, setIsAvailable] = useState(true);
+  const [completedDeliveriesCount, setCompletedDeliveriesCount] = useState(0);
   const [lastRefresh, setLastRefresh] = useState(Date.now());
   const [selectedOrder, setSelectedOrder] = useState(null);
   // lock body scroll when drawer/modal is open
@@ -227,6 +228,22 @@ const AvailableOrders = () => {
         fetchAvailableJobs();
       }
     });
+
+    // Fetch count of completed deliveries to determine "new user" state
+    const fetchCompleted = async () => {
+      try {
+        const resp = await getRiderDeliveries(1, 100);
+        const deliveries = resp?.data?.deliveries || resp?.deliveries || resp?.data || [];
+        const completed = deliveries.filter(d => (d.status || '').toLowerCase() === 'delivered').length;
+        console.log('[AvailableOrders] Completed deliveries count:', completed);
+        setCompletedDeliveriesCount(completed);
+      } catch (e) {
+        console.warn('[AvailableOrders] Failed to fetch deliveries for completed count', e);
+        setCompletedDeliveriesCount(0);
+      }
+    };
+
+    fetchCompleted();
 
     // Listen for verification completion
     const handleVerificationComplete = async (event) => {
@@ -394,6 +411,28 @@ const AvailableOrders = () => {
     }
   };
 
+  // Haversine formula to calculate distance in kilometers between two [lng, lat] points
+  const calculateHaversineKm = (a, b) => {
+    try {
+      if (!a || !b || a.length < 2 || b.length < 2) return null;
+      const toRad = (deg) => deg * (Math.PI / 180);
+      const [lng1, lat1] = a;
+      const [lng2, lat2] = b;
+      const R = 6371; // Earth radius km
+      const dLat = toRad(lat2 - lat1);
+      const dLon = toRad(lng2 - lng1);
+      const radLat1 = toRad(lat1);
+      const radLat2 = toRad(lat2);
+      const sinDLat = Math.sin(dLat / 2) * Math.sin(dLat / 2);
+      const sinDLon = Math.sin(dLon / 2) * Math.sin(dLon / 2);
+      const aCalc = sinDLat + Math.cos(radLat1) * Math.cos(radLat2) * sinDLon;
+      const c = 2 * Math.atan2(Math.sqrt(aCalc), Math.sqrt(1 - aCalc));
+      return R * c;
+    } catch (e) {
+      return null;
+    }
+  };
+
   return (
     <IonPage>
       <RiderLayout>
@@ -455,19 +494,19 @@ const AvailableOrders = () => {
                 />
                 <StatCard
                   title="Potential Earnings"
-                  value={`₦${orders.reduce((sum, order) => sum + (order.amount || order.price || 0), 0).toFixed(2)}`}
+                  value={completedDeliveriesCount === 0 ? '₦0.00' : `₦${orders.reduce((sum, order) => sum + (order.amount || order.price || 0), 0).toFixed(2)}`}
                   subtitle=""
                   color="text-[#00A63E]"
                 />
                 <StatCard
                   title="Avg. Distance"
-                  value={orders.length > 0 ? `${(orders.reduce((sum, o) => sum + (o.distance || 0), 0) / orders.length).toFixed(1)} km` : '0 km'}
+                  value={completedDeliveriesCount === 0 ? '0 km' : (orders.length > 0 ? `${(orders.reduce((sum, o) => sum + (o.distance || 0), 0) / orders.length).toFixed(1)} km` : '0 km')}
                   subtitle=""
                   color="text-[#FF7A00]"
                 />
                 <StatCard
                   title="Avg. Time"
-                  value={orders.length > 0 && orders[0].estimatedTime ? orders[0].estimatedTime : 'N/A'}
+                  value={completedDeliveriesCount === 0 ? '0 min' : (orders.length > 0 && orders[0].estimatedTime ? orders[0].estimatedTime : 'N/A')}
                   subtitle=""
                   color="text-[#9810FA]"
                 />
@@ -586,6 +625,33 @@ const AvailableOrders = () => {
                   <div className="text-sm text-[#0F172A] mb-2">Pickup: {selectedOrder.pickupAddress?.street || selectedOrder.pickupAddress || selectedOrder.pickupName}</div>
                   <div className="text-sm text-[#0F172A] mb-2">Delivery: {selectedOrder.deliveryAddress?.street || selectedOrder.deliveryAddress || selectedOrder.deliveryName}</div>
                   <div className="text-sm text-[#64748B] mb-2">Distance: {selectedOrder.distance || 'N/A'}</div>
+
+                  {/* Calculated route distance + Potential earnings breakdown */}
+                  {(() => {
+                    const pickupCoords = extractCoords(selectedOrder, 'pickup');
+                    const deliveryCoords = extractCoords(selectedOrder, 'delivery');
+                    const calculatedKm = calculateHaversineKm(pickupCoords, deliveryCoords);
+
+                    const base = parseFloat(selectedOrder.price || selectedOrder.amount || 0) || 0;
+                    const tips = parseFloat(selectedOrder.tips || selectedOrder.tip || 0) || 0;
+                    const total = base + tips;
+
+                    return (
+                      <div className="mb-2">
+                        {calculatedKm ? (
+                          <div className="text-sm text-[#64748B] mb-1">Calculated route distance: {calculatedKm.toFixed(1)} km</div>
+                        ) : null}
+
+                        <div className="text-xs text-[#64748B]">Potential earnings</div>
+                        <div className="text-lg font-medium text-[#00D68F]">₦{total.toFixed(2)}</div>
+                        <div className="text-xs text-[#94A3B8]">Breakdown: ₦{base.toFixed(2)} base {tips > 0 ? `+ ₦${tips.toFixed(2)} tips` : ''}</div>
+                        {completedDeliveriesCount === 0 && (
+                          <div className="text-xs text-[#64748B] mt-1">Note: Potential Earnings remains 0 until you complete your delivery.</div>
+                        )}
+                      </div>
+                    );
+                  })()}
+
                   <div className="text-sm text-[#64748B] mb-2">Price: {selectedOrder.price || selectedOrder.amount || 'N/A'}</div>
                   <div className="mt-3 text-xs text-[#64748B]">{selectedOrder.specialInstructions || selectedOrder.notes || selectedOrder.packageDescription || ''}</div>
 

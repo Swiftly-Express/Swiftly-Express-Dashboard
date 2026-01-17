@@ -177,13 +177,13 @@ const RiderProfile = () => {
   // Load saved data from cookies on mount
   useEffect(() => {
     console.log('[Profile] === INITIAL DATA LOAD ===');
-  
+
     // First, try to load Google profile data
     const googleData = loadGoogleProfileData();
-    
+
     if (googleData) {
       console.log('[Profile] Loading from Google data');
-      
+
       // Set user name and rider ID
       if (googleData.name) {
         setUserName(googleData.name);
@@ -191,24 +191,24 @@ const RiderProfile = () => {
       if (googleData.riderId) {
         setRiderId(googleData.riderId);
       }
-      
+
       // Set profile photo
       if (googleData.photo && !googleData.photo.includes('dicebear')) {
         setProfileImage(googleData.photo);
-        
+
         // Save to all storage locations
         const imageKey = getProfileImageKey();
         setCookie(imageKey, googleData.photo, 7);
         setCookie('profile_image', googleData.photo, 7);
         localStorage.setItem('profile_image', googleData.photo);
-        
+
         console.log('[Profile] ✓ Google profile photo loaded and saved');
       } else if (googleData.name) {
         // Generate mock avatar from name
         const mockAvatar = generateMockAvatar(googleData.name);
         setProfileImage(mockAvatar);
       }
-      
+
       // Set personal info from Google data
       setPersonalInfo(prev => ({
         ...prev,
@@ -217,10 +217,10 @@ const RiderProfile = () => {
         email: googleData.email || prev.email,
         phone: googleData.phone || prev.phone
       }));
-      
+
       console.log('[Profile] ✓ Personal info populated from Google data');
     }
-    
+
     // Load any saved personal info from cookies (this will merge with Google data)
     const savedPersonalInfo = getJSONCookie('riderPersonalInfo');
     if (savedPersonalInfo) {
@@ -283,7 +283,7 @@ const RiderProfile = () => {
         console.error('[Profile] Error loading verification data:', e);
       }
     }
-    
+
     console.log('[Profile] === INITIAL DATA LOAD COMPLETE ===');
   }, []);
 
