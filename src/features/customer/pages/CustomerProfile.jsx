@@ -121,6 +121,13 @@ const CustomerProfile = () => {
           localStorage.setItem('profile_image', googleData.photo);
           setCookie('profile_image', googleData.photo, 7);
           console.log('[CustomerProfile] Google profile photo loaded');
+          try {
+            if (typeof window !== 'undefined' && window.dispatchEvent) {
+              window.dispatchEvent(new CustomEvent('profile:updated', { detail: { profilePhoto: googleData.photo, fullName: googleData.fullName, email: googleData.email } }));
+            }
+          } catch (e) {
+            console.warn('[CustomerProfile] Failed to dispatch profile:updated', e);
+          }
         }
       } else {
         // Fallback to localStorage if no Google data

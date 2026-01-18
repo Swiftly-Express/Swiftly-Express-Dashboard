@@ -99,6 +99,14 @@ const AuthCallback = () => {
                 setCookie(`profile_image_${googleEmail}`, googlePhoto, 7);
                 localStorage.setItem('profile_image', googlePhoto);
                 addLog('✅ Profile photo saved to all locations');
+                try {
+                    if (typeof window !== 'undefined' && window.dispatchEvent) {
+                        window.dispatchEvent(new CustomEvent('profile:updated', { detail: { profilePhoto: googlePhoto, fullName: googleName, email: googleEmail } }));
+                        addLog('🔔 profile:updated dispatched');
+                    }
+                } catch (e) {
+                    addLog('❌ Failed to dispatch profile update event', e.message);
+                }
             } catch (e) {
                 addLog('❌ Failed to save profile photo', e.message);
             }

@@ -203,6 +203,13 @@ const RiderProfile = () => {
         localStorage.setItem('profile_image', googleData.photo);
 
         console.log('[Profile] ✓ Google profile photo loaded and saved');
+        try {
+          if (typeof window !== 'undefined' && window.dispatchEvent) {
+            window.dispatchEvent(new CustomEvent('profile:updated', { detail: { profilePhoto: googleData.photo, fullName: googleData.name, email: googleData.email } }));
+          }
+        } catch (e) {
+          console.warn('[Profile] Failed to dispatch profile:updated', e);
+        }
       } else if (googleData.name) {
         // Generate mock avatar from name
         const mockAvatar = generateMockAvatar(googleData.name);

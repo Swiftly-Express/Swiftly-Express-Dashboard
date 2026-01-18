@@ -22,29 +22,42 @@ const CustomerLayout = ({ children }) => {
 
   const loadAvatar = () => {
     try {
-      // 1. Check explicit cached profile image
-      const cached = localStorage.getItem('profile_image');
-      if (cached) {
-        setAvatarSrc(cached);
-        return;
-      }
-
-      // 2. Fallback to user_data object
-      const userRaw = localStorage.getItem('user_data');
-      if (userRaw) {
-        const user = JSON.parse(userRaw);
-        const img = user?.profileImage || user?.profile_image || user?.avatar || user?.avatarUrl || user?.data?.profileImage || user?.data?.profile_image || user?.user?.profileImage || null;
-        if (img) {
-          setAvatarSrc(img);
+      // 1. Prefer an explicit cached profile image (uploaded or Google)
+      const cached = localStorage.getItem('profile_image') || '';
+      if (cached && !cached.includes('profileimage.svg')) {
+        // If cached looks like a placeholder (dicebear) we'll regenerate below
+        if (!cached.includes('dicebear')) {
+          setAvatarSrc(cached);
           return;
         }
-        // optionally use email/name seed for dicebear
-        const seed = (user?.fullName || user?.name || user?.email || 'User').split(' ')[0];
-        setAvatarSrc(`https://api.dicebear.com/7.x/avataaars/svg?seed=${encodeURIComponent(seed)}`);
-        return;
       }
 
-      // Default
+      // 2. Check user_data for a Google-provided photo or explicit profile fields
+      const userRaw = localStorage.getItem('user_data');
+      if (userRaw) {
+        try {
+          const user = JSON.parse(userRaw);
+          const img = user?.profileImage || user?.profile_image || user?.avatar || user?.picture || null;
+          const hasGoogleId = !!(user?.googleId || user?.id || user?._id || user?.sub);
+
+          if (img && !img.includes('profileimage.svg')) {
+            // Use explicit image if present
+            setAvatarSrc(img);
+            return;
+          }
+
+          // Only use name/email from cached data to seed an avatar if the data came from Google
+          if (hasGoogleId) {
+            const seed = (user?.fullName || user?.name || user?.email || 'User').split(' ')[0];
+            setAvatarSrc(`https://api.dicebear.com/7.x/avataaars/svg?seed=${encodeURIComponent(seed)}`);
+            return;
+          }
+        } catch (e) {
+          console.warn('[CustomerLayout] Failed to parse cached user_data', e);
+        }
+      }
+
+      // 3. As a last resort default avatar
       setAvatarSrc(DEFAULT_AVATAR);
     } catch (e) {
       console.warn('[CustomerLayout] Failed to load avatar from storage', e);
