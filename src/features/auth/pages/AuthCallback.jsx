@@ -637,22 +637,6 @@ const AuthCallback = () => {
                 <p className="text-lg text-gray-700 font-medium mb-2">{status}</p>
                 <p className="text-sm text-gray-500">Please wait...</p>
             </div>
-
-            {/* Debug Logs Panel */}
-            <div className="mt-8 bg-gray-900 text-green-400 p-4 rounded-lg max-w-4xl w-full max-h-96 overflow-y-auto font-mono text-xs">
-                <div className="mb-2 text-white font-bold">🔍 Debug Logs (Check Browser Console for Full Details)</div>
-                {debugLogs.map((log, idx) => (
-                    <div key={idx} className="mb-1 border-b border-gray-700 pb-1">
-                        <span className="text-gray-500">{log.timestamp.split('T')[1]}</span>
-                        <span className="ml-2">{log.message}</span>
-                        {log.data && (
-                            <pre className="ml-4 text-xs text-blue-300 mt-1">
-                                {typeof log.data === 'object' ? JSON.stringify(log.data, null, 2) : log.data}
-                            </pre>
-                        )}
-                    </div>
-                ))}
-            </div>
         </div>
     );
 };
