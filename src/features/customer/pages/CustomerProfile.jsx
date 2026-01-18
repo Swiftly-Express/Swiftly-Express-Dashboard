@@ -106,7 +106,7 @@ const CustomerProfile = () => {
 
       if (googleData) {
         console.log('[CustomerProfile] Using Google profile data');
-        
+
         // Set form data from Google
         setFormData(prev => ({
           ...prev,
