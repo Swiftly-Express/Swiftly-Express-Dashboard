@@ -604,7 +604,7 @@ const CustomerProfile = () => {
                         value={formData.fullName}
                         onChange={handleChange}
                         placeholder='John Doe'
-                        className="w-full placeholder:text-[#94A3B8] px-4 py-3 rounded-xl bg-[#F8F9FA] text-[#0F172A] focus:outline-none focus:ring-2 focus:ring-[#00D68F] border-none"
+                        className="w-full placeholder:text-[#94A3B8] px-4 py-3 rounded-xl border border-[#E2E8F0] focus:border-[#00D68F] focus:ring-2 focus:ring-[#00D68F]/20 focus:outline-none transition-all"
                         required
                       />
                     </div>
@@ -634,7 +634,7 @@ const CustomerProfile = () => {
                         value={formData.phone}
                         onChange={handleChange}
                         placeholder='+234 800 000 0000'
-                        className="w-full placeholder:text-[#94A3B8] px-4 py-3 rounded-xl bg-[#F8F9FA] text-[#0F172A] focus:outline-none focus:ring-2 focus:ring-[#00D68F] border-none"
+                        className="w-full placeholder:text-[#94A3B8] px-4 py-3 rounded-xl border border-[#E2E8F0] focus:border-[#00D68F] focus:ring-2 focus:ring-[#00D68F]/20 focus:outline-none transition-all"
                         required
                       />
                     </div>
@@ -650,7 +650,7 @@ const CustomerProfile = () => {
                         value={formData.street}
                         onChange={handleChange}
                         placeholder='123 Main Street'
-                        className="w-full placeholder:text-[#94A3B8] px-4 py-3 rounded-xl bg-[#F8F9FA] text-[#0F172A] focus:outline-none focus:ring-2 focus:ring-[#00D68F] border-none"
+                        className="w-full placeholder:text-[#94A3B8] px-4 py-3 rounded-xl border border-[#E2E8F0] focus:border-[#00D68F] focus:ring-2 focus:ring-[#00D68F]/20 focus:outline-none transition-all"
                       />
                     </div>
 
@@ -666,7 +666,7 @@ const CustomerProfile = () => {
                           value={formData.city}
                           onChange={handleChange}
                           placeholder='Lagos'
-                          className="w-full placeholder:text-[#94A3B8] px-4 py-3 rounded-xl bg-[#F8F9FA] text-[#0F172A] focus:outline-none focus:ring-2 focus:ring-[#00D68F] border-none"
+                          className="w-full placeholder:text-[#94A3B8] px-4 py-3 rounded-xl border border-[#E2E8F0] focus:border-[#00D68F] focus:ring-2 focus:ring-[#00D68F]/20 focus:outline-none transition-all"
                         />
                       </div>
                       <div>
@@ -679,7 +679,7 @@ const CustomerProfile = () => {
                           value={formData.state}
                           onChange={handleChange}
                           placeholder='Lagos State'
-                          className="w-full placeholder:text-[#94A3B8] px-4 py-3 rounded-xl bg-[#F8F9FA] text-[#0F172A] focus:outline-none focus:ring-2 focus:ring-[#00D68F] border-none"
+                          className="w-full placeholder:text-[#94A3B8] px-4 py-3 rounded-xl border border-[#E2E8F0] focus:border-[#00D68F] focus:ring-2 focus:ring-[#00D68F]/20 focus:outline-none transition-all"
                         />
                       </div>
                     </div>
@@ -695,7 +695,7 @@ const CustomerProfile = () => {
                         value={formData.zipCode}
                         onChange={handleChange}
                         placeholder='100001'
-                        className="w-full placeholder:text-[#94A3B8] px-4 py-3 rounded-xl bg-[#F8F9FA] text-[#0F172A] focus:outline-none focus:ring-2 focus:ring-[#00D68F] border-none"
+                        className="w-full placeholder:text-[#94A3B8] px-4 py-3 rounded-xl border border-[#E2E8F0] focus:border-[#00D68F] focus:ring-2 focus:ring-[#00D68F]/20 focus:outline-none transition-all"
                       />
                     </div>
                   </div>
@@ -743,7 +743,7 @@ const CustomerProfile = () => {
                             name="currentPassword"
                             value={passwordData.currentPassword}
                             onChange={handlePasswordChange}
-                            className="w-full px-4 py-3 rounded-xl bg-[#F8F9FA] text-[#0F172A] focus:outline-none focus:ring-2 focus:ring-[#00D68F] border-none"
+                            className="w-full px-4 py-3 rounded-xl border border-[#E2E8F0] focus:border-[#00D68F] focus:ring-2 focus:ring-[#00D68F]/20 focus:outline-none transition-all"
                             required
                           />
                           <button
@@ -766,7 +766,7 @@ const CustomerProfile = () => {
                             name="newPassword"
                             value={passwordData.newPassword}
                             onChange={handlePasswordChange}
-                            className="w-full px-4 py-3 rounded-xl bg-[#F8F9FA] text-[#0F172A] focus:outline-none focus:ring-2 focus:ring-[#00D68F] border-none"
+                            className="w-full px-4 py-3 rounded-xl border border-[#E2E8F0] focus:border-[#00D68F] focus:ring-2 focus:ring-[#00D68F]/20 focus:outline-none transition-all"
                             required
                           />
                           <button
@@ -789,7 +789,7 @@ const CustomerProfile = () => {
                             name="confirmPassword"
                             value={passwordData.confirmPassword}
                             onChange={handlePasswordChange}
-                            className="w-full px-4 py-3 rounded-xl bg-[#F8F9FA] text-[#0F172A] focus:outline-none focus:ring-2 focus:ring-[#00D68F] border-none"
+                            className="w-full px-4 py-3 rounded-xl border border-[#E2E8F0] focus:border-[#00D68F] focus:ring-2 focus:ring-[#00D68F]/20 focus:outline-none transition-all"
                             required
                           />
                           <button

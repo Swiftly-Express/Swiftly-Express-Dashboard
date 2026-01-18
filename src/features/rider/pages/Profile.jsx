@@ -345,7 +345,7 @@ const RiderProfile = () => {
       const googleData = loadGoogleProfileData();
       if (googleData) {
         console.log('[Profile] Using Google profile data in fetchProfile');
-        
+
         if (googleData.name) {
           setUserName(googleData.name);
         }
@@ -360,7 +360,7 @@ const RiderProfile = () => {
           localStorage.setItem('profile_image', googleData.photo);
           console.log('[Profile] Google profile photo loaded in fetchProfile');
         }
-        
+
         setPersonalInfo(prev => ({
           ...prev,
           firstName: googleData.firstName || prev.firstName,
