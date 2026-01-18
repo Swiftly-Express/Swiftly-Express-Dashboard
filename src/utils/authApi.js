@@ -426,7 +426,7 @@ export async function login(payload) {
     if (intendedRole && normalizedUserRole !== normalizedIntendedRole) {
       if (normalizedIntendedRole !== 'admin') { // Allow admins to potentially login anywhere if needed, or restrict too
         console.warn(`[authApi] ⛔ ROLE MISMATCH: Intended ${normalizedIntendedRole} but user is ${normalizedUserRole}`);
-        
+
         // Throw special error object that UI can catch
         const mismatchError = new Error(`Access Denied: You are a ${normalizedUserRole}, not a ${normalizedIntendedRole}.`);
         mismatchError.code = 'ROLE_MISMATCH';
@@ -441,15 +441,15 @@ export async function login(payload) {
       deleteCookie('auth_token');
       deleteCookie('customer_token');
       // ... (rest of clear logic is fine, calling logout() logic essentially)
-       deleteCookie('rider_token');
-       deleteCookie('admin_token');
-       deleteCookie('refresh_token');
-       deleteCookie('customer_refresh_token');
-       deleteCookie('rider_refresh_token');
-       deleteCookie('admin_refresh_token');
-       deleteCookie('user_data');
-       deleteCookie('userRole');
-       deleteCookie('user_type');
+      deleteCookie('rider_token');
+      deleteCookie('admin_token');
+      deleteCookie('refresh_token');
+      deleteCookie('customer_refresh_token');
+      deleteCookie('rider_refresh_token');
+      deleteCookie('admin_refresh_token');
+      deleteCookie('user_data');
+      deleteCookie('userRole');
+      deleteCookie('user_type');
     } catch (e) {
       console.warn('[authApi] Failed to clear tokens before login:', e);
     }
@@ -460,7 +460,7 @@ export async function login(payload) {
     }
 
     console.log('[authApi] ✓ Login successful, Role validated');
-    
+
     // Only save data if role validation passed
     const tokenStored = saveAuthData(response, userRole);
 
@@ -655,6 +655,46 @@ export async function getDeliveryByTracking(trackingNumber) {
   return apiClient.get(`/api/tracking/${trackingNumber}`);
 }
 
+// ========================================
+// NOTIFICATION APIs
+// ========================================
+
+/**
+ * Get unread notification count
+ */
+export async function getUnreadNotificationCount() {
+  return apiClient.get('/api/notifications/unread/count');
+}
+
+/**
+ * Get all notifications with pagination
+ * @param {number} page - Page number (default: 1)
+ * @param {number} limit - Items per page (default: 20)
+ * @param {boolean} isRead - Filter by read status (optional)
+ */
+export async function getNotifications(page = 1, limit = 20, isRead = null) {
+  const params = new URLSearchParams({ page: page.toString(), limit: limit.toString() });
+  if (isRead !== null) {
+    params.append('isRead', isRead.toString());
+  }
+  return apiClient.get(`/api/notifications?${params.toString()}`);
+}
+
+/**
+ * Mark a specific notification as read
+ * @param {string} notificationId - The notification ID
+ */
+export async function markNotificationAsRead(notificationId) {
+  return apiClient.post('/api/notifications/read', { notificationId });
+}
+
+/**
+ * Mark all notifications as read
+ */
+export async function markAllNotificationsAsRead() {
+  return apiClient.post('/api/notifications/read/all');
+}
+
 export async function refreshToken(payload) {
   return apiClient.post('/api/auth/refresh', payload);
 }
@@ -797,5 +837,9 @@ export default {
   getPendingUserId,
   getPendingUserData,
   getPaymentStatus,
-  getCustomerPayments
+  getCustomerPayments,
+  getUnreadNotificationCount,
+  getNotifications,
+  markNotificationAsRead,
+  markAllNotificationsAsRead
 };

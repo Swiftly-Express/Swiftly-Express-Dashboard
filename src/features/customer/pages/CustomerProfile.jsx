@@ -10,10 +10,48 @@ import {
   uploadProfileImage,
   changePassword
 } from '../../../utils/authApi';
+import { getJSONCookie, setJSONCookie, setCookie } from '../../../utils/cookies';
 import { useHistory } from 'react-router-dom';
 
 const sideBottomShadow = {
   boxShadow: '2px 4px 4px rgba(0,0,0,0.06), -2px 4px 4px rgba(0,0,0,0.06), 0 4px 8px rgba(0,0,0,0.08)'
+};
+
+const loadGoogleProfileData = () => {
+  console.log('[CustomerProfile] Loading Google profile data...');
+
+  const cachedUserData = getJSONCookie('user_data');
+  if (!cachedUserData) {
+    console.log('[CustomerProfile] No cached user_data found');
+    return null;
+  }
+
+  const googleName = cachedUserData.name || cachedUserData.fullName || cachedUserData.displayName || '';
+  const googleEmail = cachedUserData.email || '';
+  const googlePhoto = cachedUserData.profilePhoto || cachedUserData.picture || cachedUserData.avatar || '';
+  const googlePhone = cachedUserData.phone || cachedUserData.phoneNumber || '';
+
+  const nameParts = googleName.split(' ');
+  const firstName = cachedUserData.firstName || cachedUserData.given_name || nameParts[0] || '';
+  const lastName = cachedUserData.lastName || cachedUserData.family_name || nameParts.slice(1).join(' ') || '';
+  const googleId = cachedUserData.id || cachedUserData._id || cachedUserData.googleId || '';
+
+  console.log('[CustomerProfile] Google data extracted:', {
+    name: googleName,
+    email: googleEmail,
+    phone: googlePhone,
+    hasPhoto: !!googlePhoto
+  });
+
+  return {
+    fullName: googleName,
+    firstName,
+    lastName,
+    email: googleEmail,
+    phone: googlePhone,
+    photo: googlePhoto,
+    id: googleId
+  };
 };
 
 const CustomerProfile = () => {
@@ -63,53 +101,80 @@ const CustomerProfile = () => {
   const fetchProfile = async () => {
     setLoading(true);
     try {
-      // First, load from localStorage for immediate display
-      const cachedUserData = localStorage.getItem('user_data');
-      const cachedProfileImage = localStorage.getItem('profile_image');
+      // First, try to load Google profile data from cookies
+      const googleData = loadGoogleProfileData();
 
-      if (cachedUserData) {
-        try {
-          const userData = JSON.parse(cachedUserData);
-          console.log('[Profile] Loading cached user data:', userData);
+      if (googleData) {
+        console.log('[CustomerProfile] Using Google profile data');
 
-          setFormData({
-            fullName: userData?.fullName || userData?.name || '',
-            email: userData?.email || '',
-            phone: userData?.phone || userData?.phoneNumber || '',
-            street: userData?.address?.street || '',
-            city: userData?.address?.city || '',
-            state: userData?.address?.state || '',
-            zipCode: userData?.address?.zipCode || '',
-            country: userData?.address?.country || 'Nigeria'
-          });
-        } catch (e) {
-          console.warn('[Profile] Failed to parse cached user data:', e);
+        // Set form data from Google
+        setFormData(prev => ({
+          ...prev,
+          fullName: googleData.fullName || prev.fullName,
+          email: googleData.email || prev.email,
+          phone: googleData.phone || prev.phone
+        }));
+
+        // Set profile image from Google
+        if (googleData.photo) {
+          setProfileImage(googleData.photo);
+          localStorage.setItem('profile_image', googleData.photo);
+          setCookie('profile_image', googleData.photo, 7);
+          console.log('[CustomerProfile] Google profile photo loaded');
+          try {
+            if (typeof window !== 'undefined' && window.dispatchEvent) {
+              window.dispatchEvent(new CustomEvent('profile:updated', { detail: { profilePhoto: googleData.photo, fullName: googleData.fullName, email: googleData.email } }));
+            }
+          } catch (e) {
+            console.warn('[CustomerProfile] Failed to dispatch profile:updated', e);
+          }
+        }
+      } else {
+        // Fallback to localStorage if no Google data
+        const cachedUserData = localStorage.getItem('user_data');
+        const cachedProfileImage = localStorage.getItem('profile_image');
+
+        if (cachedUserData) {
+          try {
+            const userData = JSON.parse(cachedUserData);
+            console.log('[CustomerProfile] Loading cached user data:', userData);
+
+            setFormData(prev => ({
+              ...prev,
+              fullName: userData?.fullName || userData?.name || '',
+              email: userData?.email || '',
+              phone: userData?.phone || userData?.phoneNumber || ''
+            }));
+          } catch (e) {
+            console.warn('[CustomerProfile] Failed to parse cached user data:', e);
+          }
+        }
+
+        if (cachedProfileImage) {
+          setProfileImage(cachedProfileImage);
+          console.log('[CustomerProfile] Loaded cached profile image');
         }
       }
 
-      if (cachedProfileImage) {
-        setProfileImage(cachedProfileImage);
-        console.log('[Profile] Loaded cached profile image');
-      }
-
-      // Then fetch from server and update
-      console.log('[Profile] Fetching customer profile from server...');
+      // Then fetch from server and merge with existing data
+      console.log('[CustomerProfile] Fetching customer profile from server...');
       const profile = await getCustomerProfile();
-      console.log('[Profile] Profile data from server:', profile);
+      console.log('[CustomerProfile] Profile data from server:', profile);
 
       // Handle different response structures
       const data = profile?.data || profile;
 
-      setFormData({
-        fullName: data?.fullName || data?.full_name || data?.name || '',
-        email: data?.email || '',
-        phone: data?.phone || data?.phoneNumber || data?.phone_number || '',
-        street: data?.address?.street || '',
-        city: data?.address?.city || '',
-        state: data?.address?.state || '',
-        zipCode: data?.address?.zipCode || data?.address?.zip_code || '',
-        country: data?.address?.country || 'Nigeria'
-      });
+      // Merge server data with existing form data (keeping Google data as priority for basic fields)
+      setFormData(prev => ({
+        fullName: prev.fullName || data?.fullName || data?.full_name || data?.name || '',
+        email: prev.email || data?.email || '',
+        phone: prev.phone || data?.phone || data?.phoneNumber || data?.phone_number || '',
+        street: data?.address?.street || prev.street || '',
+        city: data?.address?.city || prev.city || '',
+        state: data?.address?.state || prev.state || '',
+        zipCode: data?.address?.zipCode || data?.address?.zip_code || prev.zipCode || '',
+        country: data?.address?.country || prev.country || 'Nigeria'
+      }));
 
       // Set profile image if available from server, otherwise keep cached
       const serverImage = data?.profileImage || data?.profile_image || data?.avatar;
@@ -546,7 +611,7 @@ const CustomerProfile = () => {
                         value={formData.fullName}
                         onChange={handleChange}
                         placeholder='John Doe'
-                        className="w-full placeholder:text-[#94A3B8] px-4 py-3 rounded-xl bg-[#F8F9FA] text-[#0F172A] focus:outline-none focus:ring-2 focus:ring-[#00D68F] border-none"
+                        className="w-full placeholder:text-[#94A3B8] px-4 py-3 rounded-xl border border-[#E2E8F0] focus:border-[#00D68F] focus:ring-2 focus:ring-[#00D68F]/20 focus:outline-none transition-all"
                         required
                       />
                     </div>
@@ -555,14 +620,13 @@ const CustomerProfile = () => {
                     <div>
                       <label className="block text-sm font-medium text-[#0F172A] mb-2">
                         Email Address
-                        <span className="text-xs text-[#64748B] ml-2">(Cannot be changed)</span>
                       </label>
                       <input
                         type="email"
                         name="email"
                         value={formData.email}
-                        disabled
-                        className="w-full placeholder:text-[#94A3B8] px-4 py-3 rounded-xl bg-gray-100 text-[#64748B] cursor-not-allowed border-none"
+                        onChange={handleChange}
+                        className="w-full placeholder:text-[#94A3B8] px-4 py-3 rounded-xl border border-[#E2E8F0] focus:border-[#00D68F] focus:ring-2 focus:ring-[#00D68F]/20 focus:outline-none transition-all"
                       />
                     </div>
 
@@ -577,7 +641,7 @@ const CustomerProfile = () => {
                         value={formData.phone}
                         onChange={handleChange}
                         placeholder='+234 800 000 0000'
-                        className="w-full placeholder:text-[#94A3B8] px-4 py-3 rounded-xl bg-[#F8F9FA] text-[#0F172A] focus:outline-none focus:ring-2 focus:ring-[#00D68F] border-none"
+                        className="w-full placeholder:text-[#94A3B8] px-4 py-3 rounded-xl border border-[#E2E8F0] focus:border-[#00D68F] focus:ring-2 focus:ring-[#00D68F]/20 focus:outline-none transition-all"
                         required
                       />
                     </div>
@@ -593,7 +657,7 @@ const CustomerProfile = () => {
                         value={formData.street}
                         onChange={handleChange}
                         placeholder='123 Main Street'
-                        className="w-full placeholder:text-[#94A3B8] px-4 py-3 rounded-xl bg-[#F8F9FA] text-[#0F172A] focus:outline-none focus:ring-2 focus:ring-[#00D68F] border-none"
+                        className="w-full placeholder:text-[#94A3B8] px-4 py-3 rounded-xl border border-[#E2E8F0] focus:border-[#00D68F] focus:ring-2 focus:ring-[#00D68F]/20 focus:outline-none transition-all"
                       />
                     </div>
 
@@ -609,7 +673,7 @@ const CustomerProfile = () => {
                           value={formData.city}
                           onChange={handleChange}
                           placeholder='Lagos'
-                          className="w-full placeholder:text-[#94A3B8] px-4 py-3 rounded-xl bg-[#F8F9FA] text-[#0F172A] focus:outline-none focus:ring-2 focus:ring-[#00D68F] border-none"
+                          className="w-full placeholder:text-[#94A3B8] px-4 py-3 rounded-xl border border-[#E2E8F0] focus:border-[#00D68F] focus:ring-2 focus:ring-[#00D68F]/20 focus:outline-none transition-all"
                         />
                       </div>
                       <div>
@@ -622,7 +686,7 @@ const CustomerProfile = () => {
                           value={formData.state}
                           onChange={handleChange}
                           placeholder='Lagos State'
-                          className="w-full placeholder:text-[#94A3B8] px-4 py-3 rounded-xl bg-[#F8F9FA] text-[#0F172A] focus:outline-none focus:ring-2 focus:ring-[#00D68F] border-none"
+                          className="w-full placeholder:text-[#94A3B8] px-4 py-3 rounded-xl border border-[#E2E8F0] focus:border-[#00D68F] focus:ring-2 focus:ring-[#00D68F]/20 focus:outline-none transition-all"
                         />
                       </div>
                     </div>
@@ -638,7 +702,7 @@ const CustomerProfile = () => {
                         value={formData.zipCode}
                         onChange={handleChange}
                         placeholder='100001'
-                        className="w-full placeholder:text-[#94A3B8] px-4 py-3 rounded-xl bg-[#F8F9FA] text-[#0F172A] focus:outline-none focus:ring-2 focus:ring-[#00D68F] border-none"
+                        className="w-full placeholder:text-[#94A3B8] px-4 py-3 rounded-xl border border-[#E2E8F0] focus:border-[#00D68F] focus:ring-2 focus:ring-[#00D68F]/20 focus:outline-none transition-all"
                       />
                     </div>
                   </div>
@@ -686,7 +750,7 @@ const CustomerProfile = () => {
                             name="currentPassword"
                             value={passwordData.currentPassword}
                             onChange={handlePasswordChange}
-                            className="w-full px-4 py-3 rounded-xl bg-[#F8F9FA] text-[#0F172A] focus:outline-none focus:ring-2 focus:ring-[#00D68F] border-none"
+                            className="w-full px-4 py-3 rounded-xl border border-[#E2E8F0] focus:border-[#00D68F] focus:ring-2 focus:ring-[#00D68F]/20 focus:outline-none transition-all"
                             required
                           />
                           <button
@@ -709,7 +773,7 @@ const CustomerProfile = () => {
                             name="newPassword"
                             value={passwordData.newPassword}
                             onChange={handlePasswordChange}
-                            className="w-full px-4 py-3 rounded-xl bg-[#F8F9FA] text-[#0F172A] focus:outline-none focus:ring-2 focus:ring-[#00D68F] border-none"
+                            className="w-full px-4 py-3 rounded-xl border border-[#E2E8F0] focus:border-[#00D68F] focus:ring-2 focus:ring-[#00D68F]/20 focus:outline-none transition-all"
                             required
                           />
                           <button
@@ -732,7 +796,7 @@ const CustomerProfile = () => {
                             name="confirmPassword"
                             value={passwordData.confirmPassword}
                             onChange={handlePasswordChange}
-                            className="w-full px-4 py-3 rounded-xl bg-[#F8F9FA] text-[#0F172A] focus:outline-none focus:ring-2 focus:ring-[#00D68F] border-none"
+                            className="w-full px-4 py-3 rounded-xl border border-[#E2E8F0] focus:border-[#00D68F] focus:ring-2 focus:ring-[#00D68F]/20 focus:outline-none transition-all"
                             required
                           />
                           <button

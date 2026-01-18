@@ -39,13 +39,13 @@ const KYCApprovals = () => {
     try {
       const resp = await getAnalyticsOverview();
       const data = resp.data || resp;
-      // Defensive: check for nested structure
-      const kycStats = data.kycStats || data.kyc || data.stats || data;
+      // Use the verifications object from the new API structure
+      const verifications = data.verifications || {};
       setStats({
-        pending: kycStats.pending || 0,
-        approvedToday: kycStats.approvedToday || 0,
-        rejectedToday: kycStats.rejectedToday || 0,
-        totalMonth: kycStats.totalMonth || 0
+        pending: verifications.pending || 0,
+        approvedToday: verifications.today?.approved || 0,
+        rejectedToday: verifications.today?.rejected || 0,
+        totalMonth: verifications.total || 0
       });
     } catch (err) {
       // Optionally show error toast or fallback
@@ -241,14 +241,17 @@ const KYCApprovals = () => {
 
     const approvedToday = verificationsData.filter(v => {
       const status = v.status || v.verificationStatus;
-      const updatedAt = new Date(v.updatedAt || v.updated_at || v.approvedAt);
-      return status === 'approved' && updatedAt >= today;
+      const updatedAt = new Date(v.updatedAt || v.updated_at || v.approvedAt || v.createdAt);
+      const isApproved = status === 'approved' || status === 'verified';
+      const isToday = updatedAt >= today;
+      console.log('[KYCApprovals] Checking approved today:', { status, updatedAt: updatedAt.toISOString(), today: today.toISOString(), isApproved, isToday });
+      return isApproved && isToday;
     }).length;
 
     const rejectedToday = verificationsData.filter(v => {
       const status = v.status || v.verificationStatus;
-      const updatedAt = new Date(v.updatedAt || v.updated_at || v.rejectedAt);
-      return status === 'rejected' && updatedAt >= today;
+      const updatedAt = new Date(v.updatedAt || v.updated_at || v.rejectedAt || v.createdAt);
+      return (status === 'rejected' || status === 'denied') && updatedAt >= today;
     }).length;
 
     const totalMonth = verificationsData.length;
@@ -543,6 +546,9 @@ const KYCApprovals = () => {
       // Mark as verified in notification system (for in-app and push notifications)
       onVerificationApproved();
 
+      // Dispatch event to trigger sidebar and notification refresh
+      window.dispatchEvent(new CustomEvent('kyc:updated', { detail: { action: 'approved', verificationId } }));
+
       // Refetch all relevant data (verifications, approved KYC, stats)
       await refetchAll();
       showToast('Application approved successfully!', 'success');
@@ -585,6 +591,9 @@ const KYCApprovals = () => {
       console.log('[KYCApprovals] Reject → verificationId:', verificationId, 'payload:', rejectPayload);
 
       await rejectVerification(verificationId, rejectPayload);
+
+      // Dispatch event to trigger sidebar and notification refresh
+      window.dispatchEvent(new CustomEvent('kyc:updated', { detail: { action: 'rejected', verificationId } }));
 
       // Refetch all relevant data (verifications, approved KYC, stats)
       await refetchAll();
@@ -697,7 +706,7 @@ const KYCApprovals = () => {
                 <div className="flex items-center gap-2 text-gray-500"><Loader className="w-4 h-4 animate-spin" /> Loading...</div>
               ) : approvedKYCError ? (
                 <div className="text-red-500">{approvedKYCError}</div>
-              ) : approvedKYC.length === 0 ? (
+              ) : approvedKYC.length === 0 && applications.filter(a => (a.status || a.verificationStatus) === 'approved').length === 0 ? (
                 <div className="text-gray-500">No recently approved KYC applications.</div>
               ) : (
                 <div className="overflow-x-auto">
@@ -712,11 +721,11 @@ const KYCApprovals = () => {
                       </tr>
                     </thead>
                     <tbody className="bg-white divide-y divide-gray-100">
-                      {approvedKYC.map((rider, idx) => {
-                        const name = rider.fullName || rider.name || rider.profile?.fullName || rider.profile?.name || '';
-                        const email = rider.email || rider.profile?.email || '';
-                        const phone = rider.phone || rider.profile?.phone || '';
-                        const vehicle = rider.vehicleModel || rider.vehicle?.makeModel || rider.vehicle?.type || '';
+                      {(approvedKYC.length > 0 ? approvedKYC : applications.filter(a => (a.status || a.verificationStatus) === 'approved').slice(0, 10)).map((rider, idx) => {
+                        const name = rider.fullName || rider.name || rider.profile?.fullName || rider.profile?.name || getApplicationData(rider).name || '';
+                        const email = rider.email || rider.profile?.email || getApplicationData(rider).email || '';
+                        const phone = rider.phone || rider.profile?.phone || getApplicationData(rider).phone || '';
+                        const vehicle = rider.vehicleModel || rider.vehicle?.makeModel || rider.vehicle?.type || getApplicationData(rider).vehicle || '';
                         const approvedAt = rider.approvedAt || rider.updatedAt || rider.createdAt || '';
                         return (
                           <tr key={rider._id || rider.id || idx}>

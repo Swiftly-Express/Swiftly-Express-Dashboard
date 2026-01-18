@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { IonPage, IonContent, IonSpinner, IonRefresher, IonRefresherContent } from '@ionic/react';
 import { Users, Bike, Package, DollarSign, TrendingUp, RefreshCw, AlertCircle } from 'lucide-react';
-import { Line, Doughnut } from 'react-chartjs-2';
+import { Line, Pie } from 'react-chartjs-2';
 import { Chart as ChartJS, CategoryScale, LinearScale, PointElement, LineElement, ArcElement, Title, Tooltip, Legend } from 'chart.js';
 import AdminLayout from '../components/AdminLayout';
 
@@ -39,6 +39,7 @@ const AdminDashboard = () => {
   const [userStats, setUserStats] = useState(null);
   const [orderStats, setOrderStats] = useState(null);
   const [revenueData, setRevenueData] = useState([]);
+  const [revenueChartData, setRevenueChartData] = useState(null);
   const [recentOrders, setRecentOrders] = useState([]);
   const [kycApprovals, setKycApprovals] = useState([]);
   const [processingKyc, setProcessingKyc] = useState({});
@@ -88,40 +89,81 @@ const AdminDashboard = () => {
       const [overviewRes, revenueRes, deliveriesRes, verificationsRes, riderStatsRes, userStatsRes, orderStatsRes] = await Promise.all([
         getAnalyticsOverview().catch(err => ({ error: err.message })),
         getRevenueAnalytics({ period: '6months' }).catch(err => ({ error: err.message })),
-        getAllDeliveries(1, 10).catch(err => ({ error: err.message })),
+        getAllDeliveries(1, 100).catch(err => ({ error: err.message })),
         getPendingVerifications(1, 5).catch(err => ({ error: err.message })),
         getRiderStatsFromRiders().catch(() => null),
         getUserStatsFromUsers().catch(() => null),
         getOrderStatsFromOrders().catch(() => null)
       ]);
 
-      // Set overview data
-      if (!overviewRes.error) {
-        setOverview(overviewRes.data || overviewRes);
-      }
-      // Set real-time rider stats
-      if (riderStatsRes) {
-        setRiderStats(riderStatsRes);
-      }
-      // Set real-time user stats
-      if (userStatsRes) {
-        setUserStats(userStatsRes);
-      }
-      // Set real-time order stats
-      if (orderStatsRes) {
-        setOrderStats(orderStatsRes);
+      console.log('[Dashboard] Overview response:', overviewRes);
+      console.log('[Dashboard] Revenue response:', revenueRes);
+      console.log('[Dashboard] Deliveries response:', deliveriesRes);
+
+      // Set revenue data FIRST before overview
+      if (!revenueRes.error) {
+        console.log('[Dashboard] Processing revenue data...');
+        const revenueDataRaw = revenueRes.data || revenueRes;
+        console.log('[Dashboard] Raw revenue data structure:', revenueDataRaw);
+
+        // Try different response structures
+        let chartData = [];
+        if (revenueDataRaw?.data?.monthlyBreakdown && Array.isArray(revenueDataRaw.data.monthlyBreakdown)) {
+          chartData = revenueDataRaw.data.monthlyBreakdown;
+        } else if (revenueDataRaw?.monthlyBreakdown && Array.isArray(revenueDataRaw.monthlyBreakdown)) {
+          chartData = revenueDataRaw.monthlyBreakdown;
+        } else if (revenueDataRaw?.data && Array.isArray(revenueDataRaw.data)) {
+          chartData = revenueDataRaw.data;
+        } else if (revenueDataRaw?.monthlyRevenue && Array.isArray(revenueDataRaw.monthlyRevenue)) {
+          chartData = revenueDataRaw.monthlyRevenue;
+        } else if (Array.isArray(revenueDataRaw)) {
+          chartData = revenueDataRaw;
+        } else if (revenueDataRaw?.revenue && Array.isArray(revenueDataRaw.revenue)) {
+          chartData = revenueDataRaw.revenue;
+        }
+
+        console.log('[Dashboard] Extracted chart data:', chartData);
+
+        // Normalize data structure - ensure each item has month and value
+        const normalizedData = chartData
+          .map((item, index) => {
+            // Handle different possible structures
+            let month = item.month || item.period || item.date || item.label || item.name || item._id || `Month ${index + 1}`;
+            
+            // Format month to be more readable (e.g., "2026-01" -> "Jan 2026")
+            if (typeof month === 'string' && month.match(/^\d{4}-\d{2}$/)) {
+              const [year, monthNum] = month.split('-');
+              const monthNames = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+              month = `${monthNames[parseInt(monthNum) - 1]} ${year}`;
+            }
+            
+            const value = Number(item.revenue || item.value || item.amount || item.total || item.totalRevenue || 0);
+
+            return { month: String(month), value: value };
+          })
+          .filter(item => item.month && !isNaN(item.value) && item.value !== undefined);
+
+        console.log('[Dashboard] Final normalized revenue data:', normalizedData);
+        console.log('[Dashboard] Total data points:', normalizedData.length);
+        setRevenueData(normalizedData);
       }
 
-      // Set revenue chart data
-      if (!revenueRes.error && revenueRes.data?.monthlyRevenue) {
-        setRevenueData(revenueRes.data.monthlyRevenue);
-      } else if (!revenueRes.error && Array.isArray(revenueRes.data)) {
-        setRevenueData(revenueRes.data);
+      // Set overview data
+      if (!overviewRes.error) {
+        const overviewData = overviewRes.data || overviewRes;
+        console.log('[Dashboard] Overview data:', overviewData);
+        setOverview(overviewData);
       }
+      
+      // Set real-time stats
+      if (riderStatsRes) setRiderStats(riderStatsRes);
+      if (userStatsRes) setUserStats(userStatsRes);
+      if (orderStatsRes) setOrderStats(orderStatsRes);
 
       // Set recent orders
       if (!deliveriesRes.error) {
         const deliveries = deliveriesRes.data?.deliveries || deliveriesRes.deliveries || deliveriesRes.data || [];
+        console.log('[Dashboard] Deliveries fetched:', deliveries.length);
         setRecentOrders(deliveries.slice(0, 10));
       }
 
@@ -132,7 +174,7 @@ const AdminDashboard = () => {
       }
 
     } catch (err) {
-      console.error('Error fetching dashboard data:', err);
+      console.error('[Dashboard] Error fetching dashboard data:', err);
       setError(err.message || 'Failed to load dashboard data');
     } finally {
       setLoading(false);
@@ -145,10 +187,8 @@ const AdminDashboard = () => {
     try {
       setProcessingKyc(prev => ({ ...prev, [verificationId]: 'approving' }));
       await approveVerification(verificationId);
-      // Remove from list
       setKycApprovals(prev => prev.filter(k => k._id !== verificationId && k.id !== verificationId));
       setProcessingKyc(prev => ({ ...prev, [verificationId]: null }));
-      // Dispatch event to update analytics and dashboard stats
       window.dispatchEvent(new CustomEvent('kyc:updated'));
     } catch (err) {
       console.error('Error approving KYC:', err);
@@ -165,10 +205,8 @@ const AdminDashboard = () => {
     try {
       setProcessingKyc(prev => ({ ...prev, [verificationId]: 'rejecting' }));
       await rejectVerification(verificationId, { reason });
-      // Remove from list
       setKycApprovals(prev => prev.filter(k => k._id !== verificationId && k.id !== verificationId));
       setProcessingKyc(prev => ({ ...prev, [verificationId]: null }));
-      // Dispatch event to update analytics and dashboard stats
       window.dispatchEvent(new CustomEvent('kyc:updated'));
     } catch (err) {
       console.error('Error rejecting KYC:', err);
@@ -196,7 +234,6 @@ const AdminDashboard = () => {
     const handleResize = () => setIsMobile(window.innerWidth < 768);
     window.addEventListener('resize', handleResize);
 
-    // Listen for KYC approval/rejection events to refresh stats
     const handleKycUpdate = () => {
       fetchDashboardData();
     };
@@ -209,12 +246,57 @@ const AdminDashboard = () => {
   }, []);
 
   // Calculate order status data for pie chart
-  const orderStatusData = overview?.ordersByStatus ? [
-    { name: 'Delivered', value: overview.ordersByStatus.delivered || 0, color: '#10B981' },
-    { name: 'In Transit', value: overview.ordersByStatus['in-transit'] || overview.ordersByStatus.ongoing || 0, color: '#3B82F6' },
-    { name: 'Pending', value: overview.ordersByStatus.pending || 0, color: '#F59E0B' },
-    { name: 'Cancelled', value: overview.ordersByStatus.cancelled || overview.ordersByStatus.canceled || 0, color: '#EF4444' }
-  ].filter(item => item.value > 0) : [];
+  const orderStatusData = React.useMemo(() => {
+    console.log('[Dashboard] Calculating order status from overview:', overview);
+
+    if (!overview?.deliveries) {
+      console.log('[Dashboard] No deliveries in overview');
+      return [];
+    }
+
+    const data = [
+      { name: 'Completed', value: overview.deliveries.completed || 0, color: '#10B981' },
+      { name: 'Active', value: overview.deliveries.active || 0, color: '#3B82F6' },
+      { name: 'Pending', value: overview.deliveries.pending || 0, color: '#F59E0B' },
+      { name: 'Cancelled', value: overview.deliveries.cancelled || 0, color: '#EF4444' }
+    ].filter(item => item.value > 0);
+
+    console.log('[Dashboard] Order status data:', data);
+    return data;
+  }, [overview]);
+
+  // Rebuild chart payload whenever revenueData changes
+  useEffect(() => {
+    console.log('[Dashboard] Building revenue chart from revenueData:', revenueData);
+    
+    if (!revenueData || revenueData.length === 0) {
+      console.log('[Dashboard] No revenue data, setting chart to null');
+      setRevenueChartData(null);
+      return;
+    }
+
+    const payload = {
+      labels: revenueData.map(d => d.month || 'N/A'),
+      datasets: [
+        {
+          label: 'Revenue',
+          data: revenueData.map(d => Number(d.value) || 0),
+          borderColor: '#3b82f6',
+          backgroundColor: 'rgba(59, 130, 246, 0.1)',
+          tension: 0.4,
+          borderWidth: 3,
+          pointRadius: 5,
+          pointBackgroundColor: '#ffffff',
+          fill: true
+        }
+      ]
+    };
+
+    console.log('[Dashboard] Built revenue chart payload:', payload);
+    console.log('[Dashboard] Chart labels:', payload.labels);
+    console.log('[Dashboard] Chart data:', payload.datasets[0].data);
+    setRevenueChartData(payload);
+  }, [revenueData]);
 
   const StatCard = ({ icon: Icon, title, value, change, iconBg, iconColor, loading }) => (
     <div className="bg-white rounded-xl p-3 md:p-5" style={sideBottomShadow}>
@@ -313,8 +395,8 @@ const AdminDashboard = () => {
             <StatCard
               icon={Users}
               title="Total Users"
-              value={typeof userStats?.total === 'number' ? userStats.total.toLocaleString() : (overview?.totalUsers?.toLocaleString() || '0')}
-              change={overview?.userGrowth ? `+${overview.userGrowth}%` : null}
+              value={(overview?.users?.total || userStats?.total || 0).toLocaleString()}
+              change={overview?.users?.newToday?.total ? `+${overview.users.newToday.total} today` : null}
               iconBg="bg-blue-50"
               iconColor="text-blue-600"
               loading={refreshing}
@@ -322,8 +404,8 @@ const AdminDashboard = () => {
             <StatCard
               icon={Bike}
               title="Active Riders"
-              value={typeof riderStats?.active === 'number' ? riderStats.active.toLocaleString() : (overview?.activeRiders?.toLocaleString() || overview?.totalRiders?.toLocaleString() || '0')}
-              change={overview?.riderGrowth ? `+${overview.riderGrowth}%` : null}
+              value={(overview?.users?.drivers || riderStats?.active || 0).toLocaleString()}
+              change={overview?.users?.verifiedDrivers ? `${overview.users.verifiedDrivers} verified` : null}
               iconBg="bg-orange-50"
               iconColor="text-orange-600"
               loading={refreshing}
@@ -331,8 +413,8 @@ const AdminDashboard = () => {
             <StatCard
               icon={Package}
               title="Total Orders"
-              value={typeof orderStats?.total === 'number' ? orderStats.total.toLocaleString() : (overview?.totalOrders?.toLocaleString() || '0')}
-              change={overview?.orderGrowth ? `+${overview.orderGrowth}%` : null}
+              value={(overview?.deliveries?.total || orderStats?.total || 0).toLocaleString()}
+              change={overview?.deliveries?.today?.completed ? `${overview.deliveries.today.completed} today` : null}
               iconBg="bg-green-50"
               iconColor="text-green-600"
               loading={refreshing}
@@ -340,8 +422,8 @@ const AdminDashboard = () => {
             <StatCard
               icon={DollarSign}
               title="Total Revenue"
-              value={formatCurrency(overview?.totalRevenue || 0)}
-              change={overview?.revenueGrowth ? `+${overview.revenueGrowth}%` : null}
+              value={formatCurrency(overview?.revenue?.total || 0)}
+              change={overview?.revenue?.today ? `${formatCurrency(overview.revenue.today)} today` : null}
               iconBg="bg-purple-50"
               iconColor="text-purple-600"
               loading={refreshing}
@@ -354,22 +436,11 @@ const AdminDashboard = () => {
             <div className="lg:col-span-2 bg-white rounded-xl p-6 shadow-sm border border-gray-100">
               <YummyText className="text-lg font-semibold text-gray-900 mb-2">Revenue Overview</YummyText>
               <YummyText className="text-sm text-gray-500 mb-6">Monthly revenue trend</YummyText>
-              {revenueData.length > 0 ? (
+              {revenueChartData && revenueChartData.labels && revenueChartData.labels.length > 0 && revenueChartData.datasets[0].data.length > 0 ? (
                 <div style={{ height: '300px' }}>
                   <Line
-                    data={{
-                      labels: revenueData.map(d => d.month),
-                      datasets: [{
-                        label: 'Revenue',
-                        data: revenueData.map(d => d.value),
-                        borderColor: '#3b82f6',
-                        backgroundColor: 'rgba(59, 130, 246, 0.1)',
-                        tension: 0.4,
-                        borderWidth: 3,
-                        pointRadius: 5,
-                        pointBackgroundColor: '#3b82f6',
-                      }]
-                    }}
+                    key={`revenue-chart-${revenueChartData.labels.length}`}
+                    data={revenueChartData}
                     options={{
                       responsive: true,
                       maintainAspectRatio: false,
@@ -392,7 +463,12 @@ const AdminDashboard = () => {
                         y: {
                           beginAtZero: true,
                           grid: { color: '#f0f0f0' },
-                          ticks: { color: '#94a3b8' }
+                          ticks: {
+                            color: '#94a3b8',
+                            callback: function (value) {
+                              return formatCurrency(value);
+                            }
+                          }
                         },
                         x: {
                           grid: { display: false },
@@ -407,6 +483,7 @@ const AdminDashboard = () => {
                   <div className="text-center">
                     <Package className="w-12 h-12 mx-auto mb-2 opacity-50" />
                     <p>No revenue data available</p>
+                    {refreshing && <p className="text-xs mt-2">Loading...</p>}
                   </div>
                 </div>
               )}
@@ -419,7 +496,7 @@ const AdminDashboard = () => {
               {orderStatusData.length > 0 ? (
                 <>
                   <div style={{ height: '240px' }}>
-                    <Doughnut
+                    <Pie
                       data={{
                         labels: orderStatusData.map(d => d.name),
                         datasets: [{

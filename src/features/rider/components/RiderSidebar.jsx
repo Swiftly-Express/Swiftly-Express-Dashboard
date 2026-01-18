@@ -1,7 +1,7 @@
 import { useLocation } from 'react-router-dom';
 import { useIonRouter } from '@ionic/react';
 import { YummyText } from '../../../components/YummyText';
-import { logout as apiLogout } from '../../../utils/authApi';
+import { logout as apiLogout, getAvailableJobs, getRiderDeliveries } from '../../../utils/authApi';
 import { getCookie, deleteCookie } from '../../../utils/cookies';
 import React, { useEffect, useState } from 'react';
 
@@ -39,6 +39,30 @@ const SidebarButton = ({ to, active, icon, label, count }) => {
 const RiderSidebar = () => {
   const router = useIonRouter();
   const location = useLocation();
+  const [availableOrdersCount, setAvailableOrdersCount] = useState(0);
+  const [activeDeliveriesCount, setActiveDeliveriesCount] = useState(0);
+
+  const fetchCounts = async () => {
+    try {
+      // Fetch available orders count
+      const availableResponse = await getAvailableJobs(1, 1);
+      const availableData = availableResponse?.data || availableResponse;
+      const availableTotal = availableData?.totalJobs || availableData?.total || availableData?.count || 0;
+      setAvailableOrdersCount(availableTotal);
+
+      // Fetch active deliveries count (assigned, picked-up, in-transit)
+      const deliveriesResponse = await getRiderDeliveries(1, 100);
+      const deliveriesData = deliveriesResponse?.data || deliveriesResponse;
+      const allDeliveries = deliveriesData?.deliveries || deliveriesData?.data || [];
+      const activeCount = allDeliveries.filter(d => {
+        const status = (d.status || '').toLowerCase();
+        return status === 'assigned' || status === 'picked-up' || status === 'picked up' || status === 'in-transit' || status === 'in transit';
+      }).length;
+      setActiveDeliveriesCount(activeCount);
+    } catch (error) {
+      console.error('[RiderSidebar] Failed to fetch counts:', error);
+    }
+  };
 
   const handleLogout = () => {
     (async () => {
@@ -76,13 +100,14 @@ const RiderSidebar = () => {
       to: '/rider/available',
       icon: '/blockicon.svg',
       label: 'Available Orders',
-      count: 5,
+      count: availableOrdersCount > 0 ? availableOrdersCount : undefined,
     },
     {
       id: 'active',
       to: '/rider/active',
       icon: '/locationicon.svg',
       label: 'Active Deliveries',
+      count: activeDeliveriesCount > 0 ? activeDeliveriesCount : undefined,
     },
     {
       id: 'earnings',
@@ -107,15 +132,35 @@ const RiderSidebar = () => {
   const [mobileOpen, setMobileOpen] = useState(false);
 
   useEffect(() => {
+    // Initial fetch
+    fetchCounts();
+
+    // Poll every 30 seconds
+    const countInterval = setInterval(fetchCounts, 30000);
+
+    // Listen for events that should trigger refresh
+    const handleRefresh = () => {
+      fetchCounts();
+    };
+
+    window.addEventListener('delivery:accepted', handleRefresh);
+    window.addEventListener('delivery:updated', handleRefresh);
+    window.addEventListener('delivery:completed', handleRefresh);
+
     const toggle = () => setMobileOpen((s) => !s);
     const close = () => setMobileOpen(false);
     window.addEventListener('rider:toggleMobileSidebar', toggle);
     window.addEventListener('rider:closeMobileSidebar', close);
-    // cleanup
+
     return () => {
+      clearInterval(countInterval);
+      window.removeEventListener('delivery:accepted', handleRefresh);
+      window.removeEventListener('delivery:updated', handleRefresh);
+      window.removeEventListener('delivery:completed', handleRefresh);
       window.removeEventListener('rider:toggleMobileSidebar', toggle);
       window.removeEventListener('rider:closeMobileSidebar', close);
     };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const closeMobile = () => setMobileOpen(false);

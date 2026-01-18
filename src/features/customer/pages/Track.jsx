@@ -5,7 +5,8 @@ import CustomerLayout from '../components/CustomerLayout';
 import { YummyText } from '../../../components/YummyText';
 import Loader from '../../../components/Loader';
 import TrackingMap from '../../../components/TrackingMap'; // NEW
-import { getDeliveryByTracking } from '../../../utils/authApi';
+// RatingModal is mounted globally in CustomerLayout and triggered via window events
+import { getDeliveryByTracking, rateDriver } from '../../../utils/authApi';
 import socketService from '../../../services/socket.service'; // NEW
 import BlockIcon from '../../../icons/Blockicon';
 import CheckIcon from '../../../icons/Checkicon';
@@ -23,6 +24,7 @@ const Track = () => {
   const [toastMsg, setToastMsg] = useState('');
   const [showToast, setShowToast] = useState(false);
   const [driverLocation, setDriverLocation] = useState(null);
+  const [hasRated, setHasRated] = useState(false);
   const params = useParams();
 
   // Auto-fetch when a trackingId is present in the URL (e.g. /track/SX-...)
@@ -63,16 +65,28 @@ const Track = () => {
 
         if (updatedDeliveryId === currentDeliveryId) {
           console.log('[Track] Delivery status updated, refreshing:', updatedDeliveryId);
+          const newStatus = event.detail.status || deliveryData.status;
+
           // Update the status in current delivery data
           setDeliveryData(prev => ({
             ...prev,
-            status: event.detail.status || prev.status,
+            status: newStatus,
             updatedAt: new Date().toISOString()
           }));
 
           // Show toast notification
-          setToastMsg(`✅ Status updated to: ${event.detail.status}`);
+          setToastMsg(`✅ Status updated to: ${newStatus}`);
           setShowToast(true);
+
+          // Show rating modal if delivery is completed and not yet rated
+          if ((newStatus?.toLowerCase() === 'delivered' || newStatus?.toLowerCase() === 'completed') &&
+            !hasRated &&
+            !deliveryData.rating &&
+            !deliveryData.customerRating) {
+            setTimeout(() => {
+              window.dispatchEvent(new CustomEvent('rating:show', { detail: deliveryData }));
+            }, 1500);
+          }
         }
       }
     };
@@ -142,6 +156,17 @@ const Track = () => {
       const data = response?.data?.delivery || response?.delivery || response?.data || response;
       setDeliveryData(data);
 
+      // Check if delivery is completed and not yet rated
+      const statusLower = data.status?.toLowerCase();
+      const isCompleted = statusLower === 'delivered' || statusLower === 'completed';
+      const alreadyRated = data.rating || data.customerRating || data.hasRated;
+
+      if (isCompleted && !alreadyRated && !hasRated) {
+        setTimeout(() => {
+          window.dispatchEvent(new CustomEvent('rating:show', { detail: data }));
+        }, 2000);
+      }
+
     } catch (err) {
       console.error('[Track] Failed to fetch delivery:', err);
       setToastMsg(err?.message || 'Tracking number not found');
@@ -209,6 +234,46 @@ const Track = () => {
   const recipientPhone = deliveryData?.recipient?.phone || deliveryData?.recipientPhone || deliveryData?.receiverPhone || deliveryData?.toPhone || deliveryData?.to?.phone || 'N/A';
   const recipientEmail = deliveryData?.recipient?.email || deliveryData?.recipientEmail || deliveryData?.toEmail || deliveryData?.to?.email || 'N/A';
   const recipientAddressLine = deliveryData?.deliveryAddress?.street || deliveryData?.deliveryAddress?.address || deliveryData?.deliveryAddress || deliveryData?.deliveryAddressString || '';
+
+  // Handle rating submission
+  const handleSubmitRating = async (ratingData) => {
+    try {
+      console.log('[Track] Submitting rating:', ratingData);
+      // Only send rating field - backend doesn't accept comment or driverId
+      const response = await rateDriver(ratingData.deliveryId, {
+        rating: ratingData.rating
+      });
+
+      console.log('[Track] Rating submitted successfully:', response);
+      setHasRated(true);
+
+      // Update delivery data to reflect rating
+      setDeliveryData(prev => ({
+        ...prev,
+        rating: ratingData.rating,
+        customerRating: ratingData.rating,
+        hasRated: true
+      }));
+
+      // Show success toast
+      setToastMsg('⭐ Thank you for your feedback!');
+      setShowToast(true);
+
+      // Dispatch event to notify rider and update UI
+      window.dispatchEvent(new CustomEvent('rating:submitted', {
+        detail: {
+          deliveryId: ratingData.deliveryId,
+          driverId: ratingData.driverId,
+          rating: ratingData.rating,
+          comment: ratingData.comment
+        }
+      }));
+    } catch (error) {
+      console.error('[Track] Failed to submit rating:', error);
+      setToastMsg(error.message || 'Failed to submit rating');
+      setShowToast(true);
+    }
+  };
 
   return (
     <IonPage>
@@ -495,6 +560,8 @@ const Track = () => {
               </div>
             </div>
           )}
+
+          {/* Rating handled by global RatingModal mounted in CustomerLayout. */}
         </IonContent>
       </CustomerLayout>
     </IonPage>

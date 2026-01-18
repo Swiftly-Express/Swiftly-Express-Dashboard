@@ -170,8 +170,23 @@ const Dashboard = () => {
       setShowVerificationModal(false);
     };
     window.addEventListener('verification:completed', handleVerificationComplete);
+
+    // Refresh dashboard when deliveries change elsewhere in the app
+    const handleDeliveryEvent = (event) => {
+      console.log('[Dashboard] delivery event received, refreshing dashboard:', event?.type, event?.detail);
+      fetchDashboardData();
+    };
+
+    window.addEventListener('delivery:accepted', handleDeliveryEvent);
+    window.addEventListener('delivery:statusChanged', handleDeliveryEvent);
+    window.addEventListener('delivery:updated', handleDeliveryEvent);
+    window.addEventListener('delivery:completed', handleDeliveryEvent);
     return () => {
       window.removeEventListener('verification:completed', handleVerificationComplete);
+      window.removeEventListener('delivery:accepted', handleDeliveryEvent);
+      window.removeEventListener('delivery:statusChanged', handleDeliveryEvent);
+      window.removeEventListener('delivery:updated', handleDeliveryEvent);
+      window.removeEventListener('delivery:completed', handleDeliveryEvent);
     };
   }, []);
 
@@ -220,9 +235,9 @@ const Dashboard = () => {
       );
       setActiveDeliveries(activeOnly.slice(0, 3));
 
-      // Process available orders
+      // Process available orders (use full real data from API)
       const orders = ordersRes?.data?.jobs || ordersRes?.jobs || ordersRes?.data || [];
-      setAvailableOrders(orders.slice(0, 2));
+      setAvailableOrders(orders);
 
       // Process earnings and stats
       const earnings = earningsRes?.data || earningsRes;

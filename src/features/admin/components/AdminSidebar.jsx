@@ -12,6 +12,7 @@ import KycIcon from '../../../icons/Kycicon';
 import AnalyzeIcon from '../../../icons/Analyzeicon';
 import SettingsIcon from '../../../icons/Settingsicon';
 import ToybikeIcon from '../../../icons/Toybikeicon';
+import { getPendingVerifications, getAllDeliveries } from '../../../utils/adminApi';
 
 const SidebarButton = ({ to, active, icon, label, count }) => {
   const router = useIonRouter();
@@ -54,15 +55,48 @@ const SidebarButton = ({ to, active, icon, label, count }) => {
 const AdminSidebar = () => {
   const router = useIonRouter();
   const [mobileOpen, setMobileOpen] = useState(false);
+  const [kycPendingCount, setKycPendingCount] = useState(0);
+  const [ordersCount, setOrdersCount] = useState(0);
+
+  const fetchCounts = async () => {
+    try {
+      const [kycResp, ordersResp] = await Promise.all([
+        getPendingVerifications(1, 1).catch(() => ({ data: { pagination: { total: 0 } } })),
+        getAllDeliveries(1, 1).catch(() => ({ data: { pagination: { total: 0 } } }))
+      ]);
+      const kycData = kycResp?.data || kycResp;
+      const kycVerifications = kycData?.verifications || [];
+      const kycPending = kycVerifications.filter(v => (v.status || v.verificationStatus) === 'pending').length || kycData?.pagination?.total || 0;
+      setKycPendingCount(kycPending);
+
+      const ordersData = ordersResp?.data || ordersResp;
+      const totalOrders = ordersData?.pagination?.total || ordersData?.total || 0;
+      setOrdersCount(totalOrders);
+    } catch (err) {
+      console.error('[AdminSidebar] Failed to fetch counts:', err);
+    }
+  };
 
   useEffect(() => {
+    fetchCounts();
+    const interval = setInterval(fetchCounts, 30000);
+
     const toggle = () => setMobileOpen((s) => !s);
     const close = () => setMobileOpen(false);
+    const handleKycUpdate = () => fetchCounts();
+    const handleOrderUpdate = () => fetchCounts();
+
     window.addEventListener('admin:toggleMobileSidebar', toggle);
     window.addEventListener('admin:closeMobileSidebar', close);
+    window.addEventListener('kyc:updated', handleKycUpdate);
+    window.addEventListener('order:created', handleOrderUpdate);
+
     return () => {
+      clearInterval(interval);
       window.removeEventListener('admin:toggleMobileSidebar', toggle);
       window.removeEventListener('admin:closeMobileSidebar', close);
+      window.removeEventListener('kyc:updated', handleKycUpdate);
+      window.removeEventListener('order:created', handleOrderUpdate);
     };
   }, []);
 
@@ -112,14 +146,14 @@ const AdminSidebar = () => {
       to: '/admin/orders',
       icon: <BlockIcon />,
       label: 'Manage Orders',
-      count: 12,
+      count: ordersCount || undefined,
     },
     {
       id: 'kyc-approvals',
       to: '/admin/kyc',
       icon: <KycIcon />,
       label: 'KYC Approvals',
-      count: 5,
+      count: kycPendingCount || undefined,
     },
     {
       id: 'analytics',

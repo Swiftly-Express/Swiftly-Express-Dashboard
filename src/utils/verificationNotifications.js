@@ -40,7 +40,19 @@ const now = () => Date.now();
 
 const hoursSince = (timestamp) => {
   if (!timestamp) return Infinity;
-  return (now() - Number(timestamp)) / (1000 * 60 * 60);
+  // Accept numeric ms (string or number) or ISO date strings
+  let t = timestamp;
+  if (typeof t === 'string') {
+    // Try numeric string first
+    if (/^\d+$/.test(t)) {
+      t = Number(t);
+    } else {
+      t = Date.parse(t);
+    }
+  }
+  t = Number(t);
+  if (isNaN(t)) return Infinity;
+  return (now() - t) / (1000 * 60 * 60);
 };
 
 /* =========================
