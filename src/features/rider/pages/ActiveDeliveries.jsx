@@ -28,6 +28,7 @@ const ActiveDeliveries = () =>
   const [updatingStatus, setUpdatingStatus] = useState(null);
   const [isMobile, setIsMobile] = useState(false);
   const [activeTab, setActiveTab] = useState('in-progress'); // in-progress, yet-to-start, completed
+  const [stats, setStats] = useState({}); // { [deliveryId]: { distance, duration } }
 
   // Fetch rider's active deliveries on mount
   useEffect(() =>
@@ -328,6 +329,15 @@ const ActiveDeliveries = () =>
     }
   };
 
+
+  const handleRouteStats = (deliveryId, { distance, duration }) =>
+  {
+    setStats(prev => ({
+      ...prev,
+      [deliveryId]: { distance, duration }
+    }));
+  };
+
   // Filter deliveries by tab
   const filterDeliveriesByTab = () =>
   {
@@ -499,8 +509,8 @@ const ActiveDeliveries = () =>
                     packageId={delivery.trackingNumber || delivery.deliveryId || delivery.id || 'N/A'}
                     status={formatStatus(delivery.status)}
                     statusColor={getStatusColor(delivery.status)}
-                    distance={delivery.distance ? `${delivery.distance} km` : (delivery.distanceInKm ? `${delivery.distanceInKm} km` : 'N/A')}
-                    time={delivery.estimatedTime || delivery.estimatedDuration || (delivery.estimatedTimeMinutes ? `${delivery.estimatedTimeMinutes} min` : 'N/A')}
+                    distance={stats[delivery._id || delivery.id]?.distance || (delivery.distance ? `${delivery.distance} km` : (delivery.distanceInKm ? `${delivery.distanceInKm} km` : 'N/A'))}
+                    time={stats[delivery._id || delivery.id]?.duration ? `${stats[delivery._id || delivery.id]?.duration}` : (delivery.estimatedTime || delivery.estimatedDuration || (delivery.estimatedTimeMinutes ? `${delivery.estimatedTimeMinutes} min` : 'Est. N/A'))}
                     price={delivery.amount ? `₦${Number(delivery.amount).toFixed(2)}` : (delivery.price ? `₦${Number(delivery.price).toFixed(2)}` : '₦0.00')}
                     pickupName={delivery.pickup?.name || delivery.pickupName || delivery.senderName || 'Pickup Location'}
                     pickupAddress={pickupAddressText}
@@ -520,6 +530,8 @@ const ActiveDeliveries = () =>
                     onActionClick={() => handleActionClick(delivery)}
                     isUpdating={updatingStatus === (delivery._id || delivery.id)}
                     isMobile={isMobile}
+                    deliveryId={delivery._id || delivery.id}
+                    onRouteStats={handleRouteStats}
                   />
                 );
               })
@@ -585,7 +597,9 @@ const DeliveryCard = ({
   actionButtonText,
   onActionClick,
   isUpdating,
-  isMobile
+  isMobile,
+  deliveryId,
+  onRouteStats
 }) => (
   <div className={isMobile ? "bg-white rounded-2xl mb-4 overflow-hidden ml-0.5 -mr-1" : "bg-white rounded-2xl mb-6 overflow-hidden ml-0.5"} style={sideBottomShadow}>
     {/* Header Section with Background */}
@@ -639,6 +653,7 @@ const DeliveryCard = ({
             pickupLocation={pickupCoords}
             dropoffLocation={deliveryCoords}
             driverLocation={vehicleCoords}
+            onRouteStats={(stats) => onRouteStats && onRouteStats(deliveryId, stats)}
           />
         </div>
       )}
@@ -681,14 +696,26 @@ const DeliveryCard = ({
               <button
                 onClick={() =>
                 {
-                  if (packageId) {
-                    window.location.href = `/rider/track/${packageId}`;
-                  } else if (pickupCoords && deliveryCoords) {
-                    const origin = `${pickupCoords[1]},${pickupCoords[0]}`;
-                    const dest = `${deliveryCoords[1]},${deliveryCoords[0]}`;
-                    window.open(`https://www.google.com/maps/dir/?api=1&origin=${origin}&destination=${dest}&travelmode=driving`, '_blank');
+                  const statusLower = (status || '').toLowerCase();
+                  let destCoords = null;
+
+                  // If waiting to pickup or going to pickup -> Target is Pickup Location
+                  if (statusLower.includes('assigned') || statusLower.includes('pending') || (statusLower.includes('picked') === false && statusLower.includes('transit') === false)) {
+                    destCoords = pickupCoords;
+                  }
+                  // If picked up or in transit -> Target is Delivery Location
+                  else {
+                    destCoords = deliveryCoords;
+                  }
+
+                  if (destCoords) {
+                    // GeoJSON [lng, lat] or Object {lat, lng}
+                    const lat = Array.isArray(destCoords) ? destCoords[1] : destCoords.lat;
+                    const lng = Array.isArray(destCoords) ? destCoords[0] : destCoords.lng;
+
+                    window.open(`https://www.google.com/maps/dir/?api=1&destination=${lat},${lng}&travelmode=driving`, '_blank');
                   } else {
-                    alert('Navigation data not available');
+                    alert('Navigation coordinates not available');
                   }
                 }}
                 className={`flex-1 flex items-center justify-center gap-1 ${isMobile ? "py-2.5" : "py-2"} bg-white rounded-lg text-xs hover:bg-gray-50 transition-colors`}
@@ -786,6 +813,7 @@ const DeliveryCard = ({
             pickupLocation={pickupCoords}
             dropoffLocation={deliveryCoords}
             driverLocation={vehicleCoords}
+            onRouteStats={(stats) => onRouteStats && onRouteStats(deliveryId, stats)}
           />
         </div>
       )}
