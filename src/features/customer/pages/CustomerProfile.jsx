@@ -555,14 +555,13 @@ const CustomerProfile = () => {
                     <div>
                       <label className="block text-sm font-medium text-[#0F172A] mb-2">
                         Email Address
-                        <span className="text-xs text-[#64748B] ml-2">(Cannot be changed)</span>
                       </label>
                       <input
                         type="email"
                         name="email"
                         value={formData.email}
-                        disabled
-                        className="w-full placeholder:text-[#94A3B8] px-4 py-3 rounded-xl bg-gray-100 text-[#64748B] cursor-not-allowed border-none"
+                        onChange={handleInputChange}
+                        className="w-full placeholder:text-[#94A3B8] px-4 py-3 rounded-xl border border-[#E2E8F0] focus:border-[#00D68F] focus:ring-2 focus:ring-[#00D68F]/20 focus:outline-none transition-all"
                       />
                     </div>
 

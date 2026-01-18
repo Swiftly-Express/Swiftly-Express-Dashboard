@@ -16,7 +16,7 @@ const loadGoogleProfileData = () => {
   console.log('loading google profile data...');
 
   const cachedUserData = getJSONCookie('user_data');
-  if (cachedUserData) {
+  if (!cachedUserData) {
     return null;
   }
 
@@ -27,7 +27,7 @@ const loadGoogleProfileData = () => {
 
   const nameParts = googleName.split(' ');
   const firstName = cachedUserData.firstName || cachedUserData.given_name || nameParts[0] || '';
-  const lastName = cachedUserData.lastName || cachedUserData.family_name || nameParts.slice(1).join('') || '';
+  const lastName = cachedUserData.lastName || cachedUserData.family_name || nameParts.slice(1).join(' ') || '';
   const googleId = cachedUserData.id || cachedUserData._id || cachedUserData.googleId || '';
   const riderId = cachedUserData.riderId || cachedUserData.driverId || (googleId ? `RD-${googleId}` : '');
 
@@ -37,7 +37,7 @@ const loadGoogleProfileData = () => {
     lastName,
     email: googleEmail,
     phone: googlePhone,
-    Photo: googlePhoto,
+    photo: googlePhoto,
     riderId,
     id: googleId
   };

@@ -1,6 +1,6 @@
 import React, { useEffect, useState, useRef } from 'react';
 import { useHistory, useLocation } from 'react-router-dom';
-import { setCookie, setJSONCookie, getCookie } from '../../../utils/cookies';
+import { setCookie, setJSONCookie, getCookie, deleteCookie } from '../../../utils/cookies';
 import { getCurrentUser } from '../../../utils/authApi';
 
 const AuthCallback = () => {
@@ -160,6 +160,62 @@ const AuthCallback = () => {
             sessionStorage.setItem('auth_processing', 'true');
             addLog('✅ Set auth_processing in sessionStorage');
 
+            // CRITICAL: Clear ALL previous user data to ensure new users get fresh storage
+            addLog('🧹 Clearing all previous user data for fresh start...');
+            try {
+                // Clear all role tokens
+                deleteCookie('customer_token');
+                deleteCookie('rider_token');
+                deleteCookie('admin_token');
+                deleteCookie('auth_token');
+                deleteCookie('customer_refresh_token');
+                deleteCookie('rider_refresh_token');
+                deleteCookie('admin_refresh_token');
+                deleteCookie('refresh_token');
+
+                // Clear all user profile data
+                deleteCookie('user_data');
+                deleteCookie('userRole');
+                deleteCookie('user_type');
+                deleteCookie('user_name');
+
+                // Clear all profile images
+                deleteCookie('profile_image');
+                const profileImageKeys = ['profile_image_customer', 'profile_image_rider', 'profile_image_admin'];
+                profileImageKeys.forEach(key => deleteCookie(key));
+
+                // Clear rider-specific data
+                deleteCookie('riderPersonalInfo');
+                deleteCookie('riderVehicleInfo');
+                deleteCookie('riderDocuments');
+                deleteCookie('riderVerificationData');
+                deleteCookie('riderVerificationStatus');
+                deleteCookie('riderAccountVerified');
+                deleteCookie('riderEmailVerified');
+
+                // Clear customer-specific data
+                deleteCookie('customerPersonalInfo');
+
+                // Clear verification/pending data
+                deleteCookie('pendingVerificationUserId');
+                deleteCookie('pendingVerificationEmail');
+                deleteCookie('pendingVerificationType');
+                deleteCookie('pending_user_data');
+                deleteCookie('verificationCompleted');
+                deleteCookie('verificationSubmitted');
+
+                // Clear localStorage
+                if (typeof localStorage !== 'undefined') {
+                    localStorage.removeItem('profile_image');
+                    localStorage.removeItem('user_name');
+                    localStorage.removeItem('user_data');
+                }
+
+                addLog('✅ All previous user data cleared successfully');
+            } catch (clearError) {
+                addLog('⚠️ Error clearing some data (continuing)', clearError.message);
+            }
+
             const params = new URLSearchParams(location.search);
             addLog('🔍 URL Search Params', location.search);
 
@@ -316,6 +372,31 @@ const AuthCallback = () => {
                     addLog('💾 Starting to save tokens...');
                     setStatus('Saving authentication data...');
 
+                    // CRITICAL: Clear other role tokens to prevent cross-role auth issues
+                    addLog('🧹 Clearing tokens from other roles...');
+                    deleteCookie('user_data');
+                    deleteCookie('userRole');
+                    deleteCookie('user_type');
+                    if (exRole === 'rider' || exRole === 'driver') {
+                        deleteCookie('customer_token');
+                        deleteCookie('admin_token');
+                        deleteCookie('customer_refresh_token');
+                        deleteCookie('admin_refresh_token');
+                        addLog('✅ Cleared customer and admin tokens');
+                    } else if (exRole === 'customer') {
+                        deleteCookie('rider_token');
+                        deleteCookie('admin_token');
+                        deleteCookie('rider_refresh_token');
+                        deleteCookie('admin_refresh_token');
+                        addLog('✅ Cleared rider and admin tokens');
+                    } else if (exRole === 'admin') {
+                        deleteCookie('rider_token');
+                        deleteCookie('customer_token');
+                        deleteCookie('rider_refresh_token');
+                        deleteCookie('customer_refresh_token');
+                        addLog('✅ Cleared rider and customer tokens');
+                    }
+
                     try {
                         setCookie('auth_token', exToken, 7);
                         addLog('✅ Saved auth_token');
@@ -436,6 +517,31 @@ const AuthCallback = () => {
                         role: finalRole,
                         sources: { urlParam: role, userData: bestUserData.role, jwt: decodedToken?.role }
                     });
+
+                    // CRITICAL: Clear other role tokens to prevent cross-role auth issues
+                    addLog('Clearing tokens from other roles...');
+                    deleteCookie('user_data');
+                    deleteCookie('userRole');
+                    deleteCookie('user_type');
+                    if (finalRole === 'rider' || finalRole === 'driver') {
+                        deleteCookie('customer_token');
+                        deleteCookie('admin_token');
+                        deleteCookie('customer_refresh_token');
+                        deleteCookie('admin_refresh_token');
+                        addLog('✅ Cleared customer and admin tokens');
+                    } else if (finalRole === 'customer') {
+                        deleteCookie('rider_token');
+                        deleteCookie('admin_token');
+                        deleteCookie('rider_refresh_token');
+                        deleteCookie('admin_refresh_token');
+                        addLog('✅ Cleared rider and admin tokens');
+                    } else if (finalRole === 'admin') {
+                        deleteCookie('rider_token');
+                        deleteCookie('customer_token');
+                        deleteCookie('rider_refresh_token');
+                        deleteCookie('customer_refresh_token');
+                        addLog('✅ Cleared rider and customer tokens');
+                    }
 
                     try {
                         setCookie('auth_token', token, 7);
