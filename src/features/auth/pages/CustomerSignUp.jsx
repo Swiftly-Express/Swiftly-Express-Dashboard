@@ -29,15 +29,13 @@ const CustomerSignUp = () => {
     const emailVal = (formData.email || '').toString().trim();
     const passwordVal = (formData.password || '').toString();
     const confirmVal = (formData.confirmPassword || '').toString();
-
-    if (!fullName) {
-      setError('Please enter your full name');
-      return;
-    }
-    if (!emailVal) {
-      setError('Please enter your email address');
-      return;
-    }
+    // Public site URL helper - production always uses NEXT_PUBLIC_BASE_URL (or default), dev uses NEXT_PUBLIC_SITE_URL
+    const getPublicSiteUrl = () => {
+      const prodEnv = import.meta.env.NEXT_PUBLIC_BASE_URL || import.meta.env.VITE_PUBLIC_BASE_URL || 'https://swiftlyxpress.com';
+      const devEnv = import.meta.env.NEXT_PUBLIC_SITE_URL || import.meta.env.VITE_PUBLIC_SITE_URL || 'http://localhost:3000';
+      const isDev = Boolean(import.meta.env.DEV);
+      return (isDev ? devEnv.replace(/\/$/, '') : prodEnv.replace(/\/$/, ''));
+    };
     if (!passwordVal) {
       setError('Please enter a password');
       return;
@@ -129,7 +127,7 @@ const CustomerSignUp = () => {
 
   // Robust public site URL helper - prefer explicit production config, then current origin, then dev fallback
   const getPublicSiteUrl = () => {
-    const prodEnv = import.meta.env.NEXT_PUBLIC_BASE_URL || import.meta.env.VITE_PUBLIC_BASE_URL || '';
+    const prodEnv = import.meta.env.NEXT_PUBLIC_BASE_URL || import.meta.env.VITE_PUBLIC_BASE_URL || 'https://swiftlyxpress.com';
     const devEnv = import.meta.env.NEXT_PUBLIC_SITE_URL || import.meta.env.VITE_PUBLIC_SITE_URL || 'http://localhost:3000';
 
     if (prodEnv && !/localhost/i.test(prodEnv)) return prodEnv.replace(/\/$/, '');

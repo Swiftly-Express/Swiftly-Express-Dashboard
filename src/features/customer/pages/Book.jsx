@@ -108,23 +108,13 @@ const Book = () => {
   const handleDeliveryTypeSelect = (value) => {
     // If user selected Smart Ride, redirect to Smart Ride booking page on the public site
     if (value === 'smart_ride') {
-      const prodEnv = import.meta.env.NEXT_PUBLIC_BASE_URL || import.meta.env.VITE_PUBLIC_BASE_URL || '';
+      const prodEnv = import.meta.env.NEXT_PUBLIC_BASE_URL || import.meta.env.VITE_PUBLIC_BASE_URL || 'https://swiftlyxpress.com';
       const devEnv = import.meta.env.NEXT_PUBLIC_SITE_URL || import.meta.env.VITE_PUBLIC_SITE_URL || 'http://localhost:3000';
 
-      // Prefer explicit production env if set and not localhost
-      if (prodEnv && !/localhost/i.test(prodEnv)) {
-        window.location.href = `${prodEnv.replace(/\/$/, '')}/smartride-booking`;
-        return;
-      }
-
-      // If running on a real host (not localhost), use current origin
-      if (typeof window !== 'undefined' && window.location && !window.location.hostname.includes('localhost')) {
-        window.location.href = `${window.location.origin.replace(/\/$/, '')}/smartride-booking`;
-        return;
-      }
-
-      // Fallback to dev site
-      window.location.href = `${devEnv.replace(/\/$/, '')}/smartride-booking`;
+      // Use production base in production builds, otherwise dev site
+      const isDev = Boolean(import.meta.env.DEV);
+      const targetBase = isDev ? devEnv.replace(/\/$/, '') : prodEnv.replace(/\/$/, '');
+      window.location.href = `${targetBase}/smartride-booking`;
       return;
     }
 
