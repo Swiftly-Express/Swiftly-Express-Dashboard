@@ -29,6 +29,16 @@ const RiderSignup = () => {
     : rawBase.replace(/\/$/, '');
   const googleAuthUrl = `${apiBase}/api/auth/google?role=rider`;
 
+  // Robust public site URL helper - prefer explicit production config, then current origin, then dev fallback
+  const getPublicSiteUrl = () => {
+    const prodEnv = import.meta.env.NEXT_PUBLIC_BASE_URL || import.meta.env.VITE_PUBLIC_BASE_URL || '';
+    const devEnv = import.meta.env.NEXT_PUBLIC_SITE_URL || import.meta.env.VITE_PUBLIC_SITE_URL || 'http://localhost:3000';
+
+    if (prodEnv && !/localhost/i.test(prodEnv)) return prodEnv.replace(/\/$/, '');
+    if (typeof window !== 'undefined' && window.location && !window.location.hostname.includes('localhost')) return window.location.origin.replace(/\/$/, '');
+    return devEnv.replace(/\/$/, '');
+  };
+
   const [googleLoading, setGoogleLoading] = useState(false);
 
   const handleGoogleSignup = (e) => {
@@ -243,7 +253,7 @@ const RiderSignup = () => {
                         onClick={(e) => {
                           e.preventDefault();
                           // Force full navigation to public site with correct port
-                          const publicSiteUrl = import.meta.env.VITE_PUBLIC_SITE_URL || 'http://localhost:3001';
+                          const publicSiteUrl = getPublicSiteUrl();
                           window.location.href = `${publicSiteUrl}/terms-of-service`;
                         }}
                         className="text-[#00D68F] cursor-pointer hover:underline"
@@ -251,7 +261,7 @@ const RiderSignup = () => {
                         tabIndex={0}
                         onKeyPress={(e) => {
                           if (e.key === 'Enter') {
-                            const publicSiteUrl = import.meta.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3001';
+                            const publicSiteUrl = getPublicSiteUrl();
                             window.location.href = `${publicSiteUrl}/terms-of-service`;
                           }
                         }}

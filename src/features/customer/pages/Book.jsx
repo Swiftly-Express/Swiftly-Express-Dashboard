@@ -99,12 +99,35 @@ const Book = () => {
   const deliveryTypes = [
     { value: 'express', label: 'Express (Same day)', price: '₦2500' },
     { value: 'standard', label: 'Standard (1-2 days)', price: '₦1200' },
-    { value: 'economy', label: 'Economy (3-5 days)', price: '₦800' }
+    { value: 'economy', label: 'Economy (3-5 days)', price: '₦800' },
+    { value: 'smart_ride', label: 'Smart Ride', price: '₦500' }
   ];
 
   const selectedDeliveryType = deliveryTypes.find(t => t.value === formData.deliveryType);
 
   const handleDeliveryTypeSelect = (value) => {
+    // If user selected Smart Ride, redirect to Smart Ride booking page on the public site
+    if (value === 'smart_ride') {
+      const prodEnv = import.meta.env.NEXT_PUBLIC_BASE_URL || import.meta.env.VITE_PUBLIC_BASE_URL || '';
+      const devEnv = import.meta.env.NEXT_PUBLIC_SITE_URL || import.meta.env.VITE_PUBLIC_SITE_URL || 'http://localhost:3000';
+
+      // Prefer explicit production env if set and not localhost
+      if (prodEnv && !/localhost/i.test(prodEnv)) {
+        window.location.href = `${prodEnv.replace(/\/$/, '')}/smartride-booking`;
+        return;
+      }
+
+      // If running on a real host (not localhost), use current origin
+      if (typeof window !== 'undefined' && window.location && !window.location.hostname.includes('localhost')) {
+        window.location.href = `${window.location.origin.replace(/\/$/, '')}/smartride-booking`;
+        return;
+      }
+
+      // Fallback to dev site
+      window.location.href = `${devEnv.replace(/\/$/, '')}/smartride-booking`;
+      return;
+    }
+
     setFormData({ ...formData, deliveryType: value });
     setShowDeliveryTypeModal(false);
   };
