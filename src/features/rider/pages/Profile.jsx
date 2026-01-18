@@ -341,50 +341,80 @@ const RiderProfile = () => {
         return;
       }
 
-      const imageKey = getProfileImageKey();
-      const cachedImage = getCookie(imageKey);
-      if (cachedImage) {
-        setProfileImage(cachedImage);
-      }
+      // First priority: Load Google profile data
+      const googleData = loadGoogleProfileData();
+      if (googleData) {
+        console.log('[Profile] Using Google profile data in fetchProfile');
+        
+        if (googleData.name) {
+          setUserName(googleData.name);
+        }
+        if (googleData.riderId) {
+          setRiderId(googleData.riderId);
+        }
+        if (googleData.photo && !googleData.photo.includes('dicebear')) {
+          setProfileImage(googleData.photo);
+          const imageKey = getProfileImageKey();
+          setCookie(imageKey, googleData.photo, 7);
+          setCookie('profile_image', googleData.photo, 7);
+          localStorage.setItem('profile_image', googleData.photo);
+          console.log('[Profile] Google profile photo loaded in fetchProfile');
+        }
+        
+        setPersonalInfo(prev => ({
+          ...prev,
+          firstName: googleData.firstName || prev.firstName,
+          lastName: googleData.lastName || prev.lastName,
+          email: googleData.email || prev.email,
+          phone: googleData.phone || prev.phone
+        }));
+      } else {
+        // Fallback: Load from cached user_data if no Google data available
+        const imageKey = getProfileImageKey();
+        const cachedImage = getCookie(imageKey);
+        if (cachedImage) {
+          setProfileImage(cachedImage);
+        }
 
-      const cachedUserData = getJSONCookie('user_data');
-      if (cachedUserData) {
-        try {
-          const user = typeof cachedUserData === 'string' ? JSON.parse(cachedUserData) : cachedUserData;
-          console.log('[Profile] Loaded cached user data:', user);
+        const cachedUserData = getJSONCookie('user_data');
+        if (cachedUserData) {
+          try {
+            const user = typeof cachedUserData === 'string' ? JSON.parse(cachedUserData) : cachedUserData;
+            console.log('[Profile] Loaded cached user data:', user);
 
-          // Extract name from Google profile (name field) or split fullName
-          const name = user.name || user.fullName || `${user.firstName || ''} ${user.lastName || ''}`.trim();
-          if (name) setUserName(name);
+            // Extract name from Google profile (name field) or split fullName
+            const name = user.name || user.fullName || `${user.firstName || ''} ${user.lastName || ''}`.trim();
+            if (name) setUserName(name);
 
-          // Extract firstName and lastName from Google name or fullName
-          const nameParts = name.split(' ');
-          const firstName = user.firstName || user.given_name || nameParts[0] || '';
-          const lastName = user.lastName || user.family_name || nameParts.slice(1).join(' ') || '';
+            // Extract firstName and lastName from Google name or fullName
+            const nameParts = name.split(' ');
+            const firstName = user.firstName || user.given_name || nameParts[0] || '';
+            const lastName = user.lastName || user.family_name || nameParts.slice(1).join(' ') || '';
 
-          if (user.riderId || user.driverId || user.id) {
-            setRiderId(user.riderId || user.driverId || `RD-${user.id}`);
+            if (user.riderId || user.driverId || user.id) {
+              setRiderId(user.riderId || user.driverId || `RD-${user.id}`);
+            }
+
+            // Load Google profile photo if available
+            if (user.profilePhoto || user.picture || user.avatar) {
+              const photoUrl = user.profilePhoto || user.picture || user.avatar;
+              setProfileImage(photoUrl);
+              const imageKey = getProfileImageKey();
+              setCookie(imageKey, photoUrl, 7);
+              localStorage.setItem('profile_image', photoUrl);
+              console.log('[Profile] Loaded Google profile photo:', photoUrl);
+            }
+
+            setPersonalInfo(prev => ({
+              ...prev,
+              firstName: firstName || prev.firstName,
+              lastName: lastName || prev.lastName,
+              email: user.email || prev.email,
+              phone: user.phone || user.phoneNumber || prev.phone
+            }));
+          } catch (e) {
+            console.error('[Profile] Failed to parse cached user data:', e);
           }
-
-          // Load Google profile photo if available
-          if (user.profilePhoto || user.picture || user.avatar) {
-            const photoUrl = user.profilePhoto || user.picture || user.avatar;
-            setProfileImage(photoUrl);
-            const imageKey = getProfileImageKey();
-            setCookie(imageKey, photoUrl, 7);
-            localStorage.setItem('profile_image', photoUrl);
-            console.log('[Profile] Loaded Google profile photo:', photoUrl);
-          }
-
-          setPersonalInfo(prev => ({
-            ...prev,
-            firstName: firstName || prev.firstName,
-            lastName: lastName || prev.lastName,
-            email: user.email || prev.email,
-            phone: user.phone || user.phoneNumber || prev.phone
-          }));
-        } catch (e) {
-          console.error('[Profile] Failed to parse cached user data:', e);
         }
       }
 
