@@ -85,11 +85,11 @@ const Support = () => {
   };
 
   const handlePhoneSupport = () => {
-    window.location.href = 'tel:+18005943589'; // +1 (800) SWIFTLY
+    window.location.href = 'tel:+2348089000013';
   };
 
   const handleEmailSupport = () => {
-    window.location.href = 'mailto:support@swiftlyexpress.com';
+    window.location.href = 'mailto:support@swiftlyxpress.com';
   };
 
   const handleLiveChat = () => {
@@ -123,7 +123,7 @@ const Support = () => {
               title="Phone Support"
               subtitle="Available 24/7"
               action={handlePhoneSupport}
-              actionText="+1 (800) SWIFTLY"
+              actionText="+234 08089000013"
             />
 
             <SupportCard
@@ -134,7 +134,7 @@ const Support = () => {
               title="Email Support"
               subtitle="Response within 2 hours"
               action={handleEmailSupport}
-              actionText="support@swiftlyexpress.com"
+              actionText="support@swiftlyxpress.com"
             />
 
             <SupportCard
