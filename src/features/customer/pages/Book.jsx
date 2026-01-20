@@ -106,15 +106,9 @@ const Book = () => {
   const selectedDeliveryType = deliveryTypes.find(t => t.value === formData.deliveryType);
 
   const handleDeliveryTypeSelect = (value) => {
-    // If user selected Smart Ride, redirect to Smart Ride booking page on the public site
+    // If user selected Smart Ride, redirect to Smart Ride booking page
     if (value === 'smart_ride') {
-      const prodEnv = import.meta.env.NEXT_PUBLIC_BASE_URL || import.meta.env.VITE_PUBLIC_BASE_URL || 'https://swiftlyxpress.com';
-      const devEnv = import.meta.env.NEXT_PUBLIC_SITE_URL || import.meta.env.VITE_PUBLIC_SITE_URL || 'http://localhost:3000';
-
-      // Use production base in production builds, otherwise dev site
-      const isDev = Boolean(import.meta.env.DEV);
-      const targetBase = isDev ? devEnv.replace(/\/$/, '') : prodEnv.replace(/\/$/, '');
-      window.location.href = `${targetBase}/smartride-booking`;
+      router.push('/customer/smartride-booking', 'forward', 'push');
       return;
     }
 
