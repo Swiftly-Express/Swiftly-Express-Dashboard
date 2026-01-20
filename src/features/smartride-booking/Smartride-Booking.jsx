@@ -231,166 +231,166 @@ export default function SmartRideBooking() {
             return;
         }
 
-            try {
-                setIsProcessingPayment(true);
+        try {
+            setIsProcessingPayment(true);
 
-                const payload = {
-                    senderName: formData.senderName,
-                    senderPhone: formData.senderPhone,
-                    pickupDate: formData.pickupDate,
-                    recipientName: formData.recipientName,
-                    recipientPhone: formData.recipientPhone,
-                    recipientEmail: formData.recipientEmail,
-                    pickupAddress: {
-                        street: formData.pickupPlace?.street || formData.pickupAddress,
-                        city: formData.pickupPlace?.city || '',
-                        state: formData.pickupPlace?.state || 'Unknown',
-                        zipCode: formData.pickupPlace?.zipCode || '',
-                        coordinates: formData.pickupPlace?.coordinates || null
-                    },
-                    deliveryAddress: {
-                        street: formData.deliveryPlace?.street || formData.deliveryAddress,
-                        city: formData.deliveryPlace?.city || '',
-                        state: formData.deliveryPlace?.state || 'Unknown',
-                        zipCode: formData.deliveryPlace?.zipCode || '',
-                        coordinates: formData.deliveryPlace?.coordinates || null
-                    },
-                    packageDetails: {
-                        sizeCategory: formData.sizeCategory,
-                        weightCategory: formData.weightCategory,
-                        weight: formData.weight || `${formData.weightCategory} weight`,
-                        dimensions: formData.dimensions,
-                        description: formData.packageDescription
-                    },
-                    payment: { method: formData.paymentMethod, notes: formData.paymentNotes }
-                };
+            const payload = {
+                senderName: formData.senderName,
+                senderPhone: formData.senderPhone,
+                pickupDate: formData.pickupDate,
+                recipientName: formData.recipientName,
+                recipientPhone: formData.recipientPhone,
+                recipientEmail: formData.recipientEmail,
+                pickupAddress: {
+                    street: formData.pickupPlace?.street || formData.pickupAddress,
+                    city: formData.pickupPlace?.city || '',
+                    state: formData.pickupPlace?.state || 'Unknown',
+                    zipCode: formData.pickupPlace?.zipCode || '',
+                    coordinates: formData.pickupPlace?.coordinates || null
+                },
+                deliveryAddress: {
+                    street: formData.deliveryPlace?.street || formData.deliveryAddress,
+                    city: formData.deliveryPlace?.city || '',
+                    state: formData.deliveryPlace?.state || 'Unknown',
+                    zipCode: formData.deliveryPlace?.zipCode || '',
+                    coordinates: formData.deliveryPlace?.coordinates || null
+                },
+                packageDetails: {
+                    sizeCategory: formData.sizeCategory,
+                    weightCategory: formData.weightCategory,
+                    weight: formData.weight || `${formData.weightCategory} weight`,
+                    dimensions: formData.dimensions,
+                    description: formData.packageDescription
+                },
+                payment: { method: formData.paymentMethod, notes: formData.paymentNotes }
+            };
 
-                let createResp = null;
-                if (formData.image) {
-                    const fd = new FormData();
-                    fd.append('image', formData.image);
-                    Object.entries(payload).forEach(([k, v]) => {
-                        if (typeof v === 'object') fd.append(k, JSON.stringify(v));
-                        else fd.append(k, String(v));
-                    });
-                    createResp = await createDelivery(fd);
-                } else {
-                    createResp = await createDelivery(payload);
-                }
-
-                const deliveryObj = createResp?.data?.delivery || createResp?.delivery || createResp?.data || createResp;
-                const dId = deliveryObj?._id || deliveryObj?.id || deliveryObj?.deliveryId || deliveryObj?.trackingNumber;
-                if (!dId) {
-                    console.error('Create delivery response:', createResp);
-                    throw new Error('Failed to create delivery (no id returned)');
-                }
-                setDeliveryId(dId);
-
-                setToast?.('Preparing payment...');
-
-                // Open popup synchronously to preserve user gesture
-                let paymentWindow = null;
-                try {
-                    paymentWindow = window.open('', '_blank');
-                    if (paymentWindow) paymentWindow.document.write('<p>Preparing payment...</p>');
-                } catch (pwErr) {
-                    console.warn('[SmartRide] Failed to open payment popup synchronously', pwErr);
-                    paymentWindow = null;
-                }
-
-                const initJson = await apiClient.post(`/api/payment/initialize/${dId}`, {
-                    amount: calculateTotal().total,
-                    currency: 'NGN',
-                    email: formData.recipientEmail || 'customer@swiftlyxpress.com',
-                    callback_url: `${window.location.origin}/customer/payment/callback`,
-                    metadata: { deliveryId: dId }
+            let createResp = null;
+            if (formData.image) {
+                const fd = new FormData();
+                fd.append('image', formData.image);
+                Object.entries(payload).forEach(([k, v]) => {
+                    if (typeof v === 'object') fd.append(k, JSON.stringify(v));
+                    else fd.append(k, String(v));
                 });
+                createResp = await createDelivery(fd);
+            } else {
+                createResp = await createDelivery(payload);
+            }
 
-                const initPayload = initJson?.data || initJson;
-                const paymentObj = initPayload?.data?.payment || initPayload?.payment || initPayload?.data;
-                const paymentReference = paymentObj?.reference || paymentObj?.id || paymentObj?.paymentId;
-                const authorizationUrl = paymentObj?.authorizationUrl || paymentObj?.authorization_url || paymentObj?.url || paymentObj?.payment_url;
+            const deliveryObj = createResp?.data?.delivery || createResp?.delivery || createResp?.data || createResp;
+            const dId = deliveryObj?._id || deliveryObj?.id || deliveryObj?.deliveryId || deliveryObj?.trackingNumber;
+            if (!dId) {
+                console.error('Create delivery response:', createResp);
+                throw new Error('Failed to create delivery (no id returned)');
+            }
+            setDeliveryId(dId);
 
-                if (!paymentReference && !authorizationUrl) {
-                    throw new Error('Payment initialization failed');
-                }
+            setToast?.('Preparing payment...');
 
+            // Open popup synchronously to preserve user gesture
+            let paymentWindow = null;
+            try {
+                paymentWindow = window.open('', '_blank');
+                if (paymentWindow) paymentWindow.document.write('<p>Preparing payment...</p>');
+            } catch (pwErr) {
+                console.warn('[SmartRide] Failed to open payment popup synchronously', pwErr);
+                paymentWindow = null;
+            }
+
+            const initJson = await apiClient.post(`/api/payment/initialize/${dId}`, {
+                amount: calculateTotal().total,
+                currency: 'NGN',
+                email: formData.recipientEmail || 'customer@swiftlyxpress.com',
+                callback_url: `${window.location.origin}/customer/payment/callback`,
+                metadata: { deliveryId: dId }
+            });
+
+            const initPayload = initJson?.data || initJson;
+            const paymentObj = initPayload?.data?.payment || initPayload?.payment || initPayload?.data;
+            const paymentReference = paymentObj?.reference || paymentObj?.id || paymentObj?.paymentId;
+            const authorizationUrl = paymentObj?.authorizationUrl || paymentObj?.authorization_url || paymentObj?.url || paymentObj?.payment_url;
+
+            if (!paymentReference && !authorizationUrl) {
+                throw new Error('Payment initialization failed');
+            }
+
+            try {
+                if (dId) setCookie('pending_payment_delivery_id', String(dId), 1);
+                if (paymentReference) setCookie('pending_payment_id', String(paymentReference), 1);
+            } catch (e) { }
+
+            const cleanupOnPaymentCancel = async (did) => {
                 try {
-                    if (dId) setCookie('pending_payment_delivery_id', String(dId), 1);
-                    if (paymentReference) setCookie('pending_payment_id', String(paymentReference), 1);
-                } catch (e) { }
-
-                const cleanupOnPaymentCancel = async (did) => {
-                    try {
-                        if (did) await cancelDelivery(did, { reason: 'payment_cancelled' });
-                    } catch (cleanupErr) {
-                        console.warn('[SmartRide] Failed to cancel delivery on backend:', cleanupErr);
-                    }
-                    try { deleteCookie('pending_payment_delivery_id'); deleteCookie('pending_payment_id'); } catch (e) { }
-                    setIsProcessingPayment(false);
-                    setToast?.('Payment was not completed. Your booking was cancelled.');
-                };
-
-                // If hosted authorization URL is provided, navigate popup to it
-                if (authorizationUrl) {
-                    try {
-                        if (paymentWindow) {
-                            paymentWindow.location.href = authorizationUrl;
-                        } else {
-                            window.open(authorizationUrl, '_blank');
-                        }
-
-                        // Monitor popup closure
-                        try {
-                            const popupInterval = setInterval(() => {
-                                try {
-                                    if (!paymentWindow || paymentWindow.closed) {
-                                        clearInterval(popupInterval);
-                                        const pending = getCookie('pending_payment_id');
-                                        if (pending) {
-                                            cleanupOnPaymentCancel(dId);
-                                        }
-                                    }
-                                } catch (e) {
-                                    clearInterval(popupInterval);
-                                }
-                            }, 1000);
-                        } catch (monErr) { console.warn('[SmartRide] Failed to monitor payment popup:', monErr); }
-
-                        setIsProcessingPayment(false);
-                        return;
-                    } catch (navErr) {
-                        console.error('[SmartRide] Failed to navigate popup to authorizationUrl', navErr);
-                        // fall through to inline modal attempt
-                    }
+                    if (did) await cancelDelivery(did, { reason: 'payment_cancelled' });
+                } catch (cleanupErr) {
+                    console.warn('[SmartRide] Failed to cancel delivery on backend:', cleanupErr);
                 }
+                try { deleteCookie('pending_payment_delivery_id'); deleteCookie('pending_payment_id'); } catch (e) { }
+                setIsProcessingPayment(false);
+                setToast?.('Payment was not completed. Your booking was cancelled.');
+            };
 
-                // Fallback to inline Paystack modal if no hosted URL
-                if (paymentReference) {
-                    try { if (paymentWindow) paymentWindow.close(); } catch (e) { }
+            // If hosted authorization URL is provided, navigate popup to it
+            if (authorizationUrl) {
+                try {
+                    if (paymentWindow) {
+                        paymentWindow.location.href = authorizationUrl;
+                    } else {
+                        window.open(authorizationUrl, '_blank');
+                    }
 
-                    const PaystackPop = (await import('@paystack/inline-js')).default;
-                    const paystackPublicKey = import.meta.env.VITE_PAYSTACK_PUBLIC_KEY || 'pk_test_xxxx';
+                    // Monitor popup closure
+                    try {
+                        const popupInterval = setInterval(() => {
+                            try {
+                                if (!paymentWindow || paymentWindow.closed) {
+                                    clearInterval(popupInterval);
+                                    const pending = getCookie('pending_payment_id');
+                                    if (pending) {
+                                        cleanupOnPaymentCancel(dId);
+                                    }
+                                }
+                            } catch (e) {
+                                clearInterval(popupInterval);
+                            }
+                        }, 1000);
+                    } catch (monErr) { console.warn('[SmartRide] Failed to monitor payment popup:', monErr); }
 
-                    const handler = PaystackPop.setup({
-                        key: paystackPublicKey,
-                        email: formData.recipientEmail || 'customer@swiftlyxpress.com',
-                        amount: calculateTotal().total * 100, // Paystack expects kobo
-                        ref: paymentReference,
-                        onClose: function () {
-                            cleanupOnPaymentCancel(dId);
-                        },
-                        callback: function (response) {
-                            try { deleteCookie('pending_payment_delivery_id'); deleteCookie('pending_payment_id'); } catch (e) { }
-                            // Navigate to payment callback route to let SPA finalize
-                            try { router.push('/customer/payment/callback', 'root', 'replace'); } catch (e) { window.location.href = '/customer/payment/callback'; }
-                        }
-                    });
-
-                    handler.openIframe();
                     setIsProcessingPayment(false);
                     return;
+                } catch (navErr) {
+                    console.error('[SmartRide] Failed to navigate popup to authorizationUrl', navErr);
+                    // fall through to inline modal attempt
                 }
+            }
+
+            // Fallback to inline Paystack modal if no hosted URL
+            if (paymentReference) {
+                try { if (paymentWindow) paymentWindow.close(); } catch (e) { }
+
+                const PaystackPop = (await import('@paystack/inline-js')).default;
+                const paystackPublicKey = import.meta.env.VITE_PAYSTACK_PUBLIC_KEY || 'pk_test_xxxx';
+
+                const handler = PaystackPop.setup({
+                    key: paystackPublicKey,
+                    email: formData.recipientEmail || 'customer@swiftlyxpress.com',
+                    amount: calculateTotal().total * 100, // Paystack expects kobo
+                    ref: paymentReference,
+                    onClose: function () {
+                        cleanupOnPaymentCancel(dId);
+                    },
+                    callback: function (response) {
+                        try { deleteCookie('pending_payment_delivery_id'); deleteCookie('pending_payment_id'); } catch (e) { }
+                        // Navigate to payment callback route to let SPA finalize
+                        try { router.push('/customer/payment/callback', 'root', 'replace'); } catch (e) { window.location.href = '/customer/payment/callback'; }
+                    }
+                });
+
+                handler.openIframe();
+                setIsProcessingPayment(false);
+                return;
+            }
         } catch (err) {
             console.error('Payment error', err);
             alert(err?.message || 'Payment failed');
