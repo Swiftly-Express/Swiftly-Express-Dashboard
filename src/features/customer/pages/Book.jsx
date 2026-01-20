@@ -10,6 +10,7 @@ import GoogleMapsAutocomplete from '../../../components/GoogleMapsAutocomplete';
 import CustomerLayout from '../components/CustomerLayout';
 import { YummyText } from '../../../components/YummyText';
 import { createDelivery, isAuthenticated, cancelDelivery } from '../../../utils/authApi';
+import { calculateDistance, calculateDeliveryPrice } from '../../../utils/pricing';
 import axios from 'axios';
 import { getCookie, setCookie, setJSONCookie, getJSONCookie, deleteCookie } from '../../../utils/cookies';
 
@@ -95,6 +96,10 @@ const Book = () => {
   const [showPaymentDrawer, setShowPaymentDrawer] = useState(false);
   const [selectedPaymentMethod, setSelectedPaymentMethod] = useState('cash');
   const [isMobile, setIsMobile] = useState(false);
+  const [isPriority, setIsPriority] = useState(false);
+  const [isSpecialErrand, setIsSpecialErrand] = useState(false);
+  const [waitingMinutes, setWaitingMinutes] = useState(0);
+  const [distanceKm, setDistanceKm] = useState(0);
 
   const deliveryTypes = [
     { value: 'express', label: 'Express (Same day)', price: '₦2500' },
@@ -647,28 +652,35 @@ const Book = () => {
     }
   };
 
+  // Calculate distance whenever addresses change
+  useEffect(() => {
+    if (pickupCoordinates && deliveryCoordinates &&
+      pickupCoordinates.lat !== 0 && deliveryCoordinates.lat !== 0) {
+      const dist = calculateDistance(pickupCoordinates, deliveryCoordinates);
+      setDistanceKm(dist);
+    } else {
+      setDistanceKm(0);
+    }
+  }, [pickupCoordinates, deliveryCoordinates]);
+
+  const getPricingBreakdown = () => {
+    return calculateDeliveryPrice({
+      distance: distanceKm,
+      waitingMinutes: 0,
+      isPriority,
+      isSpecialErrand: false,
+      batchDiscount: 0, // Can be updated for batch orders in future
+      customBid: null,
+      deliveryType: formData.deliveryType
+    });
+  };
+
   const calculateTotal = () => {
-    const baseRate = getBaseRate();
-    const insurance = getInsurance();
-    return baseRate + insurance;
+    return getPricingBreakdown().total;
   };
 
   const getBaseRate = () => {
-    switch (formData.deliveryType) {
-      case 'express':
-        return 2500;
-      case 'standard':
-        return 1200;
-      case 'economy':
-        return 800;
-      default:
-        return 0;
-    }
-  };
-
-  const getInsurance = () => {
-    const declaredValue = parseFloat(formData.declaredValue) || 0;
-    return declaredValue > 0 ? Math.max(declaredValue * 0.01, 200) : 0;
+    return getPricingBreakdown().deliveryCharge;
   };
 
   return (
@@ -1196,20 +1208,32 @@ const Book = () => {
                     ></textarea>
                   </div>
 
-                  <div className="mb-6">
-                    <label className="block text-sm font-medium text-[#0F172A] mb-2">
-                      Declared Value (₦)
-                      <span className="text-xs text-gray-500 ml-2 block md:inline">(For insurance)</span>
-                    </label>
-                    <input
-                      type="number"
-                      name="declaredValue"
-                      value={formData.declaredValue}
-                      onChange={handleChange}
-                      placeholder="10000.00"
-                      step="0.01"
-                      className="w-full px-4 py-3 rounded-xl bg-[#F8F9FA] text-sm md:text-base text-[#0F172A] placeholder:text-[#94A3B8] focus:outline-none focus:ring-2 focus:ring-[#00D68F] border-none"
-                    />
+
+
+                  {/* Optional Services */}
+                  <div className="mb-6 bg-white rounded-xl border border-gray-200 p-4">
+                    <h3 className="text-sm font-semibold text-[#0F172A] mb-3">Optional Services</h3>
+
+                    {/* Priority Delivery */}
+                    <div className="flex items-center justify-between p-3 rounded-lg hover:bg-gray-50 cursor-pointer mb-2">
+                      <div className="flex-1">
+                        <div className="flex items-center gap-2">
+                          <span className="text-sm font-medium text-[#0F172A]">Delivery Speed</span>
+                          <span className="text-xs px-2 py-0.5 bg-orange-100 text-orange-700 rounded-full">Priority option</span>
+                        </div>
+                        <p className="text-xs text-gray-500 mt-1">Choose delivery speed</p>
+                      </div>
+                      <div className="flex items-center gap-4">
+                        <label className="flex items-center gap-2">
+                          <input type="radio" name="priorityOption" checked={isPriority} onChange={() => setIsPriority(true)} className="w-4 h-4 text-[#00B75A]" />
+                          <span className="text-sm">Priority</span>
+                        </label>
+                        <label className="flex items-center gap-2">
+                          <input type="radio" name="priorityOption" checked={!isPriority} onChange={() => setIsPriority(false)} className="w-4 h-4 text-[#94A3B8]" />
+                          <span className="text-sm">Standard</span>
+                        </label>
+                      </div>
+                    </div>
                   </div>
 
                   {/* Package Image Upload - Redesigned */}
@@ -1332,22 +1356,64 @@ const Book = () => {
 
                 {/* Cost Breakdown */}
                 <div className="bg-[#F0FDF4] rounded-xl p-4 md:p-6 mb-6">
-                  <div className="space-y-3">
-                    <div className="flex justify-between items-center text-[#0F172A]">
-                      <span className="text-sm md:text-base">Base Rate</span>
-                      <span className="text-sm md:text-base font-medium">₦{getBaseRate().toLocaleString('en-NG', { minimumFractionDigits: 2 })}</span>
-                    </div>
-                    <div className="flex justify-between items-center text-[#0F172A]">
-                      <span className="text-sm md:text-base">Insurance (1%)</span>
-                      <span className="text-sm md:text-base font-medium">₦{getInsurance().toLocaleString('en-NG', { minimumFractionDigits: 2 })}</span>
-                    </div>
+                  <h3 className="text-base font-semibold text-[#0F172A] mb-4">Cost Breakdown</h3>
+                  <div className="space-y-2.5">
+                    {(() => {
+                      const pricing = getPricingBreakdown();
+                      return (
+                        <>
+                          {/* Distance Info */}
+                          {distanceKm > 0 && (
+                            <div className="flex justify-between items-center text-[#64748B] text-sm">
+                              <span>Distance</span>
+                              <span className="font-medium">{pricing.distance} km</span>
+                            </div>
+                          )}
 
-                    <div className="border-t border-gray-300 pt-3 mt-3">
-                      <div className="flex justify-between items-center">
-                        <span className="text-base md:text-lg font-medium text-[#0F172A]">Total</span>
-                        <span className="text-xl md:text-2xl font-medium text-[#00B75A]">₦{calculateTotal().toLocaleString('en-NG', { minimumFractionDigits: 2 })}</span>
-                      </div>
-                    </div>
+                          {/* Base Fare */}
+                          <div className="flex justify-between items-center text-[#0F172A]">
+                            <span className="text-sm md:text-base">Base Fare</span>
+                            <span className="text-sm md:text-base font-medium">₦{pricing.baseFare.toLocaleString()}</span>
+                          </div>
+
+                          {/* Distance Charge */}
+                          {pricing.distanceCharge > 0 && (
+                            <div className="flex justify-between items-center text-[#0F172A]">
+                              <span className="text-sm">Distance Charge ({Math.max(0, pricing.distance - 2).toFixed(1)}km × ₦{pricing.perKmRate})</span>
+                              <span className="text-sm font-medium">₦{pricing.distanceCharge.toLocaleString()}</span>
+                            </div>
+                          )}
+
+                          {/* Priority Fee */}
+                          {pricing.priorityFee > 0 && (
+                            <div className="flex justify-between items-center text-orange-700">
+                              <span className="text-sm">Priority Delivery</span>
+                              <span className="text-sm font-medium">+₦{pricing.priorityFee.toLocaleString()}</span>
+                            </div>
+                          )}
+
+                          {/* Batch Discount */}
+                          {pricing.discountAmount > 0 && (
+                            <div className="flex justify-between items-center text-green-700">
+                              <span className="text-sm">Batch Discount ({pricing.discountPercentage}%)</span>
+                              <span className="text-sm font-medium">-₦{pricing.discountAmount.toLocaleString()}</span>
+                            </div>
+                          )}
+
+                          {/* Insurance removed */}
+
+                          {/* Total */}
+                          <div className="border-t border-gray-300 pt-3 mt-3">
+                            <div className="flex justify-between items-center">
+                              <span className="text-base md:text-lg font-medium text-[#0F172A]">Total</span>
+                              <span className="text-xl md:text-2xl font-medium text-[#00B75A]">
+                                ₦{pricing.total.toLocaleString('en-NG', { minimumFractionDigits: 2 })}
+                              </span>
+                            </div>
+                          </div>
+                        </>
+                      );
+                    })()}
                   </div>
                 </div>
 
@@ -1358,7 +1424,6 @@ const Book = () => {
                     disabled={isSubmitting}
                     className={`flex-1 flex items-center justify-center gap-2 px-6 md:px-8 py-3 bg-[#00B75A] ${isSubmitting ? 'opacity-50 cursor-not-allowed' : 'hover:bg-[#00B876]'} text-white rounded-xl transition-colors font-medium text-sm md:text-base`}
                   >
-                    <img src="/blockicon-white.svg" alt="Book" className="w-5 h-5" />
                     {isSubmitting ? 'Booking...' : 'Book Delivery'}
                   </button>
                   <button

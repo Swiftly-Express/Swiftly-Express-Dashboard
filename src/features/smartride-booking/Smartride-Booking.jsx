@@ -11,6 +11,7 @@ import GoogleMapsAutocomplete from '../../components/GoogleMapsAutocomplete';
 import axios from 'axios';
 import { getCookie, setCookie, deleteCookie } from '../../utils/cookies';
 import { createDelivery, cancelDelivery } from '../../utils/authApi';
+import { calculateDistance, calculateDeliveryPrice } from '../../utils/pricing';
 
 const API_BASE = import.meta.env.VITE_API_BASE_URL || 'https://api.swiftlyxpress.com';
 
@@ -79,6 +80,13 @@ export default function SmartRideBooking() {
     const [isProcessingPayment, setIsProcessingPayment] = useState(false);
     const [isMobile, setIsMobile] = useState(false);
     const [deliveryId, setDeliveryId] = useState(null);
+    const [toastMsg, setToastMsg] = useState('');
+    const [showToast, setShowToast] = useState(false);
+    const [isPriority, setIsPriority] = useState(false);
+    const [isSpecialErrand, setIsSpecialErrand] = useState(false);
+    const [waitingMinutes, setWaitingMinutes] = useState(0);
+    const [distanceKm, setDistanceKm] = useState(0);
+    const [boosted, setBoosted] = useState(false);
 
     useEffect(() => {
         const check = () => setIsMobile(window.innerWidth <= 768);
@@ -86,6 +94,19 @@ export default function SmartRideBooking() {
         window.addEventListener('resize', check);
         return () => window.removeEventListener('resize', check);
     }, []);
+
+    // Calculate distance whenever addresses change
+    useEffect(() => {
+        const pickupCoords = formData.pickupPlace?.coordinates;
+        const deliveryCoords = formData.deliveryPlace?.coordinates;
+
+        if (pickupCoords && deliveryCoords && pickupCoords.lat && deliveryCoords.lat) {
+            const dist = calculateDistance(pickupCoords, deliveryCoords);
+            setDistanceKm(dist);
+        } else {
+            setDistanceKm(0);
+        }
+    }, [formData.pickupPlace, formData.deliveryPlace]);
 
     // Listen for postMessage from payment callback popup (same behavior as Book.jsx)
     useEffect(() => {
@@ -170,31 +191,15 @@ export default function SmartRideBooking() {
     };
 
     const calculateTotal = () => {
-        const baseDelivery = 500;
-
-        // Parse weight - use explicit weight if provided, otherwise derive from category
-        const weightMap = { light: 2.5, heavy: 12.5, very_heavy: 25 };
-        const explicitWeight = parseFloat(formData.weight);
-        const effectiveWeight = !isNaN(explicitWeight) && explicitWeight > 0
-            ? explicitWeight
-            : weightMap[formData.weightCategory] || 2.5;
-
-        const perKgRate = 200;
-        const weightCharge = Math.ceil(effectiveWeight) * perKgRate;
-
-        const baseRate = baseDelivery + weightCharge;
-
-        const declaredValue = parseFloat(formData.declaredValue) || 0;
-        const insurance = declaredValue > 0 ? Math.max(Math.round(declaredValue * 0.01), 200) : 0;
-
-        const total = baseRate + insurance;
-
-        return {
-            baseRate,
-            insurance,
-            total,
-            details: { effectiveWeight, weightCharge, declaredValue }
-        };
+        return calculateDeliveryPrice({
+            distance: distanceKm,
+            waitingMinutes: 0,
+            isPriority, // Smart Ride defaults to priority
+            isSpecialErrand: false,
+            batchDiscount: 0,
+            customBid: null,
+            deliveryType: 'smart_ride'
+        });
     };
 
     const breadcrumbSteps = ['Package Information', 'Package Summary', 'Rider Matching', 'Rider Details'];
@@ -234,6 +239,53 @@ export default function SmartRideBooking() {
         try {
             setIsProcessingPayment(true);
 
+            // Build pickup/delivery address objects similar to Book.jsx to satisfy backend validation
+            const pickupAddrRaw = formData.pickupPlace ? {
+                street: formData.pickupPlace.street || '',
+                city: formData.pickupPlace.city || '',
+                state: formData.pickupPlace.state || formData.pickupPlace.country || formData.pickupPlace.city || '',
+                zipCode: formData.pickupPlace.zipCode || '',
+                country: formData.pickupPlace.country || '',
+                coordinates: formData.pickupPlace.coordinates || { lat: 0, lng: 0 }
+            } : {
+                street: formData.pickupAddress || '',
+                city: '',
+                state: '',
+                zipCode: '',
+                country: '',
+                coordinates: { lat: 0, lng: 0 }
+            };
+
+            const deliveryAddrRaw = formData.deliveryPlace ? {
+                street: formData.deliveryPlace.street || '',
+                city: formData.deliveryPlace.city || '',
+                state: formData.deliveryPlace.state || formData.deliveryPlace.country || formData.deliveryPlace.city || '',
+                zipCode: formData.deliveryPlace.zipCode || '',
+                country: formData.deliveryPlace.country || '',
+                coordinates: formData.deliveryPlace.coordinates || { lat: 0, lng: 0 }
+            } : {
+                street: formData.deliveryAddress || '',
+                city: '',
+                state: '',
+                zipCode: '',
+                country: '',
+                coordinates: { lat: 0, lng: 0 }
+            };
+
+            const { country: _pCountry, ...pickupNoCountry } = pickupAddrRaw;
+            const pickupAddr = {
+                ...pickupNoCountry,
+                state: pickupAddrRaw.state || pickupAddrRaw.city || 'Unknown',
+                zipCode: pickupAddrRaw.zipCode || '00000'
+            };
+
+            const { country: _dCountry, ...deliveryNoCountry } = deliveryAddrRaw;
+            const deliveryAddr = {
+                ...deliveryNoCountry,
+                state: deliveryAddrRaw.state || deliveryAddrRaw.city || 'Unknown',
+                zipCode: deliveryAddrRaw.zipCode || '00000'
+            };
+
             const payload = {
                 senderName: formData.senderName,
                 senderPhone: formData.senderPhone,
@@ -241,20 +293,8 @@ export default function SmartRideBooking() {
                 recipientName: formData.recipientName,
                 recipientPhone: formData.recipientPhone,
                 recipientEmail: formData.recipientEmail,
-                pickupAddress: {
-                    street: formData.pickupPlace?.street || formData.pickupAddress,
-                    city: formData.pickupPlace?.city || '',
-                    state: formData.pickupPlace?.state || 'Unknown',
-                    zipCode: formData.pickupPlace?.zipCode || '',
-                    coordinates: formData.pickupPlace?.coordinates || null
-                },
-                deliveryAddress: {
-                    street: formData.deliveryPlace?.street || formData.deliveryAddress,
-                    city: formData.deliveryPlace?.city || '',
-                    state: formData.deliveryPlace?.state || 'Unknown',
-                    zipCode: formData.deliveryPlace?.zipCode || '',
-                    coordinates: formData.deliveryPlace?.coordinates || null
-                },
+                pickupAddress: pickupAddr,
+                deliveryAddress: deliveryAddr,
                 packageDetails: {
                     sizeCategory: formData.sizeCategory,
                     weightCategory: formData.weightCategory,
@@ -286,7 +326,8 @@ export default function SmartRideBooking() {
             }
             setDeliveryId(dId);
 
-            setToast?.('Preparing payment...');
+            setToastMsg('Preparing payment...');
+            setShowToast(true);
 
             // Open popup synchronously to preserve user gesture
             let paymentWindow = null;
@@ -328,7 +369,8 @@ export default function SmartRideBooking() {
                 }
                 try { deleteCookie('pending_payment_delivery_id'); deleteCookie('pending_payment_id'); } catch (e) { }
                 setIsProcessingPayment(false);
-                setToast?.('Payment was not completed. Your booking was cancelled.');
+                setToastMsg('Payment was not completed. Your booking was cancelled.');
+                setShowToast(true);
             };
 
             // If hosted authorization URL is provided, navigate popup to it
@@ -536,7 +578,7 @@ export default function SmartRideBooking() {
                                 {/* Delivery Information Section */}
                                 <div className="mb-3">
                                     <YummyText className="text-lg font-medium text-gray-900 mb-1">Delivery Information</YummyText>
-                                    <YummyText className="text-sm text-gray-600 mb-4">Fill in the details below to schedule your delivery</YummyText>
+                                    <YummyText className="text-sm text-gray-600 mb-8 md:mb-4 lg:mb-4">Fill in the details below to schedule your delivery</YummyText>
 
                                     {/* Delivery Type */}
                                     <div className="mb-6">
@@ -982,22 +1024,24 @@ export default function SmartRideBooking() {
                                         ></textarea>
                                     </div>
 
-                                    {/* Declared Value */}
-                                    <div className="mb-6">
-                                        <label className="block text-sm font-medium text-[#0F172A] mb-2">
-                                            Declared Value (₦)
-                                            <span className="text-xs text-gray-500 ml-2 block md:inline">(For insurance)</span>
-                                        </label>
-                                        <input
-                                            type="number"
-                                            name="declaredValue"
-                                            value={formData.declaredValue}
-                                            onChange={handleChange}
-                                            placeholder="10000.00"
-                                            step="0.01"
-                                            className="w-full px-4 py-3 rounded-xl bg-[#F8F9FA] text-[#0F172A] placeholder:text-[#94A3B8] focus:outline-none focus:ring-2 focus:ring-[#00D68F] border-none"
-                                        />
-                                    </div>
+                                    {/* Optional Services for Smart Ride */}
+                                    {/* Smart Ride features removed from form - priority offered during rider search */}
+
+                                    {/* Live Price Preview */}
+                                    {distanceKm > 0 && (
+                                        <div className="mb-6 bg-[#F0FDF4] rounded-xl p-4 border-2 border-[#00B75A]">
+                                            <div className="flex justify-between items-center">
+                                                <div>
+                                                    <p className="text-sm text-gray-600">Estimated Price</p>
+                                                    <p className="text-xs text-gray-500">{calculateTotal().distance} km • {isPriority ? 'Priority' : 'Standard'}</p>
+                                                </div>
+                                                <div className="text-right">
+                                                    <p className="text-2xl font-bold text-[#00B75A]">₦{calculateTotal().total.toLocaleString()}</p>
+                                                    <p className="text-xs text-gray-600">Rider earns: ₦{calculateTotal().riderEarnings.toLocaleString()}</p>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    )}
 
                                     {/* Package Image Upload */}
                                     <div className="mb-6">
@@ -1274,7 +1318,6 @@ export default function SmartRideBooking() {
     // Package Summary
     if (currentStep === 'summary') {
         const pricing = calculateTotal();
-        const declaredValueNumber = pricing.details?.declaredValue ?? (parseFloat(formData.declaredValue) || 0);
 
         return (
             <div className="min-h-screen bg-[#FFFFFF]">
@@ -1405,23 +1448,45 @@ export default function SmartRideBooking() {
                                 <p className="font-sm text-[#1E1E1E] bg-[#FBFBFB] rounded-md px-3 py-3">{formData.packageDescription}</p>
                             </div>
 
-                            <div className="mb-8">
-                                <p className="text-sm text-[#1E1E1E] font-medium mb-1">Declared Value (₦)</p>
-                                <p className="font-sm text-[#1E1E1E] bg-[#FBFBFB] rounded-md px-3 py-3">₦{declaredValueNumber.toLocaleString()}</p>
-                            </div>
+                            {/* Declared value removed */}
 
                             {/* Pricing */}
                             <div className="bg-[#F0FDF4] rounded-xl p-6 mb-6">
-                                <div className="space-y-3">
+                                <h3 className="text-base font-semibold text-[#0F172A] mb-4">Cost Breakdown</h3>
+                                <div className="space-y-2.5">
+                                    {/* Distance Info */}
+                                    {distanceKm > 0 && (
+                                        <div className="flex justify-between items-center text-[#64748B] text-sm">
+                                            <span>Distance</span>
+                                            <span className="font-medium">{pricing.distance} km</span>
+                                        </div>
+                                    )}
+
+                                    {/* Base Fare */}
                                     <div className="flex justify-between items-center text-[#0F172A]">
-                                        <span className="text-[15px]">Base Rate</span>
-                                        <span className="text-[15px]">₦{pricing.baseRate.toLocaleString()}</span>
-                                    </div>
-                                    <div className="flex justify-between items-center text-[#0F172A]">
-                                        <span className="text-[15px]">Insurance (1% of declared value)</span>
-                                        <span className="text-[15px]">₦{pricing.insurance.toLocaleString()}</span>
+                                        <span className="text-[15px]">Base Fare (up to 2km)</span>
+                                        <span className="text-[15px]">₦{pricing.baseFare.toLocaleString()}</span>
                                     </div>
 
+                                    {/* Distance Charge */}
+                                    {pricing.distanceCharge > 0 && (
+                                        <div className="flex justify-between items-center text-[#0F172A]">
+                                            <span className="text-sm">Distance Charge ({Math.max(0, pricing.distance - 2).toFixed(1)}km × ₦{pricing.perKmRate})</span>
+                                            <span className="text-sm">₦{pricing.distanceCharge.toLocaleString()}</span>
+                                        </div>
+                                    )}
+
+                                    {/* Priority Fee (Smart Ride) */}
+                                    {pricing.priorityFee > 0 && (
+                                        <div className="flex justify-between items-center text-orange-700">
+                                            <span className="text-sm">Priority Delivery</span>
+                                            <span className="text-sm font-medium">+₦{pricing.priorityFee.toLocaleString()}</span>
+                                        </div>
+                                    )}
+
+                                    {/* Insurance removed */}
+
+                                    {/* Total */}
                                     <div className="border-t border-gray-300 pt-3 mt-3">
                                         <div className="flex justify-between items-center">
                                             <span className="text-lg font-medium text-[#0F172A]">Total</span>
@@ -1525,6 +1590,32 @@ export default function SmartRideBooking() {
                                 </>
                             )}
                         </div>
+
+                        {/* Priority upsell while searching */}
+                        {isSearching && !boosted && (
+                            <div className="max-w-md mx-auto mb-6">
+                                <div className="bg-white p-4 rounded-xl shadow-sm border flex items-center justify-between">
+                                    <div>
+                                        <p className="font-medium">Get matched faster</p>
+                                        <p className="text-sm text-gray-600">Boost for +₦{calculateTotal().priorityFee} to increase matching speed</p>
+                                    </div>
+                                    <div>
+                                        <button
+                                            onClick={() => { setIsPriority(true); setBoosted(true); }}
+                                            className="px-4 py-2 bg-[#00B75A] text-white rounded-lg"
+                                        >
+                                            Boost ₦{calculateTotal().priorityFee}
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                        )}
+
+                        {isSearching && boosted && (
+                            <div className="max-w-md mx-auto mb-6">
+                                <div className="bg-[#FEFCE8] p-3 rounded-lg border border-yellow-200 text-yellow-800">Priority boost active — finding faster riders</div>
+                            </div>
+                        )}
 
                         {/* Loader spinner above skeleton placeholders */}
                         {isSearching && (
@@ -1863,6 +1954,12 @@ export default function SmartRideBooking() {
           animation: scale-in 0.2s ease-out;
         }
       `}</style>
+            <IonToast
+                isOpen={showToast}
+                message={toastMsg}
+                duration={3000}
+                onDidDismiss={() => setShowToast(false)}
+            />
         </>
     );
 }
