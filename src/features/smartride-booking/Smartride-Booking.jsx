@@ -87,6 +87,8 @@ export default function SmartRideBooking() {
     const [waitingMinutes, setWaitingMinutes] = useState(0);
     const [distanceKm, setDistanceKm] = useState(0);
     const [boosted, setBoosted] = useState(false);
+    const [paymentHover, setPaymentHover] = useState(false);
+    const [drawerHover, setDrawerHover] = useState('');
 
     useEffect(() => {
         const check = () => setIsMobile(window.innerWidth <= 768);
@@ -1118,7 +1120,17 @@ export default function SmartRideBooking() {
                                         <button
                                             type="button"
                                             onClick={() => setShowPaymentDrawer(true)}
-                                            className="w-full px-4 py-3 rounded-xl bg-white border-2 border-gray-300 text-left flex items-center justify-between hover:border-[#00B75A] transition-all"
+                                            onMouseEnter={() => setPaymentHover(true)}
+                                            onMouseLeave={() => setPaymentHover(false)}
+                                            style={{
+                                                borderWidth: '2px',
+                                                borderStyle: 'solid',
+                                                borderColor: (paymentHover || formData.paymentMethod) ? '#00B75A' : '#E5E7EB',
+                                                backgroundColor: (paymentHover || formData.paymentMethod) ? '#F0FDF4' : '#FFFFFF',
+                                                boxShadow: paymentHover ? '0 0 0 10px rgba(16,185,129,0.12)' : (formData.paymentMethod ? '0 0 0 6px rgba(16,185,129,0.06)' : 'none'),
+                                                outline: 'none'
+                                            }}
+                                            className="w-full px-4 py-3 rounded-xl text-left flex items-center justify-between transition-all"
                                         >
                                             {formData.paymentMethod ? (
                                                 <div className="flex items-center gap-3">
@@ -1222,10 +1234,17 @@ export default function SmartRideBooking() {
                                         type="button"
                                         onClick={() => {
                                             setFormData({ ...formData, paymentMethod: 'cash' });
-                                            setShowPaymentDrawer(false);
+                                            setTimeout(() => setShowPaymentDrawer(false), 150);
                                         }}
-                                        className={`w-full p-4 rounded-xl border-2 text-left transition-all hover:border-[#00B75A] hover:bg-[#F0FDF4]/30 ${formData.paymentMethod === 'cash' ? 'border-[#00B75A] bg-[#F0FDF4]' : 'border-gray-200 bg-white'
-                                            }`}
+                                        style={{
+                                            borderWidth: '2px',
+                                            borderStyle: 'solid',
+                                            borderColor: formData.paymentMethod === 'cash' ? '#00B75A' : '#E5E7EB',
+                                            backgroundColor: formData.paymentMethod === 'cash' ? '#F0FDF4' : '#FFFFFF',
+                                            boxShadow: formData.paymentMethod === 'cash' ? '0 0 0 6px rgba(16,185,129,0.06)' : 'none',
+                                            outline: 'none'
+                                        }}
+                                        className={`w-full p-4 rounded-xl text-left transition-all`}
                                     >
                                         <div className="flex items-center gap-4">
                                             <div className="w-12 h-12 rounded-full bg-[#F0FDF4] flex items-center justify-center flex-shrink-0">
@@ -1250,10 +1269,17 @@ export default function SmartRideBooking() {
                                         type="button"
                                         onClick={() => {
                                             setFormData({ ...formData, paymentMethod: 'card' });
-                                            setShowPaymentDrawer(false);
+                                            setTimeout(() => setShowPaymentDrawer(false), 150);
                                         }}
-                                        className={`w-full p-4 rounded-xl border-2 text-left transition-all hover:border-[#00B75A] hover:bg-[#F0FDF4]/30 ${formData.paymentMethod === 'card' ? 'border-[#00B75A] bg-[#F0FDF4]' : 'border-gray-200 bg-white'
-                                            }`}
+                                        style={{
+                                            borderWidth: '2px',
+                                            borderStyle: 'solid',
+                                            borderColor: formData.paymentMethod === 'card' ? '#00B75A' : '#E5E7EB',
+                                            backgroundColor: formData.paymentMethod === 'card' ? '#F0FDF4' : '#FFFFFF',
+                                            boxShadow: formData.paymentMethod === 'card' ? '0 0 0 6px rgba(16,185,129,0.06)' : 'none',
+                                            outline: 'none'
+                                        }}
+                                        className={`w-full p-4 rounded-xl text-left transition-all`}
                                     >
                                         <div className="flex items-center gap-4">
                                             <div className="w-12 h-12 rounded-full bg-[#F0FDF4] flex items-center justify-center flex-shrink-0">
@@ -1283,10 +1309,17 @@ export default function SmartRideBooking() {
                                         type="button"
                                         onClick={() => {
                                             setFormData({ ...formData, paymentMethod: 'transfer' });
-                                            setShowPaymentDrawer(false);
+                                            setTimeout(() => setShowPaymentDrawer(false), 150);
                                         }}
-                                        className={`w-full p-4 rounded-xl border-2 text-left transition-all hover:border-[#00B75A] hover:bg-[#F0FDF4]/30 ${formData.paymentMethod === 'transfer' ? 'border-[#00B75A] bg-[#F0FDF4]' : 'border-gray-200 bg-white'
-                                            }`}
+                                        style={{
+                                            borderWidth: '2px',
+                                            borderStyle: 'solid',
+                                            borderColor: formData.paymentMethod === 'transfer' ? '#00B75A' : '#E5E7EB',
+                                            backgroundColor: formData.paymentMethod === 'transfer' ? '#F0FDF4' : '#FFFFFF',
+                                            boxShadow: formData.paymentMethod === 'transfer' ? '0 0 0 6px rgba(16,185,129,0.06)' : 'none',
+                                            outline: 'none'
+                                        }}
+                                        className={`w-full p-4 rounded-xl text-left transition-all`}
                                     >
                                         <div className="flex items-center gap-4">
                                             <div className="w-12 h-12 rounded-full bg-[#F0FDF4] flex items-center justify-center flex-shrink-0">
@@ -1306,6 +1339,17 @@ export default function SmartRideBooking() {
                                             )}
                                         </div>
                                     </button>
+                                    <div className="bg-blue-50 border border-blue-200 rounded-xl p-4 mt-6">
+                                        <div className="flex items-start gap-3">
+                                            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" className="flex-shrink-0 mt-0.5">
+                                                <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-6h2v6zm0-8h-2V7h2v2z" fill="#3B82F6" />
+                                            </svg>
+                                            <div className="text-sm text-[#1E40AF]">
+                                                <div className="font-medium mb-1">Secure Payment</div>
+                                                <div>All card payments are processed securely through Paystack. Your payment information is encrypted and never stored on our servers.</div>
+                                            </div>
+                                        </div>
+                                    </div>
                                 </div>
                             </div>
                         </div>
@@ -1829,10 +1873,17 @@ export default function SmartRideBooking() {
                                         setFormData({ ...formData, paymentMethod: 'cash' });
                                         setShowPaymentDrawer(false);
                                     }}
-                                    className={`w-full p-4 rounded-xl border-2 text-left transition-all hover:border-[#00B75A] hover:bg-[#F0FDF4]/30 ${formData.paymentMethod === 'cash'
-                                        ? 'border-[#00B75A] bg-[#F0FDF4]'
-                                        : 'border-gray-200 bg-white'
-                                        }`}
+                                    onMouseEnter={() => setDrawerHover('cash')}
+                                    onMouseLeave={() => setDrawerHover('')}
+                                    style={{
+                                        borderWidth: '2px',
+                                        borderStyle: 'solid',
+                                        borderColor: (formData.paymentMethod === 'cash' || drawerHover === 'cash') ? '#00B75A' : '#E5E7EB',
+                                        backgroundColor: (formData.paymentMethod === 'cash' || drawerHover === 'cash') ? '#F0FDF4' : '#FFFFFF',
+                                        boxShadow: drawerHover === 'cash' ? '0 0 0 10px rgba(16,185,129,0.12)' : (formData.paymentMethod === 'cash' ? '0 0 0 6px rgba(16,185,129,0.06)' : 'none'),
+                                        outline: 'none'
+                                    }}
+                                    className={`w-full p-4 rounded-xl text-left transition-all`}
                                 >
                                     <div className="flex items-center gap-4">
                                         <div className="w-12 h-12 rounded-full bg-[#F0FDF4] flex items-center justify-center flex-shrink-0">
@@ -1860,10 +1911,17 @@ export default function SmartRideBooking() {
                                         setFormData({ ...formData, paymentMethod: 'card' });
                                         setShowPaymentDrawer(false);
                                     }}
-                                    className={`w-full p-4 rounded-xl border-2 text-left transition-all hover:border-[#00B75A] hover:bg-[#F0FDF4]/30 ${formData.paymentMethod === 'card'
-                                        ? 'border-[#00B75A] bg-[#F0FDF4]'
-                                        : 'border-gray-200 bg-white'
-                                        }`}
+                                    onMouseEnter={() => setDrawerHover('card')}
+                                    onMouseLeave={() => setDrawerHover('')}
+                                    style={{
+                                        borderWidth: '2px',
+                                        borderStyle: 'solid',
+                                        borderColor: (formData.paymentMethod === 'card' || drawerHover === 'card') ? '#00B75A' : '#E5E7EB',
+                                        backgroundColor: (formData.paymentMethod === 'card' || drawerHover === 'card') ? '#F0FDF4' : '#FFFFFF',
+                                        boxShadow: drawerHover === 'card' ? '0 0 0 10px rgba(16,185,129,0.12)' : (formData.paymentMethod === 'card' ? '0 0 0 6px rgba(16,185,129,0.06)' : 'none'),
+                                        outline: 'none'
+                                    }}
+                                    className={`w-full p-4 rounded-xl text-left transition-all`}
                                 >
                                     <div className="flex items-center gap-4">
                                         <div className="w-12 h-12 rounded-full bg-[#F0FDF4] flex items-center justify-center flex-shrink-0">
@@ -1896,10 +1954,17 @@ export default function SmartRideBooking() {
                                         setFormData({ ...formData, paymentMethod: 'transfer' });
                                         setShowPaymentDrawer(false);
                                     }}
-                                    className={`w-full p-4 rounded-xl border-2 text-left transition-all hover:border-[#00B75A] hover:bg-[#F0FDF4]/30 ${formData.paymentMethod === 'transfer'
-                                        ? 'border-[#00B75A] bg-[#F0FDF4]'
-                                        : 'border-gray-200 bg-white'
-                                        }`}
+                                    onMouseEnter={() => setDrawerHover('transfer')}
+                                    onMouseLeave={() => setDrawerHover('')}
+                                    style={{
+                                        borderWidth: '2px',
+                                        borderStyle: 'solid',
+                                        borderColor: (formData.paymentMethod === 'transfer' || drawerHover === 'transfer') ? '#00B75A' : '#E5E7EB',
+                                        backgroundColor: (formData.paymentMethod === 'transfer' || drawerHover === 'transfer') ? '#F0FDF4' : '#FFFFFF',
+                                        boxShadow: drawerHover === 'transfer' ? '0 0 0 10px rgba(16,185,129,0.12)' : (formData.paymentMethod === 'transfer' ? '0 0 0 6px rgba(16,185,129,0.06)' : 'none'),
+                                        outline: 'none'
+                                    }}
+                                    className={`w-full p-4 rounded-xl text-left transition-all`}
                                 >
                                     <div className="flex items-center gap-4">
                                         <div className="w-12 h-12 rounded-full bg-[#F0FDF4] flex items-center justify-center flex-shrink-0">
@@ -1919,6 +1984,17 @@ export default function SmartRideBooking() {
                                         )}
                                     </div>
                                 </button>
+                                <div className="bg-blue-50 border border-blue-200 rounded-xl p-4 mt-6">
+                                    <div className="flex items-start gap-3">
+                                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" className="flex-shrink-0 mt-0.5">
+                                            <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-6h2v6zm0-8h-2V7h2v2z" fill="#3B82F6" />
+                                        </svg>
+                                        <div className="text-sm text-[#1E40AF]">
+                                            <div className="font-medium mb-1">Secure Payment</div>
+                                            <div>All card payments are processed securely through Paystack. Your payment information is encrypted and never stored on our servers.</div>
+                                        </div>
+                                    </div>
+                                </div>
                             </div>
                         </YummyText>
                     </div>

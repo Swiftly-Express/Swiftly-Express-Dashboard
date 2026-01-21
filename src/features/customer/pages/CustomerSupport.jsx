@@ -59,7 +59,7 @@ const Support = () => {
     },
     {
       question: 'Is my package insured?',
-      answer: 'Yes, all packages are automatically insured up to $100. Additional insurance can be purchased for high-value items. Coverage details are available in your rider agreement.'
+      answer: 'Yes, all packages are automatically insured up to ₦100. Additional insurance can be purchased for high-value items. Coverage details are available in your rider agreement.'
     }
   ];
 

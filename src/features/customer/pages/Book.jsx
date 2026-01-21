@@ -96,6 +96,8 @@ const Book = () => {
   const [showPaymentDrawer, setShowPaymentDrawer] = useState(false);
   const [selectedPaymentMethod, setSelectedPaymentMethod] = useState('cash');
   const [isMobile, setIsMobile] = useState(false);
+  const [paymentHover, setPaymentHover] = useState(false);
+  const [drawerHover, setDrawerHover] = useState('');
   const [isPriority, setIsPriority] = useState(false);
   const [isSpecialErrand, setIsSpecialErrand] = useState(false);
   const [waitingMinutes, setWaitingMinutes] = useState(0);
@@ -1291,7 +1293,17 @@ const Book = () => {
                     <button
                       type="button"
                       onClick={() => setShowPaymentDrawer(true)}
-                      className="w-full px-5 py-1 rounded-full  border-2 !border-[#1E1E1E] hover:border-[#00B75A] text-sm md:text-base focus:outline-none focus:ring-2 focus:ring-[#00B75A] transition-all text-left flex items-center justify-between group"
+                      onMouseEnter={() => setPaymentHover(true)}
+                      onMouseLeave={() => setPaymentHover(false)}
+                      style={{
+                        borderWidth: '2px',
+                        borderStyle: 'solid',
+                        borderColor: (paymentHover || formData.paymentMethod) ? '#00B75A' : '#E5E7EB',
+                        backgroundColor: (paymentHover || formData.paymentMethod) ? '#F0FDF4' : '#FFFFFF',
+                        boxShadow: paymentHover ? '0 0 0 10px rgba(16,185,129,0.12)' : (formData.paymentMethod ? '0 0 0 6px rgba(16,185,129,0.06)' : 'none'),
+                        outline: 'none'
+                      }}
+                      className="w-full px-5 py-1 rounded-full text-sm md:text-base transition-all text-left flex items-center justify-between group"
                     >
                       <div className="flex items-center gap-3">
                         {formData.paymentMethod === 'cash' && (
@@ -1462,12 +1474,19 @@ const Book = () => {
                   <button
                     onClick={() => {
                       setFormData({ ...formData, paymentMethod: 'cash' });
-                      setShowPaymentDrawer(false);
+                      setTimeout(() => setShowPaymentDrawer(false), 150);
                     }}
-                    className={`w-full p-4 rounded-xl border-2 mb-4 transition-all ${formData.paymentMethod === 'cash'
-                      ? 'border-[#00B75A] bg-[#F0FDF4]'
-                      : 'border-gray-200 hover:border-gray-300'
-                      }`}
+                    onMouseEnter={() => setDrawerHover('cash')}
+                    onMouseLeave={() => setDrawerHover('')}
+                    style={{
+                      borderWidth: '2px',
+                      borderStyle: 'solid',
+                      borderColor: (formData.paymentMethod === 'cash' || drawerHover === 'cash') ? '#00B75A' : '#E5E7EB',
+                      backgroundColor: (formData.paymentMethod === 'cash' || drawerHover === 'cash') ? '#F0FDF4' : '#FFFFFF',
+                      boxShadow: drawerHover === 'cash' ? '0 0 0 10px rgba(16,185,129,0.12)' : (formData.paymentMethod === 'cash' ? '0 0 0 6px rgba(16,185,129,0.06)' : 'none'),
+                      outline: 'none'
+                    }}
+                    className={`w-full p-4 rounded-xl mb-4 transition-all`}
                   >
                     <div className="flex items-start gap-4">
                       <div className={`w-12 h-12 rounded-full flex items-center justify-center ${formData.paymentMethod === 'cash' ? 'bg-[#00B75A]' : 'bg-gray-100'
@@ -1489,12 +1508,19 @@ const Book = () => {
                   <button
                     onClick={() => {
                       setFormData({ ...formData, paymentMethod: 'card' });
-                      setShowPaymentDrawer(false);
+                      setTimeout(() => setShowPaymentDrawer(false), 150);
                     }}
-                    className={`w-full p-4 rounded-xl border-2 mb-4 transition-all ${formData.paymentMethod === 'card'
-                      ? 'border-[#00B75A] bg-[#F0FDF4]'
-                      : 'border-gray-200 hover:border-gray-300'
-                      }`}
+                    onMouseEnter={() => setDrawerHover('card')}
+                    onMouseLeave={() => setDrawerHover('')}
+                    style={{
+                      borderWidth: '2px',
+                      borderStyle: 'solid',
+                      borderColor: (formData.paymentMethod === 'card' || drawerHover === 'card') ? '#00B75A' : '#E5E7EB',
+                      backgroundColor: (formData.paymentMethod === 'card' || drawerHover === 'card') ? '#F0FDF4' : '#FFFFFF',
+                      boxShadow: drawerHover === 'card' ? '0 0 0 10px rgba(16,185,129,0.12)' : (formData.paymentMethod === 'card' ? '0 0 0 6px rgba(16,185,129,0.06)' : 'none'),
+                      outline: 'none'
+                    }}
+                    className={`w-full p-4 rounded-xl mb-4 transition-all`}
                   >
                     <div className="flex items-start gap-4">
                       <div className={`w-12 h-12 rounded-full flex items-center justify-center ${formData.paymentMethod === 'card' ? 'bg-[#00B75A]' : 'bg-gray-100'
@@ -1523,12 +1549,19 @@ const Book = () => {
                   <button
                     onClick={() => {
                       setFormData({ ...formData, paymentMethod: 'transfer' });
-                      setShowPaymentDrawer(false);
+                      setTimeout(() => setShowPaymentDrawer(false), 150);
                     }}
-                    className={`w-full p-4 rounded-xl border-2 mb-4 transition-all ${formData.paymentMethod === 'transfer'
-                      ? 'border-[#00B75A] bg-[#F0FDF4]'
-                      : 'border-gray-200 hover:border-gray-300'
-                      }`}
+                    onMouseEnter={() => setDrawerHover('transfer')}
+                    onMouseLeave={() => setDrawerHover('')}
+                    style={{
+                      borderWidth: '2px',
+                      borderStyle: 'solid',
+                      borderColor: (formData.paymentMethod === 'transfer' || drawerHover === 'transfer') ? '#00B75A' : '#E5E7EB',
+                      backgroundColor: (formData.paymentMethod === 'transfer' || drawerHover === 'transfer') ? '#F0FDF4' : '#FFFFFF',
+                      boxShadow: drawerHover === 'transfer' ? '0 0 0 10px rgba(16,185,129,0.12)' : (formData.paymentMethod === 'transfer' ? '0 0 0 6px rgba(16,185,129,0.06)' : 'none'),
+                      outline: 'none'
+                    }}
+                    className={`w-full p-4 rounded-xl mb-4 transition-all`}
                   >
                     <div className="flex items-start gap-4">
                       <div className={`w-12 h-12 rounded-full flex items-center justify-center ${formData.paymentMethod === 'transfer' ? 'bg-[#00B75A]' : 'bg-gray-100'
