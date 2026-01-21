@@ -1287,9 +1287,9 @@ const Book = () => {
                     </div>
                   </div>
 
-                  {/* Payment Method - Redesigned */}
+                  {/* Payment Method - exact copy from SmartRide */}
                   <div className="mb-6">
-                    <label className="block text-sm font-medium text-[#0F172A] mb-3">Payment Method</label>
+                    <label className="block text-sm font-medium text-[#0F172A] mb-2">Payment Method</label>
                     <button
                       type="button"
                       onClick={() => setShowPaymentDrawer(true)}
@@ -1303,52 +1303,62 @@ const Book = () => {
                         boxShadow: paymentHover ? '0 0 0 10px rgba(16,185,129,0.12)' : (formData.paymentMethod ? '0 0 0 6px rgba(16,185,129,0.06)' : 'none'),
                         outline: 'none'
                       }}
-                      className="w-full px-5 py-1 rounded-full text-sm md:text-base transition-all text-left flex items-center justify-between group"
+                      className="w-full px-4 py-3 rounded-xl text-left flex items-center justify-between transition-all"
                     >
-                      <div className="flex items-center gap-3">
-                        {formData.paymentMethod === 'cash' && (
-                          <>
-                            <div className="w-10 h-10 rounded-full bg-[#F0FDF4] flex items-center justify-center">
-                              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                                <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-2h2v2zm0-4h-2V7h2v6z" fill="#00B75A" />
-                              </svg>
-                            </div>
-                            <span className="font-medium text-[#0F172A]">Cash on Delivery</span>
-                          </>
-                        )}
-                        {formData.paymentMethod === 'card' && (
-                          <>
-                            <div className="w-10 h-10 rounded-full bg-[#F0FDF4] flex items-center justify-center">
-                              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                                <path d="M20 4H4c-1.11 0-1.99.89-1.99 2L2 18c0 1.11.89 2 2 2h16c1.11 0 2-.89 2-2V6c0-1.11-.89-2-2-2zm0 14H4v-6h16v6zm0-10H4V6h16v2z" fill="#00B75A" />
-                              </svg>
-                            </div>
-                            <span className="font-medium text-[#0F172A]">Pay Online</span>
-                          </>
-                        )}
-                        {formData.paymentMethod === 'transfer' && (
-                          <>
-                            <div className="w-10 h-10 rounded-full bg-[#F0FDF4] flex items-center justify-center">
-                              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                                <path d="M11.8 10.9c-2.27-.59-3-1.2-3-2.15 0-1.09 1.01-1.85 2.7-1.85 1.78 0 2.44.85 2.5 2.1h2.21c-.07-1.72-1.12-3.3-3.21-3.81V3h-3v2.16c-1.94.42-3.5 1.68-3.5 3.61 0 2.31 1.91 3.46 4.7 4.13 2.5.6 3 1.48 3 2.41 0 .69-.49 1.79-2.7 1.79-2.06 0-2.87-.92-2.98-2.1h-2.2c.12 2.19 1.76 3.42 3.68 3.83V21h3v-2.15c1.95-.37 3.5-1.5 3.5-3.55 0-2.84-2.43-3.81-4.7-4.4z" fill="#00B75A" />
-                              </svg>
-                            </div>
-                            <span className="font-medium text-[#0F172A]">Bank Transfer</span>
-                          </>
-                        )}
-                        {!formData.paymentMethod && (
-                          <>
-                            <div className="w-10 h-10 rounded-full bg-gray-100 flex items-center justify-center">
-                              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                                <path d="M20 4H4c-1.11 0-1.99.89-1.99 2L2 18c0 1.11.89 2 2 2h16c1.11 0 2-.89 2-2V6c0-1.11-.89-2-2-2zm0 14H4v-6h16v6zm0-10H4V6h16v2z" fill="#94A3B8" />
-                              </svg>
-                            </div>
-                            <span className="text-[#94A3B8]">Select payment method</span>
-                          </>
-                        )}
-                      </div>
-                      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" className="group-hover:translate-x-1 transition-transform">
-                        <path d="M9 5l7 7-7 7" stroke="#64748B" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+                      {formData.paymentMethod ? (
+                        <div className="flex items-center gap-3">
+                          {formData.paymentMethod === 'cash' && (
+                            <>
+                              <div className="w-10 h-10 rounded-full bg-[#F0FDF4] flex items-center justify-center">
+                                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#00B75A" strokeWidth="2">
+                                  <rect x="2" y="5" width="20" height="14" rx="2" />
+                                  <circle cx="12" cy="12" r="3" />
+                                </svg>
+                              </div>
+                              <div>
+                                <p className="text-sm font-medium text-[#0F172A]">Cash on Delivery</p>
+                                <p className="text-xs text-[#64748B]">Pay with cash when delivered</p>
+                              </div>
+                            </>
+                          )}
+                          {formData.paymentMethod === 'card' && (
+                            <>
+                              <div className="w-10 h-10 rounded-full bg-[#F0FDF4] flex items-center justify-center">
+                                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#00B75A" strokeWidth="2">
+                                  <rect x="1" y="4" width="22" height="16" rx="2" ry="2" />
+                                  <line x1="1" y1="10" x2="23" y2="10" />
+                                </svg>
+                              </div>
+                              <div>
+                                <p className="text-sm font-medium text-[#0F172A]">Pay Online (Card)</p>
+                                <div className="flex items-center gap-1.5 mt-1">
+                                  <img src="https://upload.wikimedia.org/wikipedia/commons/0/04/Visa.svg" alt="Visa" className="h-4" />
+                                  <img src="https://upload.wikimedia.org/wikipedia/commons/2/2a/Mastercard-logo.svg" alt="Mastercard" className="h-4" />
+                                  <span className="text-xs text-[#64748B]">Verve</span>
+                                </div>
+                              </div>
+                            </>
+                          )}
+                          {formData.paymentMethod === 'transfer' && (
+                            <>
+                              <div className="w-10 h-10 rounded-full bg-[#F0FDF4] flex items-center justify-center">
+                                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#00B75A" strokeWidth="2">
+                                  <line x1="12" y1="1" x2="12" y2="23" />
+                                  <path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6" />
+                                </svg>
+                              </div>
+                              <div>
+                                <p className="text-sm font-medium text-[#0F172A]">Bank Transfer</p>
+                                <p className="text-xs text-[#64748B]">Transfer to our account</p>
+                              </div>
+                            </>
+                          )}
+                        </div>
+                      ) : (
+                        <span className="text-[#94A3B8]">Select payment method</span>
+                      )}
+                      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#94A3B8" strokeWidth="2">
+                        <polyline points="6 9 12 15 18 9" />
                       </svg>
                     </button>
                   </div>
@@ -1611,12 +1621,19 @@ const Book = () => {
                     <button
                       onClick={() => {
                         setFormData({ ...formData, paymentMethod: 'cash' });
-                        setShowPaymentDrawer(false);
+                        setTimeout(() => setShowPaymentDrawer(false), 150);
                       }}
-                      className={`w-full p-4 rounded-xl border-2 mb-4 transition-all ${formData.paymentMethod === 'cash'
-                        ? 'border-[#00B75A] bg-[#F0FDF4]'
-                        : 'border-gray-200 hover:border-gray-300'
-                        }`}
+                      onMouseEnter={() => setDrawerHover('cash')}
+                      onMouseLeave={() => setDrawerHover('')}
+                      style={{
+                        borderWidth: '2px',
+                        borderStyle: 'solid',
+                        borderColor: (formData.paymentMethod === 'cash' || drawerHover === 'cash') ? '#00B75A' : '#E5E7EB',
+                        backgroundColor: (formData.paymentMethod === 'cash' || drawerHover === 'cash') ? '#F0FDF4' : '#FFFFFF',
+                        boxShadow: drawerHover === 'cash' ? '0 0 0 10px rgba(16,185,129,0.12)' : (formData.paymentMethod === 'cash' ? '0 0 0 6px rgba(16,185,129,0.06)' : 'none'),
+                        outline: 'none'
+                      }}
+                      className={`w-full p-4 rounded-xl mb-4 transition-all`}
                     >
                       <div className="flex items-start gap-4">
                         <div className={`w-12 h-12 rounded-full flex items-center justify-center ${formData.paymentMethod === 'cash' ? 'bg-[#00B75A]' : 'bg-gray-100'
@@ -1638,12 +1655,19 @@ const Book = () => {
                     <button
                       onClick={() => {
                         setFormData({ ...formData, paymentMethod: 'card' });
-                        setShowPaymentDrawer(false);
+                        setTimeout(() => setShowPaymentDrawer(false), 150);
                       }}
-                      className={`w-full p-4 rounded-xl border-2 mb-4 transition-all ${formData.paymentMethod === 'card'
-                        ? 'border-[#00B75A] bg-[#F0FDF4]'
-                        : 'border-gray-200 hover:border-gray-300'
-                        }`}
+                      onMouseEnter={() => setDrawerHover('card')}
+                      onMouseLeave={() => setDrawerHover('')}
+                      style={{
+                        borderWidth: '2px',
+                        borderStyle: 'solid',
+                        borderColor: (formData.paymentMethod === 'card' || drawerHover === 'card') ? '#00B75A' : '#E5E7EB',
+                        backgroundColor: (formData.paymentMethod === 'card' || drawerHover === 'card') ? '#F0FDF4' : '#FFFFFF',
+                        boxShadow: drawerHover === 'card' ? '0 0 0 10px rgba(16,185,129,0.12)' : (formData.paymentMethod === 'card' ? '0 0 0 6px rgba(16,185,129,0.06)' : 'none'),
+                        outline: 'none'
+                      }}
+                      className={`w-full p-4 rounded-xl mb-4 transition-all`}
                     >
                       <div className="flex items-start gap-4">
                         <div className={`w-12 h-12 rounded-full flex items-center justify-center ${formData.paymentMethod === 'card' ? 'bg-[#00B75A]' : 'bg-gray-100'
@@ -1672,12 +1696,19 @@ const Book = () => {
                     <button
                       onClick={() => {
                         setFormData({ ...formData, paymentMethod: 'transfer' });
-                        setShowPaymentDrawer(false);
+                        setTimeout(() => setShowPaymentDrawer(false), 150);
                       }}
-                      className={`w-full p-4 rounded-xl border-2 mb-4 transition-all ${formData.paymentMethod === 'transfer'
-                        ? 'border-[#00B75A] bg-[#F0FDF4]'
-                        : 'border-gray-200 hover:border-gray-300'
-                        }`}
+                      onMouseEnter={() => setDrawerHover('transfer')}
+                      onMouseLeave={() => setDrawerHover('')}
+                      style={{
+                        borderWidth: '2px',
+                        borderStyle: 'solid',
+                        borderColor: (formData.paymentMethod === 'transfer' || drawerHover === 'transfer') ? '#00B75A' : '#E5E7EB',
+                        backgroundColor: (formData.paymentMethod === 'transfer' || drawerHover === 'transfer') ? '#F0FDF4' : '#FFFFFF',
+                        boxShadow: drawerHover === 'transfer' ? '0 0 0 10px rgba(16,185,129,0.12)' : (formData.paymentMethod === 'transfer' ? '0 0 0 6px rgba(16,185,129,0.06)' : 'none'),
+                        outline: 'none'
+                      }}
+                      className={`w-full p-4 rounded-xl mb-4 transition-all`}
                     >
                       <div className="flex items-start gap-4">
                         <div className={`w-12 h-12 rounded-full flex items-center justify-center ${formData.paymentMethod === 'transfer' ? 'bg-[#00B75A]' : 'bg-gray-100'
