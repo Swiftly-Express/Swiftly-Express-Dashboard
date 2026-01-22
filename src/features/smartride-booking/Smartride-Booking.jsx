@@ -10,7 +10,7 @@ import GoogleMap from '../../components/TrackingMap';
 import GoogleMapsAutocomplete from '../../components/GoogleMapsAutocomplete';
 import axios from 'axios';
 import { getCookie, setCookie, deleteCookie } from '../../utils/cookies';
-import { createDelivery, cancelDelivery } from '../../utils/authApi';
+import { createDelivery, cancelDelivery, isAuthenticated } from '../../utils/authApi';
 import { calculateDistance, calculateDeliveryPrice } from '../../utils/pricing';
 
 const API_BASE = import.meta.env.VITE_API_BASE_URL || 'https://api.swiftlyxpress.com';
@@ -41,7 +41,7 @@ const sideBottomShadow = {
     boxShadow: '2px 2px 4px rgba(0,0,0,0.06), -2px 2px 4px rgba(0,0,0,0.06), 0 4px 8px rgba(0,0,0,0.08)'
 };
 
-export default function SmartRideBooking() {
+export default function SmartRideBooking({ embedMode = false, initialData = {}, onClose = null }) {
     const router = useIonRouter();
     const [currentStep, setCurrentStep] = useState('form');
     const [isSearching, setIsSearching] = useState(false);
@@ -51,7 +51,7 @@ export default function SmartRideBooking() {
     const [showFineTuneInfo, setShowFineTuneInfo] = useState(false);
 
     const [formData, setFormData] = useState({
-        deliveryType: 'Smart Ride',
+        deliveryType: 'smart_ride',
         senderName: '',
         senderPhone: '',
         pickupAddress: '',
@@ -69,11 +69,11 @@ export default function SmartRideBooking() {
         sizeScale: 100,
         weight: '',
         packageDescription: '',
-        declaredValue: '',
         // Payment and image fields
         image: null,
         paymentMethod: '',
-        paymentNotes: ''
+        paymentNotes: '',
+        ...initialData
     });
 
     const [showPaymentDrawer, setShowPaymentDrawer] = useState(false);
@@ -125,6 +125,32 @@ export default function SmartRideBooking() {
 
         window.addEventListener('message', handlePaymentMessage);
         return () => window.removeEventListener('message', handlePaymentMessage);
+    }, [router]);
+
+    // Add this at the top of SmartRideBooking component, right after the state declarations
+
+    useEffect(() => {
+        // Check if user came from public page via returnUrl after authentication
+        const urlParams = new URLSearchParams(window.location.search);
+        const returnUrl = urlParams.get('returnUrl');
+
+        if (returnUrl) {
+            // Clear the returnUrl from URL to avoid confusion
+            window.history.replaceState({}, '', window.location.pathname);
+
+            // Show a welcome toast for new users who just signed up
+            setToastMsg('Welcome! Let\'s book your delivery 🎉');
+            setShowToast(true);
+        }
+
+        // Verify authentication status
+        if (!isAuthenticated()) {
+            setToastMsg('Please log in to book a delivery');
+            setShowToast(true);
+            setTimeout(() => {
+                router.push('/auth/customer/login?returnUrl=/customer/smartride-booking', 'root', 'replace');
+            }, 2000);
+        }
     }, [router]);
 
     const handleChange = (e) => {

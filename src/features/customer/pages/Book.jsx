@@ -11,6 +11,7 @@ import CustomerLayout from '../components/CustomerLayout';
 import { YummyText } from '../../../components/YummyText';
 import { createDelivery, isAuthenticated, cancelDelivery } from '../../../utils/authApi';
 import { calculateDistance, calculateDeliveryPrice } from '../../../utils/pricing';
+import SmartRideBooking from '../../smartride-booking/Smartride-Booking';
 import axios from 'axios';
 import { getCookie, setCookie, setJSONCookie, getJSONCookie, deleteCookie } from '../../../utils/cookies';
 
@@ -113,9 +114,18 @@ const Book = () => {
   const selectedDeliveryType = deliveryTypes.find(t => t.value === formData.deliveryType);
 
   const handleDeliveryTypeSelect = (value) => {
-    // If user selected Smart Ride, redirect to Smart Ride booking page
+    // If user selected Smart Ride, open Smart Ride inline on this page
     if (value === 'smart_ride') {
-      router.push('/customer/smartride-booking', 'forward', 'push');
+      setFormData({ ...formData, deliveryType: value });
+      setShowDeliveryTypeModal(false);
+      // update URL so state is shareable
+      try {
+        const url = `${window.location.pathname}?delivery=smart_ride`;
+        window.history.pushState({}, '', url);
+      } catch (e) {
+        // ignore
+      }
+      setShowSmartRide(true);
       return;
     }
 
@@ -150,6 +160,22 @@ const Book = () => {
     window.addEventListener('message', handlePaymentMessage);
     return () => window.removeEventListener('message', handlePaymentMessage);
   }, [router]);
+
+  // Inline SmartRide state: open if ?delivery=smart_ride present
+  const [showSmartRide, setShowSmartRide] = useState(false);
+
+  useEffect(() => {
+    const sp = new URLSearchParams(window.location.search);
+    if (sp.get('delivery') === 'smart_ride') setShowSmartRide(true);
+
+    const onPop = () => {
+      const p = new URLSearchParams(window.location.search);
+      setShowSmartRide(p.get('delivery') === 'smart_ride');
+    };
+
+    window.addEventListener('popstate', onPop);
+    return () => window.removeEventListener('popstate', onPop);
+  }, []);
 
   useEffect(() => {
     const check = () => setIsMobile(window.innerWidth <= 768);
@@ -697,6 +723,40 @@ const Book = () => {
             position="top"
           />
 
+          {/* Inline SmartRide: replaces booking form when active */}
+          {showSmartRide && (
+            <div className="bg-white rounded-2xl p-4 md:p-6 mb-6" style={sideBottomShadow}>
+              <div className="flex items-center justify-between mb-4">
+                <YummyText className="text-lg md:text-xl font-normal text-[#0F172A]">Smart Ride</YummyText>
+                <button
+                  onClick={() => {
+                    setShowSmartRide(false);
+                    try { window.history.replaceState({}, '', window.location.pathname); } catch (e) { }
+                  }}
+                  className="p-2 rounded-full hover:bg-gray-100 transition-colors"
+                >
+                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <path d="M18 6L6 18M6 6l12 12" stroke="#64748B" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+                  </svg>
+                </button>
+              </div>
+
+              <SmartRideBooking embedMode={true} initialData={{
+                senderName: formData.senderName,
+                senderPhone: formData.senderPhone,
+                pickupAddress: formData.pickupStreet || formData.pickupAddress || '',
+                deliveryAddress: formData.deliveryStreet || formData.deliveryAddress || '',
+                pickupDate: formData.pickupDate,
+                recipientEmail: formData.recipientEmail,
+                packageDescription: formData.packageDescription,
+                image: formData.image
+              }} onClose={() => {
+                setShowSmartRide(false);
+                try { window.history.replaceState({}, '', window.location.pathname); } catch (e) { }
+              }} />
+            </div>
+          )}
+
           {/* Header */}
           <div className="mb-4 md:mb-8 mt-4 sm:mt-0 md:mt-0">
             <YummyText className="text-2xl md:text-3xl  font-medium text-[#0F172A] mb-2 text-left md:text-left">
@@ -708,7 +768,7 @@ const Book = () => {
           </div>
 
           <YummyText>
-            <div>
+            <div style={{ display: showSmartRide ? 'none' : 'block' }}>
               <div className="bg-white rounded-2xl p-4 md:p-6 mb-6" style={sideBottomShadow}>
                 {/* Section Title */}
                 <div className="mb-4 md:mb-6">

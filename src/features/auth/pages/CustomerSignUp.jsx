@@ -1,5 +1,5 @@
-import { IonPage, IonContent, useIonRouter } from '@ionic/react';
-import React, { useState } from 'react';
+import { IonPage, IonContent, useIonRouter, IonToast } from '@ionic/react';
+import React, { useState, useEffect } from 'react';
 import { IonIcon } from '@ionic/react';
 import { YummyText } from '../../../components/YummyText';
 import Button from '../../../components/Button';
@@ -17,8 +17,34 @@ const CustomerSignUp = () => {
     confirmPassword: ''
   });
   const [error, setError] = useState('');
-
   const [loading, setLoading] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+  const [googleLoading, setGoogleLoading] = useState(false);
+  const [toastMsg, setToastMsg] = useState('');
+  const [showToast, setShowToast] = useState(false);
+
+  // Handle returnUrl from authentication flow
+  useEffect(() => {
+    const urlParams = new URLSearchParams(window.location.search);
+    const returnUrl = urlParams.get('returnUrl');
+    
+    if (returnUrl) {
+      // Store returnUrl in sessionStorage so we can use it after signup
+      sessionStorage.setItem('auth_return_url', returnUrl);
+      
+      // Clean up URL
+      window.history.replaceState({}, '', window.location.pathname);
+    }
+  }, []);
+
+  // Public site URL helper - production always uses NEXT_PUBLIC_BASE_URL (or default), dev uses NEXT_PUBLIC_SITE_URL
+  const getPublicSiteUrl = () => {
+    const prodEnv = import.meta.env.NEXT_PUBLIC_BASE_URL || import.meta.env.VITE_PUBLIC_BASE_URL || 'https://swiftlyxpress.com';
+    const devEnv = import.meta.env.NEXT_PUBLIC_SITE_URL || import.meta.env.VITE_PUBLIC_SITE_URL || 'http://localhost:3000';
+    const isDev = Boolean(import.meta.env.DEV);
+    return (isDev ? devEnv.replace(/\/$/, '') : prodEnv.replace(/\/$/, ''));
+  };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -29,13 +55,7 @@ const CustomerSignUp = () => {
     const emailVal = (formData.email || '').toString().trim();
     const passwordVal = (formData.password || '').toString();
     const confirmVal = (formData.confirmPassword || '').toString();
-    // Public site URL helper - production always uses NEXT_PUBLIC_BASE_URL (or default), dev uses NEXT_PUBLIC_SITE_URL
-    const getPublicSiteUrl = () => {
-      const prodEnv = import.meta.env.NEXT_PUBLIC_BASE_URL || import.meta.env.VITE_PUBLIC_BASE_URL || 'https://swiftlyxpress.com';
-      const devEnv = import.meta.env.NEXT_PUBLIC_SITE_URL || import.meta.env.VITE_PUBLIC_SITE_URL || 'http://localhost:3000';
-      const isDev = Boolean(import.meta.env.DEV);
-      return (isDev ? devEnv.replace(/\/$/, '') : prodEnv.replace(/\/$/, ''));
-    };
+
     if (!passwordVal) {
       setError('Please enter a password');
       return;
@@ -90,11 +110,39 @@ const CustomerSignUp = () => {
         // ignore
       }
 
+      // Check for returnUrl and redirect accordingly
+      const returnUrl = sessionStorage.getItem('auth_return_url');
+      
       if (document && document.activeElement) document.activeElement.blur();
+      
+      if (returnUrl) {
+        // Store returnUrl so verify-email page can use it after verification
+        sessionStorage.setItem('post_verification_url', returnUrl);
+        console.log('[CustomerSignUp] Stored returnUrl for post-verification:', returnUrl);
+      }
+      
       router.push('/auth/verify-email', 'forward', 'push');
     } catch (err) {
       console.error('Customer registration failed', err);
-      setError(err?.message || 'Registration failed. Please try again.');
+      
+      // Check if user already exists
+      if (err?.status === 409 || err?.message?.toLowerCase().includes('already exists') || err?.message?.toLowerCase().includes('exist')) {
+        setToastMsg('Account already exists! Redirecting to login...');
+        setShowToast(true);
+        
+        // Redirect to login with returnUrl if it exists
+        const returnUrl = sessionStorage.getItem('auth_return_url');
+        
+        setTimeout(() => {
+          if (returnUrl) {
+            router.push(`/auth/customer/login?returnUrl=${encodeURIComponent(returnUrl)}`, 'root', 'replace');
+          } else {
+            router.push('/auth/customer/login', 'root', 'replace');
+          }
+        }, 2000);
+      } else {
+        setError(err?.message || 'Registration failed. Please try again.');
+      }
     } finally {
       setLoading(false);
     }
@@ -109,12 +157,14 @@ const CustomerSignUp = () => {
   };
 
   const handleSignIn = () => {
-    router.push('/auth/customer/login', 'back', 'pop');
+    // Check if there's a returnUrl we should pass along
+    const returnUrl = sessionStorage.getItem('auth_return_url');
+    if (returnUrl) {
+      router.push(`/auth/customer/login?returnUrl=${encodeURIComponent(returnUrl)}`, 'back', 'pop');
+    } else {
+      router.push('/auth/customer/login', 'back', 'pop');
+    }
   };
-
-  const [showPassword, setShowPassword] = useState(false);
-  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
-  const [googleLoading, setGoogleLoading] = useState(false);
 
   // Ensure API base is absolute. If VITE_API_BASE_URL is set to a relative path
   // (e.g. '/') in dev, convert it to an absolute URL so window.location.href
@@ -123,17 +173,6 @@ const CustomerSignUp = () => {
   const apiBase = (typeof window !== 'undefined' && rawBase.startsWith('/'))
     ? `${window.location.origin.replace(/\/$/, '')}${rawBase.replace(/\/$/, '')}`
     : rawBase.replace(/\/$/, '');
-  const googleAuthUrl = `${apiBase}/api/auth/google?role=customer`;
-
-  // Robust public site URL helper - prefer explicit production config, then current origin, then dev fallback
-  const getPublicSiteUrl = () => {
-    const prodEnv = import.meta.env.NEXT_PUBLIC_BASE_URL || import.meta.env.VITE_PUBLIC_BASE_URL || 'https://swiftlyxpress.com';
-    const devEnv = import.meta.env.NEXT_PUBLIC_SITE_URL || import.meta.env.VITE_PUBLIC_SITE_URL || 'http://localhost:3000';
-
-    if (prodEnv && !/localhost/i.test(prodEnv)) return prodEnv.replace(/\/$/, '');
-    if (typeof window !== 'undefined' && window.location && !window.location.hostname.includes('localhost')) return window.location.origin.replace(/\/$/, '');
-    return devEnv.replace(/\/$/, '');
-  };
 
   const handleGoogleSignup = (e) => {
     e.preventDefault();
@@ -141,8 +180,17 @@ const CustomerSignUp = () => {
     if (el) {
       el.classList.add('scale-95', 'opacity-90');
     }
-    console.log('[CustomerSignUp] Redirecting to:', googleAuthUrl);
+    
     setGoogleLoading(true);
+    
+    // Include returnUrl in Google OAuth if it exists
+    const returnUrl = sessionStorage.getItem('auth_return_url');
+    const googleAuthUrl = returnUrl 
+      ? `${apiBase}/api/auth/google?role=customer&returnUrl=${encodeURIComponent(returnUrl)}`
+      : `${apiBase}/api/auth/google?role=customer`;
+    
+    console.log('[CustomerSignUp] Redirecting to:', googleAuthUrl);
+    
     // let the gradient ring be visible briefly before leaving
     setTimeout(() => {
       window.location.href = googleAuthUrl;
@@ -152,6 +200,13 @@ const CustomerSignUp = () => {
   return (
     <IonPage>
       <IonContent className="ion-no-padding">
+        <IonToast
+          isOpen={showToast}
+          onDidDismiss={() => setShowToast(false)}
+          message={toastMsg}
+          duration={3000}
+          position="top"
+        />
         <div className="bg-white min-h-screen justify-between grid grid-cols-1 lg:grid-cols-2 mx-auto py-6 lg:py-12 px-6 gap-6">
           {/* Left Side - Form */}
           <div className="flex items-center justify-center lg:pr-2 lg:pl-8">
@@ -293,19 +348,21 @@ const CustomerSignUp = () => {
                   </div>
                 </YummyText>
 
-                {/* Create Account Button */}
+                {/* Error Display */}
                 {error && (
-                  <div className="text-red-500 text-sm mb-4 text-center">
+                  <div className="text-red-500 text-sm mb-4 text-center p-3 bg-red-50 rounded-lg">
                     {error}
                   </div>
                 )}
+
+                {/* Create Account Button */}
                 <Button
                   variant="primary"
                   onClick={handleSubmit}
-                  className={`!w-full !py-3 !bg-[#00B75A] text-sm !text-white rounded-full transition-all duration-300 ${formData.agreeToTerms ? 'hover:!bg-[#00D68F] opacity-100' : 'opacity-50 cursor-not-allowed'}`}
-                  disabled={!formData.agreeToTerms}
+                  disabled={!formData.agreeToTerms || loading}
+                  className={`!w-full !py-3 !bg-[#00B75A] text-sm !text-white rounded-full transition-all duration-300 ${formData.agreeToTerms && !loading ? 'hover:!bg-[#00D68F] opacity-100' : 'opacity-50 cursor-not-allowed'}`}
                 >
-                  <YummyText>Create Account</YummyText>
+                  <YummyText>{loading ? 'Creating Account...' : 'Create Account'}</YummyText>
                 </Button>
 
                 {/* Divider */}
