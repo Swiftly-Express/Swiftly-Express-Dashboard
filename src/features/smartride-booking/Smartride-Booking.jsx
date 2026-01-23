@@ -530,9 +530,13 @@ export default function SmartRideBooking({ embedMode = false, initialData = {}, 
                     <div className="bg-white">
                         <div className="max-w-6xl mx-auto px-2 sm:px-4 py-0 h-16 md:h-32 flex items-center justify-between mb-8 md:mb-0 sm:md-0 lg:mb-0t">
                             <div className="flex items-center gap-3">
-                                <a href="/" className="inline-block">
-                                    <img src="/swiftly-logo.svg" alt="Swiftly" className="h-40 md:h-22 lg:h-22 object-contain" />
-                                </a>
+                                {!(embedMode && isMobile) ? (
+                                    <a href="/" className="inline-block">
+                                        <img src="/swiftly-logo.svg" alt="Swiftly" className="h-40 md:h-22 lg:h-22 object-contain" />
+                                    </a>
+                                ) : (
+                                    <div className="px-3 py-1 rounded-full bg-gray-100 text-sm font-semibold text-[#0F172A]">Smartride</div>
+                                )}
                             </div>
                             <div>
                                 <button
@@ -1409,9 +1413,13 @@ export default function SmartRideBooking({ embedMode = false, initialData = {}, 
                     <div className="bg-white">
                         <div className="max-w-6xl mx-auto px-2 sm:px-4 py-0 h-16 md:h-32 flex items-center justify-between mb-8 md:mb-0 sm:md-0 lg:mb-0t">
                             <div className="flex items-center gap-3">
-                                <a href="/" className="inline-block">
-                                    <img src="/swiftly-logo.svg" alt="Swiftly" className="h-40 md:h-22 lg:h-22 object-contain" />
-                                </a>
+                                {!(embedMode && isMobile) ? (
+                                    <a href="/" className="inline-block">
+                                        <img src="/swiftly-logo.svg" alt="Swiftly" className="h-40 md:h-22 lg:h-22 object-contain" />
+                                    </a>
+                                ) : (
+                                    <div className="px-3 py-1 rounded-full border-[1.5px] border-[#01A9F4] text-sm font-semibold text-[#0F172A]">Smartride</div>
+                                )}
                             </div>
                             <div>
                                 <button
@@ -1615,9 +1623,13 @@ export default function SmartRideBooking({ embedMode = false, initialData = {}, 
                     <div className="bg-white">
                         <div className="max-w-6xl mx-auto px-2 sm:px-4 py-0 h-16 md:h-32 flex items-center justify-between mb-8 md:mb-0 sm:md-0 lg:mb-0t">
                             <div className="flex items-center gap-3">
-                                <a href="/" className="inline-block">
-                                    <img src="/swiftly-logo.svg" alt="Swiftly" className="h-40 md:h-22 lg:h-22 object-contain" />
-                                </a>
+                                {!(embedMode && isMobile) ? (
+                                    <a href="/" className="inline-block">
+                                        <img src="/swiftly-logo.svg" alt="Swiftly" className="h-40 md:h-22 lg:h-22 object-contain" />
+                                    </a>
+                                ) : (
+                                    <div className="px-3 py-1 rounded-full bg-gray-100 text-sm font-semibold text-[#0F172A]">Smartride</div>
+                                )}
                             </div>
                             <div>
                                 <button
