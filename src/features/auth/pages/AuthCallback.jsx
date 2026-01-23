@@ -36,6 +36,121 @@ const AuthCallback = () => {
         }
     };
 
+    // Helper to get and clean returnUrl from storage
+    const getReturnUrl = (role) => {
+        addLog('🔍 Checking for returnUrl in storage');
+        
+        let returnUrl = null;
+        
+        // Check localStorage first (set by SmartRideModal from public page)
+        try {
+            const storedUrl = localStorage.getItem('swiftly_auth_return_url');
+            const timestamp = localStorage.getItem('swiftly_auth_return_timestamp');
+            
+            if (storedUrl && timestamp) {
+                const age = Date.now() - parseInt(timestamp);
+                const maxAge = 10 * 60 * 1000; // 10 minutes (increased from 5)
+                
+                if (age < maxAge) {
+                    returnUrl = storedUrl;
+                    addLog('✅ Found valid returnUrl in localStorage', { url: returnUrl, ageSeconds: Math.floor(age / 1000) });
+                    
+                    // Clean up
+                    localStorage.removeItem('swiftly_auth_return_url');
+                    localStorage.removeItem('swiftly_auth_return_timestamp');
+                    addLog('✅ Cleaned up localStorage returnUrl');
+                } else {
+                    addLog('⚠️ returnUrl in localStorage expired', { ageSeconds: Math.floor(age / 1000) });
+                    localStorage.removeItem('swiftly_auth_return_url');
+                    localStorage.removeItem('swiftly_auth_return_timestamp');
+                }
+            } else {
+                addLog('ℹ️ No returnUrl found in localStorage');
+            }
+        } catch (e) {
+            addLog('⚠️ Error reading returnUrl from localStorage', e.message);
+        }
+        
+        // Check sessionStorage as backup
+        if (!returnUrl) {
+            try {
+                returnUrl = sessionStorage.getItem('auth_return_url');
+                if (returnUrl) {
+                    addLog('✅ Found returnUrl in sessionStorage', returnUrl);
+                    sessionStorage.removeItem('auth_return_url');
+                    addLog('✅ Cleaned up sessionStorage returnUrl');
+                } else {
+                    addLog('ℹ️ No returnUrl found in sessionStorage');
+                }
+            } catch (e) {
+                addLog('⚠️ Error reading returnUrl from sessionStorage', e.message);
+            }
+        }
+        
+        // Check auth_return_url from localStorage as additional fallback
+        if (!returnUrl) {
+            try {
+                const fallbackUrl = localStorage.getItem('auth_return_url');
+                if (fallbackUrl) {
+                    returnUrl = fallbackUrl;
+                    addLog('✅ Found returnUrl in localStorage fallback', returnUrl);
+                    localStorage.removeItem('auth_return_url');
+                    addLog('✅ Cleaned up localStorage fallback returnUrl');
+                }
+            } catch (e) {
+                addLog('⚠️ Error reading fallback returnUrl', e.message);
+            }
+        }
+        
+        return returnUrl;
+    };
+
+    // Helper to get redirect path based on role and returnUrl
+    const getRedirectPath = (role, returnUrl) => {
+        addLog('🎯 Determining redirect path', { role, returnUrl });
+        
+        // If we have a returnUrl, validate it's appropriate for the role
+        if (returnUrl) {
+            addLog('🔍 Validating returnUrl for role', { role, returnUrl });
+            
+            // Check if returnUrl matches the user's role
+            const isCustomerUrl = returnUrl.includes('/customer/');
+            const isRiderUrl = returnUrl.includes('/rider/');
+            const isAdminUrl = returnUrl.includes('/admin/');
+            
+            if (role === 'customer' && isCustomerUrl) {
+                addLog('✅ returnUrl matches customer role, using it', returnUrl);
+                return returnUrl;
+            } else if ((role === 'rider' || role === 'driver') && isRiderUrl) {
+                addLog('✅ returnUrl matches rider role, using it', returnUrl);
+                return returnUrl;
+            } else if (role === 'admin' && isAdminUrl) {
+                addLog('✅ returnUrl matches admin role, using it', returnUrl);
+                return returnUrl;
+            } else {
+                addLog('⚠️ returnUrl does not match user role, ignoring', {
+                    role,
+                    returnUrl,
+                    isCustomerUrl,
+                    isRiderUrl,
+                    isAdminUrl
+                });
+            }
+        }
+        
+        // Default to dashboard for the role
+        const defaultPaths = {
+            'customer': '/customer/dashboard',
+            'rider': '/rider/dashboard',
+            'driver': '/rider/dashboard',
+            'admin': '/admin/dashboard'
+        };
+        
+        const defaultPath = defaultPaths[role] || '/';
+        addLog('ℹ️ Using default path for role', { role, path: defaultPath });
+        return defaultPath;
+    };
+
     // Helper to save Google profile data
     const saveGoogleProfileData = (userData, role) => {
         addLog('💾 Starting to save Google profile data', { role, hasUserData: !!userData });
@@ -212,11 +327,20 @@ const AuthCallback = () => {
                 deleteCookie('verificationCompleted');
                 deleteCookie('verificationSubmitted');
 
-                // Clear localStorage
+                // Clear localStorage (but preserve returnUrl)
                 if (typeof localStorage !== 'undefined') {
+                    const returnUrl = localStorage.getItem('swiftly_auth_return_url');
+                    const returnTimestamp = localStorage.getItem('swiftly_auth_return_timestamp');
+                    const fallbackReturn = localStorage.getItem('auth_return_url');
+                    
                     localStorage.removeItem('profile_image');
                     localStorage.removeItem('user_name');
                     localStorage.removeItem('user_data');
+                    
+                    // Restore returnUrl if it existed
+                    if (returnUrl) localStorage.setItem('swiftly_auth_return_url', returnUrl);
+                    if (returnTimestamp) localStorage.setItem('swiftly_auth_return_timestamp', returnTimestamp);
+                    if (fallbackReturn) localStorage.setItem('auth_return_url', fallbackReturn);
                 }
 
                 addLog('✅ All previous user data cleared successfully');
@@ -235,26 +359,11 @@ const AuthCallback = () => {
             const error = params.get('error');
             const message = params.get('message');
 
-            // Preserve returnUrl if provided by backend or earlier flow
-            const returnUrlParam = params.get('returnUrl') || params.get('returnurl') || params.get('return');
-            // Also check cookie fallback (set before redirect to provider)
-            const cookieReturn = getCookie && getCookie('auth_return_url');
-            const preservedReturnUrl = returnUrlParam || sessionStorage.getItem('auth_return_url') || cookieReturn || (typeof localStorage !== 'undefined' ? localStorage.getItem('auth_return_url') : null);
-            if (preservedReturnUrl) {
-                addLog('🔖 Found returnUrl to preserve', preservedReturnUrl);
-                try { sessionStorage.setItem('auth_return_url', preservedReturnUrl); } catch (e) { addLog('⚠️ Failed to set sessionStorage', e.message); }
-                // Clear the cookie and localStorage once we've preserved it client-side
-                try { if (cookieReturn) deleteCookie && deleteCookie('auth_return_url'); } catch (e) { addLog('⚠️ Failed to delete auth_return_url cookie', e.message); }
-                try { if (typeof localStorage !== 'undefined') localStorage.removeItem('auth_return_url'); } catch (e) { addLog('⚠️ Failed to remove localStorage auth_return_url', e.message); }
-            }
-
             // CRITICAL: If we have a code, immediately clear it from URL to prevent double exchange
             if (code) {
                 addLog('🔒 CLEARING CODE FROM URL immediately to prevent reuse');
                 const newParams = new URLSearchParams();
                 if (role) newParams.set('role', role);
-                // Preserve returnUrl in the cleaned URL so the exchange step can still read it if needed
-                if (preservedReturnUrl) newParams.set('returnUrl', preservedReturnUrl);
                 newParams.set('processing', 'true');
                 history.replace({
                     pathname: location.pathname,
@@ -459,34 +568,21 @@ const AuthCallback = () => {
                     addLog('✅ Set completion flags');
 
                     setStatus('Success! Redirecting...');
-                    addLog('🎯 Preparing to redirect', { role: exRole });
+                    
+                    // Get returnUrl if it exists
+                    const returnUrl = getReturnUrl(exRole);
+                    const redirectPath = getRedirectPath(exRole, returnUrl);
+                    
+                    addLog('🎯 Preparing to redirect', { 
+                        role: exRole, 
+                        returnUrl: returnUrl || 'none',
+                        finalPath: redirectPath 
+                    });
 
                     setTimeout(() => {
                         sessionStorage.removeItem('auth_processing');
-                        addLog('🚀 REDIRECTING NOW', { role: exRole });
-
-                        // Prefer any preserved returnUrl
-                        const finalReturn = sessionStorage.getItem('auth_return_url');
-                        if (finalReturn) {
-                            addLog('➡️ Redirecting to preserved returnUrl', finalReturn);
-                            sessionStorage.removeItem('auth_return_url');
-                            history.replace(finalReturn);
-                            return;
-                        }
-
-                        if (exRole === 'customer') {
-                            addLog('➡️ Redirecting to /customer/dashboard');
-                            history.replace('/customer/dashboard');
-                        } else if (exRole === 'rider' || exRole === 'driver') {
-                            addLog('➡️ Redirecting to /rider/dashboard');
-                            history.replace('/rider/dashboard');
-                        } else if (exRole === 'admin') {
-                            addLog('➡️ Redirecting to /admin/dashboard');
-                            history.replace('/admin/dashboard');
-                        } else {
-                            addLog('➡️ Redirecting to /');
-                            history.replace('/');
-                        }
+                        addLog('🚀 REDIRECTING NOW', { path: redirectPath });
+                        history.replace(redirectPath);
                     }, 500);
                     return;
                 } catch (err) {
@@ -613,32 +709,21 @@ const AuthCallback = () => {
                     addLog('✅ Set completion flags');
 
                     setStatus('Success! Redirecting...');
+                    
+                    // Get returnUrl if it exists
+                    const returnUrl = getReturnUrl(finalRole);
+                    const redirectPath = getRedirectPath(finalRole, returnUrl);
+                    
+                    addLog('🎯 Preparing to redirect', { 
+                        role: finalRole, 
+                        returnUrl: returnUrl || 'none',
+                        finalPath: redirectPath 
+                    });
 
                     setTimeout(() => {
                         sessionStorage.removeItem('auth_processing');
-                        addLog('🚀 REDIRECTING NOW', { role: finalRole });
-
-                        const finalReturn = sessionStorage.getItem('auth_return_url');
-                        if (finalReturn) {
-                            addLog('➡️ Redirecting to preserved returnUrl', finalReturn);
-                            sessionStorage.removeItem('auth_return_url');
-                            history.replace(finalReturn);
-                            return;
-                        }
-
-                        if (finalRole === 'customer') {
-                            addLog('➡️ Redirecting to /customer/dashboard');
-                            history.replace('/customer/dashboard');
-                        } else if (finalRole === 'rider' || finalRole === 'driver') {
-                            addLog('➡️ Redirecting to /rider/dashboard');
-                            history.replace('/rider/dashboard');
-                        } else if (finalRole === 'admin') {
-                            addLog('➡️ Redirecting to /admin/dashboard');
-                            history.replace('/admin/dashboard');
-                        } else {
-                            addLog('➡️ Redirecting to /');
-                            history.replace('/');
-                        }
+                        addLog('🚀 REDIRECTING NOW', { path: redirectPath });
+                        history.replace(redirectPath);
                     }, 500);
                 } catch (e) {
                     addLog('❌ DIRECT TOKEN ERROR', {
