@@ -99,7 +99,7 @@ const Book = () => {
   const [isMobile, setIsMobile] = useState(false);
   const [paymentHover, setPaymentHover] = useState(false);
   const [drawerHover, setDrawerHover] = useState('');
-  const [isPriority, setIsPriority] = useState(false);
+
   const [isSpecialErrand, setIsSpecialErrand] = useState(false);
   const [waitingMinutes, setWaitingMinutes] = useState(0);
   const [distanceKm, setDistanceKm] = useState(0);
@@ -695,7 +695,7 @@ const Book = () => {
     return calculateDeliveryPrice({
       distance: distanceKm,
       waitingMinutes: 0,
-      isPriority,
+      isPriority: false,
       isSpecialErrand: false,
       batchDiscount: 0, // Can be updated for batch orders in future
       customBid: null,
@@ -1261,31 +1261,7 @@ const Book = () => {
 
 
 
-                  {/* Optional Services */}
-                  <div className="mb-6 bg-white rounded-xl border border-gray-200 p-4">
-                    <h3 className="text-sm font-semibold text-[#0F172A] mb-3">Optional Services</h3>
 
-                    {/* Priority Delivery */}
-                    <div className="flex items-center justify-between p-3 rounded-lg hover:bg-gray-50 cursor-pointer mb-2">
-                      <div className="flex-1">
-                        <div className="flex items-center gap-2">
-                          <span className="text-sm font-medium text-[#0F172A]">Delivery Speed</span>
-                          <span className="text-xs px-2 py-0.5 bg-orange-100 text-orange-700 rounded-full">Priority option</span>
-                        </div>
-                        <p className="text-xs text-gray-500 mt-1">Choose delivery speed</p>
-                      </div>
-                      <div className="flex items-center gap-4">
-                        <label className="flex items-center gap-2">
-                          <input type="radio" name="priorityOption" checked={isPriority} onChange={() => setIsPriority(true)} className="w-4 h-4 text-[#00B75A]" />
-                          <span className="text-sm">Priority</span>
-                        </label>
-                        <label className="flex items-center gap-2">
-                          <input type="radio" name="priorityOption" checked={!isPriority} onChange={() => setIsPriority(false)} className="w-4 h-4 text-[#94A3B8]" />
-                          <span className="text-sm">Standard</span>
-                        </label>
-                      </div>
-                    </div>
-                  </div>
 
                   {/* Package Image Upload - Redesigned */}
                   <div className="mb-6">
@@ -1455,13 +1431,7 @@ const Book = () => {
                             </div>
                           )}
 
-                          {/* Priority Fee */}
-                          {pricing.priorityFee > 0 && (
-                            <div className="flex justify-between items-center text-orange-700">
-                              <span className="text-sm">Priority Delivery</span>
-                              <span className="text-sm font-medium">+₦{pricing.priorityFee.toLocaleString()}</span>
-                            </div>
-                          )}
+
 
                           {/* Batch Discount */}
                           {pricing.discountAmount > 0 && (
