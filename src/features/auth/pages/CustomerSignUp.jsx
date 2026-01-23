@@ -32,6 +32,7 @@ const CustomerSignUp = () => {
     if (returnUrl) {
       // Store returnUrl in sessionStorage so we can use it after signup
       sessionStorage.setItem('auth_return_url', returnUrl);
+      try { localStorage.setItem('auth_return_url', returnUrl); } catch (e) { /* ignore */ }
 
       // Clean up URL
       window.history.replaceState({}, '', window.location.pathname);
@@ -185,9 +186,10 @@ const CustomerSignUp = () => {
 
     // Include returnUrl in Google OAuth if it exists
     const returnUrl = sessionStorage.getItem('auth_return_url');
-    // Also persist returnUrl as a cookie so the backend can echo it back if needed
+    // Also persist returnUrl as a cookie and localStorage so the backend can echo it back if needed
     if (returnUrl) {
       try { setCookie('auth_return_url', returnUrl, 1); } catch (e) { /* ignore */ }
+      try { localStorage.setItem('auth_return_url', returnUrl); } catch (e) { /* ignore */ }
     }
     const googleAuthUrl = returnUrl
       ? `${apiBase}/api/auth/google?role=customer&returnUrl=${encodeURIComponent(returnUrl)}`

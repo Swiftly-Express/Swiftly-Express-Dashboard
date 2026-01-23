@@ -239,12 +239,13 @@ const AuthCallback = () => {
             const returnUrlParam = params.get('returnUrl') || params.get('returnurl') || params.get('return');
             // Also check cookie fallback (set before redirect to provider)
             const cookieReturn = getCookie && getCookie('auth_return_url');
-            const preservedReturnUrl = returnUrlParam || sessionStorage.getItem('auth_return_url') || cookieReturn;
+            const preservedReturnUrl = returnUrlParam || sessionStorage.getItem('auth_return_url') || cookieReturn || (typeof localStorage !== 'undefined' ? localStorage.getItem('auth_return_url') : null);
             if (preservedReturnUrl) {
                 addLog('🔖 Found returnUrl to preserve', preservedReturnUrl);
                 try { sessionStorage.setItem('auth_return_url', preservedReturnUrl); } catch (e) { addLog('⚠️ Failed to set sessionStorage', e.message); }
-                // Clear the cookie once we've preserved it client-side
+                // Clear the cookie and localStorage once we've preserved it client-side
                 try { if (cookieReturn) deleteCookie && deleteCookie('auth_return_url'); } catch (e) { addLog('⚠️ Failed to delete auth_return_url cookie', e.message); }
+                try { if (typeof localStorage !== 'undefined') localStorage.removeItem('auth_return_url'); } catch (e) { addLog('⚠️ Failed to remove localStorage auth_return_url', e.message); }
             }
 
             // CRITICAL: If we have a code, immediately clear it from URL to prevent double exchange
