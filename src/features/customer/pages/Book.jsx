@@ -10,6 +10,8 @@ import GoogleMapsAutocomplete from '../../../components/GoogleMapsAutocomplete';
 import CustomerLayout from '../components/CustomerLayout';
 import { YummyText } from '../../../components/YummyText';
 import { createDelivery, isAuthenticated, cancelDelivery } from '../../../utils/authApi';
+import { calculateDistance, calculateDeliveryPrice } from '../../../utils/pricing';
+import SmartRideBooking from '../../smartride-booking/Smartride-Booking';
 import axios from 'axios';
 import { getCookie, setCookie, setJSONCookie, getJSONCookie, deleteCookie } from '../../../utils/cookies';
 
@@ -95,6 +97,12 @@ const Book = () => {
   const [showPaymentDrawer, setShowPaymentDrawer] = useState(false);
   const [selectedPaymentMethod, setSelectedPaymentMethod] = useState('cash');
   const [isMobile, setIsMobile] = useState(false);
+  const [paymentHover, setPaymentHover] = useState(false);
+  const [drawerHover, setDrawerHover] = useState('');
+
+  const [isSpecialErrand, setIsSpecialErrand] = useState(false);
+  const [waitingMinutes, setWaitingMinutes] = useState(0);
+  const [distanceKm, setDistanceKm] = useState(0);
 
   const deliveryTypes = [
     { value: 'express', label: 'Express (Same day)', price: '₦2500' },
@@ -106,15 +114,18 @@ const Book = () => {
   const selectedDeliveryType = deliveryTypes.find(t => t.value === formData.deliveryType);
 
   const handleDeliveryTypeSelect = (value) => {
-    // If user selected Smart Ride, redirect to Smart Ride booking page on the public site
+    // If user selected Smart Ride, open Smart Ride inline on this page
     if (value === 'smart_ride') {
-      const prodEnv = import.meta.env.NEXT_PUBLIC_BASE_URL || import.meta.env.VITE_PUBLIC_BASE_URL || 'https://swiftlyxpress.com';
-      const devEnv = import.meta.env.NEXT_PUBLIC_SITE_URL || import.meta.env.VITE_PUBLIC_SITE_URL || 'http://localhost:3000';
-
-      // Use production base in production builds, otherwise dev site
-      const isDev = Boolean(import.meta.env.DEV);
-      const targetBase = isDev ? devEnv.replace(/\/$/, '') : prodEnv.replace(/\/$/, '');
-      window.location.href = `${targetBase}/smartride-booking`;
+      setFormData({ ...formData, deliveryType: value });
+      setShowDeliveryTypeModal(false);
+      // update URL so state is shareable
+      try {
+        const url = `${window.location.pathname}?delivery=smart_ride`;
+        window.history.pushState({}, '', url);
+      } catch (e) {
+        // ignore
+      }
+      setShowSmartRide(true);
       return;
     }
 
@@ -149,6 +160,22 @@ const Book = () => {
     window.addEventListener('message', handlePaymentMessage);
     return () => window.removeEventListener('message', handlePaymentMessage);
   }, [router]);
+
+  // Inline SmartRide state: open if ?delivery=smart_ride present
+  const [showSmartRide, setShowSmartRide] = useState(false);
+
+  useEffect(() => {
+    const sp = new URLSearchParams(window.location.search);
+    if (sp.get('delivery') === 'smart_ride') setShowSmartRide(true);
+
+    const onPop = () => {
+      const p = new URLSearchParams(window.location.search);
+      setShowSmartRide(p.get('delivery') === 'smart_ride');
+    };
+
+    window.addEventListener('popstate', onPop);
+    return () => window.removeEventListener('popstate', onPop);
+  }, []);
 
   useEffect(() => {
     const check = () => setIsMobile(window.innerWidth <= 768);
@@ -653,28 +680,35 @@ const Book = () => {
     }
   };
 
+  // Calculate distance whenever addresses change
+  useEffect(() => {
+    if (pickupCoordinates && deliveryCoordinates &&
+      pickupCoordinates.lat !== 0 && deliveryCoordinates.lat !== 0) {
+      const dist = calculateDistance(pickupCoordinates, deliveryCoordinates);
+      setDistanceKm(dist);
+    } else {
+      setDistanceKm(0);
+    }
+  }, [pickupCoordinates, deliveryCoordinates]);
+
+  const getPricingBreakdown = () => {
+    return calculateDeliveryPrice({
+      distance: distanceKm,
+      waitingMinutes: 0,
+      isPriority: false,
+      isSpecialErrand: false,
+      batchDiscount: 0, // Can be updated for batch orders in future
+      customBid: null,
+      deliveryType: formData.deliveryType
+    });
+  };
+
   const calculateTotal = () => {
-    const baseRate = getBaseRate();
-    const insurance = getInsurance();
-    return baseRate + insurance;
+    return getPricingBreakdown().total;
   };
 
   const getBaseRate = () => {
-    switch (formData.deliveryType) {
-      case 'express':
-        return 2500;
-      case 'standard':
-        return 1200;
-      case 'economy':
-        return 800;
-      default:
-        return 0;
-    }
-  };
-
-  const getInsurance = () => {
-    const declaredValue = parseFloat(formData.declaredValue) || 0;
-    return declaredValue > 0 ? Math.max(declaredValue * 0.01, 200) : 0;
+    return getPricingBreakdown().deliveryCharge;
   };
 
   return (
@@ -689,8 +723,31 @@ const Book = () => {
             position="top"
           />
 
+          {/* Inline SmartRide: replaces booking form when active */}
+          {showSmartRide && (
+            <div className="bg-white rounded-2xl p-4 md:p-6 mb-6" style={sideBottomShadow}>
+
+              {/* inject delivery options for embedded SmartRide via global so Smartride can render dropdown */}
+              {(() => { window.__SMART_RIDE_OPTIONS__ = deliveryTypes; return null; })()}
+
+              <SmartRideBooking embedMode={true} initialData={{
+                senderName: formData.senderName,
+                senderPhone: formData.senderPhone,
+                pickupAddress: formData.pickupStreet || formData.pickupAddress || '',
+                deliveryAddress: formData.deliveryStreet || formData.deliveryAddress || '',
+                pickupDate: formData.pickupDate,
+                recipientEmail: formData.recipientEmail,
+                packageDescription: formData.packageDescription,
+                image: formData.image
+              }} onClose={() => {
+                setShowSmartRide(false);
+                try { window.history.replaceState({}, '', window.location.pathname); } catch (e) { }
+              }} />
+            </div>
+          )}
+
           {/* Header */}
-          <div className="mb-4 md:mb-8 mt-4 sm:mt-0 md:mt-0">
+          <div style={{ display: showSmartRide ? 'none' : 'block' }} className="mb-4 md:mb-8 mt-4 sm:mt-0 md:mt-0">
             <YummyText className="text-2xl md:text-3xl  font-medium text-[#0F172A] mb-2 text-left md:text-left">
               Book a Delivery
             </YummyText>
@@ -700,7 +757,7 @@ const Book = () => {
           </div>
 
           <YummyText>
-            <div>
+            <div style={{ display: showSmartRide ? 'none' : 'block' }}>
               <div className="bg-white rounded-2xl p-4 md:p-6 mb-6" style={sideBottomShadow}>
                 {/* Section Title */}
                 <div className="mb-4 md:mb-6">
@@ -1202,21 +1259,9 @@ const Book = () => {
                     ></textarea>
                   </div>
 
-                  <div className="mb-6">
-                    <label className="block text-sm font-medium text-[#0F172A] mb-2">
-                      Declared Value (₦)
-                      <span className="text-xs text-gray-500 ml-2 block md:inline">(For insurance)</span>
-                    </label>
-                    <input
-                      type="number"
-                      name="declaredValue"
-                      value={formData.declaredValue}
-                      onChange={handleChange}
-                      placeholder="10000.00"
-                      step="0.01"
-                      className="w-full px-4 py-3 rounded-xl bg-[#F8F9FA] text-sm md:text-base text-[#0F172A] placeholder:text-[#94A3B8] focus:outline-none focus:ring-2 focus:ring-[#00D68F] border-none"
-                    />
-                  </div>
+
+
+
 
                   {/* Package Image Upload - Redesigned */}
                   <div className="mb-6">
@@ -1267,58 +1312,78 @@ const Book = () => {
                     </div>
                   </div>
 
-                  {/* Payment Method - Redesigned */}
+                  {/* Payment Method - exact copy from SmartRide */}
                   <div className="mb-6">
-                    <label className="block text-sm font-medium text-[#0F172A] mb-3">Payment Method</label>
+                    <label className="block text-sm font-medium text-[#0F172A] mb-2">Payment Method</label>
                     <button
                       type="button"
                       onClick={() => setShowPaymentDrawer(true)}
-                      className="w-full px-5 py-1 rounded-full  border-2 !border-[#1E1E1E] hover:border-[#00B75A] text-sm md:text-base focus:outline-none focus:ring-2 focus:ring-[#00B75A] transition-all text-left flex items-center justify-between group"
+                      onMouseEnter={() => setPaymentHover(true)}
+                      onMouseLeave={() => setPaymentHover(false)}
+                      style={{
+                        borderWidth: '2px',
+                        borderStyle: 'solid',
+                        borderColor: (paymentHover || formData.paymentMethod) ? '#00B75A' : '#E5E7EB',
+                        backgroundColor: (paymentHover || formData.paymentMethod) ? '#F0FDF4' : '#FFFFFF',
+                        boxShadow: paymentHover ? '0 0 0 10px rgba(16,185,129,0.12)' : (formData.paymentMethod ? '0 0 0 6px rgba(16,185,129,0.06)' : 'none'),
+                        outline: 'none'
+                      }}
+                      className="w-full px-4 py-3 rounded-xl text-left flex items-center justify-between transition-all"
                     >
-                      <div className="flex items-center gap-3">
-                        {formData.paymentMethod === 'cash' && (
-                          <>
-                            <div className="w-10 h-10 rounded-full bg-[#F0FDF4] flex items-center justify-center">
-                              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                                <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-2h2v2zm0-4h-2V7h2v6z" fill="#00B75A" />
-                              </svg>
-                            </div>
-                            <span className="font-medium text-[#0F172A]">Cash on Delivery</span>
-                          </>
-                        )}
-                        {formData.paymentMethod === 'card' && (
-                          <>
-                            <div className="w-10 h-10 rounded-full bg-[#F0FDF4] flex items-center justify-center">
-                              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                                <path d="M20 4H4c-1.11 0-1.99.89-1.99 2L2 18c0 1.11.89 2 2 2h16c1.11 0 2-.89 2-2V6c0-1.11-.89-2-2-2zm0 14H4v-6h16v6zm0-10H4V6h16v2z" fill="#00B75A" />
-                              </svg>
-                            </div>
-                            <span className="font-medium text-[#0F172A]">Pay Online</span>
-                          </>
-                        )}
-                        {formData.paymentMethod === 'transfer' && (
-                          <>
-                            <div className="w-10 h-10 rounded-full bg-[#F0FDF4] flex items-center justify-center">
-                              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                                <path d="M11.8 10.9c-2.27-.59-3-1.2-3-2.15 0-1.09 1.01-1.85 2.7-1.85 1.78 0 2.44.85 2.5 2.1h2.21c-.07-1.72-1.12-3.3-3.21-3.81V3h-3v2.16c-1.94.42-3.5 1.68-3.5 3.61 0 2.31 1.91 3.46 4.7 4.13 2.5.6 3 1.48 3 2.41 0 .69-.49 1.79-2.7 1.79-2.06 0-2.87-.92-2.98-2.1h-2.2c.12 2.19 1.76 3.42 3.68 3.83V21h3v-2.15c1.95-.37 3.5-1.5 3.5-3.55 0-2.84-2.43-3.81-4.7-4.4z" fill="#00B75A" />
-                              </svg>
-                            </div>
-                            <span className="font-medium text-[#0F172A]">Bank Transfer</span>
-                          </>
-                        )}
-                        {!formData.paymentMethod && (
-                          <>
-                            <div className="w-10 h-10 rounded-full bg-gray-100 flex items-center justify-center">
-                              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                                <path d="M20 4H4c-1.11 0-1.99.89-1.99 2L2 18c0 1.11.89 2 2 2h16c1.11 0 2-.89 2-2V6c0-1.11-.89-2-2-2zm0 14H4v-6h16v6zm0-10H4V6h16v2z" fill="#94A3B8" />
-                              </svg>
-                            </div>
-                            <span className="text-[#94A3B8]">Select payment method</span>
-                          </>
-                        )}
-                      </div>
-                      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" className="group-hover:translate-x-1 transition-transform">
-                        <path d="M9 5l7 7-7 7" stroke="#64748B" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+                      {formData.paymentMethod ? (
+                        <div className="flex items-center gap-3">
+                          {formData.paymentMethod === 'cash' && (
+                            <>
+                              <div className="w-10 h-10 rounded-full bg-[#F0FDF4] flex items-center justify-center">
+                                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#00B75A" strokeWidth="2">
+                                  <rect x="2" y="5" width="20" height="14" rx="2" />
+                                  <circle cx="12" cy="12" r="3" />
+                                </svg>
+                              </div>
+                              <div>
+                                <p className="text-sm font-medium text-[#0F172A]">Cash on Delivery</p>
+                                <p className="text-xs text-[#64748B]">Pay with cash when delivered</p>
+                              </div>
+                            </>
+                          )}
+                          {formData.paymentMethod === 'card' && (
+                            <>
+                              <div className="w-10 h-10 rounded-full bg-[#F0FDF4] flex items-center justify-center">
+                                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#00B75A" strokeWidth="2">
+                                  <rect x="1" y="4" width="22" height="16" rx="2" ry="2" />
+                                  <line x1="1" y1="10" x2="23" y2="10" />
+                                </svg>
+                              </div>
+                              <div>
+                                <p className="text-sm font-medium text-[#0F172A]">Pay Online (Card)</p>
+                                <div className="flex items-center gap-1.5 mt-1">
+                                  <img src="https://upload.wikimedia.org/wikipedia/commons/0/04/Visa.svg" alt="Visa" className="h-4" />
+                                  <img src="https://upload.wikimedia.org/wikipedia/commons/2/2a/Mastercard-logo.svg" alt="Mastercard" className="h-4" />
+                                  <span className="text-xs text-[#64748B]">Verve</span>
+                                </div>
+                              </div>
+                            </>
+                          )}
+                          {formData.paymentMethod === 'transfer' && (
+                            <>
+                              <div className="w-10 h-10 rounded-full bg-[#F0FDF4] flex items-center justify-center">
+                                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#00B75A" strokeWidth="2">
+                                  <line x1="12" y1="1" x2="12" y2="23" />
+                                  <path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6" />
+                                </svg>
+                              </div>
+                              <div>
+                                <p className="text-sm font-medium text-[#0F172A]">Bank Transfer</p>
+                                <p className="text-xs text-[#64748B]">Transfer to our account</p>
+                              </div>
+                            </>
+                          )}
+                        </div>
+                      ) : (
+                        <span className="text-[#94A3B8]">Select payment method</span>
+                      )}
+                      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#94A3B8" strokeWidth="2">
+                        <polyline points="6 9 12 15 18 9" />
                       </svg>
                     </button>
                   </div>
@@ -1338,22 +1403,58 @@ const Book = () => {
 
                 {/* Cost Breakdown */}
                 <div className="bg-[#F0FDF4] rounded-xl p-4 md:p-6 mb-6">
-                  <div className="space-y-3">
-                    <div className="flex justify-between items-center text-[#0F172A]">
-                      <span className="text-sm md:text-base">Base Rate</span>
-                      <span className="text-sm md:text-base font-medium">₦{getBaseRate().toLocaleString('en-NG', { minimumFractionDigits: 2 })}</span>
-                    </div>
-                    <div className="flex justify-between items-center text-[#0F172A]">
-                      <span className="text-sm md:text-base">Insurance (1%)</span>
-                      <span className="text-sm md:text-base font-medium">₦{getInsurance().toLocaleString('en-NG', { minimumFractionDigits: 2 })}</span>
-                    </div>
+                  <h3 className="text-base font-semibold text-[#0F172A] mb-4">Cost Breakdown</h3>
+                  <div className="space-y-2.5">
+                    {(() => {
+                      const pricing = getPricingBreakdown();
+                      return (
+                        <>
+                          {/* Distance Info */}
+                          {distanceKm > 0 && (
+                            <div className="flex justify-between items-center text-[#64748B] text-sm">
+                              <span>Distance</span>
+                              <span className="font-medium">{pricing.distance} km</span>
+                            </div>
+                          )}
 
-                    <div className="border-t border-gray-300 pt-3 mt-3">
-                      <div className="flex justify-between items-center">
-                        <span className="text-base md:text-lg font-medium text-[#0F172A]">Total</span>
-                        <span className="text-xl md:text-2xl font-medium text-[#00B75A]">₦{calculateTotal().toLocaleString('en-NG', { minimumFractionDigits: 2 })}</span>
-                      </div>
-                    </div>
+                          {/* Base Fare */}
+                          <div className="flex justify-between items-center text-[#0F172A]">
+                            <span className="text-sm md:text-base">Base Fare</span>
+                            <span className="text-sm md:text-base font-medium">₦{pricing.baseFare.toLocaleString()}</span>
+                          </div>
+
+                          {/* Distance Charge */}
+                          {pricing.distanceCharge > 0 && (
+                            <div className="flex justify-between items-center text-[#0F172A]">
+                              <span className="text-sm">Distance Charge ({Math.max(0, pricing.distance - 2).toFixed(1)}km × ₦{pricing.perKmRate})</span>
+                              <span className="text-sm font-medium">₦{pricing.distanceCharge.toLocaleString()}</span>
+                            </div>
+                          )}
+
+
+
+                          {/* Batch Discount */}
+                          {pricing.discountAmount > 0 && (
+                            <div className="flex justify-between items-center text-green-700">
+                              <span className="text-sm">Batch Discount ({pricing.discountPercentage}%)</span>
+                              <span className="text-sm font-medium">-₦{pricing.discountAmount.toLocaleString()}</span>
+                            </div>
+                          )}
+
+                          {/* Insurance removed */}
+
+                          {/* Total */}
+                          <div className="border-t border-gray-300 pt-3 mt-3">
+                            <div className="flex justify-between items-center">
+                              <span className="text-base md:text-lg font-medium text-[#0F172A]">Total</span>
+                              <span className="text-xl md:text-2xl font-medium text-[#00B75A]">
+                                ₦{pricing.total.toLocaleString('en-NG', { minimumFractionDigits: 2 })}
+                              </span>
+                            </div>
+                          </div>
+                        </>
+                      );
+                    })()}
                   </div>
                 </div>
 
@@ -1364,7 +1465,6 @@ const Book = () => {
                     disabled={isSubmitting}
                     className={`flex-1 flex items-center justify-center gap-2 px-6 md:px-8 py-3 bg-[#00B75A] ${isSubmitting ? 'opacity-50 cursor-not-allowed' : 'hover:bg-[#00B876]'} text-white rounded-xl transition-colors font-medium text-sm md:text-base`}
                   >
-                    <img src="/blockicon-white.svg" alt="Book" className="w-5 h-5" />
                     {isSubmitting ? 'Booking...' : 'Book Delivery'}
                   </button>
                   <button
@@ -1403,12 +1503,19 @@ const Book = () => {
                   <button
                     onClick={() => {
                       setFormData({ ...formData, paymentMethod: 'cash' });
-                      setShowPaymentDrawer(false);
+                      setTimeout(() => setShowPaymentDrawer(false), 150);
                     }}
-                    className={`w-full p-4 rounded-xl border-2 mb-4 transition-all ${formData.paymentMethod === 'cash'
-                      ? 'border-[#00B75A] bg-[#F0FDF4]'
-                      : 'border-gray-200 hover:border-gray-300'
-                      }`}
+                    onMouseEnter={() => setDrawerHover('cash')}
+                    onMouseLeave={() => setDrawerHover('')}
+                    style={{
+                      borderWidth: '2px',
+                      borderStyle: 'solid',
+                      borderColor: (formData.paymentMethod === 'cash' || drawerHover === 'cash') ? '#00B75A' : '#E5E7EB',
+                      backgroundColor: (formData.paymentMethod === 'cash' || drawerHover === 'cash') ? '#F0FDF4' : '#FFFFFF',
+                      boxShadow: drawerHover === 'cash' ? '0 0 0 10px rgba(16,185,129,0.12)' : (formData.paymentMethod === 'cash' ? '0 0 0 6px rgba(16,185,129,0.06)' : 'none'),
+                      outline: 'none'
+                    }}
+                    className={`w-full p-4 rounded-xl mb-4 transition-all`}
                   >
                     <div className="flex items-start gap-4">
                       <div className={`w-12 h-12 rounded-full flex items-center justify-center ${formData.paymentMethod === 'cash' ? 'bg-[#00B75A]' : 'bg-gray-100'
@@ -1430,12 +1537,19 @@ const Book = () => {
                   <button
                     onClick={() => {
                       setFormData({ ...formData, paymentMethod: 'card' });
-                      setShowPaymentDrawer(false);
+                      setTimeout(() => setShowPaymentDrawer(false), 150);
                     }}
-                    className={`w-full p-4 rounded-xl border-2 mb-4 transition-all ${formData.paymentMethod === 'card'
-                      ? 'border-[#00B75A] bg-[#F0FDF4]'
-                      : 'border-gray-200 hover:border-gray-300'
-                      }`}
+                    onMouseEnter={() => setDrawerHover('card')}
+                    onMouseLeave={() => setDrawerHover('')}
+                    style={{
+                      borderWidth: '2px',
+                      borderStyle: 'solid',
+                      borderColor: (formData.paymentMethod === 'card' || drawerHover === 'card') ? '#00B75A' : '#E5E7EB',
+                      backgroundColor: (formData.paymentMethod === 'card' || drawerHover === 'card') ? '#F0FDF4' : '#FFFFFF',
+                      boxShadow: drawerHover === 'card' ? '0 0 0 10px rgba(16,185,129,0.12)' : (formData.paymentMethod === 'card' ? '0 0 0 6px rgba(16,185,129,0.06)' : 'none'),
+                      outline: 'none'
+                    }}
+                    className={`w-full p-4 rounded-xl mb-4 transition-all`}
                   >
                     <div className="flex items-start gap-4">
                       <div className={`w-12 h-12 rounded-full flex items-center justify-center ${formData.paymentMethod === 'card' ? 'bg-[#00B75A]' : 'bg-gray-100'
@@ -1464,12 +1578,19 @@ const Book = () => {
                   <button
                     onClick={() => {
                       setFormData({ ...formData, paymentMethod: 'transfer' });
-                      setShowPaymentDrawer(false);
+                      setTimeout(() => setShowPaymentDrawer(false), 150);
                     }}
-                    className={`w-full p-4 rounded-xl border-2 mb-4 transition-all ${formData.paymentMethod === 'transfer'
-                      ? 'border-[#00B75A] bg-[#F0FDF4]'
-                      : 'border-gray-200 hover:border-gray-300'
-                      }`}
+                    onMouseEnter={() => setDrawerHover('transfer')}
+                    onMouseLeave={() => setDrawerHover('')}
+                    style={{
+                      borderWidth: '2px',
+                      borderStyle: 'solid',
+                      borderColor: (formData.paymentMethod === 'transfer' || drawerHover === 'transfer') ? '#00B75A' : '#E5E7EB',
+                      backgroundColor: (formData.paymentMethod === 'transfer' || drawerHover === 'transfer') ? '#F0FDF4' : '#FFFFFF',
+                      boxShadow: drawerHover === 'transfer' ? '0 0 0 10px rgba(16,185,129,0.12)' : (formData.paymentMethod === 'transfer' ? '0 0 0 6px rgba(16,185,129,0.06)' : 'none'),
+                      outline: 'none'
+                    }}
+                    className={`w-full p-4 rounded-xl mb-4 transition-all`}
                   >
                     <div className="flex items-start gap-4">
                       <div className={`w-12 h-12 rounded-full flex items-center justify-center ${formData.paymentMethod === 'transfer' ? 'bg-[#00B75A]' : 'bg-gray-100'
@@ -1519,12 +1640,19 @@ const Book = () => {
                     <button
                       onClick={() => {
                         setFormData({ ...formData, paymentMethod: 'cash' });
-                        setShowPaymentDrawer(false);
+                        setTimeout(() => setShowPaymentDrawer(false), 150);
                       }}
-                      className={`w-full p-4 rounded-xl border-2 mb-4 transition-all ${formData.paymentMethod === 'cash'
-                        ? 'border-[#00B75A] bg-[#F0FDF4]'
-                        : 'border-gray-200 hover:border-gray-300'
-                        }`}
+                      onMouseEnter={() => setDrawerHover('cash')}
+                      onMouseLeave={() => setDrawerHover('')}
+                      style={{
+                        borderWidth: '2px',
+                        borderStyle: 'solid',
+                        borderColor: (formData.paymentMethod === 'cash' || drawerHover === 'cash') ? '#00B75A' : '#E5E7EB',
+                        backgroundColor: (formData.paymentMethod === 'cash' || drawerHover === 'cash') ? '#F0FDF4' : '#FFFFFF',
+                        boxShadow: drawerHover === 'cash' ? '0 0 0 10px rgba(16,185,129,0.12)' : (formData.paymentMethod === 'cash' ? '0 0 0 6px rgba(16,185,129,0.06)' : 'none'),
+                        outline: 'none'
+                      }}
+                      className={`w-full p-4 rounded-xl mb-4 transition-all`}
                     >
                       <div className="flex items-start gap-4">
                         <div className={`w-12 h-12 rounded-full flex items-center justify-center ${formData.paymentMethod === 'cash' ? 'bg-[#00B75A]' : 'bg-gray-100'
@@ -1546,12 +1674,19 @@ const Book = () => {
                     <button
                       onClick={() => {
                         setFormData({ ...formData, paymentMethod: 'card' });
-                        setShowPaymentDrawer(false);
+                        setTimeout(() => setShowPaymentDrawer(false), 150);
                       }}
-                      className={`w-full p-4 rounded-xl border-2 mb-4 transition-all ${formData.paymentMethod === 'card'
-                        ? 'border-[#00B75A] bg-[#F0FDF4]'
-                        : 'border-gray-200 hover:border-gray-300'
-                        }`}
+                      onMouseEnter={() => setDrawerHover('card')}
+                      onMouseLeave={() => setDrawerHover('')}
+                      style={{
+                        borderWidth: '2px',
+                        borderStyle: 'solid',
+                        borderColor: (formData.paymentMethod === 'card' || drawerHover === 'card') ? '#00B75A' : '#E5E7EB',
+                        backgroundColor: (formData.paymentMethod === 'card' || drawerHover === 'card') ? '#F0FDF4' : '#FFFFFF',
+                        boxShadow: drawerHover === 'card' ? '0 0 0 10px rgba(16,185,129,0.12)' : (formData.paymentMethod === 'card' ? '0 0 0 6px rgba(16,185,129,0.06)' : 'none'),
+                        outline: 'none'
+                      }}
+                      className={`w-full p-4 rounded-xl mb-4 transition-all`}
                     >
                       <div className="flex items-start gap-4">
                         <div className={`w-12 h-12 rounded-full flex items-center justify-center ${formData.paymentMethod === 'card' ? 'bg-[#00B75A]' : 'bg-gray-100'
@@ -1580,12 +1715,19 @@ const Book = () => {
                     <button
                       onClick={() => {
                         setFormData({ ...formData, paymentMethod: 'transfer' });
-                        setShowPaymentDrawer(false);
+                        setTimeout(() => setShowPaymentDrawer(false), 150);
                       }}
-                      className={`w-full p-4 rounded-xl border-2 mb-4 transition-all ${formData.paymentMethod === 'transfer'
-                        ? 'border-[#00B75A] bg-[#F0FDF4]'
-                        : 'border-gray-200 hover:border-gray-300'
-                        }`}
+                      onMouseEnter={() => setDrawerHover('transfer')}
+                      onMouseLeave={() => setDrawerHover('')}
+                      style={{
+                        borderWidth: '2px',
+                        borderStyle: 'solid',
+                        borderColor: (formData.paymentMethod === 'transfer' || drawerHover === 'transfer') ? '#00B75A' : '#E5E7EB',
+                        backgroundColor: (formData.paymentMethod === 'transfer' || drawerHover === 'transfer') ? '#F0FDF4' : '#FFFFFF',
+                        boxShadow: drawerHover === 'transfer' ? '0 0 0 10px rgba(16,185,129,0.12)' : (formData.paymentMethod === 'transfer' ? '0 0 0 6px rgba(16,185,129,0.06)' : 'none'),
+                        outline: 'none'
+                      }}
+                      className={`w-full p-4 rounded-xl mb-4 transition-all`}
                     >
                       <div className="flex items-start gap-4">
                         <div className={`w-12 h-12 rounded-full flex items-center justify-center ${formData.paymentMethod === 'transfer' ? 'bg-[#00B75A]' : 'bg-gray-100'

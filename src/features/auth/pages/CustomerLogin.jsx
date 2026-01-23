@@ -1,5 +1,5 @@
 import { IonPage, IonContent, useIonRouter, IonIcon, IonToast } from '@ionic/react';
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { eyeOutline, eyeOffOutline } from 'ionicons/icons';
 import { YummyText } from '../../../components/YummyText';
 import Button from '../../../components/Button';
@@ -24,6 +24,20 @@ const CustomerLogin = () =>
   const [unverifiedUserId, setUnverifiedUserId] = useState(null);
   const [unverifiedEmail, setUnverifiedEmail] = useState('');
   const [resendLoading, setResendLoading] = useState(false);
+
+  // Handle returnUrl from authentication flow
+  useEffect(() => {
+    const urlParams = new URLSearchParams(window.location.search);
+    const returnUrl = urlParams.get('returnUrl');
+    
+    if (returnUrl) {
+      // Store returnUrl in sessionStorage so we can use it after login
+      sessionStorage.setItem('auth_return_url', returnUrl);
+      
+      // Clean up URL
+      window.history.replaceState({}, '', window.location.pathname);
+    }
+  }, []);
 
   const handleSubmit = async (e) =>
   {
@@ -57,9 +71,18 @@ const CustomerLogin = () =>
       // Fetch user profile to ensure everything is synced (optional but good)
       try { await getCurrentUser(); } catch (e) { /* ignore */ }
 
-      // Redirect to customer dashboard
+      // Check for returnUrl and redirect accordingly
+      const returnUrl = sessionStorage.getItem('auth_return_url');
+      sessionStorage.removeItem('auth_return_url'); // Clean up
+      
       if (document && document.activeElement) document.activeElement.blur();
-      router.push('/customer/dashboard', 'forward', 'push');
+      
+      if (returnUrl) {
+        console.log('[CustomerLogin] Redirecting to returnUrl:', returnUrl);
+        router.push(returnUrl, 'root', 'replace');
+      } else {
+        router.push('/customer/dashboard', 'forward', 'push');
+      }
     } catch (err) {
       console.error('Login error:', err);
 
@@ -174,7 +197,14 @@ const CustomerLogin = () =>
   const handleCreateAccount = () =>
   {
     if (document && document.activeElement) document.activeElement.blur();
-    router.push('/auth/customer/signup');
+    
+    // Check if there's a returnUrl we should pass along
+    const returnUrl = sessionStorage.getItem('auth_return_url');
+    if (returnUrl) {
+      router.push(`/auth/customer/signup?returnUrl=${encodeURIComponent(returnUrl)}`);
+    } else {
+      router.push('/auth/customer/signup');
+    }
   };
 
   // Google OAuth start (redirect to backend which begins OAuth handshake)
@@ -188,7 +218,13 @@ const CustomerLogin = () =>
     e.preventDefault();
     try {
       setGoogleLoading(true);
-      const googleUrl = `${apiBase}/api/auth/google?role=customer`;
+      
+      // Include returnUrl in Google OAuth if it exists
+      const returnUrl = sessionStorage.getItem('auth_return_url');
+      const googleUrl = returnUrl 
+        ? `${apiBase}/api/auth/google?role=customer&returnUrl=${encodeURIComponent(returnUrl)}`
+        : `${apiBase}/api/auth/google?role=customer`;
+      
       console.log('[CustomerLogin] Redirecting to:', googleUrl);
       setTimeout(() =>
       {
@@ -308,6 +344,13 @@ const CustomerLogin = () =>
                     <YummyText>forgot password?</YummyText>
                   </span>
                 </div>
+
+                {/* Error Display */}
+                {error && (
+                  <div className="text-red-500 text-sm mb-4 text-center p-3 bg-red-50 rounded-lg">
+                    {error}
+                  </div>
+                )}
 
                 {/* Log In Button */}
                 <Button

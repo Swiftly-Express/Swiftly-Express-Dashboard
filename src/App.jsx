@@ -1,8 +1,8 @@
 import React from "react";
 import {
-IonApp,
-IonRouterOutlet,
-setupIonicReact,
+  IonApp,
+  IonRouterOutlet,
+  setupIonicReact,
 } from "@ionic/react";
 import { IonReactRouter } from "@ionic/react-router";
 import { Route, Redirect } from "react-router-dom";
@@ -42,6 +42,7 @@ import Book from "./features/customer/pages/Book";
 import CustomerProfile from "./features/customer/pages/CustomerProfile";
 import CustomerSupport from "./features/customer/pages/CustomerSupport";
 import PaymentSuccess from "./features/customer/pages/PaymentSuccess";
+import SmartRideBooking from "./features/smartride-booking/index";
 
 /* Rider Dashboard pages */
 import RiderDashboard from "./features/rider/pages/Dashboard";
@@ -166,6 +167,13 @@ const App = () => {
               <Route exact path="/customer/support">
                 <CustomerRouteGuard>
                   <CustomerSupport />
+                </CustomerRouteGuard>
+              </Route>
+
+              {/* Smart Ride Booking - Customer feature */}
+              <Route exact path="/customer/smartride-booking">
+                <CustomerRouteGuard>
+                  <SmartRideBooking />
                 </CustomerRouteGuard>
               </Route>
 

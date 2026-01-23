@@ -167,7 +167,7 @@ const GoogleMapsAutocomplete = ({
                     // Fallback: minimal place data with description
                     onPlaceSelect({
                         street: prediction.description,
-                        city: '',
+                        city: '', 
                         state: '',
                         zipCode: '',
                         country: '',
