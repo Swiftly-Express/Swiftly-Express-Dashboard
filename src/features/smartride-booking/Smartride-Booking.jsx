@@ -527,15 +527,16 @@ export default function SmartRideBooking({ embedMode = false, initialData = {}, 
             <div className="min-h-screen bg-[#FFFFFF]">
                 {/* Header */}
                 <YummyText>
-                    <div className="bg-white">
-                        <div className="max-w-6xl mx-auto px-2 sm:px-4 py-0 h-16 md:h-32 flex items-center justify-between mb-8 md:mb-0 sm:md-0 lg:mb-0t">
+                    <div className="">
+                        <div className="max-w-6xl mx-auto px-0 sm:px-4 py-0 h-16 md:h-32 flex items-center justify-between mb-8 md:mb-0 sm:md-0 lg:mb-0t">
                             <div className="flex items-center gap-3">
-                                {!(embedMode && isMobile) ? (
+                                {!(embedMode && isMobile) && (
                                     <a href="/" className="inline-block">
                                         <img src="/swiftly-logo.svg" alt="Swiftly" className="h-40 md:h-22 lg:h-22 object-contain" />
                                     </a>
-                                ) : (
-                                    <div className="px-3 py-1 rounded-full bg-gray-100 text-sm font-semibold text-[#0F172A]">Smartride</div>
+                                )}
+                                {embedMode && isMobile && (
+                                    <YummyText className="text-xs text-[#0F172A] border border-[#00B75A] rounded-full px-2 py-0.5">Smartride</YummyText>
                                 )}
                             </div>
                             <div>
@@ -557,13 +558,13 @@ export default function SmartRideBooking({ embedMode = false, initialData = {}, 
 
                 {/* Breadcrumb */}
                 <YummyText>
-                    <div className="max-w-4xl mx-auto -mt-6 px-4 sm:px-6 lg:px-8">
+                    <div className="max-w-4xl mx-auto -mt-6 px-0 sm:px-6 lg:px-8">
                         <Breadcrumb steps={breadcrumbSteps} currentStep={getCurrentStepIndex()} />
                     </div>
                 </YummyText>
 
                 {/* Page Title */}
-                <div className="max-w-5xl mx-auto px-4">
+                <div className="max-w-5xl mx-auto px-0 md:px-4 lg:px-4">
                     <div className="mb-3">
                         <YummyText className="text-3xl font-medium text-gray-900 mb-1">Book a Delivery</YummyText>
                         <YummyText className="text-gray-600 text-sm">Schedule a new shipment with ease</YummyText>
@@ -572,7 +573,7 @@ export default function SmartRideBooking({ embedMode = false, initialData = {}, 
 
                 {/* Main Content */}
                 <YummyText>
-                    <div className="max-w-5xl mx-auto px-4 pb-12">
+                    <div className="max-w-5xl mx-auto px-0 md:px-4 lg:px-4 pb-12 mt-6">
                         <div className="bg-white rounded-2xl p-6" style={sideBottomShadow}>
                             <form onSubmit={handleSubmit}>
                                 {/* Delivery Information Section */}
@@ -1413,12 +1414,13 @@ export default function SmartRideBooking({ embedMode = false, initialData = {}, 
                     <div className="bg-white">
                         <div className="max-w-6xl mx-auto px-2 sm:px-4 py-0 h-16 md:h-32 flex items-center justify-between mb-8 md:mb-0 sm:md-0 lg:mb-0t">
                             <div className="flex items-center gap-3">
-                                {!(embedMode && isMobile) ? (
+                                {!(embedMode && isMobile) && (
                                     <a href="/" className="inline-block">
                                         <img src="/swiftly-logo.svg" alt="Swiftly" className="h-40 md:h-22 lg:h-22 object-contain" />
                                     </a>
-                                ) : (
-                                    <div className="px-3 py-1 rounded-full border-[1.5px] border-[#01A9F4] text-sm font-semibold text-[#0F172A]">Smartride</div>
+                                )}
+                                {embedMode && isMobile && (
+                                    <YummyText className="text-xs text-[#0F172A] border border-[#00B75A] rounded-full px-2 py-0.5">Smartride</YummyText>
                                 )}
                             </div>
                             <div>
@@ -1623,12 +1625,13 @@ export default function SmartRideBooking({ embedMode = false, initialData = {}, 
                     <div className="bg-white">
                         <div className="max-w-6xl mx-auto px-2 sm:px-4 py-0 h-16 md:h-32 flex items-center justify-between mb-8 md:mb-0 sm:md-0 lg:mb-0t">
                             <div className="flex items-center gap-3">
-                                {!(embedMode && isMobile) ? (
+                                {!(embedMode && isMobile) && (
                                     <a href="/" className="inline-block">
                                         <img src="/swiftly-logo.svg" alt="Swiftly" className="h-40 md:h-22 lg:h-22 object-contain" />
                                     </a>
-                                ) : (
-                                    <div className="px-3 py-1 rounded-full bg-gray-100 text-sm font-semibold text-[#0F172A]">Smartride</div>
+                                )}
+                                {embedMode && isMobile && (
+                                    <YummyText className="text-xs text-[#0F172A] border border-[#00B75A] rounded-full px-2 py-0.5">Smartride</YummyText>
                                 )}
                             </div>
                             <div>

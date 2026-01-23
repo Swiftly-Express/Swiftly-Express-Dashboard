@@ -235,11 +235,21 @@ const AuthCallback = () => {
             const error = params.get('error');
             const message = params.get('message');
 
+            // Preserve returnUrl if provided by backend or earlier flow
+            const returnUrlParam = params.get('returnUrl') || params.get('returnurl') || params.get('return');
+            const preservedReturnUrl = returnUrlParam || sessionStorage.getItem('auth_return_url');
+            if (preservedReturnUrl) {
+                addLog('🔖 Found returnUrl to preserve', preservedReturnUrl);
+                sessionStorage.setItem('auth_return_url', preservedReturnUrl);
+            }
+
             // CRITICAL: If we have a code, immediately clear it from URL to prevent double exchange
             if (code) {
                 addLog('🔒 CLEARING CODE FROM URL immediately to prevent reuse');
                 const newParams = new URLSearchParams();
                 if (role) newParams.set('role', role);
+                // Preserve returnUrl in the cleaned URL so the exchange step can still read it if needed
+                if (preservedReturnUrl) newParams.set('returnUrl', preservedReturnUrl);
                 newParams.set('processing', 'true');
                 history.replace({
                     pathname: location.pathname,
@@ -450,6 +460,15 @@ const AuthCallback = () => {
                         sessionStorage.removeItem('auth_processing');
                         addLog('🚀 REDIRECTING NOW', { role: exRole });
 
+                        // Prefer any preserved returnUrl
+                        const finalReturn = sessionStorage.getItem('auth_return_url');
+                        if (finalReturn) {
+                            addLog('➡️ Redirecting to preserved returnUrl', finalReturn);
+                            sessionStorage.removeItem('auth_return_url');
+                            history.replace(finalReturn);
+                            return;
+                        }
+
                         if (exRole === 'customer') {
                             addLog('➡️ Redirecting to /customer/dashboard');
                             history.replace('/customer/dashboard');
@@ -593,6 +612,14 @@ const AuthCallback = () => {
                     setTimeout(() => {
                         sessionStorage.removeItem('auth_processing');
                         addLog('🚀 REDIRECTING NOW', { role: finalRole });
+
+                        const finalReturn = sessionStorage.getItem('auth_return_url');
+                        if (finalReturn) {
+                            addLog('➡️ Redirecting to preserved returnUrl', finalReturn);
+                            sessionStorage.removeItem('auth_return_url');
+                            history.replace(finalReturn);
+                            return;
+                        }
 
                         if (finalRole === 'customer') {
                             addLog('➡️ Redirecting to /customer/dashboard');

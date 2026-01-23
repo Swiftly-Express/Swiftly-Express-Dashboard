@@ -725,7 +725,7 @@ const Book = () => {
 
           {/* Inline SmartRide: replaces booking form when active */}
           {showSmartRide && (
-            <div className="bg-white rounded-2xl p-4 md:p-6 mb-6" style={sideBottomShadow}>
+            <div>
 
               {/* inject delivery options for embedded SmartRide via global so Smartride can render dropdown */}
               {(() => { window.__SMART_RIDE_OPTIONS__ = deliveryTypes; return null; })()}
