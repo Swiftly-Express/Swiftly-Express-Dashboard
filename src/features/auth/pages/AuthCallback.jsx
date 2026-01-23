@@ -39,22 +39,22 @@ const AuthCallback = () => {
     // Helper to get and clean returnUrl from storage
     const getReturnUrl = (role) => {
         addLog('🔍 Checking for returnUrl in storage');
-        
+
         let returnUrl = null;
-        
+
         // Check localStorage first (set by SmartRideModal from public page)
         try {
             const storedUrl = localStorage.getItem('swiftly_auth_return_url');
             const timestamp = localStorage.getItem('swiftly_auth_return_timestamp');
-            
+
             if (storedUrl && timestamp) {
                 const age = Date.now() - parseInt(timestamp);
                 const maxAge = 10 * 60 * 1000; // 10 minutes (increased from 5)
-                
+
                 if (age < maxAge) {
                     returnUrl = storedUrl;
                     addLog('✅ Found valid returnUrl in localStorage', { url: returnUrl, ageSeconds: Math.floor(age / 1000) });
-                    
+
                     // Clean up
                     localStorage.removeItem('swiftly_auth_return_url');
                     localStorage.removeItem('swiftly_auth_return_timestamp');
@@ -70,7 +70,7 @@ const AuthCallback = () => {
         } catch (e) {
             addLog('⚠️ Error reading returnUrl from localStorage', e.message);
         }
-        
+
         // Check sessionStorage as backup
         if (!returnUrl) {
             try {
@@ -86,7 +86,7 @@ const AuthCallback = () => {
                 addLog('⚠️ Error reading returnUrl from sessionStorage', e.message);
             }
         }
-        
+
         // Check auth_return_url from localStorage as additional fallback
         if (!returnUrl) {
             try {
@@ -101,23 +101,23 @@ const AuthCallback = () => {
                 addLog('⚠️ Error reading fallback returnUrl', e.message);
             }
         }
-        
+
         return returnUrl;
     };
 
     // Helper to get redirect path based on role and returnUrl
     const getRedirectPath = (role, returnUrl) => {
         addLog('🎯 Determining redirect path', { role, returnUrl });
-        
+
         // If we have a returnUrl, validate it's appropriate for the role
         if (returnUrl) {
             addLog('🔍 Validating returnUrl for role', { role, returnUrl });
-            
+
             // Check if returnUrl matches the user's role
             const isCustomerUrl = returnUrl.includes('/customer/');
             const isRiderUrl = returnUrl.includes('/rider/');
             const isAdminUrl = returnUrl.includes('/admin/');
-            
+
             if (role === 'customer' && isCustomerUrl) {
                 addLog('✅ returnUrl matches customer role, using it', returnUrl);
                 return returnUrl;
@@ -137,7 +137,7 @@ const AuthCallback = () => {
                 });
             }
         }
-        
+
         // Default to dashboard for the role
         const defaultPaths = {
             'customer': '/customer/dashboard',
@@ -145,7 +145,7 @@ const AuthCallback = () => {
             'driver': '/rider/dashboard',
             'admin': '/admin/dashboard'
         };
-        
+
         const defaultPath = defaultPaths[role] || '/';
         addLog('ℹ️ Using default path for role', { role, path: defaultPath });
         return defaultPath;
@@ -332,11 +332,11 @@ const AuthCallback = () => {
                     const returnUrl = localStorage.getItem('swiftly_auth_return_url');
                     const returnTimestamp = localStorage.getItem('swiftly_auth_return_timestamp');
                     const fallbackReturn = localStorage.getItem('auth_return_url');
-                    
+
                     localStorage.removeItem('profile_image');
                     localStorage.removeItem('user_name');
                     localStorage.removeItem('user_data');
-                    
+
                     // Restore returnUrl if it existed
                     if (returnUrl) localStorage.setItem('swiftly_auth_return_url', returnUrl);
                     if (returnTimestamp) localStorage.setItem('swiftly_auth_return_timestamp', returnTimestamp);
@@ -568,15 +568,15 @@ const AuthCallback = () => {
                     addLog('✅ Set completion flags');
 
                     setStatus('Success! Redirecting...');
-                    
+
                     // Get returnUrl if it exists
                     const returnUrl = getReturnUrl(exRole);
                     const redirectPath = getRedirectPath(exRole, returnUrl);
-                    
-                    addLog('🎯 Preparing to redirect', { 
-                        role: exRole, 
+
+                    addLog('🎯 Preparing to redirect', {
+                        role: exRole,
                         returnUrl: returnUrl || 'none',
-                        finalPath: redirectPath 
+                        finalPath: redirectPath
                     });
 
                     setTimeout(() => {
@@ -709,15 +709,15 @@ const AuthCallback = () => {
                     addLog('✅ Set completion flags');
 
                     setStatus('Success! Redirecting...');
-                    
+
                     // Get returnUrl if it exists
                     const returnUrl = getReturnUrl(finalRole);
                     const redirectPath = getRedirectPath(finalRole, returnUrl);
-                    
-                    addLog('🎯 Preparing to redirect', { 
-                        role: finalRole, 
+
+                    addLog('🎯 Preparing to redirect', {
+                        role: finalRole,
                         returnUrl: returnUrl || 'none',
-                        finalPath: redirectPath 
+                        finalPath: redirectPath
                     });
 
                     setTimeout(() => {
