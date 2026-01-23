@@ -58,17 +58,43 @@ const AdminLayout = ({ children }) => {
     }
   };
 
-  const handleMarkAllAsRead = async () => {
+  const handleMarkAllAsRead = async (e) => {
+    if (e) {
+      e.preventDefault();
+      e.stopPropagation();
+    }
+
     try {
       console.log('[AdminLayout] Marking all notifications as read...');
       const response = await markAllNotificationsAsRead();
       console.log('[AdminLayout] Mark all as read response:', response);
+
+      // Optimistically update UI
       setNotifications(prev => prev.map(n => ({ ...n, isRead: true, read: true })));
       setUnreadCount(0);
+
+      // Refresh from server in background (delayed to avoid race conditions)
+      setTimeout(async () => {
+        try {
+          await fetchNotifications(1, false);
+          await checkNotifications();
+        } catch (err) {
+          console.warn('[AdminLayout] Refresh after mark-all failed', err);
+        }
+      }, 200);
+
+      try { if (document && document.activeElement) document.activeElement.blur(); } catch (err) { /* ignore */ }
       console.log('[AdminLayout] All notifications marked as read successfully');
     } catch (error) {
       console.error('[AdminLayout] Failed to mark all as read:', error);
       console.error('[AdminLayout] Error details:', error.response?.data || error.message);
+      // Revert optimistic update on error
+      try {
+        await fetchNotifications(1, false);
+        await checkNotifications();
+      } catch (e) {
+        console.warn('[AdminLayout] Failed to revert after mark-all error', e);
+      }
     }
   };
 
@@ -222,6 +248,8 @@ const AdminLayout = ({ children }) => {
                 {notifications.length > 0 && (
                   <button
                     onClick={handleMarkAllAsRead}
+                    onMouseDown={(e) => e.stopPropagation()}
+                    onTouchStart={(e) => e.stopPropagation()}
                     className="text-xs text-[#00B75A] hover:text-[#00a352] font-medium transition-colors"
                   >
                     Mark all read
@@ -276,12 +304,8 @@ const AdminLayout = ({ children }) => {
                           <div
                             key={notifId}
                             className={`p-4 hover:bg-gray-50 transition-colors cursor-pointer ${!isRead ? 'bg-blue-50' : ''}`}
-                            onMouseEnter={(e) => {
-                              if (!isRead) {
-                                handleMarkAsRead(notifId, e);
-                              }
-                            }}
                             onClick={(e) => {
+                              e.stopPropagation();
                               if (!isRead) {
                                 handleMarkAsRead(notifId, e);
                               }
