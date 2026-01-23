@@ -601,6 +601,23 @@ export async function createDelivery(payload) {
   return apiClient.post('/api/customer/deliveries', payload);
 }
 
+export async function getDeliveryEstimate(params) {
+  const { pickupLat, pickupLng, deliveryLat, deliveryLng, smartRide, specialErrand } = params;
+  if (!pickupLat || !pickupLng || !deliveryLat || !deliveryLng) {
+    throw new Error('Missing coordinates for price estimation');
+  }
+  return apiClient.get('/api/customer/deliveries/estimate-price', {
+    params: {
+      pickupLat,
+      pickupLng,
+      deliveryLat,
+      deliveryLng,
+      smartRide,
+      specialErrand
+    }
+  });
+}
+
 // Payment-related client helpers
 export async function getPaymentStatus(paymentId) {
   if (!paymentId) throw new Error('paymentId is required');

@@ -40,6 +40,7 @@ function toRad(degrees) {
  * @param {number} params.customBid - Custom bid amount (must be >= 800, optional)
  * @param {string} params.deliveryType - Delivery type: 'express' or 'smart_ride' (optional)
  * @returns {Object} Pricing breakdown
+ * @deprecated Use getDeliveryEstimate from authApi.js instead. This function is no longer used and uses outdated pricing logic.
  */
 export function calculateDeliveryPrice({
   distance = 0,
