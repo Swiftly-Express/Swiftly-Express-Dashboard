@@ -6,8 +6,7 @@ import Button from '../../../components/Button';
 import { login, getCurrentUser, logout } from '../../../utils/authApi';
 import { setCookie, setJSONCookie } from '../../../utils/cookies';
 
-const CustomerLogin = () =>
-{
+const CustomerLogin = () => {
   const router = useIonRouter();
   const [formData, setFormData] = useState({
     email: '',
@@ -29,18 +28,17 @@ const CustomerLogin = () =>
   useEffect(() => {
     const urlParams = new URLSearchParams(window.location.search);
     const returnUrl = urlParams.get('returnUrl');
-    
+
     if (returnUrl) {
       // Store returnUrl in sessionStorage so we can use it after login
       sessionStorage.setItem('auth_return_url', returnUrl);
-      
+
       // Clean up URL
       window.history.replaceState({}, '', window.location.pathname);
     }
   }, []);
 
-  const handleSubmit = async (e) =>
-  {
+  const handleSubmit = async (e) => {
     e.preventDefault();
     setError('');
 
@@ -74,9 +72,9 @@ const CustomerLogin = () =>
       // Check for returnUrl and redirect accordingly
       const returnUrl = sessionStorage.getItem('auth_return_url');
       sessionStorage.removeItem('auth_return_url'); // Clean up
-      
+
       if (document && document.activeElement) document.activeElement.blur();
-      
+
       if (returnUrl) {
         console.log('[CustomerLogin] Redirecting to returnUrl:', returnUrl);
         router.push(returnUrl, 'root', 'replace');
@@ -105,8 +103,7 @@ const CustomerLogin = () =>
         );
 
         // Auto-redirect
-        setTimeout(() =>
-        {
+        setTimeout(() => {
           window.location.href = redirectPath;
         }, 3000);
         setGoogleLoading(false);
@@ -155,8 +152,7 @@ const CustomerLogin = () =>
     }
   };
 
-  const handleResendVerification = async () =>
-  {
+  const handleResendVerification = async () => {
     if (!unverifiedUserId) {
       // Fallback to simple redirect if we somehow don't have ID
       router.push('/auth/verify-email', 'forward', 'push');
@@ -177,8 +173,7 @@ const CustomerLogin = () =>
       setCookie('pendingVerificationType', 'customer', 1);
       setCookie('pendingVerificationUserId', unverifiedUserId, 1);
 
-      setTimeout(() =>
-      {
+      setTimeout(() => {
         router.push('/auth/verify-email', 'forward', 'push');
       }, 1500);
     } catch (err) {
@@ -189,15 +184,13 @@ const CustomerLogin = () =>
     }
   };
 
-  const handleForgotPassword = () =>
-  {
+  const handleForgotPassword = () => {
     router.push('/forgot-password?role=customer');
   };
 
-  const handleCreateAccount = () =>
-  {
+  const handleCreateAccount = () => {
     if (document && document.activeElement) document.activeElement.blur();
-    
+
     // Check if there's a returnUrl we should pass along
     const returnUrl = sessionStorage.getItem('auth_return_url');
     if (returnUrl) {
@@ -213,21 +206,23 @@ const CustomerLogin = () =>
     ? `${window.location.origin.replace(/\/$/, '')}${rawBase.replace(/\/$/, '')}`
     : rawBase.replace(/\/$/, '');
 
-  const handleGoogleLogin = (e) =>
-  {
+  const handleGoogleLogin = (e) => {
     e.preventDefault();
     try {
       setGoogleLoading(true);
-      
+
       // Include returnUrl in Google OAuth if it exists
       const returnUrl = sessionStorage.getItem('auth_return_url');
-      const googleUrl = returnUrl 
+      // Also persist returnUrl as a cookie so the backend can echo it back if needed
+      if (returnUrl) {
+        try { setCookie('auth_return_url', returnUrl, 1); } catch (e) { /* ignore */ }
+      }
+      const googleUrl = returnUrl
         ? `${apiBase}/api/auth/google?role=customer&returnUrl=${encodeURIComponent(returnUrl)}`
         : `${apiBase}/api/auth/google?role=customer`;
-      
+
       console.log('[CustomerLogin] Redirecting to:', googleUrl);
-      setTimeout(() =>
-      {
+      setTimeout(() => {
         window.location.href = googleUrl;
       }, 200);
     } catch (err) {
@@ -236,8 +231,7 @@ const CustomerLogin = () =>
     }
   };
 
-  const handleChange = (fieldOrEvent, value) =>
-  {
+  const handleChange = (fieldOrEvent, value) => {
     setError('');
     // support both (e) event handlers or (field, value) calls
     if (typeof fieldOrEvent === 'string') {
