@@ -1,13 +1,14 @@
 'use client';
 
 import React, { useState, useRef, useEffect } from 'react';
-import { Calendar, Bike, Phone, MessageCircle, Package, CheckCircle } from 'lucide-react';
+import { Calendar, Bike, Phone, MessageCircle, Package, CheckCircle, X } from 'lucide-react';
 import { IonPage, IonContent, IonToast, useIonRouter } from '@ionic/react';
 import Button from '../../components/Button';
 import { YummyText } from '../../components/YummyText';
 import Breadcrumb from '../../components/Breadcrumb';
 import GoogleMap from '../../components/TrackingMap';
 import GoogleMapsAutocomplete from '../../components/GoogleMapsAutocomplete';
+import StyledDropdown from '../../components/StyledDropdown';
 import axios from 'axios';
 import { getCookie, setCookie, deleteCookie } from '../../utils/cookies';
 import { createDelivery, cancelDelivery, isAuthenticated } from '../../utils/authApi';
@@ -519,42 +520,7 @@ export default function SmartRideBooking({ embedMode = false, initialData = {}, 
         hideBubbleTimeout.current = setTimeout(() => setSliderBubble(null), 800);
     };
 
-    // Simple dropdown component
-    const StyledDropdown = ({ value, onChange, options, tooltips }) => {
-        const [isOpen, setIsOpen] = useState(false);
-        return (
-            <div className="relative">
-                <button
-                    type="button"
-                    onClick={() => setIsOpen(!isOpen)}
-                    className="w-full px-4 py-3 rounded-xl bg-[#F8F9FA] text-sm text-left text-[#0F172A] focus:outline-none focus:ring-2 focus:ring-[#00D68F] border-none flex items-center justify-between"
-                >
-                    <span>{value}</span>
-                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                        <path d="M6 9l6 6 6-6" stroke="#94A3B8" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
-                    </svg>
-                </button>
-                {isOpen && (
-                    <div className="absolute z-10 w-full mt-2 bg-white rounded-xl shadow-lg border border-gray-200 overflow-hidden">
-                        {options.map(opt => (
-                            <button
-                                key={opt}
-                                type="button"
-                                onClick={() => {
-                                    onChange(opt);
-                                    setIsOpen(false);
-                                }}
-                                className="w-full px-4 py-3 text-left text-sm text-[#0F172A] hover:bg-[#F8F9FA] transition-colors"
-                                title={tooltips?.[opt]}
-                            >
-                                {opt}
-                            </button>
-                        ))}
-                    </div>
-                )}
-            </div>
-        );
-    };
+
 
     if (currentStep === 'form') {
         return (
@@ -568,16 +534,18 @@ export default function SmartRideBooking({ embedMode = false, initialData = {}, 
                                     <img src="/swiftly-logo.svg" alt="Swiftly" className="h-40 md:h-22 lg:h-22 object-contain" />
                                 </a>
                             </div>
-
-                            {/* Desktop/back button */}
                             <div>
-                                <Button
-                                    variant="primary"
-                                    className="!bg-[#FFFFFF] !border-[1.5px] !border-[#0A0A0A] text-[#000000] text-sm hover:!bg-[#FFFFFF] rounded-full px-4 py-2 inline-flex"
-                                    onClick={() => router.goBack()}
+                                <button
+                                    type="button"
+                                    aria-label="Close"
+                                    onClick={() => {
+                                        if (embedMode && typeof onClose === 'function') return onClose();
+                                        return router.goBack();
+                                    }}
+                                    className="inline-flex items-center justify-center w-10 h-10 rounded-full border-[1.5px] border-[#0A0A0A] bg-white hover:bg-white"
                                 >
-                                    Back
-                                </Button>
+                                    <X className="w-5 h-5 text-[#0A0A0A]" />
+                                </button>
                             </div>
                         </div>
                     </div>
@@ -610,14 +578,56 @@ export default function SmartRideBooking({ embedMode = false, initialData = {}, 
 
                                     {/* Delivery Type */}
                                     <div className="mb-6">
-                                        <label className="block text-sm font-medium text-gray-700 mb-2">Delivery Type</label>
-                                        <input
-                                            type="text"
-                                            name="deliveryType"
-                                            value={formData.deliveryType}
-                                            onChange={handleChange}
-                                            className="w-full px-4 py-3 bg-[#FBFBFB] placeholder:text-[#BDBDBD] rounded-lg focus:outline-none focus:ring-2 focus:ring-[#00D68F]"
-                                            readOnly
+                                        <label className="block text-sm font-medium text-gray-700 mb-2 mt-5">Delivery Type</label>
+                                        <StyledDropdown
+                                            value={
+                                                formData.deliveryType === 'express' ? 'Express (Same day)' :
+                                                    formData.deliveryType === 'standard' ? 'Standard (1-2 days)' :
+                                                        formData.deliveryType === 'economy' ? 'Economy (3-5 days)' :
+                                                            formData.deliveryType === 'smart_ride' ? 'Smart Ride' :
+                                                                'Smart Ride'
+                                            }
+                                            onChange={(label) => {
+                                                const deliveryTypeMap = {
+                                                    'Express (Same day)': 'express',
+                                                    'Standard (1-2 days)': 'standard',
+                                                    'Economy (3-5 days)': 'economy',
+                                                    'Smart Ride': 'smart_ride'
+                                                };
+                                                const selectedValue = deliveryTypeMap[label];
+
+                                                // If user selected a non-Smart Ride option, redirect to main booking
+                                                if (selectedValue !== 'smart_ride') {
+                                                    // Store form data in sessionStorage for pre-filling
+                                                    try {
+                                                        sessionStorage.setItem('booking_form_data', JSON.stringify({
+                                                            ...formData,
+                                                            deliveryType: selectedValue
+                                                        }));
+                                                    } catch (e) {
+                                                        console.warn('Failed to store form data:', e);
+                                                    }
+
+                                                    // Close Smart Ride if embedded
+                                                    if (embedMode && typeof onClose === 'function') {
+                                                        onClose();
+                                                    }
+
+                                                    // Navigate to main booking page
+                                                    router.push('/customer/book', 'root', 'replace');
+                                                } else {
+                                                    setFormData({ ...formData, deliveryType: selectedValue });
+                                                }
+                                            }}
+                                            options={['Express (Same day)', 'Standard (1-2 days)', 'Economy (3-5 days)', 'Smart Ride']}
+                                            tooltips={{
+                                                'Express (Same day)': 'Fast delivery within the same day — starting from ₦1,200',
+                                                'Standard (1-2 days)': 'Regular delivery in 1-2 days — starting from ₦800',
+                                                'Economy (3-5 days)': 'Budget-friendly delivery in 3-5 days — starting from ₦800',
+                                                'Smart Ride': 'Quick motorcycle delivery with instant rider matching — starting from ₦1,400'
+                                            }}
+                                            className="w-full border-[1.5px] border-gray-200 rounded-full"
+                                            width="w-full"
                                         />
                                     </div>
                                 </div>
@@ -798,6 +808,8 @@ export default function SmartRideBooking({ embedMode = false, initialData = {}, 
                                                         'Medium': 'Great for laptops, clothes, or documents. About the size of a briefcase.',
                                                         'Very Big': 'For electronics or furniture parts. As big as a suitcase or larger.'
                                                     }}
+                                                    className="w-full border-[1.5px] border-gray-200 rounded-full"
+                                                    width="w-full"
                                                 />
                                             </div>
 
@@ -991,6 +1003,8 @@ export default function SmartRideBooking({ embedMode = false, initialData = {}, 
                                                         'Heavy': 'Needs both hands to lift. 5-20kg - think microwave or bag of rice.',
                                                         'Very Heavy': 'Requires serious effort, maybe two people. Over 20kg - like furniture.'
                                                     }}
+                                                    className="w-full border-[1.5px] border-gray-200 rounded-full"
+                                                    width="w-full"
                                                 />
                                             </div>
 
@@ -1399,16 +1413,18 @@ export default function SmartRideBooking({ embedMode = false, initialData = {}, 
                                     <img src="/swiftly-logo.svg" alt="Swiftly" className="h-40 md:h-22 lg:h-22 object-contain" />
                                 </a>
                             </div>
-
-                            {/* Desktop/back button */}
                             <div>
-                                <Button
-                                    variant="primary"
-                                    className="!bg-[#FFFFFF] border-[1.5px] border-[#0A0A0A] text-[#000000] text-sm hover:!bg-[#FFFFFF] rounded-full px-4 py-2 inline-flex"
-                                    onClick={() => router.goBack()}
+                                <button
+                                    type="button"
+                                    aria-label="Close"
+                                    onClick={() => {
+                                        if (embedMode && typeof onClose === 'function') return onClose();
+                                        return router.goBack();
+                                    }}
+                                    className="inline-flex items-center justify-center w-10 h-10 rounded-full border-[1.5px] border-[#0A0A0A] bg-white hover:bg-white"
                                 >
-                                    Back
-                                </Button>
+                                    <X className="w-5 h-5 text-[#0A0A0A]" />
+                                </button>
                             </div>
                         </div>
                     </div>
@@ -1603,16 +1619,18 @@ export default function SmartRideBooking({ embedMode = false, initialData = {}, 
                                     <img src="/swiftly-logo.svg" alt="Swiftly" className="h-40 md:h-22 lg:h-22 object-contain" />
                                 </a>
                             </div>
-
-                            {/* Desktop/back button */}
                             <div>
-                                <Button
-                                    variant="primary"
-                                    className="!bg-[#FFFFFF] border-[1.5px] !border-[#0A0A0A] text-[#000000] text-sm hover:!bg-[#FFFFFF] rounded-full px-4 py-2 inline-flex"
-                                    onClick={() => router.goBack()}
+                                <button
+                                    type="button"
+                                    aria-label="Close"
+                                    onClick={() => {
+                                        if (embedMode && typeof onClose === 'function') return onClose();
+                                        return router.goBack();
+                                    }}
+                                    className="inline-flex items-center justify-center w-10 h-10 rounded-full border-[1.5px] border-[#0A0A0A] bg-white hover:bg-white"
                                 >
-                                    Back
-                                </Button>
+                                    <X className="w-5 h-5 text-[#0A0A0A]" />
+                                </button>
                             </div>
                         </div>
                     </div>
@@ -1730,16 +1748,18 @@ export default function SmartRideBooking({ embedMode = false, initialData = {}, 
                                     <img src="/swiftly-logo.svg" alt="Swiftly" className="h-40 md:h-22 lg:h-22 object-contain" />
                                 </a>
                             </div>
-
-                            {/* Desktop/back button */}
                             <div>
-                                <Button
-                                    variant="primary"
-                                    className="!bg-[#FFFFFF] border-[1.5px] border-[#0A0A0A] text-[#000000] text-sm hover:!bg-[#FFFFFF] rounded-full px-4 py-2 inline-flex"
-                                    onClick={() => router.goBack()}
+                                <button
+                                    type="button"
+                                    aria-label="Close"
+                                    onClick={() => {
+                                        if (embedMode && typeof onClose === 'function') return onClose();
+                                        return router.goBack();
+                                    }}
+                                    className="inline-flex items-center justify-center w-10 h-10 rounded-full border-[1.5px] border-[#0A0A0A] bg-white hover:bg-white"
                                 >
-                                    Back
-                                </Button>
+                                    <X className="w-5 h-5 text-[#0A0A0A]" />
+                                </button>
                             </div>
                         </div>
                     </div>

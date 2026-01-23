@@ -726,20 +726,9 @@ const Book = () => {
           {/* Inline SmartRide: replaces booking form when active */}
           {showSmartRide && (
             <div className="bg-white rounded-2xl p-4 md:p-6 mb-6" style={sideBottomShadow}>
-              <div className="flex items-center justify-between mb-4">
-                <YummyText className="text-lg md:text-xl font-normal text-[#0F172A]">Smart Ride</YummyText>
-                <button
-                  onClick={() => {
-                    setShowSmartRide(false);
-                    try { window.history.replaceState({}, '', window.location.pathname); } catch (e) { }
-                  }}
-                  className="p-2 rounded-full hover:bg-gray-100 transition-colors"
-                >
-                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                    <path d="M18 6L6 18M6 6l12 12" stroke="#64748B" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
-                  </svg>
-                </button>
-              </div>
+
+              {/* inject delivery options for embedded SmartRide via global so Smartride can render dropdown */}
+              {(() => { window.__SMART_RIDE_OPTIONS__ = deliveryTypes; return null; })()}
 
               <SmartRideBooking embedMode={true} initialData={{
                 senderName: formData.senderName,
@@ -758,7 +747,7 @@ const Book = () => {
           )}
 
           {/* Header */}
-          <div className="mb-4 md:mb-8 mt-4 sm:mt-0 md:mt-0">
+          <div style={{ display: showSmartRide ? 'none' : 'block' }} className="mb-4 md:mb-8 mt-4 sm:mt-0 md:mt-0">
             <YummyText className="text-2xl md:text-3xl  font-medium text-[#0F172A] mb-2 text-left md:text-left">
               Book a Delivery
             </YummyText>
