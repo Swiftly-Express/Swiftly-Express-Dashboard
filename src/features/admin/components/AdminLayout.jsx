@@ -54,7 +54,29 @@ const AdminLayout = ({ children }) => {
     const newState = !showNotifications;
     setShowNotifications(newState);
     if (newState) {
+      // Fetch notifications to populate dropdown
       await fetchNotifications(1, false);
+
+      // Optimistically mark everything read locally and on the server
+      setNotifications(prev => prev.map(n => ({ ...n, isRead: true, read: true })));
+      setUnreadCount(0);
+
+      // Fire server-side mark-all in background and refresh shortly after
+      (async () => {
+        try {
+          await markAllNotificationsAsRead();
+        } catch (err) {
+          console.warn('[AdminLayout] markAllNotificationsAsRead failed', err);
+        }
+        setTimeout(async () => {
+          try {
+            await fetchNotifications(1, false);
+            await checkNotifications();
+          } catch (e) {
+            console.warn('[AdminLayout] Refresh after toggle mark-all failed', e);
+          }
+        }, 300);
+      })();
     }
   };
 
@@ -143,15 +165,22 @@ const AdminLayout = ({ children }) => {
       checkNotifications();
     };
 
+    const handleVerificationCompleted = () => {
+      console.log('[AdminLayout] verification:completed event received');
+      checkNotifications();
+    };
+
     window.addEventListener('kyc:updated', handleKycUpdate);
     window.addEventListener('user:created', handleUserCreated);
     window.addEventListener('kyc:submitted', handleKycSubmitted);
+    window.addEventListener('verification:completed', handleVerificationCompleted);
 
     return () => {
       clearInterval(notificationInterval);
       window.removeEventListener('kyc:updated', handleKycUpdate);
       window.removeEventListener('user:created', handleUserCreated);
       window.removeEventListener('kyc:submitted', handleKycSubmitted);
+      window.removeEventListener('verification:completed', handleVerificationCompleted);
     };
   }, []);
   return (
@@ -304,6 +333,8 @@ const AdminLayout = ({ children }) => {
                           <div
                             key={notifId}
                             className={`p-4 hover:bg-gray-50 transition-colors cursor-pointer ${!isRead ? 'bg-blue-50' : ''}`}
+                            onMouseDown={(e) => e.stopPropagation()}
+                            onTouchStart={(e) => e.stopPropagation()}
                             onClick={(e) => {
                               e.stopPropagation();
                               if (!isRead) {

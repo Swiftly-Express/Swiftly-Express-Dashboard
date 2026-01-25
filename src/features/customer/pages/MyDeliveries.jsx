@@ -72,6 +72,7 @@ const DeliveryCard = ({ delivery }) => {
   const [showCopyToast, setShowCopyToast] = useState(false);
   const statusStyle = getStatusStyle(delivery.status);
   const progress = getProgress(delivery.status);
+  const paymentStatus = (delivery.paymentStatus || delivery.payment?.status || '').toLowerCase();
 
   const handleToggleDetails = () => {
     const newIsOpen = !isOpen;
@@ -117,9 +118,23 @@ const DeliveryCard = ({ delivery }) => {
               <YummyText className="text-base md:text-lg font-medium text-[#0F172A] truncate">
                 {delivery.packageDetails?.description || 'Package'}
               </YummyText>
-              <span className={`px-3 py-1 rounded-full text-xs font-medium ${statusStyle.bg} ${statusStyle.color} w-fit`}>
-                {delivery.status || 'Pending'}
-              </span>
+              <div className="flex items-center gap-2">
+                <span className={`px-3 py-1 rounded-full text-xs font-medium ${statusStyle.bg} ${statusStyle.color} w-fit`}>
+                  {delivery.status || 'Pending'}
+                </span>
+
+                {(paymentStatus === 'pending' || paymentStatus === 'unpaid' || paymentStatus === 'failed') && (
+                  <button
+                    onClick={() => {
+                      const deliveryId = delivery._id || delivery.id || delivery.trackingNumber;
+                      window.dispatchEvent(new CustomEvent('payment:init', { detail: { deliveryId } }));
+                    }}
+                    className="px-3 py-1 rounded-full text-xs font-medium bg-[#FFFAEB] text-[#92400E] border border-[#FEF3C7]"
+                  >
+                    Make Payment
+                  </button>
+                )}
+              </div>
             </div>
 
             <div className="text-sm text-[#4A5565] mb-1 flex items-center gap-1 flex-wrap">
@@ -559,18 +574,12 @@ const MyDeliveries = () => {
 
       console.log('[MyDeliveries] Parsed items:', items);
 
-      // Filter out cancelled and unpaid orders
+      // Filter out cancelled orders (keep unpaid/pending so users can pay later)
       const validDeliveries = items.filter(d => {
         const status = (d.status || '').toLowerCase();
-        const paymentStatus = (d.paymentStatus || '').toLowerCase();
 
         // Exclude cancelled orders
         if (status === 'cancelled' || status === 'canceled') {
-          return false;
-        }
-
-        // Exclude orders with unpaid/pending payment status
-        if (paymentStatus === 'pending' || paymentStatus === 'unpaid' || paymentStatus === 'failed') {
           return false;
         }
 

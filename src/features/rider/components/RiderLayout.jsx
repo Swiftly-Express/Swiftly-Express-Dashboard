@@ -102,6 +102,8 @@ const RiderLayout = ({ children }) => {
     const handleVerificationComplete = (event) => {
       console.log('[RiderLayout] Verification completed, refreshing profile');
       fetchUserProfile();
+      // Also refresh notifications/count
+      checkNotifications();
     };
 
     // Listen for delivery status changes to check for new notifications
@@ -245,6 +247,26 @@ const RiderLayout = ({ children }) => {
     if (newState) {
       // Opening notifications - fetch them
       await fetchNotifications(1, false);
+
+      // Optimistically mark everything read locally and on the server
+      setNotifications(prev => prev.map(n => ({ ...n, isRead: true, read: true })));
+      setUnreadCount(0);
+
+      (async () => {
+        try {
+          await markAllNotificationsAsRead();
+        } catch (err) {
+          console.warn('[RiderLayout] markAllNotificationsAsRead failed', err);
+        }
+        setTimeout(async () => {
+          try {
+            await fetchNotifications(1, false);
+            await checkNotifications();
+          } catch (e) {
+            console.warn('[RiderLayout] Refresh after toggle mark-all failed', e);
+          }
+        }, 300);
+      })();
     }
   };
 
@@ -499,6 +521,8 @@ const RiderLayout = ({ children }) => {
                           <div
                             key={notifId}
                             className={`p-4 hover:bg-gray-50 transition-colors cursor-pointer ${!isRead ? 'bg-blue-50' : ''}`}
+                            onMouseDown={(e) => e.stopPropagation()}
+                            onTouchStart={(e) => e.stopPropagation()}
                             onClick={(e) => {
                               e.stopPropagation();
                               if (!isRead) {

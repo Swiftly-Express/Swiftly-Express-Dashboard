@@ -272,6 +272,9 @@ const KYCApprovals = () => {
     });
   };
 
+  // Only pending applications should appear in the Pending Applications list to avoid duplicates
+  const pendingApps = applications.filter(a => ((a.status || a.verificationStatus) || '').toString().toLowerCase() === 'pending');
+
   const showToast = (message, type = 'success') => {
     setToast({ show: true, message, type });
     setTimeout(() => {
@@ -776,7 +779,7 @@ const KYCApprovals = () => {
                 </YummyText>
               </div>
 
-              {applications.length === 0 ? (
+              {pendingApps.length === 0 ? (
                 <div className="text-center py-12">
                   <DocumentIcon width={48} height={48} stroke="#D1D5DB" className="mx-auto mb-3" />
                   <YummyText className="text-gray-500">No pending applications</YummyText>
@@ -784,7 +787,7 @@ const KYCApprovals = () => {
               ) : (
                 <>
                   <div className="space-y-4">
-                    {applications.map((app, index) => {
+                    {pendingApps.map((app, index) => {
                       const normalizedApp = getApplicationData(app);
                       if (isMobile) {
                         return (

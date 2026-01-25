@@ -102,7 +102,29 @@ const CustomerLayout = ({ children }) => {
     const newState = !showNotifications;
     setShowNotifications(newState);
     if (newState) {
+      // Fetch notifications to populate dropdown
       await fetchNotifications(1, false);
+
+      // Optimistically mark everything read locally and on the server
+      setNotifications(prev => prev.map(n => ({ ...n, isRead: true, read: true })));
+      setUnreadCount(0);
+
+      // Fire server-side mark-all in background and refresh shortly after
+      (async () => {
+        try {
+          await markAllNotificationsAsRead();
+        } catch (err) {
+          console.warn('[CustomerLayout] markAllNotificationsAsRead failed', err);
+        }
+        setTimeout(async () => {
+          try {
+            await fetchNotifications(1, false);
+            await checkNotifications();
+          } catch (e) {
+            console.warn('[CustomerLayout] Refresh after toggle mark-all failed', e);
+          }
+        }, 300);
+      })();
     }
   };
 
@@ -191,12 +213,18 @@ const CustomerLayout = ({ children }) => {
       checkNotifications();
     };
 
+    const handleVerificationCompleted = () => {
+      checkNotifications();
+    };
+
     window.addEventListener('profile:updated', loadAvatar);
     window.addEventListener('delivery:updated', handleDeliveryUpdated);
+    window.addEventListener('verification:completed', handleVerificationCompleted);
 
     return () => {
       window.removeEventListener('profile:updated', loadAvatar);
       window.removeEventListener('delivery:updated', handleDeliveryUpdated);
+      window.removeEventListener('verification:completed', handleVerificationCompleted);
       clearInterval(notificationInterval);
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -349,6 +377,8 @@ const CustomerLayout = ({ children }) => {
                           <div
                             key={notifId}
                             className={`p-4 hover:bg-gray-50 transition-colors cursor-pointer ${!isRead ? 'bg-blue-50' : ''}`}
+                            onMouseDown={(e) => e.stopPropagation()}
+                            onTouchStart={(e) => e.stopPropagation()}
                             onClick={(e) => {
                               e.stopPropagation();
                               if (!isRead) {

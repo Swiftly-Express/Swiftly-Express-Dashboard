@@ -354,9 +354,15 @@ export default function SmartRideBooking({ embedMode = false, initialData = {}, 
                 throw new Error('Failed to create delivery (no id returned)');
             }
             setDeliveryId(dId);
-
-            setToastMsg('Preparing payment...');
+            // Payment is optional for SmartRide — finalize booking now and allow payment later
+            window.dispatchEvent(new Event('deliveries:refresh'));
+            window.dispatchEvent(new CustomEvent('delivery:created', { detail: createResp?.data || createResp }));
+            setToastMsg('Delivery booked successfully!');
             setShowToast(true);
+            setIsProcessingPayment(false);
+            setIsCreating(false);
+            try { router.push('/customer/deliveries', 'root', 'replace'); } catch (e) { window.location.href = '/customer/deliveries'; }
+            return;
 
             // Open popup synchronously to preserve user gesture
             let paymentWindow = null;
