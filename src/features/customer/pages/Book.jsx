@@ -9,8 +9,8 @@ import StyledDropdown from '../../../components/StyledDropdown';
 import GoogleMapsAutocomplete from '../../../components/GoogleMapsAutocomplete';
 import CustomerLayout from '../components/CustomerLayout';
 import { YummyText } from '../../../components/YummyText';
-import { createDelivery, isAuthenticated, cancelDelivery } from '../../../utils/authApi';
-import { calculateDistance, calculateDeliveryPrice } from '../../../utils/pricing';
+import { createDelivery, isAuthenticated, cancelDelivery, getDeliveryEstimate } from '../../../utils/authApi';
+import { calculateDistance } from '../../../utils/pricing';
 import SmartRideBooking from '../../smartride-booking/Smartride-Booking';
 import axios from 'axios';
 import { getCookie, setCookie, setJSONCookie, getJSONCookie, deleteCookie } from '../../../utils/cookies';
@@ -29,7 +29,8 @@ const apiClient = axios.create({
 
 // Add request interceptor to attach auth token
 apiClient.interceptors.request.use(
-  (config) => {
+  (config) =>
+  {
     const riderToken = getCookie("rider_token");
     const customerToken = getCookie("customer_token");
     const adminToken = getCookie("admin_token");
@@ -50,7 +51,8 @@ const sideBottomShadow = {
   boxShadow: '2px 4px 4px rgba(0,0,0,0.06), -2px 4px 4px rgba(0,0,0,0.06), 0 4px 8px rgba(0,0,0,0.08)'
 };
 
-const Book = () => {
+const Book = () =>
+{
   const [formData, setFormData] = useState({
     deliveryType: '',
     senderName: '',
@@ -103,6 +105,8 @@ const Book = () => {
   const [isSpecialErrand, setIsSpecialErrand] = useState(false);
   const [waitingMinutes, setWaitingMinutes] = useState(0);
   const [distanceKm, setDistanceKm] = useState(0);
+  const [estimatedPrice, setEstimatedPrice] = useState(null);
+  const [isCaclulatingPrice, setIsCalculatingPrice] = useState(false);
 
   const deliveryTypes = [
     { value: 'express', label: 'Express (Same day)', price: '₦2500' },
@@ -113,7 +117,8 @@ const Book = () => {
 
   const selectedDeliveryType = deliveryTypes.find(t => t.value === formData.deliveryType);
 
-  const handleDeliveryTypeSelect = (value) => {
+  const handleDeliveryTypeSelect = (value) =>
+  {
     // If user selected Smart Ride, open Smart Ride inline on this page
     if (value === 'smart_ride') {
       setFormData({ ...formData, deliveryType: value });
@@ -133,17 +138,20 @@ const Book = () => {
     setShowDeliveryTypeModal(false);
   };
 
-  useEffect(() => {
+  useEffect(() =>
+  {
     if (!isAuthenticated()) {
       setToastMsg('Please log in to book a delivery');
       setShowToast(true);
-      setTimeout(() => {
+      setTimeout(() =>
+      {
         router.push('/auth/customer/login', 'root', 'replace');
       }, 2000);
     }
 
     // Listen for postMessage from payment callback popup
-    const handlePaymentMessage = (event) => {
+    const handlePaymentMessage = (event) =>
+    {
       console.log('[Book] Received postMessage:', event.data);
       if (event.data?.type === 'PAYMENT_REDIRECT') {
         const targetUrl = event.data.url || event.data.fullUrl;
@@ -164,11 +172,13 @@ const Book = () => {
   // Inline SmartRide state: open if ?delivery=smart_ride present
   const [showSmartRide, setShowSmartRide] = useState(false);
 
-  useEffect(() => {
+  useEffect(() =>
+  {
     const sp = new URLSearchParams(window.location.search);
     if (sp.get('delivery') === 'smart_ride') setShowSmartRide(true);
 
-    const onPop = () => {
+    const onPop = () =>
+    {
       const p = new URLSearchParams(window.location.search);
       setShowSmartRide(p.get('delivery') === 'smart_ride');
     };
@@ -177,7 +187,8 @@ const Book = () => {
     return () => window.removeEventListener('popstate', onPop);
   }, []);
 
-  useEffect(() => {
+  useEffect(() =>
+  {
     const check = () => setIsMobile(window.innerWidth <= 768);
     check();
     window.addEventListener('resize', check);
@@ -185,7 +196,8 @@ const Book = () => {
   }, []);
 
   // Initialize dimensions and weightCategory based on defaults
-  useEffect(() => {
+  useEffect(() =>
+  {
     const weightMap = { small: 'light', big: 'heavy', very_big: 'very_heavy' };
     const dimsMap = { small: [30, 30, 30], big: [50, 40, 30], very_big: [80, 60, 50] };
     const base = dimsMap[formData.sizeCategory] || dimsMap.small;
@@ -195,14 +207,16 @@ const Book = () => {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  const handleChange = (e) => {
+  const handleChange = (e) =>
+  {
     setFormData({
       ...formData,
       [e.target.name]: e.target.value
     });
   };
 
-  const handleSubmit = async () => {
+  const handleSubmit = async () =>
+  {
     console.log('[Book] handleSubmit called', { paymentMethod: formData.paymentMethod });
     setIsSubmitting(true);
     try {
@@ -224,9 +238,11 @@ const Book = () => {
           if (res.results && res.results.length > 0) {
             const result = res.results.find(r => r.types && r.types.some(t => ['street_address', 'premise', 'establishment', 'route', 'postal_town', 'locality'].includes(t))) || res.results[0];
             const components = result.address_components || [];
-            const extract = (componentsList) => {
+            const extract = (componentsList) =>
+            {
               const out = { streetNumber: '', route: '', premise: '', subpremise: '', name: '', city: '', state: '', postal_code: '', country: '' };
-              componentsList.forEach(component => {
+              componentsList.forEach(component =>
+              {
                 const types = component.types || [];
                 if (types.includes('street_number')) out.streetNumber = component.long_name;
                 if (types.includes('route')) out.route = component.long_name;
@@ -280,9 +296,11 @@ const Book = () => {
           if (res.results && res.results.length > 0) {
             const result = res.results.find(r => r.types && r.types.some(t => ['street_address', 'premise', 'establishment', 'route', 'postal_town', 'locality'].includes(t))) || res.results[0];
             const components = result.address_components || [];
-            const extract = (componentsList) => {
+            const extract = (componentsList) =>
+            {
               const out = { streetNumber: '', route: '', premise: '', subpremise: '', name: '', city: '', state: '', postal_code: '', country: '' };
-              componentsList.forEach(component => {
+              componentsList.forEach(component =>
+              {
                 const types = component.types || [];
                 if (types.includes('street_number')) out.streetNumber = component.long_name;
                 if (types.includes('route')) out.route = component.long_name;
@@ -395,7 +413,8 @@ const Book = () => {
         payment: {
           method: formData.paymentMethod,
           notes: formData.paymentNotes
-        }
+        },
+        deliveryType: formData.deliveryType
       };
 
       // If user selected online payment, create delivery record first (draft/pending),
@@ -404,7 +423,8 @@ const Book = () => {
       if (formData.image) {
         const fd = new FormData();
         fd.append('image', formData.image);
-        Object.entries(payload).forEach(([k, v]) => {
+        Object.entries(payload).forEach(([k, v]) =>
+        {
           if (v === undefined || v === null) {
             fd.append(k, '');
           } else if (typeof v === 'object') {
@@ -433,6 +453,214 @@ const Book = () => {
         setIsProcessingPayment(false);
         return;
       }
+      if (formData.paymentMethod === 'card') {
+        try {
+          setIsProcessingPayment(true);
+          setToastMsg('Preparing payment...');
+          setShowToast(true);
+
+          // Open a popup synchronously to preserve user gesture (prevents popup blocker)
+          let paymentWindow = null;
+          try {
+            paymentWindow = window.open('', '_blank');
+            if (paymentWindow) paymentWindow.document.write('<p>Preparing payment...</p>');
+          } catch (pwErr) {
+            console.warn('[Book] Failed to open payment popup synchronously', pwErr);
+            paymentWindow = null;
+          }
+
+          // In Book.jsx, when initializing payment:
+          const initJson = await apiClient.post(`/api/payment/initialize/${deliveryId}`, {
+            amount: calculateTotal(),
+            currency: 'NGN',
+            email: formData.recipientEmail || 'customer@swiftlyxpress.com',
+            // prefer the global frontend callback route so Paystack returns straight to SPA
+            callback_url: `${window.location.origin}/customer/payment/callback`,
+            metadata: { deliveryId }
+          });
+
+          console.log('Payment initialization response (axios):', initJson);
+          const initPayload = initJson?.data || initJson; // axios response -> .data is server payload
+          console.log('Returned authorizationUrl (inspect):', initPayload?.data?.payment?.authorizationUrl || initPayload?.payment?.authorizationUrl || initPayload?.data?.authorizationUrl || initPayload?.authorizationUrl);
+
+          // Backend returns shape like: { success: true, message: '', data: { payment: { id, amount, currency, status, authorizationUrl, reference } } }
+          const paymentObj = initPayload?.data?.payment || initPayload?.payment || initPayload?.data;
+          const paymentReference = paymentObj?.reference || paymentObj?.id || paymentObj?.paymentId || paymentObj?.referenceId;
+          const authorizationUrl = paymentObj?.authorizationUrl || paymentObj?.authorization_url || paymentObj?.url || paymentObj?.payment_url;
+          const paymentIdReturned = paymentObj?.id || paymentObj?.paymentId || paymentObj?._id || paymentObj?.reference;
+          console.log('Parsed payment object:', { paymentObj, paymentReference, authorizationUrl, paymentIdReturned });
+
+          if (!paymentReference && !authorizationUrl) {
+            console.error('Payment initialize returned no reference or authorizationUrl:', initJson);
+            setToastMsg('Failed to initialize payment. Please try again.');
+            setShowToast(true);
+            setIsProcessingPayment(false);
+            setIsSubmitting(false);
+            return;
+          }
+
+          // Store pending data in cookies (so callback/opened windows can access them)
+          try {
+            if (deliveryId) setCookie('pending_payment_delivery_id', String(deliveryId), 1);
+            if (paymentIdReturned) setCookie('pending_payment_id', String(paymentIdReturned), 1);
+          } catch (e) { /* ignore */ }
+
+          // helper: cancel delivery if payment not completed
+          const cleanupOnPaymentCancel = async (did) =>
+          {
+            try {
+              console.log('[Book] Cleaning up delivery due to payment cancel:', did);
+              // call backend cancel endpoint (best-effort)
+              if (did) await cancelDelivery(did, { reason: 'payment_cancelled' });
+            } catch (cleanupErr) {
+              console.warn('[Book] Failed to cancel delivery on backend:', cleanupErr);
+            }
+            try { deleteCookie('pending_payment_delivery_id'); deleteCookie('pending_payment_id'); } catch (e) { /* ignore */ }
+            setIsProcessingPayment(false);
+            setIsSubmitting(false);
+            setToastMsg('Payment was not completed. Your booking was cancelled.');
+            setShowToast(true);
+          };
+
+          // Dynamically import Paystack and open modal or navigate hosted checkout (prefer hosted authorizationUrl)
+          try {
+            const PaystackPop = (await import('@paystack/inline-js')).default;
+
+            const paystackPublicKey = import.meta.env.VITE_PAYSTACK_PUBLIC_KEY || 'pk_test_xxxx';
+            console.log('Payment UI decision:', { authorizationUrl, paymentReference });
+
+            // If backend provided hosted checkout URL, navigate the popup to it (preserves gesture)
+            if (authorizationUrl) {
+              console.log('Navigating payment popup to authorizationUrl');
+              try {
+                if (paymentWindow) {
+                  paymentWindow.location.href = authorizationUrl;
+                } else {
+                  window.open(authorizationUrl, '_blank');
+                }
+                setIsProcessingPayment(false);
+                // Monitor popup closure - if user closes it without completing payment, cancel the delivery
+                try {
+                  const popupInterval = setInterval(() =>
+                  {
+                    try {
+                      if (!paymentWindow || paymentWindow.closed) {
+                        clearInterval(popupInterval);
+                        // if pending cookie still exists, treat as cancelled
+                        const pending = getCookie('pending_payment_id');
+                        if (pending) {
+                          cleanupOnPaymentCancel(deliveryId);
+                        }
+                      }
+                    } catch (e) {
+                      clearInterval(popupInterval);
+                    }
+                  }, 1000);
+                } catch (monErr) {
+                  console.warn('[Book] Failed to monitor payment popup:', monErr);
+                }
+                // Do not proceed further; payment will complete on hosted page
+                return;
+              } catch (navErr) {
+                console.error('Failed to navigate popup to authorizationUrl:', navErr);
+                // fallthrough to inline modal attempt
+              }
+            }
+
+            // Fallback to inline modal if no hosted URL
+            if (paymentReference) {
+              // close the blank popup if it exists
+              try { if (paymentWindow) paymentWindow.close(); } catch (e) { /* ignore */ }
+
+              const handler = PaystackPop.setup({
+                key: paystackPublicKey,
+                email: formData.recipientEmail || 'customer@swiftlyxpress.com',
+                amount: calculateTotal() * 100, // convert to kobo
+                currency: 'NGN',
+                ref: paymentReference,
+                metadata: {
+                  deliveryId,
+                  custom_fields: [
+                    {
+                      display_name: 'Delivery ID',
+                      variable_name: 'delivery_id',
+                      value: deliveryId
+                    }
+                  ]
+                },
+                onSuccess: async (transaction) =>
+                {
+                  console.log('Payment successful (inline):', transaction);
+                  setToastMsg('Payment successful! Redirecting...');
+                  setShowToast(true);
+
+                  try {
+                    // Ensure pending identifiers are stored so the success page can verify
+                    try {
+                      const pid = paymentReference || transaction?.reference || transaction?.trxref || transaction?.id;
+                      if (pid) setCookie('pending_payment_id', String(pid), 1);
+                      if (deliveryId) setCookie('pending_payment_delivery_id', String(deliveryId), 1);
+                    } catch (e) { /* ignore */ }
+
+                    // Close the Paystack iframe/modal if available
+                    try {
+                      if (handler && typeof handler.closeIframe === 'function') handler.closeIframe();
+                      else if (handler && typeof handler.close === 'function') handler.close();
+                    } catch (closeErr) {
+                      console.warn('Failed to close Paystack iframe gracefully', closeErr);
+                    }
+
+                    // Redirect to the existing payment success page which performs verification
+                    const pidEnc = encodeURIComponent(paymentReference || transaction?.reference || transaction?.trxref || '');
+                    const didPart = deliveryId ? `&deliveryId=${encodeURIComponent(deliveryId)}` : '';
+                    const target = `/customer/payment/success?paymentId=${pidEnc}${didPart}`;
+
+                    setTimeout(() =>
+                    {
+                      router.push(target, 'root', 'replace');
+                    }, 350);
+                  } catch (err) {
+                    console.error('Error handling inline paystack success:', err);
+                    setIsProcessingPayment(false);
+                    setIsSubmitting(false);
+                  }
+                },
+                onCancel: async () =>
+                {
+                  console.log('Payment cancelled by user');
+                  // rollback delivery on cancel
+                  try { await cleanupOnPaymentCancel(deliveryId); } catch (e) { console.warn(e); }
+                }
+              });
+
+              console.log('Paystack handler created, opening iframe...');
+              handler.openIframe();
+              console.log('Paystack iframe opened successfully');
+              setIsProcessingPayment(false);
+            }
+          } catch (paystackError) {
+            console.error('Error loading Paystack:', paystackError);
+            setToastMsg('Failed to load payment interface. Please try again.');
+            setShowToast(true);
+            setIsProcessingPayment(false);
+            setIsSubmitting(false);
+            return;
+          }
+
+          // Don't proceed with non-payment flow
+          return;
+        } catch (e) {
+          console.error('Payment initialize error', e);
+          setToastMsg(e.message || 'Payment initialization failed');
+          setShowToast(true);
+          // Close popup if it was opened and an error occurred
+          try { if (paymentWindow && !paymentWindow.closed) paymentWindow.close(); } catch (closeErr) { /* ignore */ }
+          setIsProcessingPayment(false);
+          setIsSubmitting(false);
+        }
+      }
+
+      // Non-card or fallback: finalize booking locally (already created)
       // NOTE: Payment is optional. We no longer force immediate online payment during booking.
       // Previously the code initialized Paystack and required payment before finalizing the booking.
       // Now we allow order creation without payment and users can pay later from My Deliveries.
@@ -445,7 +673,8 @@ const Book = () => {
 
       setToastMsg('Delivery booked successfully!');
       setShowToast(true);
-      setTimeout(() => {
+      setTimeout(() =>
+      {
         router.push('/customer/deliveries', 'root', 'replace');
       }, 1500);
     } catch (err) {
@@ -461,7 +690,8 @@ const Book = () => {
     }
   };
 
-  const saveDraft = async () => {
+  const saveDraft = async () =>
+  {
     setIsSubmitting(true);
     try {
       const draftsRaw = getJSONCookie('delivery_drafts');
@@ -477,40 +707,102 @@ const Book = () => {
     } catch (e) {
       setToastMsg('Failed to save draft');
       setShowToast(true);
+      setToastMsg('Failed to save draft');
+      setShowToast(true);
     } finally {
       setIsSubmitting(false);
     }
   };
 
-  // Calculate distance whenever addresses change
-  useEffect(() => {
+  // Fetch price estimation when relevant fields change
+  useEffect(() =>
+  {
+    const fetchEstimate = async () =>
+    {
+      if (!pickupCoordinates?.lat || !deliveryCoordinates?.lat) {
+        setEstimatedPrice(null);
+        return;
+      }
+
+      setIsCalculatingPrice(true);
+      try {
+        const response = await getDeliveryEstimate({
+          pickupLat: pickupCoordinates.lat,
+          pickupLng: pickupCoordinates.lng,
+          deliveryLat: deliveryCoordinates.lat,
+          deliveryLng: deliveryCoordinates.lng,
+          smartRide: formData.deliveryType === 'smart_ride',
+          specialErrand: isSpecialErrand // Assuming this state exists or should be added
+        });
+
+        if (response && response.data) {
+          setEstimatedPrice(response.data);
+          setDistanceKm(response.data.distance);
+        }
+      } catch (error) {
+        console.error("Failed to fetch price estimate:", error);
+        // Fallback or error handling? For now, maybe just log it.
+        // We could potentially keep using local calculation as fallback if we wanted, 
+        // but the goal is to align with backend.
+      } finally {
+        setIsCalculatingPrice(false);
+      }
+    };
+
+    const debounceTimer = setTimeout(fetchEstimate, 500); // 500ms debounce
+    return () => clearTimeout(debounceTimer);
+  }, [pickupCoordinates, deliveryCoordinates, formData.deliveryType, isSpecialErrand]);
+
+  // Calculate distance whenever addresses change - KEEPING THIS FOR NOW BUT IS REDUNDANT WITH BACKEND RESPONSE potentially
+  // If backend returns distance, we can use that.
+  useEffect(() =>
+  {
     if (pickupCoordinates && deliveryCoordinates &&
       pickupCoordinates.lat !== 0 && deliveryCoordinates.lat !== 0) {
       const dist = calculateDistance(pickupCoordinates, deliveryCoordinates);
-      setDistanceKm(dist);
+      // setDistanceKm(dist); // Let backend set this to be accurate
     } else {
       setDistanceKm(0);
     }
   }, [pickupCoordinates, deliveryCoordinates]);
 
-  const getPricingBreakdown = () => {
-    return calculateDeliveryPrice({
-      distance: distanceKm,
-      waitingMinutes: 0,
-      isPriority: false,
-      isSpecialErrand: false,
-      batchDiscount: 0, // Can be updated for batch orders in future
-      customBid: null,
-      deliveryType: formData.deliveryType
-    });
+  const getPricingBreakdown = () =>
+  {
+    if (estimatedPrice) {
+      return {
+        total: estimatedPrice.total,
+        deliveryCharge: (estimatedPrice.pricingBreakdown?.baseFare || 0) + (estimatedPrice.pricingBreakdown?.distanceCharge || 0),
+        baseFare: estimatedPrice.pricingBreakdown?.baseFare || 0,
+        distance: estimatedPrice.distance || 0,
+        distanceCharge: estimatedPrice.pricingBreakdown?.distanceCharge || 0,
+        perKmRate: estimatedPrice.pricingBreakdown?.perKmRate || 0,
+        discountAmount: estimatedPrice.pricingBreakdown?.discountAmount || 0,
+        discountPercentage: estimatedPrice.pricingBreakdown?.discountPercentage || 0,
+        ...estimatedPrice.pricingBreakdown
+      }
+    }
+    // Return safe defaults to prevent UI crashes
+    return {
+      total: 0,
+      deliveryCharge: 0,
+      baseFare: 0,
+      distance: 0,
+      distanceCharge: 0,
+      perKmRate: 0,
+      discountAmount: 0,
+      discountPercentage: 0
+    };
   };
 
-  const calculateTotal = () => {
+  const calculateTotal = () =>
+  {
     return getPricingBreakdown().total;
   };
 
-  const getBaseRate = () => {
-    return getPricingBreakdown().deliveryCharge;
+  const getBaseRate = () =>
+  {
+    // Logic for base rate display
+    return getPricingBreakdown().deliveryCharge || 0;
   };
 
   return (
@@ -541,7 +833,8 @@ const Book = () => {
                 recipientEmail: formData.recipientEmail,
                 packageDescription: formData.packageDescription,
                 image: formData.image
-              }} onClose={() => {
+              }} onClose={() =>
+              {
                 setShowSmartRide(false);
                 try { window.history.replaceState({}, '', window.location.pathname); } catch (e) { }
               }} />
@@ -576,7 +869,8 @@ const Book = () => {
                   <label className="block text-sm font-medium text-[#0F172A] mb-2">Delivery Type</label>
                   <StyledDropdown
                     value={selectedDeliveryType?.label || 'Select delivery type'}
-                    onChange={(label) => {
+                    onChange={(label) =>
+                    {
                       const selected = deliveryTypes.find(t => t.label === label);
                       if (selected) handleDeliveryTypeSelect(selected.value);
                     }}
@@ -634,7 +928,8 @@ const Book = () => {
                           value={formData.pickupStreet}
                           onChange={(value) => setFormData({ ...formData, pickupStreet: value })}
                           placeholder="Enter pickup address"
-                          onPlaceSelect={(place) => {
+                          onPlaceSelect={(place) =>
+                          {
                             setFormData(prev => ({ ...prev, pickupStreet: place.street || place.formatted_address || '' }));
                             setPickupCoordinates(place.coordinates || { lat: 0, lng: 0 });
                             setPickupAddressObj(place);
@@ -703,7 +998,8 @@ const Book = () => {
                           value={formData.deliveryStreet}
                           onChange={(value) => setFormData({ ...formData, deliveryStreet: value })}
                           placeholder="Enter delivery address"
-                          onPlaceSelect={(place) => {
+                          onPlaceSelect={(place) =>
+                          {
                             setFormData(prev => ({ ...prev, deliveryStreet: place.street || place.formatted_address || '' }));
                             setDeliveryCoordinates(place.coordinates || { lat: 0, lng: 0 });
                             setDeliveryAddressObj(place);
@@ -753,7 +1049,8 @@ const Book = () => {
                                 formData.sizeCategory === 'very_big' ? 'Very Big' :
                                   'Size Category'
                           }
-                          onChange={(label) => {
+                          onChange={(label) =>
+                          {
                             const valueMap = { 'Small': 'small', 'Medium': 'big', 'Very Big': 'very_big' };
                             const defaultScaleMap = { small: 85, big: 100, very_big: 120 };
                             const cat = valueMap[label];
@@ -808,7 +1105,8 @@ const Book = () => {
                             max="130"
                             name="sizeScale"
                             value={formData.sizeScale}
-                            onChange={(e) => {
+                            onChange={(e) =>
+                            {
                               const scale = parseInt(e.target.value, 10);
                               const dimsMap = { small: [30, 30, 30], big: [50, 40, 30], very_big: [80, 60, 50] };
                               // Determine category from scale thresholds
@@ -833,14 +1131,16 @@ const Book = () => {
                                 // ignore
                               }
                             }}
-                            onMouseMove={(e) => {
+                            onMouseMove={(e) =>
+                            {
                               if (!sliderRef.current) return;
                               const val = parseInt(sliderRef.current.value, 10);
                               const min = 70; const max = 130;
                               const percent = (val - min) / (max - min);
                               setSliderBubble({ percent, value: val });
                             }}
-                            onMouseLeave={() => {
+                            onMouseLeave={() =>
+                            {
                               if (hideBubbleTimeout.current) clearTimeout(hideBubbleTimeout.current);
                               hideBubbleTimeout.current = setTimeout(() => setSliderBubble(null), 800);
                             }}
@@ -942,7 +1242,8 @@ const Book = () => {
                                 formData.weightCategory === 'very_heavy' ? 'Very Heavy' :
                                   'Weight Category'
                           }
-                          onChange={(label) => {
+                          onChange={(label) =>
+                          {
                             const valueMap = { 'Light': 'light', 'Heavy': 'heavy', 'Very Heavy': 'very_heavy' };
                             setFormData({ ...formData, weightCategory: valueMap[label] });
                           }}
@@ -1042,7 +1343,8 @@ const Book = () => {
                               </div>
                               <button
                                 type="button"
-                                onClick={(e) => {
+                                onClick={(e) =>
+                                {
                                   e.preventDefault();
                                   setFormData({ ...formData, image: null });
                                 }}
@@ -1161,7 +1463,8 @@ const Book = () => {
                 <div className="bg-[#F0FDF4] rounded-xl p-4 md:p-6 mb-6">
                   <h3 className="text-base font-semibold text-[#0F172A] mb-4">Cost Breakdown</h3>
                   <div className="space-y-2.5">
-                    {(() => {
+                    {(() =>
+                    {
                       const pricing = getPricingBreakdown();
                       return (
                         <>
@@ -1257,7 +1560,8 @@ const Book = () => {
 
                 <div className="p-6 overflow-y-auto h-[calc(100%-88px)]">
                   <button
-                    onClick={() => {
+                    onClick={() =>
+                    {
                       setFormData({ ...formData, paymentMethod: 'cash' });
                       setTimeout(() => setShowPaymentDrawer(false), 150);
                     }}
@@ -1291,7 +1595,8 @@ const Book = () => {
                   </button>
 
                   <button
-                    onClick={() => {
+                    onClick={() =>
+                    {
                       setFormData({ ...formData, paymentMethod: 'card' });
                       setTimeout(() => setShowPaymentDrawer(false), 150);
                     }}
@@ -1332,7 +1637,8 @@ const Book = () => {
                   </button>
 
                   <button
-                    onClick={() => {
+                    onClick={() =>
+                    {
                       setFormData({ ...formData, paymentMethod: 'transfer' });
                       setTimeout(() => setShowPaymentDrawer(false), 150);
                     }}
@@ -1394,7 +1700,8 @@ const Book = () => {
 
                   <div className="p-6 overflow-y-auto max-h-[70vh]">
                     <button
-                      onClick={() => {
+                      onClick={() =>
+                      {
                         setFormData({ ...formData, paymentMethod: 'cash' });
                         setTimeout(() => setShowPaymentDrawer(false), 150);
                       }}
@@ -1428,7 +1735,8 @@ const Book = () => {
                     </button>
 
                     <button
-                      onClick={() => {
+                      onClick={() =>
+                      {
                         setFormData({ ...formData, paymentMethod: 'card' });
                         setTimeout(() => setShowPaymentDrawer(false), 150);
                       }}
@@ -1469,7 +1777,8 @@ const Book = () => {
                     </button>
 
                     <button
-                      onClick={() => {
+                      onClick={() =>
+                      {
                         setFormData({ ...formData, paymentMethod: 'transfer' });
                         setTimeout(() => setShowPaymentDrawer(false), 150);
                       }}

@@ -4,7 +4,7 @@ import { closeOutline } from 'ionicons/icons';
 import RiderLayout from '../components/RiderLayout';
 import { YummyText } from '../../../components/YummyText';
 import BanIcon from '../../../icons/Banicon';
-import MapboxMap from '../../../components/MapboxMap';
+import TrackingMap from '../../../components/TrackingMap';
 import { getAvailableJobs, acceptDeliveryJob, getRiderProfile, getRiderDeliveries } from '../../../utils/authApi';
 import { getCookie, getJSONCookie, isRiderVerified, setCookie, setJSONCookie } from '../../../utils/cookies';
 
@@ -129,7 +129,8 @@ const OrderCard = ({
   </div>
 );
 
-const AvailableOrders = () => {
+const AvailableOrders = () =>
+{
   const [activeTab, setActiveTab] = useState('all');
   const [orders, setOrders] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -143,7 +144,8 @@ const AvailableOrders = () => {
   const [lastRefresh, setLastRefresh] = useState(Date.now());
   const [selectedOrder, setSelectedOrder] = useState(null);
   // lock body scroll when drawer/modal is open
-  useEffect(() => {
+  useEffect(() =>
+  {
     if (selectedOrder) {
       const prev = document.body.style.overflow;
       document.body.style.overflow = 'hidden';
@@ -153,7 +155,8 @@ const AvailableOrders = () => {
   }, [selectedOrder]);
 
   // Debug: Check tokens on mount
-  useEffect(() => {
+  useEffect(() =>
+  {
     const riderToken = getCookie('rider_token');
     const customerToken = getCookie('customer_token');
     const authToken = getCookie('auth_token');
@@ -168,7 +171,8 @@ const AvailableOrders = () => {
   }, []);
 
   // Check verification status from backend
-  const checkVerificationStatus = async () => {
+  const checkVerificationStatus = async () =>
+  {
     try {
       console.log('[AvailableOrders] 🔍 Fetching verification status from backend...');
       const response = await getRiderProfile();
@@ -220,9 +224,11 @@ const AvailableOrders = () => {
     }
   };
 
-  useEffect(() => {
+  useEffect(() =>
+  {
     // Initial verification check with backend
-    checkVerificationStatus().then(verified => {
+    checkVerificationStatus().then(verified =>
+    {
       console.log('[AvailableOrders] Initial verification check:', verified);
       if (verified) {
         fetchAvailableJobs();
@@ -230,7 +236,8 @@ const AvailableOrders = () => {
     });
 
     // Fetch count of completed deliveries to determine "new user" state
-    const fetchCompleted = async () => {
+    const fetchCompleted = async () =>
+    {
       try {
         const resp = await getRiderDeliveries(1, 100);
         const deliveries = resp?.data?.deliveries || resp?.deliveries || resp?.data || [];
@@ -246,7 +253,8 @@ const AvailableOrders = () => {
     fetchCompleted();
 
     // Listen for verification completion
-    const handleVerificationComplete = async (event) => {
+    const handleVerificationComplete = async (event) =>
+    {
       console.log('[AvailableOrders] Verification completed event received:', event.detail);
       // Re-check verification status from backend
       const verified = await checkVerificationStatus();
@@ -264,13 +272,15 @@ const AvailableOrders = () => {
     };
 
     window.addEventListener('verification:completed', handleVerificationComplete);
-    return () => {
+    return () =>
+    {
       window.removeEventListener('verification:completed', handleVerificationComplete);
     };
   }, []);
 
   // Fetch available jobs on mount and when page changes
-  useEffect(() => {
+  useEffect(() =>
+  {
     if (isVerified) {
       fetchAvailableJobs();
     }
@@ -279,15 +289,18 @@ const AvailableOrders = () => {
   // Auto-refresh removed — use pull-to-refresh or manual refresh instead
 
   // Listen for new deliveries created by customers
-  useEffect(() => {
-    const handleDeliveryCreated = (event) => {
+  useEffect(() =>
+  {
+    const handleDeliveryCreated = (event) =>
+    {
       console.log('[AvailableOrders] New delivery created, refreshing jobs:', event.detail);
       setToastMsg('New delivery available!');
       setShowToast(true);
       fetchAvailableJobs();
     };
 
-    const handleDeliveriesRefresh = () => {
+    const handleDeliveriesRefresh = () =>
+    {
       console.log('[AvailableOrders] Deliveries refresh requested');
       fetchAvailableJobs();
     };
@@ -295,13 +308,15 @@ const AvailableOrders = () => {
     window.addEventListener('delivery:created', handleDeliveryCreated);
     window.addEventListener('deliveries:refresh', handleDeliveriesRefresh);
 
-    return () => {
+    return () =>
+    {
       window.removeEventListener('delivery:created', handleDeliveryCreated);
       window.removeEventListener('deliveries:refresh', handleDeliveriesRefresh);
     };
   }, []);
 
-  const fetchAvailableJobs = async () => {
+  const fetchAvailableJobs = async () =>
+  {
     setLoading(true);
     try {
       console.log('[AvailableOrders] Fetching available jobs from API...');
@@ -339,7 +354,8 @@ const AvailableOrders = () => {
     }
   };
 
-  const handleAcceptOrder = async (deliveryId) => {
+  const handleAcceptOrder = async (deliveryId) =>
+  {
     if (!isAvailable) {
       setToastMsg('You must be available/active to accept orders. Please update your status in your profile.');
       setShowToast(true);
@@ -365,7 +381,8 @@ const AvailableOrders = () => {
     }
   };
 
-  const handleViewDetails = (deliveryId) => {
+  const handleViewDetails = (deliveryId) =>
+  {
     // Scroll the card into view so rider doesn't lose context
     const el = document.getElementById(`order-${deliveryId}`);
     if (el && el.scrollIntoView) {
@@ -375,7 +392,8 @@ const AvailableOrders = () => {
     if (order) setSelectedOrder(order);
   };
 
-  const filteredOrders = orders.filter(order => {
+  const filteredOrders = orders.filter(order =>
+  {
     if (activeTab === 'all') return true;
     if (activeTab === 'express') return order.priority === 'Express';
     if (activeTab === 'nearby') return parseFloat(order.distance) <= 2.5;
@@ -385,13 +403,15 @@ const AvailableOrders = () => {
   const expressCount = orders.filter(o => o.priority === 'Express').length;
   const nearbyCount = orders.filter(o => parseFloat(o.distance) <= 2.5).length;
 
-  const handleRefresh = async (event) => {
+  const handleRefresh = async (event) =>
+  {
     await fetchAvailableJobs();
     event.detail.complete();
   };
 
   // Helper to extract coords from various payload shapes
-  const extractCoords = (order, which) => {
+  const extractCoords = (order, which) =>
+  {
     // which = 'pickup' or 'delivery'
     try {
       if (!order) return null;
@@ -412,7 +432,8 @@ const AvailableOrders = () => {
   };
 
   // Haversine formula to calculate distance in kilometers between two [lng, lat] points
-  const calculateHaversineKm = (a, b) => {
+  const calculateHaversineKm = (a, b) =>
+  {
     try {
       if (!a || !b || a.length < 2 || b.length < 2) return null;
       const toRad = (deg) => deg * (Math.PI / 180);
@@ -612,13 +633,9 @@ const AvailableOrders = () => {
 
                   {/* Map preview */}
                   <div className="mb-3 h-40 rounded-lg overflow-hidden">
-                    <MapboxMap
-                      pickupCoords={extractCoords(selectedOrder, 'pickup') || [3.3792, 6.5244]}
-                      deliveryCoords={extractCoords(selectedOrder, 'delivery') || [3.45, 6.52]}
-                      height="100%"
-                      showRoute={true}
-                      animateVehicle={false}
-                      packageId={selectedOrder.trackingNumber || selectedOrder.id}
+                    <TrackingMap
+                      pickupLocation={extractCoords(selectedOrder, 'pickup') || [3.3792, 6.5244]}
+                      dropoffLocation={extractCoords(selectedOrder, 'delivery') || [3.45, 6.52]}
                     />
                   </div>
 
@@ -627,7 +644,8 @@ const AvailableOrders = () => {
                   <div className="text-sm text-[#64748B] mb-2">Distance: {selectedOrder.distance || 'N/A'}</div>
 
                   {/* Calculated route distance + Potential earnings breakdown */}
-                  {(() => {
+                  {(() =>
+                  {
                     const pickupCoords = extractCoords(selectedOrder, 'pickup');
                     const deliveryCoords = extractCoords(selectedOrder, 'delivery');
                     const calculatedKm = calculateHaversineKm(pickupCoords, deliveryCoords);

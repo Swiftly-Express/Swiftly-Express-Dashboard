@@ -23,7 +23,7 @@ const normalizeCoords = (coords) =>
     return null;
 };
 
-const TrackingMap = ({ pickupLocation, dropoffLocation, driverLocation }) =>
+const TrackingMap = ({ pickupLocation, dropoffLocation, driverLocation, onRouteStats }) =>
 {
     const { isLoaded, loadError } = useJsApiLoader({
         id: 'google-map-script',
@@ -35,9 +35,9 @@ const TrackingMap = ({ pickupLocation, dropoffLocation, driverLocation }) =>
     const [directionsError, setDirectionsError] = useState(false);
 
     // Normalize coordinates
-    const pickup = useMemo(() => normalizeCoords(pickupLocation), [pickupLocation]);
-    const dropoff = useMemo(() => normalizeCoords(dropoffLocation), [dropoffLocation]);
-    const driver = useMemo(() => normalizeCoords(driverLocation), [driverLocation]);
+    const pickup = useMemo(() => normalizeCoords(pickupLocation), [JSON.stringify(pickupLocation)]);
+    const dropoff = useMemo(() => normalizeCoords(dropoffLocation), [JSON.stringify(dropoffLocation)]);
+    const driver = useMemo(() => normalizeCoords(driverLocation), [JSON.stringify(driverLocation)]);
 
     const containerStyle = {
         width: '100%',
@@ -65,13 +65,13 @@ const TrackingMap = ({ pickupLocation, dropoffLocation, driverLocation }) =>
     // Fetch directions
     useEffect(() =>
     {
-        if (isLoaded && pickup && dropoff && !directionsError) { // Retry if error state resets? No, just fetch once valid
+        if (isLoaded && pickup && dropoff && !directionsError) {
             // eslint-disable-next-line no-undef
             const directionsService = new google.maps.DirectionsService();
 
             directionsService.route(
                 {
-                    origin: pickup,
+                    origin: driver || pickup, // Start from driver if available
                     destination: dropoff,
                     // eslint-disable-next-line no-undef
                     travelMode: google.maps.TravelMode.DRIVING
@@ -82,6 +82,15 @@ const TrackingMap = ({ pickupLocation, dropoffLocation, driverLocation }) =>
                     if (status === google.maps.DirectionsStatus.OK) {
                         setDirectionsResponse(result);
                         setDirectionsError(false);
+
+                        // Extract and report stats
+                        if (result.routes[0] && result.routes[0].legs[0] && onRouteStats) {
+                            const leg = result.routes[0].legs[0];
+                            onRouteStats({
+                                distance: leg.distance.text,
+                                duration: leg.duration.text
+                            });
+                        }
                     } else {
                         console.error(`Google Maps Directions Error: ${status}`);
                         setDirectionsError(true);
@@ -89,7 +98,7 @@ const TrackingMap = ({ pickupLocation, dropoffLocation, driverLocation }) =>
                 }
             );
         }
-    }, [isLoaded, pickup, dropoff]);
+    }, [isLoaded, pickup, dropoff, driver]); // Re-fetch if driver moves to maintain accurate ETA
 
     // Fit bounds
     useEffect(() =>
