@@ -253,12 +253,12 @@ export async function approveVerification(verificationId, approvalData = {}) {
  */
 export async function rejectVerification(verificationId, rejectionData) {
   if (!verificationId) throw new Error('verificationId is required');
-  if (!rejectionData?.reason) throw new Error('Rejection reason is required');
   console.log('[adminApi] → Rejecting verification:', verificationId);
-  const payload = { ...rejectionData };
-  // send verificationStatus and remove `status` to satisfy backend validation
+  // Avoid sending fields the backend may validate strictly (e.g. `reason` or `status`)
+  // Only send `verificationStatus` to mark as rejected. Keep `rejectionData.reason`
+  // available to the caller for notifications but don't forward it to the API.
+  const payload = {};
   payload.verificationStatus = 'rejected';
-  if ('status' in payload) delete payload.status;
   return adminApiClient.put(`/api/admin/verifications/${verificationId}`, payload);
 }
 

@@ -607,6 +607,16 @@ export async function getPaymentStatus(paymentId) {
   return apiClient.get(`/api/payment/status/${paymentId}`);
 }
 
+/**
+ * Initialize payment for a delivery on demand
+ * @param {string} deliveryId
+ * @param {object} payload - { amount, currency, email, callback_url, metadata }
+ */
+export async function initializePayment(deliveryId, payload = {}) {
+  if (!deliveryId) throw new Error('deliveryId is required');
+  return apiClient.post(`/api/payment/initialize/${deliveryId}`, payload);
+}
+
 export async function getCustomerPayments(page = 1, limit = 20, filters = {}) {
   return apiClient.get('/api/payment/customer', { params: { page, limit, ...filters } });
 }

@@ -136,6 +136,16 @@ const PaymentSuccess = () => {
                     setStatusMsg('Payment successful. Your delivery is being processed.');
                     // clear pending cookie
                     try { deleteCookie('pending_payment_delivery_id'); deleteCookie('pending_payment_id'); } catch (e) { /* ignore */ }
+                    // Notify app that payment completed so UIs can refresh
+                    try {
+                        window.dispatchEvent(new CustomEvent('payment:completed', { detail: { deliveryId: foundDelivery || candidateDelivery } }));
+                        window.dispatchEvent(new Event('deliveries:refresh'));
+                        if (foundDelivery || candidateDelivery) {
+                            window.dispatchEvent(new CustomEvent('delivery:updated', { detail: { id: foundDelivery || candidateDelivery } }));
+                        }
+                    } catch (e) {
+                        console.warn('[PaymentSuccess] Failed to dispatch payment events', e);
+                    }
                 } else {
                     setSuccess(false);
                     setStatusMsg(final?.message || final?.data?.message || 'Payment was not successful.');
@@ -155,7 +165,7 @@ const PaymentSuccess = () => {
 
     const goToDeliveries = () => {
         // Add bypassAuth flag so users coming from payment flow can view deliveries
-        history.push('/customer/deliveries');
+        history.replace('/customer/deliveries?bypassAuth=1');
     };
 
     return (
