@@ -102,21 +102,72 @@ const CustomerLayout = ({ children }) => {
     const newState = !showNotifications;
     setShowNotifications(newState);
     if (newState) {
+      // Fetch notifications to populate dropdown
       await fetchNotifications(1, false);
+
+      // Optimistically mark everything read locally and on the server
+      setNotifications(prev => prev.map(n => ({ ...n, isRead: true, read: true })));
+      setUnreadCount(0);
+
+      // Fire server-side mark-all in background and refresh shortly after
+      (async () => {
+        try {
+          await markAllNotificationsAsRead();
+        } catch (err) {
+          console.warn('[CustomerLayout] markAllNotificationsAsRead failed', err);
+        }
+        setTimeout(async () => {
+          try {
+            await fetchNotifications(1, false);
+            await checkNotifications();
+          } catch (e) {
+            console.warn('[CustomerLayout] Refresh after toggle mark-all failed', e);
+          }
+        }, 300);
+      })();
     }
   };
 
-  const handleMarkAllAsRead = async () => {
+  const handleMarkAllAsRead = async (e) => {
+    if (e) {
+      e.preventDefault();
+      e.stopPropagation();
+    }
+
     try {
       console.log('[CustomerLayout] Marking all notifications as read...');
       const response = await markAllNotificationsAsRead();
       console.log('[CustomerLayout] Mark all as read response:', response);
+
+      // Optimistically update UI
       setNotifications(prev => prev.map(n => ({ ...n, isRead: true, read: true })));
       setUnreadCount(0);
+
+      // Refresh from server in background (delayed to avoid race conditions)
+      setTimeout(async () => {
+        try {
+          await fetchNotifications(1, false);
+          await checkNotifications();
+        } catch (err) {
+          console.warn('[CustomerLayout] Refresh after mark-all failed', err);
+        }
+      }, 200);
+
+      // Remove focus from button
+      try { if (document && document.activeElement) document.activeElement.blur(); } catch (err) { /* ignore */ }
+
       console.log('[CustomerLayout] All notifications marked as read successfully');
     } catch (error) {
       console.error('[CustomerLayout] Failed to mark all as read:', error);
       console.error('[CustomerLayout] Error details:', error.response?.data || error.message);
+
+      // Revert optimistic update on error
+      try {
+        await fetchNotifications(1, false);
+        await checkNotifications();
+      } catch (e) {
+        console.warn('[CustomerLayout] Failed to revert after mark-all error', e);
+      }
     }
   };
 
@@ -124,14 +175,19 @@ const CustomerLayout = ({ children }) => {
     if (e) {
       e.stopPropagation();
     }
+
     try {
       console.log('[CustomerLayout] Marking notification as read:', notificationId);
       const response = await markNotificationAsRead(notificationId);
       console.log('[CustomerLayout] Mark as read response:', response);
+
       setNotifications(prev =>
-        prev.map(n => n._id === notificationId || n.id === notificationId ? { ...n, isRead: true, read: true } : n)
+        prev.map(n => (n._id === notificationId || n.id === notificationId) ? { ...n, isRead: true, read: true } : n)
       );
-      await checkNotifications();
+
+      // Decrement unread count safely
+      setUnreadCount(prev => Math.max(0, prev - 1));
+
       console.log('[CustomerLayout] Notification marked as read successfully');
     } catch (error) {
       console.error('[CustomerLayout] Failed to mark as read:', error);
@@ -157,12 +213,18 @@ const CustomerLayout = ({ children }) => {
       checkNotifications();
     };
 
+    const handleVerificationCompleted = () => {
+      checkNotifications();
+    };
+
     window.addEventListener('profile:updated', loadAvatar);
     window.addEventListener('delivery:updated', handleDeliveryUpdated);
+    window.addEventListener('verification:completed', handleVerificationCompleted);
 
     return () => {
       window.removeEventListener('profile:updated', loadAvatar);
       window.removeEventListener('delivery:updated', handleDeliveryUpdated);
+      window.removeEventListener('verification:completed', handleVerificationCompleted);
       clearInterval(notificationInterval);
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -263,6 +325,8 @@ const CustomerLayout = ({ children }) => {
                 {notifications.length > 0 && (
                   <button
                     onClick={handleMarkAllAsRead}
+                    onMouseDown={(e) => e.stopPropagation()}
+                    onTouchStart={(e) => e.stopPropagation()}
                     className="text-xs text-[#00B75A] hover:text-[#00a352] font-medium transition-colors"
                   >
                     Mark all read
@@ -313,12 +377,10 @@ const CustomerLayout = ({ children }) => {
                           <div
                             key={notifId}
                             className={`p-4 hover:bg-gray-50 transition-colors cursor-pointer ${!isRead ? 'bg-blue-50' : ''}`}
-                            onMouseEnter={(e) => {
-                              if (!isRead) {
-                                handleMarkAsRead(notifId, e);
-                              }
-                            }}
+                            onMouseDown={(e) => e.stopPropagation()}
+                            onTouchStart={(e) => e.stopPropagation()}
                             onClick={(e) => {
+                              e.stopPropagation();
                               if (!isRead) {
                                 handleMarkAsRead(notifId, e);
                               }

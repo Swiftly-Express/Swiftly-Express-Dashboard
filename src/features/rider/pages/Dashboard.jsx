@@ -132,48 +132,143 @@ const Dashboard = () => {
   const [availableOrders, setAvailableOrders] = useState([]);
   const [loading, setLoading] = useState(true);
 
+  // Check verification status - extracted outside useEffect so it can be called from event listeners
+  const checkVerificationStatus = async () => {
+    try {
+      console.log('[Dashboard] 🔍 Starting verification check...');
+
+      // Force a fresh fetch by bypassing cache
+      const profileRes = await getRiderProfile();
+
+      console.log('[Dashboard] 📦 Raw API Response:', JSON.stringify(profileRes, null, 2));
+
+      // CRITICAL FIX: Verification is at profileRes.data.verification, NOT profile.verification
+      const data = profileRes?.data || profileRes;
+      const profile = data?.user || data;
+      const verification = data?.verification || profile?.verification;
+
+      // Get verification status from multiple possible locations
+      const verificationStatus = verification?.verificationStatus || profile?.verificationStatus || '';
+
+      console.log('[Dashboard] ✅ Extracted verification object:', verification);
+      console.log('[Dashboard] 🎯 Extracted verification status:', verificationStatus);
+
+      // Handle empty string case and normalize to lowercase
+      const statusLower = verificationStatus ? verificationStatus.toString().toLowerCase().trim() : '';
+
+      console.log('[Dashboard] 🔤 Normalized status (lowercase):', statusLower);
+
+      // CASE 1: APPROVED status - Never show modal
+      if (statusLower === 'approved' || statusLower === 'verified') {
+        console.log('[Dashboard] ✅✅✅ RIDER IS APPROVED/VERIFIED ✅✅✅');
+        console.log('[Dashboard] → Setting riderAccountVerified cookie to TRUE');
+        console.log('[Dashboard] → HIDING modal permanently');
+
+        setCookie('riderVerificationStatus', statusLower, 7);
+        setCookie('riderAccountVerified', 'true', 7);
+        setShowVerificationModal(false);
+        return true; // Return true to indicate verified
+      }
+
+      // CASE 2: No verification object at all - Rider hasn't started verification
+      if (!verification || verification === null) {
+        console.log('[Dashboard] ❌ No verification object (null/undefined)');
+        console.log('[Dashboard] → Rider has NOT started verification yet');
+        console.log('[Dashboard] → Setting riderAccountVerified cookie to FALSE');
+        console.log('[Dashboard] → SHOWING modal in 2 seconds');
+
+        setCookie('riderVerificationStatus', '', 7);
+        setCookie('riderAccountVerified', 'false', 7);
+        setTimeout(() => {
+          console.log('[Dashboard] ⏰ 2 seconds elapsed, showing modal now');
+          setShowVerificationModal(true);
+        }, 2000);
+        return false;
+      }
+
+      // CASE 3: Verification object exists but status is pending/incomplete/rejected
+      if (!statusLower || statusLower === 'pending' || statusLower === 'incomplete' || statusLower === 'rejected') {
+        console.log('[Dashboard] ⚠️ Verification status is NOT approved:', statusLower || '(empty string)');
+        console.log('[Dashboard] → Setting riderAccountVerified cookie to FALSE');
+        console.log('[Dashboard] → SHOWING modal in 2 seconds');
+
+        setCookie('riderVerificationStatus', statusLower, 7);
+        setCookie('riderAccountVerified', 'false', 7);
+       
+        return false;
+      }
+
+      // CASE 4: Any other status → hide modal (defensive fallback)
+      console.log('[Dashboard] ⚠️ Unknown verification status:', statusLower);
+      console.log('[Dashboard] → HIDING modal (defensive fallback)');
+
+      setCookie('riderVerificationStatus', statusLower, 7);
+      setShowVerificationModal(false);
+      return false;
+    } catch (e) {
+      console.error('[Dashboard] ❌ ERROR fetching verification status:', e);
+      console.error('[Dashboard] Error details:', e.message, e.stack);
+
+      // If error and user is new, show modal
+      const hasEverSubmitted = getCookie('verificationSubmitted') === 'true';
+      if (!hasEverSubmitted) {
+        setTimeout(() => {
+          setShowVerificationModal(true);
+        }, 2000);
+      } else {
+        setShowVerificationModal(false);
+      }
+      return false;
+    }
+  };
+
   useEffect(() => {
     fetchUserProfile();
     fetchDashboardData();
 
+    // Check verification status on mount
+    checkVerificationStatus();
 
-    // Always fetch latest verification status from backend and only show modal if NOT approved
-    const checkVerificationStatus = async () => {
-      try {
-        const res = await getRiderVerificationStatus();
-        const status = (res?.data?.verificationStatus || res?.verificationStatus || res?.data || '').toLowerCase();
-        setCookie('riderVerificationStatus', status, 7);
-        console.log('[Dashboard] Rider verification status:', status);
-        // Show modal for new/unverified riders
-        if (!status || status === 'pending' || status === 'incomplete') {
-          const timer = setTimeout(() => {
-            setShowVerificationModal(true);
-          }, 2000);
-          return () => clearTimeout(timer);
-        } else if (status === 'approved') {
-          setShowVerificationModal(false);
-        } else {
-          // For any other status (e.g., rejected), you can decide what to do
-          setShowVerificationModal(false);
-        }
-      } catch (e) {
-        console.error('[Dashboard] Failed to fetch verification status:', e);
-        // If error, treat as new/unverified
-        setShowVerificationModal(true);
+    // Listen for verification completion to close modal and refresh status
+    const handleVerificationComplete = async () => {
+      // Close modal immediately
+      setShowVerificationModal(false);
+
+      // Clear any old cached verification status
+      setCookie('riderAccountVerified', '', -1); // Delete the cookie
+      setCookie('riderVerificationStatus', '', -1); // Delete the cookie
+
+      console.log('[Dashboard] → Cleared verification cookies');
+
+      // Wait a moment to ensure backend has updated
+      await new Promise(resolve => setTimeout(resolve, 500));
+
+      // Refresh profile to get latest verification status
+      console.log('[Dashboard] → Fetching fresh profile data...');
+      const isVerified = await checkVerificationStatus();
+
+      if (isVerified) {
+        console.log('[Dashboard] ✅ Verification check confirms: USER IS NOW VERIFIED!');
+      } else {
+        console.log('[Dashboard] ⚠️ Verification check: User still not verified');
       }
     };
 
-    checkVerificationStatus();
-
-    // Listen for verification completion to close modal
-    const handleVerificationComplete = () => {
-      setShowVerificationModal(false);
-    };
     window.addEventListener('verification:completed', handleVerificationComplete);
+
+    // Also listen for kyc:updated event from admin
+    const handleKYCUpdate = async (event) => {
+      console.log('[Dashboard] 🔔 kyc:updated event received:', event?.detail);
+      if (event?.detail?.action === 'approved') {
+        console.log('[Dashboard] → KYC was APPROVED, refreshing verification status');
+        await handleVerificationComplete();
+      }
+    };
+
+    window.addEventListener('kyc:updated', handleKYCUpdate);
 
     // Refresh dashboard when deliveries change elsewhere in the app
     const handleDeliveryEvent = (event) => {
-      console.log('[Dashboard] delivery event received, refreshing dashboard:', event?.type, event?.detail);
       fetchDashboardData();
     };
 
@@ -181,8 +276,10 @@ const Dashboard = () => {
     window.addEventListener('delivery:statusChanged', handleDeliveryEvent);
     window.addEventListener('delivery:updated', handleDeliveryEvent);
     window.addEventListener('delivery:completed', handleDeliveryEvent);
+
     return () => {
       window.removeEventListener('verification:completed', handleVerificationComplete);
+      window.removeEventListener('kyc:updated', handleKYCUpdate);
       window.removeEventListener('delivery:accepted', handleDeliveryEvent);
       window.removeEventListener('delivery:statusChanged', handleDeliveryEvent);
       window.removeEventListener('delivery:updated', handleDeliveryEvent);
@@ -289,9 +386,7 @@ const Dashboard = () => {
     return joined || 'N/A';
   };
 
-  const handleCloseModal = (
-
-  ) => {
+  const handleCloseModal = () => {
     setShowVerificationModal(false);
   };
 

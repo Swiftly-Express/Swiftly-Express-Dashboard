@@ -9,7 +9,7 @@ import CircleXIcon from '../../../icons/Circlexicon';
 import DocumentIcon from '../../../icons/Documenticon';
 import { getPendingVerifications, approveVerification, rejectVerification, getUser, searchUsers, getAnalyticsOverview } from '../../../utils/adminApi';
 import { getApprovedRiders } from '../../../utils/adminApi';
-import { onVerificationApproved } from '../../../utils/verificationNotifications';
+import { onVerificationApproved, onVerificationRejected } from '../../../utils/verificationNotifications';
 
 const KYCApprovals = () => {
   // Approved KYC history state
@@ -134,14 +134,43 @@ const KYCApprovals = () => {
 
 
       // Show all applications (pending, approved, rejected)
-      setApplications(allVerifications);
-
-      // Enrich applications asynchronously
+      // Enrich applications asynchronously and dedupe so each rider appears once
       try {
         const enriched = await enrichApplicationsWithProfiles(allVerifications);
-        setApplications(enriched);
+
+        // Dedupe by verification id or rider id or email
+        const seen = new Set();
+        const deduped = [];
+        for (const app of enriched) {
+          const norm = getApplicationData(app);
+          const key = (norm.id || norm._rawId || norm.riderId || norm.email || norm.fullDetails?.email || '')?.toString();
+          if (!key) {
+            // fallback to JSON string of raw object
+            const fallback = JSON.stringify(app || {});
+            if (seen.has(fallback)) continue;
+            seen.add(fallback);
+            deduped.push(app);
+            continue;
+          }
+          if (seen.has(key)) continue;
+          seen.add(key);
+          deduped.push(app);
+        }
+
+        setApplications(deduped);
       } catch (e) {
         console.warn('[KYCApprovals] Failed to enrich applications with profiles:', e);
+        // fallback to raw list but dedupe minimally
+        const seen = new Set();
+        const deduped = [];
+        for (const app of allVerifications) {
+          const norm = getApplicationData(app);
+          const key = (norm.id || norm._rawId || norm.riderId || norm.email || '')?.toString();
+          if (seen.has(key)) continue;
+          seen.add(key);
+          deduped.push(app);
+        }
+        setApplications(deduped);
       }
       setTotalPages(paginationData.totalPages || 1);
 
@@ -271,6 +300,9 @@ const KYCApprovals = () => {
       totalMonth
     });
   };
+
+  // Only pending applications should appear in the Pending Applications list to avoid duplicates
+  const pendingApps = applications.filter(a => ((a.status || a.verificationStatus) || '').toString().toLowerCase() === 'pending');
 
   const showToast = (message, type = 'success') => {
     setToast({ show: true, message, type });
@@ -548,6 +580,8 @@ const KYCApprovals = () => {
 
       // Dispatch event to trigger sidebar and notification refresh
       window.dispatchEvent(new CustomEvent('kyc:updated', { detail: { action: 'approved', verificationId } }));
+      // Notify other parts of the app that verification completed
+      try { window.dispatchEvent(new Event('verification:completed')); } catch (e) { /* ignore */ }
 
       // Refetch all relevant data (verifications, approved KYC, stats)
       await refetchAll();
@@ -592,8 +626,18 @@ const KYCApprovals = () => {
 
       await rejectVerification(verificationId, rejectPayload);
 
+      // Notify rider in-app that their application was rejected
+      try {
+        onVerificationRejected({ verificationId, reason: rejectReason, name: selectedApplication?.name });
+      } catch (e) {
+        console.warn('[KYCApprovals] onVerificationRejected failed:', e);
+      }
+
       // Dispatch event to trigger sidebar and notification refresh
       window.dispatchEvent(new CustomEvent('kyc:updated', { detail: { action: 'rejected', verificationId } }));
+
+      // Notify other parts of the app that verification completed (approved/rejected)
+      try { window.dispatchEvent(new Event('verification:completed')); } catch (e) { /* ignore */ }
 
       // Refetch all relevant data (verifications, approved KYC, stats)
       await refetchAll();
@@ -776,7 +820,7 @@ const KYCApprovals = () => {
                 </YummyText>
               </div>
 
-              {applications.length === 0 ? (
+              {pendingApps.length === 0 ? (
                 <div className="text-center py-12">
                   <DocumentIcon width={48} height={48} stroke="#D1D5DB" className="mx-auto mb-3" />
                   <YummyText className="text-gray-500">No pending applications</YummyText>
@@ -784,7 +828,7 @@ const KYCApprovals = () => {
               ) : (
                 <>
                   <div className="space-y-4">
-                    {applications.map((app, index) => {
+                    {pendingApps.map((app, index) => {
                       const normalizedApp = getApplicationData(app);
                       if (isMobile) {
                         return (
@@ -1159,7 +1203,7 @@ const KYCApprovals = () => {
 
             {/* Modal Footer */}
             <div className="p-6 border-t border-gray-200 bg-gray-50">
-              {selectedApplication.status === 'pending' && (
+              {selectedApplication.status && selectedApplication.status.toString().toLowerCase() === 'pending' && (
                 <div className="flex gap-3">
                   <button
                     onClick={handleApproveClick}

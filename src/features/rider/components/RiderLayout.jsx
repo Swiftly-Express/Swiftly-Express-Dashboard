@@ -102,6 +102,8 @@ const RiderLayout = ({ children }) => {
     const handleVerificationComplete = (event) => {
       console.log('[RiderLayout] Verification completed, refreshing profile');
       fetchUserProfile();
+      // Also refresh notifications/count
+      checkNotifications();
     };
 
     // Listen for delivery status changes to check for new notifications
@@ -245,21 +247,66 @@ const RiderLayout = ({ children }) => {
     if (newState) {
       // Opening notifications - fetch them
       await fetchNotifications(1, false);
+
+      // Optimistically mark everything read locally and on the server
+      setNotifications(prev => prev.map(n => ({ ...n, isRead: true, read: true })));
+      setUnreadCount(0);
+
+      (async () => {
+        try {
+          await markAllNotificationsAsRead();
+        } catch (err) {
+          console.warn('[RiderLayout] markAllNotificationsAsRead failed', err);
+        }
+        setTimeout(async () => {
+          try {
+            await fetchNotifications(1, false);
+            await checkNotifications();
+          } catch (e) {
+            console.warn('[RiderLayout] Refresh after toggle mark-all failed', e);
+          }
+        }, 300);
+      })();
     }
   };
 
-  const handleMarkAllAsRead = async () => {
+  const handleMarkAllAsRead = async (e) => {
+    if (e) {
+      e.preventDefault();
+      e.stopPropagation();
+    }
+
     try {
       console.log('[RiderLayout] Marking all notifications as read...');
       const response = await markAllNotificationsAsRead();
       console.log('[RiderLayout] Mark all as read response:', response);
-      // Update local state
+
+      // Optimistically update UI
       setNotifications(prev => prev.map(n => ({ ...n, isRead: true, read: true })));
       setUnreadCount(0);
+
+      // Refresh from server in background (delayed to avoid race conditions)
+      setTimeout(async () => {
+        try {
+          await fetchNotifications(1, false);
+          await checkNotifications();
+        } catch (err) {
+          console.warn('[RiderLayout] Refresh after mark-all failed', err);
+        }
+      }, 200);
+
+      try { if (document && document.activeElement) document.activeElement.blur(); } catch (err) { /* ignore */ }
       console.log('[RiderLayout] All notifications marked as read successfully');
     } catch (error) {
       console.error('[RiderLayout] Failed to mark all as read:', error);
       console.error('[RiderLayout] Error details:', error.response?.data || error.message);
+      // Revert optimistic update on error
+      try {
+        await fetchNotifications(1, false);
+        await checkNotifications();
+      } catch (e) {
+        console.warn('[RiderLayout] Failed to revert after mark-all error', e);
+      }
     }
   };
 
@@ -267,16 +314,20 @@ const RiderLayout = ({ children }) => {
     if (e) {
       e.stopPropagation();
     }
+
     try {
       console.log('[RiderLayout] Marking notification as read:', notificationId);
       const response = await markNotificationAsRead(notificationId);
       console.log('[RiderLayout] Mark as read response:', response);
+
       // Update local state
       setNotifications(prev =>
-        prev.map(n => n._id === notificationId || n.id === notificationId ? { ...n, isRead: true, read: true } : n)
+        prev.map(n => (n._id === notificationId || n.id === notificationId) ? { ...n, isRead: true, read: true } : n)
       );
-      // Refresh count
-      await checkNotifications();
+
+      // Decrement unread count
+      setUnreadCount(prev => Math.max(0, prev - 1));
+
       console.log('[RiderLayout] Notification marked as read successfully');
     } catch (error) {
       console.error('[RiderLayout] Failed to mark as read:', error);
@@ -409,6 +460,8 @@ const RiderLayout = ({ children }) => {
                 {notifications.length > 0 && (
                   <button
                     onClick={handleMarkAllAsRead}
+                    onMouseDown={(e) => e.stopPropagation()}
+                    onTouchStart={(e) => e.stopPropagation()}
                     className="text-xs text-[#00B75A] hover:text-[#00a352] font-medium transition-colors"
                   >
                     Mark all read
@@ -468,12 +521,10 @@ const RiderLayout = ({ children }) => {
                           <div
                             key={notifId}
                             className={`p-4 hover:bg-gray-50 transition-colors cursor-pointer ${!isRead ? 'bg-blue-50' : ''}`}
-                            onMouseEnter={(e) => {
-                              if (!isRead) {
-                                handleMarkAsRead(notifId, e);
-                              }
-                            }}
+                            onMouseDown={(e) => e.stopPropagation()}
+                            onTouchStart={(e) => e.stopPropagation()}
                             onClick={(e) => {
+                              e.stopPropagation();
                               if (!isRead) {
                                 handleMarkAsRead(notifId, e);
                               }

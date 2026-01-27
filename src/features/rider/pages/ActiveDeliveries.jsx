@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { IonContent, IonPage, IonToast, IonIcon } from '@ionic/react';
 import RiderLayout from '../components/RiderLayout';
 import { YummyText } from '../../../components/YummyText';
@@ -49,11 +49,15 @@ const ActiveDeliveries = () =>
 
     window.addEventListener('delivery:accepted', handleDeliveryAccepted);
     window.addEventListener('delivery:statusChanged', handleDeliveryStatusChanged);
+    // Refresh on payment completion
+    const handlePaymentCompleted = () => fetchActiveDeliveries();
+    window.addEventListener('payment:completed', handlePaymentCompleted);
 
     return () =>
     {
       window.removeEventListener('delivery:accepted', handleDeliveryAccepted);
       window.removeEventListener('delivery:statusChanged', handleDeliveryStatusChanged);
+      window.removeEventListener('payment:completed', handlePaymentCompleted);
     };
   }, []);
 
@@ -330,13 +334,20 @@ const ActiveDeliveries = () =>
   };
 
 
-  const handleRouteStats = (deliveryId, { distance, duration }) =>
+  const handleRouteStats = useCallback((deliveryId, { distance, duration }) =>
   {
-    setStats(prev => ({
-      ...prev,
-      [deliveryId]: { distance, duration }
-    }));
-  };
+    setStats(prev =>
+    {
+      // Prevent update if values haven't changed
+      if (prev[deliveryId]?.distance === distance && prev[deliveryId]?.duration === duration) {
+        return prev;
+      }
+      return {
+        ...prev,
+        [deliveryId]: { distance, duration }
+      };
+    });
+  }, []);
 
   // Filter deliveries by tab
   const filterDeliveriesByTab = () =>
@@ -532,6 +543,8 @@ const ActiveDeliveries = () =>
                     isMobile={isMobile}
                     deliveryId={delivery._id || delivery.id}
                     onRouteStats={handleRouteStats}
+                    paymentStatus={((delivery.paymentStatus || delivery.payment?.status) || '').toLowerCase()}
+                    deliveryRaw={delivery}
                   />
                 );
               })
@@ -600,6 +613,9 @@ const DeliveryCard = ({
   isMobile,
   deliveryId,
   onRouteStats
+  ,
+  paymentStatus,
+  deliveryRaw
 }) => (
   <div className={isMobile ? "bg-white rounded-2xl mb-4 overflow-hidden ml-0.5 -mr-1" : "bg-white rounded-2xl mb-6 overflow-hidden ml-0.5"} style={sideBottomShadow}>
     {/* Header Section with Background */}
@@ -631,9 +647,17 @@ const DeliveryCard = ({
             <div className={isMobile ? "text-xl font-semibold text-[#00D68F]" : "text-2xl font-normal text-[#00D68F]"}>
               {price}
             </div>
-            <span className={`mt-1 px-2 py-0.5 rounded-full text-xs font-normal ${statusColor}`}>
-              {status}
-            </span>
+            <div className="flex items-center gap-2 mt-1">
+              <span className={`px-2 py-0.5 rounded-full text-xs font-normal ${statusColor}`}>
+                {status}
+              </span>
+              {/* Payment tag */}
+              {paymentStatus === 'paid' ? (
+                <span className="px-2 py-0.5 rounded-full text-xs font-normal bg-green-100 text-green-700">Paid</span>
+              ) : (
+                <span className="px-2 py-0.5 rounded-full text-xs font-normal bg-orange-100 text-orange-700">Yet to pay</span>
+              )}
+            </div>
           </div>
         </div>
 
@@ -696,24 +720,12 @@ const DeliveryCard = ({
               <button
                 onClick={() =>
                 {
-                  const statusLower = (status || '').toLowerCase();
-                  let destCoords = null;
-
-                  // If waiting to pickup or going to pickup -> Target is Pickup Location
-                  if (statusLower.includes('assigned') || statusLower.includes('pending') || (statusLower.includes('picked') === false && statusLower.includes('transit') === false)) {
-                    destCoords = pickupCoords;
-                  }
-                  // If picked up or in transit -> Target is Delivery Location
-                  else {
-                    destCoords = deliveryCoords;
-                  }
-
-                  if (destCoords) {
-                    // GeoJSON [lng, lat] or Object {lat, lng}
-                    const lat = Array.isArray(destCoords) ? destCoords[1] : destCoords.lat;
-                    const lng = Array.isArray(destCoords) ? destCoords[0] : destCoords.lng;
-
-                    window.open(`https://www.google.com/maps/dir/?api=1&destination=${lat},${lng}&travelmode=driving`, '_blank');
+                  if (packageId) {
+                    window.location.href = `/rider/track/${packageId}`;
+                  } else if (pickupCoords && deliveryCoords) {
+                    const origin = `${pickupCoords[1]},${pickupCoords[0]}`;
+                    const dest = `${deliveryCoords[1]},${deliveryCoords[0]}`;
+                    window.open(`https://www.google.com/maps/dir/?api=1&origin=${origin}&destination=${dest}&travelmode=driving`, '_blank');
                   } else {
                     alert('Navigation coordinates not available');
                   }

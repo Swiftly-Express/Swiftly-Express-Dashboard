@@ -51,7 +51,7 @@ export default function SmartRideBooking({ embedMode = false, initialData = {}, 
     const sliderRef = useRef(null);
     const hideBubbleTimeout = useRef(null);
     const [sliderBubble, setSliderBubble] = useState(null);
-    const [showFineTuneInfo, setShowFineTuneInfo] = useState(false);
+
 
     const [formData, setFormData] = useState({
         deliveryType: 'smart_ride',
@@ -412,9 +412,15 @@ export default function SmartRideBooking({ embedMode = false, initialData = {}, 
                 throw new Error('Failed to create delivery (no id returned)');
             }
             setDeliveryId(dId);
-
-            setToastMsg('Preparing payment...');
+            // Payment is optional for SmartRide — finalize booking now and allow payment later
+            window.dispatchEvent(new Event('deliveries:refresh'));
+            window.dispatchEvent(new CustomEvent('delivery:created', { detail: createResp?.data || createResp }));
+            setToastMsg('Delivery booked successfully!');
             setShowToast(true);
+            setIsProcessingPayment(false);
+            setIsCreating(false);
+            try { router.push('/customer/deliveries', 'root', 'replace'); } catch (e) { window.location.href = '/customer/deliveries'; }
+            return;
 
             // Open popup synchronously to preserve user gesture
             let paymentWindow = null;
@@ -535,16 +541,19 @@ export default function SmartRideBooking({ embedMode = false, initialData = {}, 
     const handleSizeCategoryChange = (label) =>
     {
         const valueMap = { 'Small': 'small', 'Medium': 'big', 'Very Big': 'very_big' };
+        const defaultScaleMap = { small: 85, big: 100, very_big: 120 };
         const cat = valueMap[label];
         const weightMap = { small: 'light', big: 'heavy', very_big: 'very_heavy' };
         const dimsMap = { small: [30, 30, 30], big: [50, 40, 30], very_big: [80, 60, 50] };
+        const scale = defaultScaleMap[cat] || 100;
+        const factor = scale / 100;
         const base = dimsMap[cat];
-        const factor = (formData.sizeScale || 100) / 100;
         const dims = `${Math.round(base[0] * factor)}×${Math.round(base[1] * factor)}×${Math.round(base[2] * factor)} cm`;
         setFormData({
             ...formData,
             sizeCategory: cat,
             weightCategory: weightMap[cat],
+            sizeScale: scale,
             dimensions: dims
         });
     };
@@ -559,10 +568,16 @@ export default function SmartRideBooking({ embedMode = false, initialData = {}, 
     {
         const scale = parseInt(e.target.value, 10);
         const dimsMap = { small: [30, 30, 30], big: [50, 40, 30], very_big: [80, 60, 50] };
-        const base = dimsMap[formData.sizeCategory] || dimsMap.small;
+        // Derive category from scale thresholds so slider controls category too
+        let derivedCat = 'small';
+        if (scale <= 90) derivedCat = 'small';
+        else if (scale <= 110) derivedCat = 'big';
+        else derivedCat = 'very_big';
+        const weightMap = { small: 'light', big: 'heavy', very_big: 'very_heavy' };
+        const base = dimsMap[derivedCat] || dimsMap.small;
         const factor = scale / 100;
         const dims = `${Math.round(base[0] * factor)}×${Math.round(base[1] * factor)}×${Math.round(base[2] * factor)} cm`;
-        setFormData({ ...formData, sizeScale: scale, dimensions: dims });
+        setFormData({ ...formData, sizeScale: scale, dimensions: dims, sizeCategory: derivedCat, weightCategory: weightMap[derivedCat] });
 
         const min = 70;
         const max = 130;
@@ -594,15 +609,16 @@ export default function SmartRideBooking({ embedMode = false, initialData = {}, 
             <div className="min-h-screen bg-[#FFFFFF]">
                 {/* Header */}
                 <YummyText>
-                    <div className="bg-white">
-                        <div className="max-w-6xl mx-auto px-2 sm:px-4 py-0 h-16 md:h-32 flex items-center justify-between mb-8 md:mb-0 sm:md-0 lg:mb-0t">
+                    <div className="">
+                        <div className="max-w-6xl mx-auto px-0 sm:px-4 py-0 h-16 md:h-32 flex items-center justify-between mb-8 md:mb-0 sm:md-0 lg:mb-0t">
                             <div className="flex items-center gap-3">
-                                {!(embedMode && isMobile) ? (
+                                {!(embedMode && isMobile) && (
                                     <a href="/" className="inline-block">
                                         <img src="/swiftly-logo.svg" alt="Swiftly" className="h-40 md:h-22 lg:h-22 object-contain" />
                                     </a>
-                                ) : (
-                                    <div className="px-3 py-1 rounded-full bg-gray-100 text-sm font-semibold text-[#0F172A]">Smartride</div>
+                                )}
+                                {embedMode && isMobile && (
+                                    <YummyText className="text-xs text-[#0F172A] border border-[#00B75A] rounded-full px-2 py-0.5">Smartride</YummyText>
                                 )}
                             </div>
                             <div>
@@ -625,13 +641,13 @@ export default function SmartRideBooking({ embedMode = false, initialData = {}, 
 
                 {/* Breadcrumb */}
                 <YummyText>
-                    <div className="max-w-4xl mx-auto -mt-6 px-4 sm:px-6 lg:px-8">
+                    <div className="max-w-4xl mx-auto -mt-6 px-0 sm:px-6 lg:px-8">
                         <Breadcrumb steps={breadcrumbSteps} currentStep={getCurrentStepIndex()} />
                     </div>
                 </YummyText>
 
                 {/* Page Title */}
-                <div className="max-w-5xl mx-auto px-4">
+                <div className="max-w-5xl mx-auto px-0 md:px-4 lg:px-4">
                     <div className="mb-3">
                         <YummyText className="text-3xl font-medium text-gray-900 mb-1">Book a Delivery</YummyText>
                         <YummyText className="text-gray-600 text-sm">Schedule a new shipment with ease</YummyText>
@@ -640,7 +656,7 @@ export default function SmartRideBooking({ embedMode = false, initialData = {}, 
 
                 {/* Main Content */}
                 <YummyText>
-                    <div className="max-w-5xl mx-auto px-4 pb-12">
+                    <div className="max-w-5xl mx-auto px-0 md:px-4 lg:px-4 pb-12 mt-6">
                         <div className="bg-white rounded-2xl p-6" style={sideBottomShadow}>
                             <form onSubmit={handleSubmit}>
                                 {/* Delivery Information Section */}
@@ -893,26 +909,8 @@ export default function SmartRideBooking({ embedMode = false, initialData = {}, 
                                             {/* Size Adjustment Slider */}
                                             <div className="bg-[#FFFFFF] rounded-2xl p-5 border border-gray-200">
                                                 <div className="flex items-center justify-between mb-4">
-                                                    <div className="flex items-center gap-2">
-                                                        <div className="w-8 h-8 rounded-xl bg-[FFFFFF]/10 shadow-sm border flex items-center justify-center">
-                                                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#00B75A" strokeWidth="2">
-                                                                <rect x="3" y="3" width="7" height="7" rx="1" />
-                                                                <rect x="14" y="3" width="7" height="7" rx="1" />
-                                                                <rect x="14" y="14" width="7" height="7" rx="1" />
-                                                                <rect x="3" y="14" width="7" height="7" rx="1" />
-                                                            </svg>
-                                                        </div>
+                                                    <div className="flex items-center">
                                                         <label className="text-sm font-semibold text-[#0F172A]">Adjust Size</label>
-                                                        <button
-                                                            type="button"
-                                                            onClick={() => setShowFineTuneInfo(v => !v)}
-                                                            className="p-1.5 rounded-lg hover:bg-white/60 transition-colors"
-                                                        >
-                                                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#64748B" strokeWidth="2">
-                                                                <circle cx="12" cy="12" r="10" />
-                                                                <path d="M12 16v-4M12 8h.01" />
-                                                            </svg>
-                                                        </button>
                                                     </div>
                                                     <div className="flex items-center gap-3 bg-white px-3 py-1.5 rounded-full border border-gray-200 shadow-sm">
                                                         <div className="flex items-center gap-1.5">
@@ -924,44 +922,7 @@ export default function SmartRideBooking({ embedMode = false, initialData = {}, 
                                                     </div>
                                                 </div>
 
-                                                {showFineTuneInfo && (
-                                                    <div className="mb-4 p-4 rounded-xl bg-white border border-[#00B75A]/20 shadow-sm">
-                                                        <div className="flex items-start gap-3">
-                                                            <div className="flex-shrink-0 w-8 h-8 rounded-lg bg-gradient-to-br from-[#00B75A] to-[#00D68F] flex items-center justify-center shadow-sm">
-                                                                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2.5" strokeLinecap="round">
-                                                                    <circle cx="12" cy="12" r="10" />
-                                                                    <path d="M12 16v-4M12 8h.01" />
-                                                                </svg>
-                                                            </div>
-                                                            <div className="flex-1 min-w-0">
-                                                                <div className="text-sm font-semibold text-[#0F172A] mb-2">Quick Size Adjustments</div>
-                                                                <div className="space-y-1.5 text-xs text-[#64748B]">
-                                                                    <div className="flex items-start gap-2">
-                                                                        <span className="text-[#00B75A] mt-0.5">→</span>
-                                                                        <span>Drag the slider to fine-tune your package dimensions</span>
-                                                                    </div>
-                                                                    <div className="flex items-start gap-2">
-                                                                        <span className="text-[#00B75A] mt-0.5">→</span>
-                                                                        <span>Real-time preview shows exact measurements</span>
-                                                                    </div>
-                                                                    <div className="flex items-start gap-2">
-                                                                        <span className="text-[#00B75A] mt-0.5">→</span>
-                                                                        <span>Range from 70% to 130% of base size</span>
-                                                                    </div>
-                                                                </div>
-                                                            </div>
-                                                            <button
-                                                                type="button"
-                                                                onClick={() => setShowFineTuneInfo(false)}
-                                                                className="flex-shrink-0 w-6 h-6 rounded-lg hover:bg-gray-100 flex items-center justify-center transition-colors"
-                                                            >
-                                                                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#94A3B8" strokeWidth="2.5" strokeLinecap="round">
-                                                                    <path d="M18 6L6 18M6 6l12 12" />
-                                                                </svg>
-                                                            </button>
-                                                        </div>
-                                                    </div>
-                                                )}
+
 
                                                 <div className="relative px-1">
                                                     <div className="absolute top-1/2 left-0 right-0 h-1.5 -translate-y-1/2 bg-gradient-to-r from-gray-200 via-[#00B75A]/20 to-gray-200 rounded-full pointer-events-none"></div>
@@ -1490,12 +1451,13 @@ export default function SmartRideBooking({ embedMode = false, initialData = {}, 
                     <div className="bg-white">
                         <div className="max-w-6xl mx-auto px-2 sm:px-4 py-0 h-16 md:h-32 flex items-center justify-between mb-8 md:mb-0 sm:md-0 lg:mb-0t">
                             <div className="flex items-center gap-3">
-                                {!(embedMode && isMobile) ? (
+                                {!(embedMode && isMobile) && (
                                     <a href="/" className="inline-block">
                                         <img src="/swiftly-logo.svg" alt="Swiftly" className="h-40 md:h-22 lg:h-22 object-contain" />
                                     </a>
-                                ) : (
-                                    <div className="px-3 py-1 rounded-full border-[1.5px] border-[#01A9F4] text-sm font-semibold text-[#0F172A]">Smartride</div>
+                                )}
+                                {embedMode && isMobile && (
+                                    <YummyText className="text-xs text-[#0F172A] border border-[#00B75A] rounded-full px-2 py-0.5">Smartride</YummyText>
                                 )}
                             </div>
                             <div>
@@ -1701,12 +1663,13 @@ export default function SmartRideBooking({ embedMode = false, initialData = {}, 
                     <div className="bg-white">
                         <div className="max-w-6xl mx-auto px-2 sm:px-4 py-0 h-16 md:h-32 flex items-center justify-between mb-8 md:mb-0 sm:md-0 lg:mb-0t">
                             <div className="flex items-center gap-3">
-                                {!(embedMode && isMobile) ? (
+                                {!(embedMode && isMobile) && (
                                     <a href="/" className="inline-block">
                                         <img src="/swiftly-logo.svg" alt="Swiftly" className="h-40 md:h-22 lg:h-22 object-contain" />
                                     </a>
-                                ) : (
-                                    <div className="px-3 py-1 rounded-full bg-gray-100 text-sm font-semibold text-[#0F172A]">Smartride</div>
+                                )}
+                                {embedMode && isMobile && (
+                                    <YummyText className="text-xs text-[#0F172A] border border-[#00B75A] rounded-full px-2 py-0.5">Smartride</YummyText>
                                 )}
                             </div>
                             <div>

@@ -5,8 +5,8 @@ import CustomerLayout from '../components/CustomerLayout';
 import PaymentFailedModal from '../components/PaymentFailedModal';
 import { YummyText } from '../../../components/YummyText';
 import Loader from '../../../components/Loader';
-import { getCustomerDeliveries, rateDriver, cancelDelivery } from '../../../utils/authApi';
-import { getCookie, deleteCookie } from '../../../utils/cookies';
+import { getCustomerDeliveries, rateDriver, cancelDelivery, initializePayment } from '../../../utils/authApi';
+import { getCookie, deleteCookie, setCookie, getJSONCookie } from '../../../utils/cookies';
 
 const sideBottomShadow = {
   boxShadow: '2px 4px 4px rgba(0,0,0,0.06), -2px 4px 4px rgba(0,0,0,0.06), 0 4px 8px rgba(0,0,0,0.08)'
@@ -72,6 +72,7 @@ const DeliveryCard = ({ delivery }) => {
   const [showCopyToast, setShowCopyToast] = useState(false);
   const statusStyle = getStatusStyle(delivery.status);
   const progress = getProgress(delivery.status);
+  const paymentStatus = (delivery.paymentStatus || delivery.payment?.status || '').toLowerCase();
 
   const handleToggleDetails = () => {
     const newIsOpen = !isOpen;
@@ -102,7 +103,21 @@ const DeliveryCard = ({ delivery }) => {
   };
 
   return (
-    <div className="bg-white rounded-2xl p-4 md:p-6 mb-4" style={sideBottomShadow}>
+    <div className="bg-white rounded-2xl p-4 md:p-6 mb-4 relative" style={sideBottomShadow}>
+      {/* Mobile: Make Payment button at top-right */}
+      {(paymentStatus === 'pending' || paymentStatus === 'unpaid' || paymentStatus === 'failed') && (
+        <button
+          onClick={() => {
+            const deliveryId = delivery._id || delivery.id || delivery.trackingNumber;
+            window.dispatchEvent(new CustomEvent('payment:init', { detail: { deliveryId } }));
+          }}
+          className="md:hidden absolute top-3 right-3 px-3 py-1 rounded-full border border-black bg-white text-black text-xs font-medium z-20"
+          aria-label="Make Payment"
+          style={{ borderStyle: 'solid' }}
+        >
+          <YummyText className="text-xs font-medium">Make Payment</YummyText>
+        </button>
+      )}
       {/* Mobile & Desktop Layout */}
       <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
         <div className="flex items-start gap-3 md:gap-4 flex-1">
@@ -117,9 +132,32 @@ const DeliveryCard = ({ delivery }) => {
               <YummyText className="text-base md:text-lg font-medium text-[#0F172A] truncate">
                 {delivery.packageDetails?.description || 'Package'}
               </YummyText>
-              <span className={`px-3 py-1 rounded-full text-xs font-medium ${statusStyle.bg} ${statusStyle.color} w-fit`}>
-                {delivery.status || 'Pending'}
-              </span>
+              <div className="flex items-center gap-2">
+                <span className={`px-3 py-1 rounded-full text-xs font-medium ${statusStyle.bg} ${statusStyle.color} w-fit`}>
+                  {delivery.status || 'Pending'}
+                </span>
+
+                {/* Payment tag */}
+                {paymentStatus === 'paid' ? (
+                  <span className="px-3 py-1 rounded-full text-xs font-medium bg-green-100 text-green-700">Paid</span>
+                ) : (
+                  <span className="px-3 py-1 rounded-full text-xs font-medium bg-orange-100 text-orange-700">Yet to pay</span>
+                )}
+
+                {/* Desktop/Tablet: show Make Payment tag when unpaid */}
+                {(paymentStatus === 'pending' || paymentStatus === 'unpaid' || paymentStatus === 'failed') && (
+                  <button
+                    onClick={() => {
+                      const deliveryId = delivery._id || delivery.id || delivery.trackingNumber;
+                      window.dispatchEvent(new CustomEvent('payment:init', { detail: { deliveryId } }));
+                    }}
+                    className="hidden md:inline-flex px-3 py-1 rounded-full text-xs font-medium border-2 border-black bg-white text-black z-10"
+                    style={{ borderStyle: 'solid' }}
+                  >
+                    <YummyText className="text-xs font-medium">Make Payment</YummyText>
+                  </button>
+                )}
+              </div>
             </div>
 
             <div className="text-sm text-[#4A5565] mb-1 flex items-center gap-1 flex-wrap">
@@ -213,6 +251,7 @@ const DeliveryCard = ({ delivery }) => {
 const MobileCompletedCard = ({ delivery }) => {
   const [isOpen, setIsOpen] = useState(false);
   const [showCopyToast, setShowCopyToast] = useState(false);
+  const paymentStatus = (delivery.paymentStatus || delivery.payment?.status || '').toLowerCase();
 
   const handleToggleDetails = () => {
     const newIsOpen = !isOpen;
@@ -243,7 +282,20 @@ const MobileCompletedCard = ({ delivery }) => {
   };
 
   return (
-    <div className="bg-white rounded-2xl p-4 mb-3 border border-gray-100">
+    <div className="bg-white rounded-2xl p-4 mb-3 border border-gray-100 relative">
+      {(paymentStatus === 'pending' || paymentStatus === 'unpaid' || paymentStatus === 'failed') && (
+        <button
+          onClick={() => {
+            const deliveryId = delivery._id || delivery.id || delivery.trackingNumber;
+            window.dispatchEvent(new CustomEvent('payment:init', { detail: { deliveryId } }));
+          }}
+          className="md:hidden absolute top-3 right-3 px-3 py-1 rounded-full border-2 border-black bg-white text-black text-xs font-medium z-20"
+          aria-label="Make Payment"
+          style={{ borderStyle: 'solid' }}
+        >
+          <YummyText className="text-xs font-medium">Make Payment</YummyText>
+        </button>
+      )}
       <div className="flex items-start justify-between mb-3">
         <div className="flex-1">
           <YummyText className="text-base font-medium text-[#0F172A] mb-1">
@@ -527,11 +579,103 @@ const MyDeliveries = () => {
     window.addEventListener('deliveries:refresh', handleRefresh);
     window.addEventListener('delivery:created', handleDeliveryCreated);
     window.addEventListener('delivery:updated', handleDeliveryUpdated);
+    // Listen for pay-later requests from delivery cards
+    const handlePaymentInit = async (ev) => {
+      try {
+        const deliveryId = ev?.detail?.deliveryId;
+        if (!deliveryId) return;
+        console.log('[MyDeliveries] Initializing payment for', deliveryId);
+
+        // Find delivery object from current lists
+        const all = [...activeDeliveries, ...completedDeliveries];
+        const delivery = all.find(d => (d._id || d.id || d.trackingNumber) === deliveryId) || null;
+
+        const amountRaw = delivery?.total || delivery?.price || delivery?.amount || 0;
+        const amount = typeof amountRaw === 'string' ? parseFloat(amountRaw.replace(/[^0-9.-]+/g, '')) : (amountRaw || 0);
+
+        const email = delivery?.recipientEmail || delivery?.customerEmail || (getJSONCookie && getJSONCookie('user_data')?.email) || 'customer@swiftlyxpress.com';
+
+        // try to open popup synchronously
+        let paymentWindow = null;
+        try { paymentWindow = window.open('', '_blank'); if (paymentWindow) paymentWindow.document.write('<p>Preparing payment...</p>'); } catch (e) { paymentWindow = null; }
+
+        const initJson = await initializePayment(deliveryId, {
+          amount: amount,
+          currency: 'NGN',
+          email,
+          callback_url: `${window.location.origin}/customer/payment/callback`,
+          metadata: { deliveryId }
+        });
+
+        const initPayload = initJson?.data || initJson;
+        const paymentObj = initPayload?.data?.payment || initPayload?.payment || initPayload?.data;
+        const paymentReference = paymentObj?.reference || paymentObj?.id || paymentObj?.paymentId;
+        const authorizationUrl = paymentObj?.authorizationUrl || paymentObj?.authorization_url || paymentObj?.url || paymentObj?.payment_url;
+
+        if (deliveryId) setCookie('pending_payment_delivery_id', String(deliveryId), 1);
+        if (paymentReference) setCookie('pending_payment_id', String(paymentReference), 1);
+
+        const cleanupOnPaymentCancel = async (did) => {
+          try { if (did) await cancelDelivery(did, { reason: 'payment_cancelled' }); } catch (cleanupErr) { console.warn('[MyDeliveries] cleanup failed', cleanupErr); }
+          try { deleteCookie('pending_payment_delivery_id'); deleteCookie('pending_payment_id'); } catch (e) { }
+          setToastMessage('Payment was not completed. Your booking was cancelled.');
+          setShowToast(true);
+        };
+
+        if (authorizationUrl) {
+          try {
+            if (paymentWindow) paymentWindow.location.href = authorizationUrl;
+            else window.open(authorizationUrl, '_blank');
+
+            // monitor popup close
+            const popupInterval = setInterval(() => {
+              try {
+                if (!paymentWindow || paymentWindow.closed) {
+                  clearInterval(popupInterval);
+                  const pending = getCookie('pending_payment_id');
+                  if (pending) cleanupOnPaymentCancel(deliveryId);
+                }
+              } catch (e) { clearInterval(popupInterval); }
+            }, 1000);
+
+            return;
+          } catch (navErr) {
+            console.warn('[MyDeliveries] Failed to open hosted payment URL', navErr);
+          }
+        }
+
+        // Fallback to inline Paystack
+        if (paymentReference) {
+          try { if (paymentWindow) paymentWindow.close(); } catch (e) { }
+          const PaystackPop = (await import('@paystack/inline-js')).default;
+          const paystackPublicKey = import.meta.env.VITE_PAYSTACK_PUBLIC_KEY || 'pk_test_xxxx';
+          const handler = PaystackPop.setup({
+            key: paystackPublicKey,
+            email,
+            amount: (amount || 0) * 100,
+            ref: paymentReference,
+            onClose: function () { cleanupOnPaymentCancel(deliveryId); },
+            callback: function () {
+              try { deleteCookie('pending_payment_delivery_id'); deleteCookie('pending_payment_id'); } catch (e) { };
+              try { window.location.href = '/customer/payment/callback'; } catch (e) { window.location.href = '/customer/payment/callback'; }
+            }
+          });
+          handler.openIframe();
+        }
+      } catch (err) {
+        console.error('[MyDeliveries] payment init error', err);
+        setToastMessage(err?.message || 'Failed to initialize payment');
+        setShowToast(true);
+      }
+    };
+
+    window.addEventListener('payment:init', handlePaymentInit);
 
     return () => {
       window.removeEventListener('deliveries:refresh', handleRefresh);
       window.removeEventListener('delivery:created', handleDeliveryCreated);
       window.removeEventListener('delivery:updated', handleDeliveryUpdated);
+      window.removeEventListener('payment:init', handlePaymentInit);
     };
   }, []);
 
@@ -559,18 +703,12 @@ const MyDeliveries = () => {
 
       console.log('[MyDeliveries] Parsed items:', items);
 
-      // Filter out cancelled and unpaid orders
+      // Filter out cancelled orders (keep unpaid/pending so users can pay later)
       const validDeliveries = items.filter(d => {
         const status = (d.status || '').toLowerCase();
-        const paymentStatus = (d.paymentStatus || '').toLowerCase();
 
         // Exclude cancelled orders
         if (status === 'cancelled' || status === 'canceled') {
-          return false;
-        }
-
-        // Exclude orders with unpaid/pending payment status
-        if (paymentStatus === 'pending' || paymentStatus === 'unpaid' || paymentStatus === 'failed') {
           return false;
         }
 

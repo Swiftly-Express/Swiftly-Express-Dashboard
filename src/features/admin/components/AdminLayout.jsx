@@ -54,21 +54,69 @@ const AdminLayout = ({ children }) => {
     const newState = !showNotifications;
     setShowNotifications(newState);
     if (newState) {
+      // Fetch notifications to populate dropdown
       await fetchNotifications(1, false);
+
+      // Optimistically mark everything read locally and on the server
+      setNotifications(prev => prev.map(n => ({ ...n, isRead: true, read: true })));
+      setUnreadCount(0);
+
+      // Fire server-side mark-all in background and refresh shortly after
+      (async () => {
+        try {
+          await markAllNotificationsAsRead();
+        } catch (err) {
+          console.warn('[AdminLayout] markAllNotificationsAsRead failed', err);
+        }
+        setTimeout(async () => {
+          try {
+            await fetchNotifications(1, false);
+            await checkNotifications();
+          } catch (e) {
+            console.warn('[AdminLayout] Refresh after toggle mark-all failed', e);
+          }
+        }, 300);
+      })();
     }
   };
 
-  const handleMarkAllAsRead = async () => {
+  const handleMarkAllAsRead = async (e) => {
+    if (e) {
+      e.preventDefault();
+      e.stopPropagation();
+    }
+
     try {
       console.log('[AdminLayout] Marking all notifications as read...');
       const response = await markAllNotificationsAsRead();
       console.log('[AdminLayout] Mark all as read response:', response);
+
+      // Optimistically update UI
       setNotifications(prev => prev.map(n => ({ ...n, isRead: true, read: true })));
       setUnreadCount(0);
+
+      // Refresh from server in background (delayed to avoid race conditions)
+      setTimeout(async () => {
+        try {
+          await fetchNotifications(1, false);
+          await checkNotifications();
+        } catch (err) {
+          console.warn('[AdminLayout] Refresh after mark-all failed', err);
+        }
+      }, 200);
+
+      try { if (document && document.activeElement) document.activeElement.blur(); } catch (err) { /* ignore */ }
       console.log('[AdminLayout] All notifications marked as read successfully');
     } catch (error) {
       console.error('[AdminLayout] Failed to mark all as read:', error);
       console.error('[AdminLayout] Error details:', error.response?.data || error.message);
+      // Revert optimistic update on error
+      try {
+        await fetchNotifications(1, false);
+        await checkNotifications();
+      } catch (e) {
+        console.warn('[AdminLayout] Failed to revert after mark-all error', e);
+      }
     }
   };
 
@@ -117,15 +165,22 @@ const AdminLayout = ({ children }) => {
       checkNotifications();
     };
 
+    const handleVerificationCompleted = () => {
+      console.log('[AdminLayout] verification:completed event received');
+      checkNotifications();
+    };
+
     window.addEventListener('kyc:updated', handleKycUpdate);
     window.addEventListener('user:created', handleUserCreated);
     window.addEventListener('kyc:submitted', handleKycSubmitted);
+    window.addEventListener('verification:completed', handleVerificationCompleted);
 
     return () => {
       clearInterval(notificationInterval);
       window.removeEventListener('kyc:updated', handleKycUpdate);
       window.removeEventListener('user:created', handleUserCreated);
       window.removeEventListener('kyc:submitted', handleKycSubmitted);
+      window.removeEventListener('verification:completed', handleVerificationCompleted);
     };
   }, []);
   return (
@@ -222,6 +277,8 @@ const AdminLayout = ({ children }) => {
                 {notifications.length > 0 && (
                   <button
                     onClick={handleMarkAllAsRead}
+                    onMouseDown={(e) => e.stopPropagation()}
+                    onTouchStart={(e) => e.stopPropagation()}
                     className="text-xs text-[#00B75A] hover:text-[#00a352] font-medium transition-colors"
                   >
                     Mark all read
@@ -276,12 +333,10 @@ const AdminLayout = ({ children }) => {
                           <div
                             key={notifId}
                             className={`p-4 hover:bg-gray-50 transition-colors cursor-pointer ${!isRead ? 'bg-blue-50' : ''}`}
-                            onMouseEnter={(e) => {
-                              if (!isRead) {
-                                handleMarkAsRead(notifId, e);
-                              }
-                            }}
+                            onMouseDown={(e) => e.stopPropagation()}
+                            onTouchStart={(e) => e.stopPropagation()}
                             onClick={(e) => {
+                              e.stopPropagation();
                               if (!isRead) {
                                 handleMarkAsRead(notifId, e);
                               }

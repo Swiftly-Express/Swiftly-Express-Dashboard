@@ -35,9 +35,9 @@ const TrackingMap = ({ pickupLocation, dropoffLocation, driverLocation, onRouteS
     const [directionsError, setDirectionsError] = useState(false);
 
     // Normalize coordinates
-    const pickup = useMemo(() => normalizeCoords(pickupLocation), [pickupLocation]);
-    const dropoff = useMemo(() => normalizeCoords(dropoffLocation), [dropoffLocation]);
-    const driver = useMemo(() => normalizeCoords(driverLocation), [driverLocation]);
+    const pickup = useMemo(() => normalizeCoords(pickupLocation), [JSON.stringify(pickupLocation)]);
+    const dropoff = useMemo(() => normalizeCoords(dropoffLocation), [JSON.stringify(dropoffLocation)]);
+    const driver = useMemo(() => normalizeCoords(driverLocation), [JSON.stringify(driverLocation)]);
 
     const containerStyle = {
         width: '100%',

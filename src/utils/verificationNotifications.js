@@ -203,10 +203,45 @@ export const initializeVerificationSystem = async () => {
 
 export const onVerificationApproved = () => {
   setCookie(STORAGE.VERIFIED, 'true', 7);
+  // Explicitly set verification status to approved so modal doesn't show again
+  setCookie('riderVerificationStatus', 'approved', 7);
+  setCookie('riderAccountVerified', 'true', 7);
+  // Clear dismissal and prompt cookies so modal logic starts fresh
+  deleteCookie('verificationPromptDismissedAt');
+  deleteCookie('lastVerificationModalShownAt');
+  deleteCookie('nextVerificationPushNotification');
 
   removeVerificationNotification();
   cancelVerificationPush();
   deleteCookie(STORAGE.LAST_MODAL);
+};
+
+// Call when an application is rejected so the rider gets an in-app notification
+export const onVerificationRejected = ({ verificationId, reason, name } = {}) => {
+  // Add a single rejection notification
+  const notifications = getJSONCookie(STORAGE.NOTIFICATIONS) || [];
+
+  notifications.unshift({
+    id: `verify_rejected_${now()}`,
+    type: 'verification_rejected',
+    title: 'KYC Application Rejected',
+    message: reason || 'Your verification application was rejected. Please review and resubmit.',
+    timestamp: new Date().toISOString(),
+    read: false,
+    priority: 'high',
+    meta: {
+      verificationId,
+      name,
+    },
+    action: {
+      label: 'View Requirements',
+      route: '/rider/verify-account'
+    }
+  });
+
+  // Keep notifications for 7 days
+  setJSONCookie(STORAGE.NOTIFICATIONS, notifications, 7);
+  updateUnreadCount();
 };
 
 // Missing function reference

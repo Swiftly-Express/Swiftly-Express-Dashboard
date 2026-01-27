@@ -28,11 +28,12 @@ const CustomerSignUp = () => {
   useEffect(() => {
     const urlParams = new URLSearchParams(window.location.search);
     const returnUrl = urlParams.get('returnUrl');
-    
+
     if (returnUrl) {
       // Store returnUrl in sessionStorage so we can use it after signup
       sessionStorage.setItem('auth_return_url', returnUrl);
-      
+      try { localStorage.setItem('auth_return_url', returnUrl); } catch (e) { /* ignore */ }
+
       // Clean up URL
       window.history.replaceState({}, '', window.location.pathname);
     }
@@ -112,27 +113,27 @@ const CustomerSignUp = () => {
 
       // Check for returnUrl and redirect accordingly
       const returnUrl = sessionStorage.getItem('auth_return_url');
-      
+
       if (document && document.activeElement) document.activeElement.blur();
-      
+
       if (returnUrl) {
         // Store returnUrl so verify-email page can use it after verification
         sessionStorage.setItem('post_verification_url', returnUrl);
         console.log('[CustomerSignUp] Stored returnUrl for post-verification:', returnUrl);
       }
-      
+
       router.push('/auth/verify-email', 'forward', 'push');
     } catch (err) {
       console.error('Customer registration failed', err);
-      
+
       // Check if user already exists
       if (err?.status === 409 || err?.message?.toLowerCase().includes('already exists') || err?.message?.toLowerCase().includes('exist')) {
         setToastMsg('Account already exists! Redirecting to login...');
         setShowToast(true);
-        
+
         // Redirect to login with returnUrl if it exists
         const returnUrl = sessionStorage.getItem('auth_return_url');
-        
+
         setTimeout(() => {
           if (returnUrl) {
             router.push(`/auth/customer/login?returnUrl=${encodeURIComponent(returnUrl)}`, 'root', 'replace');
@@ -180,17 +181,22 @@ const CustomerSignUp = () => {
     if (el) {
       el.classList.add('scale-95', 'opacity-90');
     }
-    
+
     setGoogleLoading(true);
-    
+
     // Include returnUrl in Google OAuth if it exists
     const returnUrl = sessionStorage.getItem('auth_return_url');
-    const googleAuthUrl = returnUrl 
+    // Also persist returnUrl as a cookie and localStorage so the backend can echo it back if needed
+    if (returnUrl) {
+      try { setCookie('auth_return_url', returnUrl, 1); } catch (e) { /* ignore */ }
+      try { localStorage.setItem('auth_return_url', returnUrl); } catch (e) { /* ignore */ }
+    }
+    const googleAuthUrl = returnUrl
       ? `${apiBase}/api/auth/google?role=customer&returnUrl=${encodeURIComponent(returnUrl)}`
       : `${apiBase}/api/auth/google?role=customer`;
-    
+
     console.log('[CustomerSignUp] Redirecting to:', googleAuthUrl);
-    
+
     // let the gradient ring be visible briefly before leaving
     setTimeout(() => {
       window.location.href = googleAuthUrl;
