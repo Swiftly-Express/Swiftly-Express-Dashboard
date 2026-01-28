@@ -147,7 +147,7 @@ const DeliveryCard = ({ delivery }) => {
                 {paymentStatus !== 'paid' && (() => {
                   const method = (delivery.payment?.method || delivery.paymentMethod || delivery.payment?.paymentMethod || delivery.method || '').toString().toLowerCase().trim();
                   return (method === 'cash' || method === 'cash_on_delivery' || method === 'cod') ? (
-                    <span className="px-3 py-1 rounded-full text-xs font-medium bg-white text-green-600 border border-green-300">Cash</span>
+                    <span className="px-3 py-1 rounded-full text-xs font-medium bg-white text-green-600 border border-gray-200">Cash</span>
                   ) : null;
                 })()}
 
