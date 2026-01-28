@@ -103,6 +103,7 @@ const Book = () => {
   const [isSpecialErrand, setIsSpecialErrand] = useState(false);
   const [waitingMinutes, setWaitingMinutes] = useState(0);
   const [distanceKm, setDistanceKm] = useState(0);
+  const [appliedDeliveryTypeFee, setAppliedDeliveryTypeFee] = useState(0);
   const [estimatedPrice, setEstimatedPrice] = useState(null);
   const [isCaclulatingPrice, setIsCalculatingPrice] = useState(false);
 
@@ -132,6 +133,13 @@ const Book = () => {
     setFormData({ ...formData, deliveryType: value });
     setShowDeliveryTypeModal(false);
   };
+
+  // Ensure delivery type fee applied immediately when user selects a type
+  useEffect(() => {
+    const dt = (formData.deliveryType || '').toString().toLowerCase();
+    const fee = dt === 'express' ? 400 : (dt === 'smart_ride' ? 600 : 0);
+    setAppliedDeliveryTypeFee(fee);
+  }, [formData.deliveryType]);
 
   useEffect(() => {
     if (!isAuthenticated()) {
@@ -751,10 +759,15 @@ const Book = () => {
 
   const getPricingBreakdown = () => {
     if (estimatedPrice) {
+      // Use the applied delivery type fee which updates immediately on selection
+      const deliveryTypeFee = appliedDeliveryTypeFee || 0;
+
       return {
+        // Use backend total as baseline but we'll override displayed total via calculateTotal()
         total: estimatedPrice.total,
-        deliveryCharge: (estimatedPrice.pricingBreakdown?.baseFare || 0) + (estimatedPrice.pricingBreakdown?.distanceCharge || 0),
+        deliveryCharge: (estimatedPrice.pricingBreakdown?.baseFare || 0) + (estimatedPrice.pricingBreakdown?.distanceCharge || 0) + deliveryTypeFee,
         baseFare: estimatedPrice.pricingBreakdown?.baseFare || 0,
+        deliveryTypeFee,
         distance: estimatedPrice.distance || 0,
         distanceCharge: estimatedPrice.pricingBreakdown?.distanceCharge || 0,
         perKmRate: estimatedPrice.pricingBreakdown?.perKmRate || 0,
@@ -766,24 +779,36 @@ const Book = () => {
     // Return safe defaults to prevent UI crashes
     return {
       total: 0,
-      deliveryCharge: 0,
-      baseFare: 0,
+      // Ensure base fare is visible even when backend estimate is missing
+      baseFare: 800,
+      deliveryTypeFee: appliedDeliveryTypeFee || 0,
+      deliveryCharge: 800 + (appliedDeliveryTypeFee || 0),
       distance: 0,
       distanceCharge: 0,
-      perKmRate: 0,
+      perKmRate: 200,
       discountAmount: 0,
       discountPercentage: 0
     };
   };
 
   const calculateTotal = () => {
-    let total = getPricingBreakdown().total || 0;
+    const pricing = getPricingBreakdown();
+    const base = Number(pricing.baseFare || 0);
+    const perKmRate = Number(pricing.perKmRate || 200);
+    const dtFee = Number(pricing.deliveryTypeFee || 0);
+    const discount = Number(pricing.discountAmount || 0);
 
-    const dt = (formData.deliveryType || '').toString().toLowerCase();
-    if (dt === 'express') total = Number(total) + 400; // express fee added to backend total
-    if (dt === 'smart_ride') total = Number(total) + 600; // smart ride fee added to backend total
+    // Prefer using measured distance from state (set by backend estimate), fallback to pricing.distance
+    const dist = (typeof distanceKm === 'number' && distanceKm > 0) ? Number(distanceKm) : Number(pricing.distance || 0);
 
-    return total;
+    // Distance charge: first 2km covered by base fare, charge by whole km after that
+    let distanceCharge = 0;
+    if (dist > 2) {
+      const extraKm = Math.ceil(dist - 2);
+      distanceCharge = extraKm * perKmRate;
+    }
+
+    return Math.max(0, base + distanceCharge + dtFee - discount);
   };
 
   const getBaseRate = () => {
@@ -1463,11 +1488,19 @@ const Book = () => {
                           {/* Insurance removed */}
 
                           {/* Total */}
+                          {/* Delivery type fee (e.g., Express/SmartRide) */}
+                          {pricing.deliveryTypeFee > 0 && (
+                            <div className="sr-only">
+                              <span>{(formData.deliveryType || '').toString().toUpperCase()}</span>
+                              <span>₦{pricing.deliveryTypeFee.toLocaleString()}</span>
+                            </div>
+                          )}
+
                           <div className="border-t border-gray-300 pt-3 mt-3">
                             <div className="flex justify-between items-center">
                               <span className="text-base md:text-lg font-medium text-[#0F172A]">Total</span>
                               <span className="text-xl md:text-2xl font-medium text-[#00B75A]">
-                                ₦{pricing.total.toLocaleString('en-NG', { minimumFractionDigits: 2 })}
+                                ₦{calculateTotal().toLocaleString('en-NG', { minimumFractionDigits: 2 })}
                               </span>
                             </div>
                           </div>
