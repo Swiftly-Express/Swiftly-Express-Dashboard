@@ -6,9 +6,28 @@ import {
   getUnreadNotificationCount,
   getNotifications,
   markNotificationAsRead,
-  markAllNotificationsAsRead
+  markAllNotificationsAsRead,
+  updateRiderAvailability,
+  getAvailableJobs
 } from '../../../utils/authApi';
 import { getCookie, setCookie, getJSONCookie } from '../../../utils/cookies';
+
+// Notification read IDs persistence
+const NOTIF_READ_COOKIE = 'rider_read_notifications';
+const getReadNotifIds = () => {
+  try {
+    const val = getCookie(NOTIF_READ_COOKIE);
+    if (!val) return [];
+    return JSON.parse(val);
+  } catch (e) {
+    return [];
+  }
+};
+const setReadNotifIds = (ids) => {
+  try {
+    setCookie(NOTIF_READ_COOKIE, JSON.stringify(ids), 7);
+  } catch (e) { }
+};
 
 // Generate mock avatar based on user name
 const generateMockAvatar = (name) => {
@@ -56,9 +75,47 @@ const RiderLayout = ({ children }) => {
     return generateMockAvatar('Rider');
   });
   const [userName, setUserName] = useState('Rider');
-  const [isOnline, setIsOnline] = useState(true);
+  // Persist online state in cookie, default to true if not set
+  const [isOnline, setIsOnline] = useState(() => {
+    const cookieVal = getCookie('rider_is_online');
+    if (cookieVal === 'false') return false;
+    return true;
+  });
+  // Helper to sync online state to backend and admin
+  const syncOnlineStateToBackend = async (active) => {
+    try {
+      let payload = { isActive: !!active };
+      // If going online, try to get location
+      if (active && navigator.geolocation) {
+        try {
+          const position = await new Promise((resolve, reject) => {
+            navigator.geolocation.getCurrentPosition(resolve, reject, { enableHighAccuracy: false, timeout: 10000, maximumAge: 60000 });
+          });
+          payload.currentLocation = { lat: position.coords.latitude, lng: position.coords.longitude };
+        } catch (e) {
+          // ignore location error
+        }
+      }
+      await updateRiderAvailability(payload);
+      // Optionally, fetch jobs and dispatch events as in toggle
+      try {
+        const jobsResp = await getAvailableJobs(1, 20);
+        const jobs = jobsResp?.data?.jobs || jobsResp?.jobs || jobsResp?.data || [];
+        window.dispatchEvent(new CustomEvent('rider:availabilityChanged', { detail: { isActive: !!active, location: payload.currentLocation || null, jobs } }));
+        window.dispatchEvent(new CustomEvent('deliveries:refresh'));
+      } catch (e) {
+        window.dispatchEvent(new CustomEvent('rider:availabilityChanged', { detail: { isActive: !!active, location: payload.currentLocation || null } }));
+        window.dispatchEvent(new CustomEvent('deliveries:refresh'));
+      }
+      setCookie('rider_is_online', active ? 'true' : 'false', 1);
+    } catch (err) {
+      // fallback: revert UI
+      setIsOnline(!active);
+    }
+  };
   const [showNotifications, setShowNotifications] = useState(false);
   const [notifications, setNotifications] = useState([]);
+  const [readNotifIds, setReadNotifIdsState] = useState(() => getReadNotifIds());
   const [unreadCount, setUnreadCount] = useState(0);
   const [notificationPage, setNotificationPage] = useState(1);
   const [hasMoreNotifications, setHasMoreNotifications] = useState(false);
@@ -76,6 +133,28 @@ const RiderLayout = ({ children }) => {
   useEffect(() => {
     fetchUserProfile();
     checkNotifications();
+
+    // On mount, restore online state from cookie
+    const cookieVal = getCookie('rider_is_online');
+    if (cookieVal === 'false') {
+      setIsOnline(false);
+    } else {
+      setIsOnline(true);
+    }
+
+    // On login, always set online and sync to backend
+    const handleLogin = () => {
+      setIsOnline(true);
+      syncOnlineStateToBackend(true);
+    };
+    // On logout, set offline and sync to backend
+    const handleLogout = () => {
+      setIsOnline(false);
+      syncOnlineStateToBackend(false);
+    };
+
+    window.addEventListener('user:login', handleLogin);
+    window.addEventListener('user:logout', handleLogout);
 
     // Poll notification count every 30 seconds
     const notificationInterval = setInterval(() => {
@@ -129,6 +208,8 @@ const RiderLayout = ({ children }) => {
     window.addEventListener('payout:scheduled', handleEarningsUpdated);
 
     return () => {
+      window.removeEventListener('user:login', handleLogin);
+      window.removeEventListener('user:logout', handleLogout);
       window.removeEventListener('profile:updated', handleProfileUpdate);
       window.removeEventListener('verification:completed', handleVerificationComplete);
       window.removeEventListener('delivery:updated', handleDeliveryUpdated);
@@ -193,52 +274,21 @@ const RiderLayout = ({ children }) => {
 
   const checkNotifications = async () => {
     try {
-      // Fetch unread count
       const countResponse = await getUnreadNotificationCount();
       const count = countResponse?.data?.count || countResponse?.count || 0;
       setUnreadCount(count);
-      console.log('[RiderLayout] Unread notification count:', count);
+      // console.log('[RiderLayout] Unread notification count:', count);
     } catch (error) {
       console.error('[RiderLayout] Failed to fetch notification count:', error);
     }
   };
 
-  const fetchNotifications = async (page = 1, append = false) => {
-    try {
-      setLoadingNotifications(true);
-      console.log('[RiderLayout] Fetching notifications, page:', page);
-
-      const response = await getNotifications(page, 20);
-      const data = response?.data || response;
-      const notificationsList = data?.notifications || data?.data || [];
-      const totalPages = data?.totalPages || data?.pages || 1;
-
-      console.log('[RiderLayout] Notifications fetched:', {
-        count: notificationsList.length,
-        page,
-        totalPages,
-        hasMore: page < totalPages
-      });
-
-      if (append) {
-        setNotifications(prev => [...prev, ...notificationsList]);
-      } else {
-        setNotifications(notificationsList);
-      }
-
-      setHasMoreNotifications(page < totalPages);
-      setNotificationPage(page);
-    } catch (error) {
-      console.error('[RiderLayout] Failed to fetch notifications:', error);
-    } finally {
-      setLoadingNotifications(false);
-    }
-  };
-
   const handleAvailabilityToggle = () => {
-    setIsOnline(!isOnline);
-    // TODO: Call updateRiderAvailability API
+    const newState = !isOnline;
+    setIsOnline(newState);
+    syncOnlineStateToBackend(newState);
   };
+
 
   const toggleNotifications = async () => {
     const newState = !showNotifications;
@@ -251,6 +301,16 @@ const RiderLayout = ({ children }) => {
       // Optimistically mark everything read locally and on the server
       setNotifications(prev => prev.map(n => ({ ...n, isRead: true, read: true })));
       setUnreadCount(0);
+      // Persist read IDs for current notifications (fetch fresh list to be safe)
+      try {
+        const resp = await getNotifications(1, 100);
+        const list = resp?.data?.notifications || resp?.notifications || resp?.data || [];
+        const ids = list.map(n => n._id || n.id).filter(Boolean);
+        setReadNotifIds(ids);
+        setReadNotifIdsState(ids);
+      } catch (e) {
+        // fallback: preserve existing
+      }
 
       (async () => {
         try {
@@ -284,6 +344,12 @@ const RiderLayout = ({ children }) => {
       // Optimistically update UI
       setNotifications(prev => prev.map(n => ({ ...n, isRead: true, read: true })));
       setUnreadCount(0);
+      // Persist read IDs in cookie/state
+      try {
+        const allIds = notifications.map(n => n._id || n.id).filter(Boolean);
+        setReadNotifIds(allIds);
+        setReadNotifIdsState(allIds);
+      } catch (e) { }
 
       // Refresh from server in background (delayed to avoid race conditions)
       setTimeout(async () => {
@@ -324,6 +390,12 @@ const RiderLayout = ({ children }) => {
       setNotifications(prev =>
         prev.map(n => (n._id === notificationId || n.id === notificationId) ? { ...n, isRead: true, read: true } : n)
       );
+      // Add to read IDs in cookie/state
+      setReadNotifIdsState(prev => {
+        const newIds = prev.includes(notificationId) ? prev : [...prev, notificationId];
+        try { setReadNotifIds(newIds); } catch (e) { }
+        return newIds;
+      });
 
       // Decrement unread count
       setUnreadCount(prev => Math.max(0, prev - 1));
@@ -486,7 +558,7 @@ const RiderLayout = ({ children }) => {
                     <div className="divide-y divide-gray-100">
                       {notifications.map(notification => {
                         const notifId = notification._id || notification.id;
-                        const isRead = notification.isRead || notification.read;
+                        const isRead = (notification.isRead || notification.read) || readNotifIds.includes(notifId);
                         const notifType = notification.type || 'info';
                         const title = notification.title || notification.message?.substring(0, 50) || 'Notification';
                         const message = notification.message || notification.body || '';

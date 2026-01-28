@@ -80,6 +80,18 @@ app.post('/api/auth/register', (req, res) => {
 
 app.get('/api/__health', (req, res) => res.json({ status: 'ok' }));
 
+// Simple mock notifications API for local development
+app.get('/api/notifications/unread/count', (req, res) => {
+  return res.json({ data: { count: 0 } });
+});
+
+app.get('/api/notifications', (req, res) => {
+  const sample = [
+    { _id: 'n1', title: 'Welcome', message: 'Welcome to Swiftly Rider!', isRead: false, createdAt: new Date().toISOString(), type: 'info' }
+  ];
+  return res.json({ data: { notifications: sample, totalPages: 1 } });
+});
+
 app.listen(PORT, () => {
   // eslint-disable-next-line no-console
   console.log(`Local auth server listening on http://localhost:${PORT}`);

@@ -107,10 +107,8 @@ const Book = () => {
   const [isCaclulatingPrice, setIsCalculatingPrice] = useState(false);
 
   const deliveryTypes = [
-    { value: 'express', label: 'Express (Same day)', price: '₦2500' },
-    { value: 'standard', label: 'Standard (1-2 days)', price: '₦1200' },
-    { value: 'economy', label: 'Economy (3-5 days)', price: '₦800' },
-    { value: 'smart_ride', label: 'Smart Ride', price: '₦500' }
+    { value: 'express', label: 'Express (Same day)', price: '₦400' },
+    { value: 'smart_ride', label: 'Smart Ride', price: '₦600' }
   ];
 
   const selectedDeliveryType = deliveryTypes.find(t => t.value === formData.deliveryType);
@@ -781,15 +779,9 @@ const Book = () => {
   const calculateTotal = () => {
     let total = getPricingBreakdown().total || 0;
 
-    // Add express delivery flat fee of ₦400 on top of base total
-    if ((formData.deliveryType || '').toString().toLowerCase() === 'express') {
-      total = Number(total) + 400;
-    }
-
-    // Smart Ride has fixed fee of ₦600
-    if ((formData.deliveryType || '').toString().toLowerCase() === 'smart_ride') {
-      total = 600;
-    }
+    const dt = (formData.deliveryType || '').toString().toLowerCase();
+    if (dt === 'express') total = Number(total) + 400; // express fee added to backend total
+    if (dt === 'smart_ride') total = Number(total) + 600; // smart ride fee added to backend total
 
     return total;
   };
@@ -1451,27 +1443,12 @@ const Book = () => {
                       const pricing = getPricingBreakdown();
                       return (
                         <>
-                          {/* Distance Info */}
-                          {distanceKm > 0 && (
-                            <div className="flex justify-between items-center text-[#64748B] text-sm">
-                              <span>Distance</span>
-                              <span className="font-medium">{pricing.distance} km</span>
-                            </div>
-                          )}
-
                           {/* Base Fare */}
                           <div className="flex justify-between items-center text-[#0F172A]">
                             <span className="text-sm md:text-base">Base Fare</span>
                             <span className="text-sm md:text-base font-medium">₦{pricing.baseFare.toLocaleString()}</span>
                           </div>
 
-                          {/* Distance Charge */}
-                          {pricing.distanceCharge > 0 && (
-                            <div className="flex justify-between items-center text-[#0F172A]">
-                              <span className="text-sm">Distance Charge ({Math.max(0, pricing.distance - 2).toFixed(1)}km × ₦{pricing.perKmRate})</span>
-                              <span className="text-sm font-medium">₦{pricing.distanceCharge.toLocaleString()}</span>
-                            </div>
-                          )}
 
 
 

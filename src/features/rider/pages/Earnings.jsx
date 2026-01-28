@@ -7,7 +7,8 @@ import AnalyzeIcon from '../../../icons/Analyzeicon';
 import PeopleIcon from '../../../icons/Peopleicon';
 import RevenueIcon from '../../../icons/Revenueicon';
 import { YummyText } from '../../../components/YummyText';
-import { getRiderEarnings } from '../../../utils/authApi';
+import { getRiderEarnings, getRiderBalance, payDebt, notifyAdminEmailChange } from '../../../utils/authApi';
+import { setCookie, deleteCookie, getCookie } from '../../../utils/cookies';
 
 const sideBottomShadow = {
   boxShadow: '0.5px 1.5px 2px rgba(0, 0, 0, 0.05), -0.5px 1.5px 2px rgba(0, 0, 0, 0.05), 0 1.5px 3px rgba(0, 0, 0, 0.07)'
@@ -39,17 +40,20 @@ const Earnings = () => {
   useEffect(() => {
     // Initial fetch
     fetchEarnings();
+    fetchBalance();
 
     // Refresh when window/tab becomes active or focused
     const onFocus = () => {
       console.log('[Earnings] window focused — refreshing earnings');
       fetchEarnings();
+      fetchBalance();
     };
 
     const onVisibilityChange = () => {
       if (document.visibilityState === 'visible') {
         console.log('[Earnings] tab visible — refreshing earnings');
         fetchEarnings();
+        fetchBalance();
       }
     };
 
@@ -60,6 +64,7 @@ const Earnings = () => {
     const interval = setInterval(() => {
       console.log('[Earnings] periodic refresh');
       fetchEarnings();
+      fetchBalance();
     }, 60000);
 
     return () => {
@@ -69,6 +74,67 @@ const Earnings = () => {
     };
   }, []);
 
+  useEffect(() => {
+    const handlePaymentCompleted = async (evt) => {
+      console.log('[Earnings] Payment completed event received:', evt?.detail);
+
+      try {
+        const riderId = earnings?.riderId || earnings?.rider?._id || getCookie('pending_debt_rider_id');
+        const previousBalance = earnings?.outstandingBalance || 0;
+
+        // Clear all pending cookies
+        deleteCookie('pending_debt_payment_id');
+        deleteCookie('pending_debt_payment_reference');
+        deleteCookie('pending_debt_rider_id');
+
+        // Show success message
+        setToastMsg(`Payment successful! Your debt of ${formatCurrency(previousBalance)} has been cleared.`);
+        setShowToast(true);
+
+        // Refresh balances to get updated data
+        await fetchBalance();
+        await fetchEarnings();
+
+        // Notify admin that debt was paid
+        if (previousBalance && Number(previousBalance) > 0) {
+          try {
+            console.log('[Earnings] Notifying admin: debt payment completed');
+            const resp = await notifyAdminEmailChange({
+              type: 'debt_paid',
+              riderId,
+              amount: previousBalance,
+              message: `Rider successfully paid outstanding debt of ${formatCurrency(previousBalance)}`,
+              timestamp: new Date().toISOString(),
+              paymentDetails: evt?.detail || null
+            });
+
+            // Dispatch local event
+            window.dispatchEvent(new CustomEvent('debt:updated', {
+              detail: {
+                riderId,
+                amount: 0,
+                paid: true,
+                previousAmount: previousBalance,
+                serverResponse: resp
+              }
+            }));
+
+            console.log('[Earnings] Admin notification sent successfully');
+          } catch (e) {
+            console.warn('[Earnings] Failed to notify admin about debt payment:', e);
+          }
+        }
+      } catch (e) {
+        console.error('[Earnings] Error handling payment completion:', e);
+        setToastMsg('Payment processed but there was an error updating your balance. Please refresh.');
+        setShowToast(true);
+      }
+    };
+
+    window.addEventListener('payment:completed', handlePaymentCompleted);
+    return () => window.removeEventListener('payment:completed', handlePaymentCompleted);
+  }, [earnings]);
+
   const fetchEarnings = async () => {
     try {
       setLoading(true);
@@ -77,10 +143,8 @@ const Earnings = () => {
       console.log('[Earnings] ✅ API Response:', response);
       const earningsData = response?.data?.earnings || response?.earnings || response?.data;
       console.log('[Earnings] 📊 Earnings data:', earningsData);
-      console.log('[Earnings] 📦 Today Deliveries:', earningsData?.todayDeliveries);
-      console.log('[Earnings] 📦 Deliveries array:', earningsData?.deliveries);
-      console.log('[Earnings] 📈 Weekly Trend:', earningsData?.weeklyTrend);
-      setEarnings(earningsData);
+      // Use backend-provided earnings object directly (avoid frontend recalculation)
+      setEarnings(earningsData || {});
     } catch (error) {
       console.error('[Earnings] ❌ Error fetching earnings:', error);
       setToastMsg(error.message || 'Failed to load earnings data');
@@ -88,6 +152,243 @@ const Earnings = () => {
       setEarnings(null);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const fetchBalance = async () => {
+    try {
+      const resp = await getRiderBalance();
+      const b = resp?.data || resp;
+      const outstanding = Number(b?.balance || b?.outstanding || b?.due || b?.amountDue || 0);
+
+      console.log('[Earnings] Fetched balance:', { outstanding, rawResponse: b });
+
+      // Store balance in state
+      setEarnings(prev => ({ ...(prev || {}), outstandingBalance: outstanding }));
+
+      const riderId = earnings?.riderId || earnings?.rider?._id || earnings?._id;
+
+      // Always notify admin about debt status (whether owing or clear)
+      if (outstanding > 0) {
+        // Rider owes money
+        console.log('[Earnings] Rider has outstanding debt:', outstanding);
+        setToastMsg(''); // Clear any previous success messages
+
+        try {
+          await notifyAdminEmailChange({
+            type: 'debt_due',
+            riderId,
+            amount: outstanding,
+            message: `Rider has outstanding debt of ${formatCurrency(outstanding)}`,
+            timestamp: new Date().toISOString()
+          });
+
+          // Dispatch local event for other components
+          window.dispatchEvent(new CustomEvent('debt:updated', {
+            detail: { riderId, amount: outstanding, status: 'owing' }
+          }));
+        } catch (notifyErr) {
+          console.warn('[Earnings] Failed to notify admin about outstanding debt', notifyErr);
+        }
+      } else {
+        // Rider's balance is clear
+        console.log('[Earnings] Rider has no outstanding debt');
+
+        // Notify admin that rider is clear (if they previously had debt)
+        const previousBalance = earnings?.outstandingBalance || 0;
+        if (Number(previousBalance) > 0) {
+          try {
+            await notifyAdminEmailChange({
+              type: 'debt_cleared',
+              riderId,
+              amount: 0,
+              previousAmount: previousBalance,
+              message: `Rider's debt has been cleared (was ${formatCurrency(previousBalance)})`,
+              timestamp: new Date().toISOString()
+            });
+
+            window.dispatchEvent(new CustomEvent('debt:updated', {
+              detail: { riderId, amount: 0, status: 'clear', previousAmount: previousBalance }
+            }));
+          } catch (notifyErr) {
+            console.warn('[Earnings] Failed to notify admin about cleared debt', notifyErr);
+          }
+        }
+      }
+    } catch (error) {
+      console.error('[Earnings] Failed to fetch rider balance:', error);
+    }
+  };
+
+  const handleSettleDebt = async () => {
+    try {
+      const outstanding = earnings?.outstandingBalance || 0;
+      if (!outstanding || Number(outstanding) <= 0) {
+        setToastMsg('No outstanding balance to settle');
+        setShowToast(true);
+        return;
+      }
+
+      const riderId = earnings?.riderId || earnings?.rider?._id || earnings?._id;
+
+      // Notify admin that rider is attempting to pay debt
+      try {
+        console.log('[Earnings] Notifying admin: rider initiating debt payment');
+        await notifyAdminEmailChange({
+          type: 'debt_payment_initiated',
+          riderId,
+          amount: outstanding,
+          message: `Rider is attempting to settle outstanding debt of ${formatCurrency(outstanding)}`
+        });
+      } catch (notifyErr) {
+        console.warn('[Earnings] Failed to notify admin about debt payment initiation', notifyErr);
+      }
+
+      // Open payment popup synchronously
+      let paymentWindow = null;
+      try {
+        paymentWindow = window.open('', '_blank');
+        if (paymentWindow) paymentWindow.document.write('<p>Preparing payment...</p>');
+      } catch (e) {
+        paymentWindow = null;
+      }
+
+      // Initialize payment
+      setToastMsg('Initializing payment...');
+      setShowToast(true);
+
+      const initJson = await payDebt({
+        amount: outstanding,
+        currency: 'NGN',
+        callback_url: `${window.location.origin}/rider/payment/callback`,
+        metadata: { riderId, type: 'debt_settlement' }
+      });
+
+      const initPayload = initJson?.data || initJson;
+      const paymentObj = initPayload?.data?.payment || initPayload?.payment || initPayload?.data || initPayload;
+      const paymentId = paymentObj?._id || paymentObj?.id || paymentObj?.paymentId;
+      const paymentReference = paymentObj?.reference || paymentObj?.paystackReference;
+      const authorizationUrl = paymentObj?.authorizationUrl || paymentObj?.authorization_url || paymentObj?.url || paymentObj?.payment_url;
+
+      console.log('[Earnings] Payment initialized:', { paymentId, paymentReference, authorizationUrl });
+
+      // Store payment identifiers
+      if (paymentId) setCookie('pending_debt_payment_id', String(paymentId), 1);
+      if (paymentReference) setCookie('pending_debt_payment_reference', String(paymentReference), 1);
+      if (riderId) setCookie('pending_debt_rider_id', String(riderId), 1);
+
+      const cleanupOnPaymentCancel = async () => {
+        try {
+          deleteCookie('pending_debt_payment_id');
+          deleteCookie('pending_debt_payment_reference');
+          deleteCookie('pending_debt_rider_id');
+        } catch (e) { /* ignore */ }
+
+        setToastMsg('Payment was not completed. Outstanding balance remains.');
+        setShowToast(true);
+
+        // Notify admin that payment was cancelled
+        try {
+          await notifyAdminEmailChange({
+            type: 'debt_payment_cancelled',
+            riderId,
+            amount: outstanding,
+            message: 'Rider cancelled debt payment'
+          });
+        } catch (notifyErr) {
+          console.warn('[Earnings] Failed to notify admin about payment cancellation', notifyErr);
+        }
+      };
+
+      // Try hosted payment URL first
+      if (authorizationUrl && authorizationUrl.startsWith('http')) {
+        try {
+          if (paymentWindow) {
+            paymentWindow.location.href = authorizationUrl;
+          } else {
+            window.open(authorizationUrl, '_blank');
+          }
+
+          // Monitor popup closure
+          const popupInterval = setInterval(() => {
+            try {
+              if (!paymentWindow || paymentWindow.closed) {
+                clearInterval(popupInterval);
+                const pending = getCookie('pending_debt_payment_id');
+                if (pending) {
+                  cleanupOnPaymentCancel();
+                }
+              }
+            } catch (e) {
+              clearInterval(popupInterval);
+            }
+          }, 1000);
+
+          return;
+        } catch (navErr) {
+          console.warn('[Earnings] Failed to open hosted payment URL', navErr);
+          // Close popup and fallback
+          try { if (paymentWindow) paymentWindow.close(); } catch (e) { /* ignore */ }
+        }
+      }
+
+      // Fallback to inline Paystack or direct callback redirect
+      if (paymentReference) {
+        try {
+          // Try to load Paystack inline
+          const PaystackPop = (await import('@paystack/inline-js')).default;
+          const paystackPublicKey = import.meta.env.VITE_PAYSTACK_PUBLIC_KEY || 'pk_test_xxxx';
+
+          const handler = PaystackPop.setup({
+            key: paystackPublicKey,
+            email: earnings?.email || 'rider@swiftlyxpress.com',
+            amount: outstanding * 100, // Convert to kobo
+            currency: 'NGN',
+            ref: paymentReference,
+            metadata: {
+              riderId,
+              type: 'debt_settlement',
+              custom_fields: [
+                {
+                  display_name: 'Rider ID',
+                  variable_name: 'rider_id',
+                  value: riderId
+                }
+              ]
+            },
+            onClose: function () {
+              cleanupOnPaymentCancel();
+            },
+            callback: function (response) {
+              console.log('[Earnings] Payment successful:', response);
+              setToastMsg('Payment successful! Verifying...');
+              setShowToast(true);
+
+              // Clean up cookies
+              try {
+                deleteCookie('pending_debt_payment_id');
+                deleteCookie('pending_debt_payment_reference');
+                deleteCookie('pending_debt_rider_id');
+              } catch (e) { /* ignore */ }
+
+              // Redirect to callback/success page
+              setTimeout(() => {
+                window.location.href = `/rider/payment/callback?reference=${paymentReference}`;
+              }, 500);
+            }
+          });
+
+          handler.openIframe();
+        } catch (paystackErr) {
+          console.error('[Earnings] Paystack inline failed:', paystackErr);
+          // Final fallback: redirect to callback page
+          window.location.href = `/rider/payment/callback?reference=${paymentReference}`;
+        }
+      }
+    } catch (error) {
+      console.error('[Earnings] Failed to initiate debt payment:', error);
+      setToastMsg(error.message || 'Failed to initiate payment');
+      setShowToast(true);
     }
   };
 
@@ -154,6 +455,37 @@ const Earnings = () => {
     <IonPage>
       <RiderLayout>
         <IonContent className="ion-padding">
+          {/* Outstanding Debt Banner */}
+          {earnings?.outstandingBalance > 0 && (
+            <div className="mb-6 p-5 rounded-xl bg-red-50 border-2 border-red-200 shadow-sm">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-4">
+                  <div className="w-12 h-12 bg-red-100 rounded-full flex items-center justify-center flex-shrink-0">
+                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#DC2626" strokeWidth="2">
+                      <circle cx="12" cy="12" r="10" />
+                      <line x1="15" y1="9" x2="9" y2="15" />
+                      <line x1="9" y1="9" x2="15" y2="15" />
+                    </svg>
+                  </div>
+                  <div>
+                    <div className="text-lg font-semibold text-red-700 mb-1">
+                      Outstanding Debt: <span className="text-red-900">-{formatCurrency(earnings.outstandingBalance)}</span>
+                    </div>
+                    <div className="text-sm text-red-600">
+                      Please settle this amount to resume full access to deliveries and earnings.
+                    </div>
+                  </div>
+                </div>
+                <button
+                  onClick={handleSettleDebt}
+                  className="bg-red-600 hover:bg-red-700 text-white px-6 py-3 rounded-xl font-medium transition-colors whitespace-nowrap shadow-md hover:shadow-lg"
+                >
+                  Settle Now
+                </button>
+              </div>
+            </div>
+          )}
+
           {/* Header */}
           <YummyText>
             <div className="flex items-center justify-between mb-8 py-2">
@@ -165,9 +497,23 @@ const Earnings = () => {
                   Track your income and performance
                 </div>
               </div>
-              <button className="bg-[#00B75A] hover:bg-[#00B876] whitespace-nowrap text-sm text-white px-3 py-2 rounded-full transition-colors font-[400]">
-                Request Payout
-              </button>
+              <div className="flex items-center gap-3">
+                <button className="bg-[#00B75A] hover:bg-[#00B876] whitespace-nowrap text-sm text-white px-3 py-2 rounded-full transition-colors font-[400]">
+                  Request Payout
+                </button>
+                {earnings?.outstandingBalance > 0 && (
+                  <div className="flex items-center gap-3 bg-red-50 px-4 py-2 rounded-full border border-red-200">
+                    <span className="text-sm font-semibold text-red-700">Debt:</span>
+                    <span className="text-base font-bold text-red-900">-{formatCurrency(earnings.outstandingBalance)}</span>
+                    <button
+                      onClick={handleSettleDebt}
+                      className="bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded-full text-sm font-medium transition-colors shadow-sm"
+                    >
+                      Settle
+                    </button>
+                  </div>
+                )}
+              </div>
             </div>
           </YummyText>
 
@@ -431,6 +777,9 @@ const Earnings = () => {
                 <div>
                   <div className="text-xs text-[#64748B] mb-1">Available Balance</div>
                   <div className="text-4xl font-normal text-[#00A63E]">{formatCurrency(nextPayoutAmount || availableBalance)}</div>
+                  {earnings?.outstandingBalance > 0 && (
+                    <div className="text-sm text-red-600 mt-1 font-semibold">Outstanding: -{formatCurrency(earnings.outstandingBalance)}</div>
+                  )}
                 </div>
                 <div className="text-right">
                   <div className="text-xs text-[#64748B] mb-1">Next Payout Date</div>

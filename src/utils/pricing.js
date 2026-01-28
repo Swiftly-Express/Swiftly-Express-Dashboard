@@ -28,6 +28,8 @@ function toRad(degrees) {
   return degrees * (Math.PI / 180);
 }
 
+import { getCommissionRate } from './adminApi';
+
 /**
  * Calculate delivery pricing based on new pricing model
  * @param {Object} params - Pricing parameters
@@ -49,7 +51,8 @@ export function calculateDeliveryPrice({
   isSpecialErrand = false,
   batchDiscount = 0,
   customBid = null,
-  deliveryType = null
+  deliveryType = null,
+  commissionRate = null // decimal e.g. 0.15 (optional - can be provided by backend)
 }) {
   // Pricing constants
   const BASE_FARE = 800; // Covers up to 2km
@@ -61,7 +64,7 @@ export function calculateDeliveryPrice({
   const SPECIAL_ERRAND_FEE_MAX = 500;
   const EXPRESS_DELIVERY_FEE = 400; // Added to base for express
   const SMART_RIDE_FEE = 600; // Added to base for smart ride
-  const PLATFORM_COMMISSION_RATE = 0.15; // 15%
+  const PLATFORM_COMMISSION_RATE = 0.15; // fallback 15%
   const MIN_BID = 800;
 
   // 1. Calculate base delivery charge
@@ -79,7 +82,9 @@ export function calculateDeliveryPrice({
   }
 
   if (distance > 2) {
-    distanceCharge = Math.ceil((distance - 2) * PER_KM_RATE);
+    // Charge by whole km after the first 2km (round up fractional km to next whole km)
+    const extraKm = Math.ceil(distance - 2);
+    distanceCharge = extraKm * PER_KM_RATE;
     deliveryCharge += distanceCharge;
   }
 
@@ -117,7 +122,8 @@ export function calculateDeliveryPrice({
   }
 
   // 10. Calculate platform commission and rider earnings
-  const platformCommission = Math.round(finalTotal * PLATFORM_COMMISSION_RATE);
+  const commissionUsed = (typeof commissionRate === 'number' && commissionRate >= 0) ? commissionRate : PLATFORM_COMMISSION_RATE;
+  const platformCommission = Math.round(finalTotal * commissionUsed);
   const riderEarnings = finalTotal - platformCommission;
 
   return {
@@ -146,7 +152,7 @@ export function calculateDeliveryPrice({
     // Rates (for display)
     perKmRate: PER_KM_RATE,
     waitingRatePer5Min: WAITING_RATE_PER_5MIN,
-    commissionRate: PLATFORM_COMMISSION_RATE * 100,
+    commissionRate: commissionUsed * 100,
     minBid: MIN_BID,
 
     // Flags
@@ -155,4 +161,28 @@ export function calculateDeliveryPrice({
     hasBatchDiscount: batchDiscount > 0,
     hasCustomBid: customBid !== null && customBid >= MIN_BID
   };
+}
+
+/**
+ * Async wrapper that attempts to fetch commission rate from backend
+ * and then computes delivery price using that commission.
+ * If backend call fails or returns unexpected data, falls back to default inside calculateDeliveryPrice.
+ * @param {Object} params - same params as calculateDeliveryPrice
+ */
+export async function calculateDeliveryPriceWithBackendCommission(params = {}) {
+  let commissionRate = params.commissionRate;
+  if (commissionRate == null) {
+    try {
+      const res = await getCommissionRate();
+      // adminApiClient response interceptor returns response.data
+      // backend may return a number or an object { commissionRate: 0.15 }
+      if (typeof res === 'number') commissionRate = res;
+      else if (res && typeof res === 'object') commissionRate = res.commissionRate ?? res.rate ?? res.value ?? null;
+    } catch (e) {
+      // ignore and fallback to default in calculateDeliveryPrice
+      commissionRate = commissionRate ?? null;
+    }
+  }
+
+  return calculateDeliveryPrice({ ...params, commissionRate });
 }

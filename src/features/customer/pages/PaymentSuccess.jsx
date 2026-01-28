@@ -3,7 +3,7 @@ import { IonPage, IonContent, IonSpinner } from '@ionic/react';
 import { useLocation, useHistory } from 'react-router-dom';
 import axios from 'axios';
 import { getCookie, deleteCookie } from '../../../utils/cookies';
-import { getPaymentStatus, refreshToken } from '../../../utils/authApi';
+import { getPaymentStatus } from '../../../utils/authApi';
 import CustomerLayout from '../components/CustomerLayout';
 import { YummyText } from '../../../components/YummyText';
 
@@ -59,12 +59,8 @@ const PaymentSuccess = () => {
                     const token = getCookie('customer_token') || getCookie('auth_token') || getCookie('rider_token') || getCookie('admin_token');
                     console.log('[PaymentSuccess] Token available:', !!token, token ? `(${token.substring(0, 20)}...)` : '');
 
-                    // Build headers with token; if cookies are missing (after external redirect)
-                    // fall back to any token stored in localStorage to help dev flows.
                     const headers = { Accept: 'application/json' };
-                    const localToken = (typeof window !== 'undefined' && (localStorage.getItem('customer_token') || localStorage.getItem('auth_token') || localStorage.getItem('rider_token') || localStorage.getItem('admin_token'))) || null;
-                    const effectiveToken = token || localToken;
-                    if (effectiveToken) headers.Authorization = `Bearer ${effectiveToken}`;
+                    if (token) headers.Authorization = `Bearer ${token}`;
 
                     console.log('[PaymentSuccess] Calling verify endpoint:', `${API_BASE}/api/payment/verify/${encodeURIComponent(paymentId)}`);
                     try {
@@ -77,28 +73,6 @@ const PaymentSuccess = () => {
                     } catch (ve) {
                         console.warn('[PaymentSuccess] Verify call failed:', ve.response?.status, ve.response?.data || ve.message);
                         verifyError = ve;
-                        // If verify failed due to missing/expired token (401), try to refresh the session and retry once.
-                        try {
-                            if (ve.response?.status === 401) {
-                                console.log('[PaymentSuccess] Verify returned 401 — attempting token refresh');
-                                try {
-                                    await refreshToken();
-                                    console.log('[PaymentSuccess] Token refresh attempted — retrying verify');
-                                    const rRetry = await axios.get(`${API_BASE}/api/payment/verify/${encodeURIComponent(paymentId)}`, {
-                                        // On retry, attempt using localStorage token if refresh didn't set cookies
-                                        headers: headers,
-                                        withCredentials: true
-                                    });
-                                    final = rRetry.data;
-                                    console.log('[PaymentSuccess] Verify (after refresh) response:', final);
-                                    verifyError = null;
-                                } catch (refreshErr) {
-                                    console.warn('[PaymentSuccess] Token refresh or verify retry failed:', refreshErr?.response?.data || refreshErr.message || refreshErr);
-                                }
-                            }
-                        } catch (refreshOuterErr) {
-                            console.warn('[PaymentSuccess] Unexpected error during refresh attempt:', refreshOuterErr);
-                        }
                         // If backend failed because we passed a delivery identifier where it expected an ObjectId,
                         // retry using the pending_payment_id cookie if available and different from the attempted id.
                         const msg = ve.response?.data?.message || ve.message || '';
@@ -172,14 +146,6 @@ const PaymentSuccess = () => {
                     } catch (e) {
                         console.warn('[PaymentSuccess] Failed to dispatch payment events', e);
                     }
-                    // Auto-redirect to My Deliveries after short delay (bypassAuth to allow callback flow)
-                    try {
-                        setTimeout(() => {
-                            history.replace('/customer/deliveries?bypassAuth=1');
-                        }, 1200);
-                    } catch (redirErr) {
-                        console.warn('[PaymentSuccess] Auto-redirect failed:', redirErr);
-                    }
                 } else {
                     setSuccess(false);
                     setStatusMsg(final?.message || final?.data?.message || 'Payment was not successful.');
@@ -197,7 +163,10 @@ const PaymentSuccess = () => {
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [location.search]);
 
-    // Auto-redirect is handled after successful verification; no manual button required.
+    const goToDeliveries = () => {
+        // Add bypassAuth flag so users coming from payment flow can view deliveries
+        history.replace('/customer/deliveries?bypassAuth=1');
+    };
 
     return (
         <IonPage>
@@ -240,7 +209,9 @@ const PaymentSuccess = () => {
                                         <YummyText className="text-xl font-semibold mb-2">{success ? 'Payment Confirmed' : 'Payment Status'}
                                             <p className="text-sm text-[#64748B] mb-4">{statusMsg}</p>
 
-                                            {/* Auto-redirecting to My Deliveries... */}
+                                            <div className="flex justify-center">
+                                                <button onClick={goToDeliveries} className="px-6 py-3 bg-[#00B75A] text-medium text-white rounded-full">My Deliveries</button>
+                                            </div>
                                         </YummyText>
                                     </div>
                                 )}

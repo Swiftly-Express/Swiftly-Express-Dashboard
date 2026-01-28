@@ -33,9 +33,21 @@ const ActiveDeliveries = () => {
   useEffect(() => {
     fetchActiveDeliveries();
 
-    // Listen for delivery acceptance events
-    const handleDeliveryAccepted = () => {
-      fetchActiveDeliveries();
+    // Listen for delivery acceptance events and scroll to the accepted delivery
+    const handleDeliveryAccepted = async (event) => {
+      const detail = event && event.detail ? event.detail : {};
+      const deliveryId = detail.deliveryId || detail.id || null;
+      await fetchActiveDeliveries();
+
+      // Try to scroll the accepted delivery into view
+      if (deliveryId) {
+        setTimeout(() => {
+          const el = document.getElementById(`delivery-${deliveryId}`);
+          if (el && el.scrollIntoView) {
+            try { el.scrollIntoView({ behavior: 'smooth', block: 'center' }); } catch (e) { el.scrollIntoView(); }
+          }
+        }, 250);
+      }
     };
 
     // Listen for delivery status updates
@@ -586,7 +598,7 @@ const DeliveryCard = ({
   paymentStatus,
   deliveryRaw
 }) => (
-  <div className={isMobile ? "bg-white rounded-2xl mb-4 overflow-hidden ml-0.5 -mr-1" : "bg-white rounded-2xl mb-6 overflow-hidden ml-0.5"} style={sideBottomShadow}>
+  <div id={`delivery-${deliveryId}`} className={isMobile ? "bg-white rounded-2xl mb-4 overflow-hidden ml-0.5 -mr-1" : "bg-white rounded-2xl mb-6 overflow-hidden ml-0.5"} style={sideBottomShadow}>
     {/* Header Section with Background */}
     <YummyText>
       <div className={isMobile ? "bg-gradient-to-br from-[#EFF6FF] to-[#EDFFF9] p-4" : "bg-gradient-to-br from-[#EFF6FF] to-[#EDFFF9] p-6"}>

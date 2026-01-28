@@ -216,6 +216,15 @@ export async function getDriverAnalytics(params = {}) {
   return adminApiClient.get(`/api/admin/analytics/drivers${queryString ? '?' + queryString : ''}`);
 }
 
+/**
+ * Get commission rate settings from backend
+ * Expected to return either a number (e.g. 0.15) or an object containing a commissionRate field.
+ */
+export async function getCommissionRate() {
+  console.log('[adminApi] → Getting commission rate');
+  return adminApiClient.get('/api/admin/settings/commission');
+}
+
 // ==================== KYC/VERIFICATION MANAGEMENT ====================
 
 /**
@@ -280,6 +289,7 @@ export default {
   getAnalyticsOverview,
   getRevenueAnalytics,
   getDriverAnalytics,
+  getCommissionRate,
   getApprovedRiders,
 
   // Verification management

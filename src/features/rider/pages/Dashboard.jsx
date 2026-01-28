@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { useIonRouter } from '@ionic/react';
 import { IonPage, IonContent } from '@ionic/react';
 import RiderLayout from '../components/RiderLayout';
 import { YummyText } from '../../../components/YummyText';
@@ -6,7 +7,7 @@ import BlockIcon from "../../../icons/Blockicon";
 import NairaIcon from "../../../icons/Nairaicon";
 import AnalyticsIcon from "../../../icons/Analyticsicon";
 import VerificationPromptModal from '../components/VerificationPromptModal';
-import { getRiderProfile, getRiderDeliveries, getAvailableJobs, getRiderEarnings, getRiderVerificationStatus } from '../../../utils/authApi';
+import { getRiderProfile, getRiderDeliveries, getAvailableJobs, getRiderEarnings, getRiderVerificationStatus, acceptDeliveryJob } from '../../../utils/authApi';
 import { getCookie, setCookie, getJSONCookie } from '../../../utils/cookies';
 
 // Shadow only on left, right and bottom - no top shadow for seamless blend
@@ -86,7 +87,7 @@ const DeliveryCard = ({ packageId, status, from, to, customer, price, distance, 
   </div>
 );
 
-const AvailableOrderCard = ({ packageId, location, distance, price }) => (
+const AvailableOrderCard = ({ packageId, location, distance, price, onAccept }) => (
   <YummyText>
     <div className="flex flex-col md:flex-row items-start md:items-center justify-between p-4 bg-white border border-gray-200 rounded-xl mb-3">
       <div className="mb-3 md:mb-0">
@@ -96,7 +97,7 @@ const AvailableOrderCard = ({ packageId, location, distance, price }) => (
       </div>
       <div className="w-full md:w-auto flex items-center gap-3 md:gap-4">
         <div className="text-lg font-normal text-[#00A63E]">{price}</div>
-        <button className="w-full md:w-auto bg-[#00B75A] hover:bg-[#00B876] text-white text-sm px-4 py-2.5 rounded-lg transition-colors font-nmedium">
+        <button onClick={() => onAccept && onAccept()} className="w-full md:w-auto bg-[#00B75A] hover:bg-[#00B876] text-white text-sm px-4 py-2.5 rounded-lg transition-colors font-nmedium">
           Accept
         </button>
       </div>
@@ -105,6 +106,7 @@ const AvailableOrderCard = ({ packageId, location, distance, price }) => (
 );
 
 const Dashboard = () => {
+  const router = useIonRouter();
   const [showVerificationModal, setShowVerificationModal] = useState(false);
   const [userName, setUserName] = useState(() => {
     // Initialize from cookies immediately
@@ -506,7 +508,7 @@ const Dashboard = () => {
                     Orders you can accept right now
                   </div>
                 </div>
-                <button className="text-[#007BFF] text-sm font-medium">
+                <button onClick={() => { try { router.push('/rider/available', 'forward', 'push'); } catch (e) { window.location.href = '/rider/available'; } }} className="text-[#007BFF] text-sm font-medium">
                   View All
                 </button>
               </div>
@@ -526,6 +528,16 @@ const Dashboard = () => {
                     location={formatAddress(order.pickupAddress || order.pickup?.address)}
                     distance={order.distance ? `${order.distance} km away` : 'N/A'}
                     price={`₦${order.amount?.toFixed(2) || order.price?.toFixed(2) || '0.00'}`}
+                    onAccept={async () => {
+                      try {
+                        const acceptResp = await acceptDeliveryJob(order._id || order.id || order.deliveryId);
+                        console.log('[Dashboard] Accepted order from dashboard:', acceptResp);
+                        window.dispatchEvent(new CustomEvent('delivery:accepted', { detail: { deliveryId: order._id || order.id || order.deliveryId } }));
+                        try { router.push('/rider/active', 'forward', 'push'); } catch (e) { window.location.href = '/rider/active'; }
+                      } catch (err) {
+                        console.error('[Dashboard] Failed to accept order from dashboard:', err);
+                      }
+                    }}
                   />
                 ))
               )}

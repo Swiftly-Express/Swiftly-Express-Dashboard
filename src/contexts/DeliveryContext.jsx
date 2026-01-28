@@ -13,7 +13,7 @@ export const useDelivery = () => {
 export const DeliveryProvider = ({ children }) => {
   // All delivery orders (from customers)
   const [allOrders, setAllOrders] = useState([]);
-  
+
   // Active deliveries assigned to riders
   const [activeDeliveries, setActiveDeliveries] = useState([
     {
@@ -26,7 +26,7 @@ export const DeliveryProvider = ({ children }) => {
       time: '15 min',
       price: 'N2348.00',
       deliveryType: 'express',
-      
+
       // Pickup details (from customer booking)
       pickupName: 'Central Mall',
       pickupAddress: '789 5th Avenue, NY 10001',
@@ -34,7 +34,7 @@ export const DeliveryProvider = ({ children }) => {
       pickupDate: '2025-11-20T14:30:00',
       senderName: 'John Store Manager',
       senderPhone: '+1 (555) 123-4567',
-      
+
       // Delivery details (from customer booking)
       deliveryName: 'Sarah Mitchell',
       deliveryAddress: '123 Oak Street, Apt 4B, NY 10002',
@@ -42,7 +42,7 @@ export const DeliveryProvider = ({ children }) => {
       recipientName: 'Sarah Mitchell',
       recipientPhone: '+1 (555) 987-6543',
       recipientEmail: 'sarah.mitchell@email.com',
-      
+
       // Package details (from customer booking)
       size: 'Medium',
       weight: '2.5 kg',
@@ -51,7 +51,7 @@ export const DeliveryProvider = ({ children }) => {
       packageDescription: 'Electronics - Handle with care',
       declaredValue: '500.00',
       notes: 'Electronics - Handle with care',
-      
+
       // Additional metadata
       createdAt: '2025-11-20T12:00:00',
       acceptedAt: '2025-11-20T12:15:00',
@@ -67,8 +67,8 @@ export const DeliveryProvider = ({ children }) => {
       distance: '1.8 mi',
       time: '8 min',
       price: 'N1200.00',
-      deliveryType: 'standard',
-      
+      deliveryType: 'express',
+
       // Pickup details
       pickupName: 'Tech Store',
       pickupAddress: '555 Main Street, NY 10003',
@@ -76,7 +76,7 @@ export const DeliveryProvider = ({ children }) => {
       pickupDate: '2025-11-20T15:00:00',
       senderName: 'Mike Tech Store',
       senderPhone: '+1 (555) 234-5678',
-      
+
       // Delivery details
       deliveryName: 'Mike Johnson',
       deliveryAddress: '456 Elm Avenue, NY 10004',
@@ -84,7 +84,7 @@ export const DeliveryProvider = ({ children }) => {
       recipientName: 'Mike Johnson',
       recipientPhone: '+1 (555) 876-5432',
       recipientEmail: 'mike.johnson@email.com',
-      
+
       // Package details
       size: 'Small',
       weight: '1.2 kg',
@@ -93,7 +93,7 @@ export const DeliveryProvider = ({ children }) => {
       packageDescription: 'Important documents',
       declaredValue: '100.00',
       notes: 'Documents',
-      
+
       // Additional metadata
       createdAt: '2025-11-20T13:30:00',
       acceptedAt: '2025-11-20T13:45:00',
@@ -115,10 +115,10 @@ export const DeliveryProvider = ({ children }) => {
       createdAt: new Date().toISOString(),
       ...orderData
     };
-    
+
     setAllOrders(prev => [...prev, newOrder]);
     setAvailableOrders(prev => [...prev, newOrder]);
-    
+
     return newOrder;
   };
 
@@ -133,7 +133,7 @@ export const DeliveryProvider = ({ children }) => {
         statusColor: 'bg-green-100 text-green-600',
         acceptedAt: new Date().toISOString()
       };
-      
+
       setActiveDeliveries(prev => [...prev, acceptedOrder]);
       setAvailableOrders(prev => prev.filter(o => o.id !== orderId));
     }
@@ -160,7 +160,7 @@ export const DeliveryProvider = ({ children }) => {
         statusColor: 'bg-green-100 text-green-600',
         deliveredAt: new Date().toISOString()
       };
-      
+
       setActiveDeliveries(prev => prev.filter(d => d.id !== orderId));
       // Could add to completedDeliveries array if needed
     }

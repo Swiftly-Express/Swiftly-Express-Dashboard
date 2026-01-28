@@ -9,11 +9,12 @@ export default defineConfig({
     // from the same origin while developing. Adjust if you run a different port.
     port: 8100,
     open: true,
-    // Dev proxy to avoid CORS when calling the production API during local development.
-    // Requests starting with /api will be forwarded to the production API host.
+    // Dev proxy to avoid CORS when calling an API during local development.
+    // Requests starting with /api will be forwarded to the configured API host.
+    // Set environment variable VITE_API_PROXY to override (e.g. http://localhost:3000)
     proxy: {
       '/api': {
-        target: 'https://api.swiftlyxpress.com',
+        target: process.env.VITE_API_PROXY || 'https://api.swiftlyxpress.com',
         changeOrigin: true,
         secure: false,
         configure: (proxy, options) => {
@@ -23,6 +24,9 @@ export default defineConfig({
             proxyReq.removeHeader('referer');
             proxyReq.setHeader('origin', 'https://swiftlyxpress.com');
             proxyReq.setHeader('referer', 'https://swiftlyxpress.com/');
+          });
+          proxy.on('error', (err, req, res) => {
+            console.warn('[vite proxy] error proxying', req.url, err && err.message);
           });
         }
       }

@@ -170,10 +170,18 @@ const AdminLayout = ({ children }) => {
       checkNotifications();
     };
 
+    const handleDebtUpdated = (evt) => {
+      console.log('[AdminLayout] debt:updated event received', evt?.detail);
+      checkNotifications();
+      // Optionally refresh visible notifications
+      fetchNotifications(1, false).catch(() => { });
+    };
+
     window.addEventListener('kyc:updated', handleKycUpdate);
     window.addEventListener('user:created', handleUserCreated);
     window.addEventListener('kyc:submitted', handleKycSubmitted);
     window.addEventListener('verification:completed', handleVerificationCompleted);
+    window.addEventListener('debt:updated', handleDebtUpdated);
 
     return () => {
       clearInterval(notificationInterval);
@@ -181,6 +189,7 @@ const AdminLayout = ({ children }) => {
       window.removeEventListener('user:created', handleUserCreated);
       window.removeEventListener('kyc:submitted', handleKycSubmitted);
       window.removeEventListener('verification:completed', handleVerificationCompleted);
+      window.removeEventListener('debt:updated', handleDebtUpdated);
     };
   }, []);
   return (

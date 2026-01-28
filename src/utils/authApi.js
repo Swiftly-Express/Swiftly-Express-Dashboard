@@ -746,6 +746,21 @@ export async function getCurrentUser(token) {
   });
 }
 
+/**
+ * Get rider balance (outstanding debt or wallet balance)
+ */
+export async function getRiderBalance() {
+  return apiClient.get('/api/driver/balance');
+}
+
+/**
+ * Create/initiate a debt payment for a rider.
+ * @param {object} payload - optional payload { amount, currency, callback_url, metadata }
+ */
+export async function payDebt(payload = {}) {
+  return apiClient.post('/api/driver/pay-debt', payload);
+}
+
 export async function logout(payload = {}) {
   try {
     await apiClient.post('/api/auth/logout', payload);

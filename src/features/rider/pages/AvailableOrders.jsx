@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { useIonRouter } from '@ionic/react';
 import { IonPage, IonContent, IonToast, IonRefresher, IonRefresherContent, IonIcon } from '@ionic/react';
 import { closeOutline } from 'ionicons/icons';
 import RiderLayout from '../components/RiderLayout';
@@ -129,8 +130,7 @@ const OrderCard = ({
   </div>
 );
 
-const AvailableOrders = () =>
-{
+const AvailableOrders = () => {
   const [activeTab, setActiveTab] = useState('all');
   const [orders, setOrders] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -139,13 +139,20 @@ const AvailableOrders = () =>
   const [toastMsg, setToastMsg] = useState('');
   const [showToast, setShowToast] = useState(false);
   const [isVerified, setIsVerified] = useState(false);
+  const [verificationStatus, setVerificationStatus] = useState(() => {
+    try {
+      const ud = getJSONCookie('user_data') || {};
+      return ud.verificationStatus || getCookie('riderVerificationStatus') || null;
+    } catch (e) {
+      return getCookie('riderVerificationStatus') || null;
+    }
+  });
   const [isAvailable, setIsAvailable] = useState(true);
   const [completedDeliveriesCount, setCompletedDeliveriesCount] = useState(0);
   const [lastRefresh, setLastRefresh] = useState(Date.now());
   const [selectedOrder, setSelectedOrder] = useState(null);
   // lock body scroll when drawer/modal is open
-  useEffect(() =>
-  {
+  useEffect(() => {
     if (selectedOrder) {
       const prev = document.body.style.overflow;
       document.body.style.overflow = 'hidden';
@@ -155,8 +162,7 @@ const AvailableOrders = () =>
   }, [selectedOrder]);
 
   // Debug: Check tokens on mount
-  useEffect(() =>
-  {
+  useEffect(() => {
     const riderToken = getCookie('rider_token');
     const customerToken = getCookie('customer_token');
     const authToken = getCookie('auth_token');
@@ -170,9 +176,10 @@ const AvailableOrders = () =>
     });
   }, []);
 
+  const router = useIonRouter();
+
   // Check verification status from backend
-  const checkVerificationStatus = async () =>
-  {
+  const checkVerificationStatus = async () => {
     try {
       console.log('[AvailableOrders] 🔍 Fetching verification status from backend...');
       const response = await getRiderProfile();
@@ -181,12 +188,34 @@ const AvailableOrders = () =>
       console.log('[AvailableOrders] 📦 Backend profile:', profile);
 
 
-      // Fix: Also check nested verification object for status
+      // Fix: Also check nested verification object and boolean flags for status
       let backendStatus = profile?.verificationStatus || profile?.accountStatus || profile?.status;
-      if (!backendStatus && profile?.verification && profile.verification.verificationStatus) {
-        backendStatus = profile.verification.verificationStatus;
+      if (!backendStatus && profile?.verification && (profile.verification.verificationStatus || profile.verification.status)) {
+        backendStatus = profile.verification.verificationStatus || profile.verification.status;
       }
-      const isApproved = backendStatus === 'approved';
+
+      // Normalize and accept several server truthy values as approved
+      const statusNormalized = backendStatus ? String(backendStatus).toLowerCase() : null;
+      let isApproved = false;
+      if (statusNormalized) {
+        const approvedValues = ['approved', 'verified', 'active', 'complete', 'approved_by_admin'];
+        if (approvedValues.includes(statusNormalized)) isApproved = true;
+      }
+
+      // Also accept boolean flags that some backends may set
+      if (profile?.isVerified === true || profile?.verified === true || profile?.verification?.isApproved === true) {
+        isApproved = true;
+      }
+
+      // Fallback: check cookies/user_data for a verification hint
+      try {
+        const userData = getJSONCookie('user_data') || {};
+        const udStatus = userData?.verificationStatus || userData?.status || userData?.verified;
+        if (!isApproved && udStatus) {
+          const udNorm = String(udStatus).toLowerCase();
+          if (['approved', 'verified', 'true'].includes(udNorm)) isApproved = true;
+        }
+      } catch (e) { /* ignore */ }
 
       console.log('[AvailableOrders] Backend verification status:', {
         backendStatus,
@@ -199,12 +228,16 @@ const AvailableOrders = () =>
         }
       });
 
-      // Sync backend status to cookies
+      // Determine final status label for local UI: 'approved' | 'submitted' | null
+      const pendingValues = ['submitted', 'pending', 'under_review', 'submitted_for_review', 'in_review'];
+      const statusLabel = isApproved ? 'approved' : (statusNormalized && pendingValues.includes(statusNormalized) ? 'submitted' : null);
+
+      // Sync backend status to cookies (store raw backendStatus for server-side use)
       if (backendStatus) {
         setCookie('riderVerificationStatus', backendStatus, 7);
         setCookie('riderAccountVerified', backendStatus, 7);
 
-        // Update user_data with latest profile
+        // Update user_data with latest profile and normalized status
         const existingUserData = getJSONCookie('user_data') || {};
         setJSONCookie('user_data', { ...existingUserData, ...profile, verificationStatus: backendStatus }, 7);
         console.log('[AvailableOrders] ✓ Synced backend status to cookies:', backendStatus);
@@ -215,6 +248,7 @@ const AvailableOrders = () =>
       setIsAvailable(available);
 
       setIsVerified(isApproved);
+      setVerificationStatus(statusLabel);
       return isApproved;
     } catch (error) {
       console.error('[AvailableOrders] Failed to check verification status:', error);
@@ -224,11 +258,9 @@ const AvailableOrders = () =>
     }
   };
 
-  useEffect(() =>
-  {
+  useEffect(() => {
     // Initial verification check with backend
-    checkVerificationStatus().then(verified =>
-    {
+    checkVerificationStatus().then(verified => {
       console.log('[AvailableOrders] Initial verification check:', verified);
       if (verified) {
         fetchAvailableJobs();
@@ -236,8 +268,7 @@ const AvailableOrders = () =>
     });
 
     // Fetch count of completed deliveries to determine "new user" state
-    const fetchCompleted = async () =>
-    {
+    const fetchCompleted = async () => {
       try {
         const resp = await getRiderDeliveries(1, 100);
         const deliveries = resp?.data?.deliveries || resp?.deliveries || resp?.data || [];
@@ -253,8 +284,7 @@ const AvailableOrders = () =>
     fetchCompleted();
 
     // Listen for verification completion
-    const handleVerificationComplete = async (event) =>
-    {
+    const handleVerificationComplete = async (event) => {
       console.log('[AvailableOrders] Verification completed event received:', event.detail);
       // Re-check verification status from backend
       const verified = await checkVerificationStatus();
@@ -272,15 +302,13 @@ const AvailableOrders = () =>
     };
 
     window.addEventListener('verification:completed', handleVerificationComplete);
-    return () =>
-    {
+    return () => {
       window.removeEventListener('verification:completed', handleVerificationComplete);
     };
   }, []);
 
   // Fetch available jobs on mount and when page changes
-  useEffect(() =>
-  {
+  useEffect(() => {
     if (isVerified) {
       fetchAvailableJobs();
     }
@@ -289,18 +317,15 @@ const AvailableOrders = () =>
   // Auto-refresh removed — use pull-to-refresh or manual refresh instead
 
   // Listen for new deliveries created by customers
-  useEffect(() =>
-  {
-    const handleDeliveryCreated = (event) =>
-    {
+  useEffect(() => {
+    const handleDeliveryCreated = (event) => {
       console.log('[AvailableOrders] New delivery created, refreshing jobs:', event.detail);
       setToastMsg('New delivery available!');
       setShowToast(true);
       fetchAvailableJobs();
     };
 
-    const handleDeliveriesRefresh = () =>
-    {
+    const handleDeliveriesRefresh = () => {
       console.log('[AvailableOrders] Deliveries refresh requested');
       fetchAvailableJobs();
     };
@@ -308,15 +333,13 @@ const AvailableOrders = () =>
     window.addEventListener('delivery:created', handleDeliveryCreated);
     window.addEventListener('deliveries:refresh', handleDeliveriesRefresh);
 
-    return () =>
-    {
+    return () => {
       window.removeEventListener('delivery:created', handleDeliveryCreated);
       window.removeEventListener('deliveries:refresh', handleDeliveriesRefresh);
     };
   }, []);
 
-  const fetchAvailableJobs = async () =>
-  {
+  const fetchAvailableJobs = async () => {
     setLoading(true);
     try {
       console.log('[AvailableOrders] Fetching available jobs from API...');
@@ -354,8 +377,18 @@ const AvailableOrders = () =>
     }
   };
 
-  const handleAcceptOrder = async (deliveryId) =>
-  {
+  // Small helper to safely parse numbers from currency or string fields
+  const parseAmount = (val) => {
+    if (val === null || val === undefined) return 0;
+    if (typeof val === 'number') return val;
+    const s = String(val);
+    // Remove any non-numeric, non-dot, non-minus characters (e.g., ₦, commas, spaces)
+    const cleaned = s.replace(/[^0-9.-]+/g, '');
+    const n = parseFloat(cleaned);
+    return Number.isNaN(n) ? 0 : n;
+  };
+
+  const handleAcceptOrder = async (deliveryId) => {
     if (!isAvailable) {
       setToastMsg('You must be available/active to accept orders. Please update your status in your profile.');
       setShowToast(true);
@@ -372,6 +405,13 @@ const AvailableOrders = () =>
       setOrders(prev => prev.filter(order => (order._id || order.id) !== deliveryId));
 
       window.dispatchEvent(new CustomEvent('delivery:accepted', { detail: { deliveryId } }));
+      // Navigate rider to Active Deliveries and let ActiveDeliveries refresh on event
+      try {
+        router.push('/rider/active', 'forward', 'push');
+      } catch (e) {
+        // Fallback to direct location change
+        window.location.href = '/rider/active';
+      }
     } catch (error) {
       console.error('[AvailableOrders] Failed to accept job:', error);
       setToastMsg((error && (error.message || error.data?.message || error.data?.errorMessage)) || 'Failed to accept order');
@@ -381,8 +421,7 @@ const AvailableOrders = () =>
     }
   };
 
-  const handleViewDetails = (deliveryId) =>
-  {
+  const handleViewDetails = (deliveryId) => {
     // Scroll the card into view so rider doesn't lose context
     const el = document.getElementById(`order-${deliveryId}`);
     if (el && el.scrollIntoView) {
@@ -392,8 +431,7 @@ const AvailableOrders = () =>
     if (order) setSelectedOrder(order);
   };
 
-  const filteredOrders = orders.filter(order =>
-  {
+  const filteredOrders = orders.filter(order => {
     if (activeTab === 'all') return true;
     if (activeTab === 'express') return order.priority === 'Express';
     if (activeTab === 'nearby') return parseFloat(order.distance) <= 2.5;
@@ -403,15 +441,13 @@ const AvailableOrders = () =>
   const expressCount = orders.filter(o => o.priority === 'Express').length;
   const nearbyCount = orders.filter(o => parseFloat(o.distance) <= 2.5).length;
 
-  const handleRefresh = async (event) =>
-  {
+  const handleRefresh = async (event) => {
     await fetchAvailableJobs();
     event.detail.complete();
   };
 
   // Helper to extract coords from various payload shapes
-  const extractCoords = (order, which) =>
-  {
+  const extractCoords = (order, which) => {
     // which = 'pickup' or 'delivery'
     try {
       if (!order) return null;
@@ -432,8 +468,7 @@ const AvailableOrders = () =>
   };
 
   // Haversine formula to calculate distance in kilometers between two [lng, lat] points
-  const calculateHaversineKm = (a, b) =>
-  {
+  const calculateHaversineKm = (a, b) => {
     try {
       if (!a || !b || a.length < 2 || b.length < 2) return null;
       const toRad = (deg) => deg * (Math.PI / 180);
@@ -475,7 +510,13 @@ const AvailableOrders = () =>
             </div>
           </YummyText>
 
-          {!isVerified ? (
+          {verificationStatus === 'submitted' ? (
+            <div className="text-center py-20 rounded-2xl px-6" style={sideBottomShadow}>
+              <BanIcon className="w-16 h-16 mx-auto mb-4 text-[#FF6B00]" />
+              <div className="text-xl font-medium text-[#0F172A] mb-3">Verification Submitted</div>
+              <div className="text-sm text-[#64748B] max-w-md mx-auto mb-6">Verification submitted, please wait.</div>
+            </div>
+          ) : verificationStatus !== 'approved' ? (
             <div className="text-center py-20 rounded-2xl px-6" style={sideBottomShadow}>
               <BanIcon className="w-16 h-16 mx-auto mb-4 text-[#FF6B00]" />
               <div className="text-xl font-medium text-[#0F172A] mb-3">Verification Required</div>
@@ -503,115 +544,114 @@ const AvailableOrders = () =>
                 Go to Profile
               </button>
             </div>
-          ) : (
-            <>
-              {/* Stats Grid */}
-              <div className="grid grid-cols-2 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
-                <StatCard
-                  title="Available Now"
-                  value={orders.length}
-                  subtitle=""
-                  color="text-[#00A63E]"
-                />
-                <StatCard
-                  title="Potential Earnings"
-                  value={completedDeliveriesCount === 0 ? '₦0.00' : `₦${orders.reduce((sum, order) => sum + (order.amount || order.price || 0), 0).toFixed(2)}`}
-                  subtitle=""
-                  color="text-[#00A63E]"
-                />
-                <StatCard
-                  title="Avg. Distance"
-                  value={completedDeliveriesCount === 0 ? '0 km' : (orders.length > 0 ? `${(orders.reduce((sum, o) => sum + (o.distance || 0), 0) / orders.length).toFixed(1)} km` : '0 km')}
-                  subtitle=""
-                  color="text-[#FF7A00]"
-                />
-                <StatCard
-                  title="Avg. Time"
-                  value={completedDeliveriesCount === 0 ? '0 min' : (orders.length > 0 && orders[0].estimatedTime ? orders[0].estimatedTime : 'N/A')}
-                  subtitle=""
-                  color="text-[#9810FA]"
-                />
-              </div>
+          ) : (<>
+            {/* Stats Grid */}
+            <div className="grid grid-cols-2 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
+              <StatCard
+                title="Available Now"
+                value={orders.length}
+                subtitle=""
+                color="text-[#00A63E]"
+              />
+              <StatCard
+                title="Potential Earnings"
+                value={completedDeliveriesCount === 0 ? '₦0.00' : `₦${(orders.reduce((sum, order) => sum + parseAmount(order.amount || order.price || 0), 0)).toLocaleString('en-NG', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`}
+                subtitle=""
+                color="text-[#00A63E]"
+              />
+              <StatCard
+                title="Avg. Distance"
+                value={completedDeliveriesCount === 0 ? '0 km' : (orders.length > 0 ? `${(orders.reduce((sum, o) => sum + parseAmount(o.distance || 0), 0) / orders.length).toFixed(1)} km` : '0 km')}
+                subtitle=""
+                color="text-[#FF7A00]"
+              />
+              <StatCard
+                title="Avg. Time"
+                value={completedDeliveriesCount === 0 ? '0 min' : (orders.length > 0 && orders[0].estimatedTime ? orders[0].estimatedTime : 'N/A')}
+                subtitle=""
+                color="text-[#9810FA]"
+              />
+            </div>
 
-              {/* Filter Tabs (single responsive row) */}
-              <div className="mb-6">
-                <div className="overflow-x-auto -mx-4 sm:mx-0 px-4 sm:px-0">
-                  <div className="inline-flex items-center gap-2 bg-gray-50 p-1 rounded-full whitespace-nowrap">
-                    <YummyText>
-                      <button
-                        onClick={() => setActiveTab('all')}
-                        className={`inline-block flex-shrink-0 min-w-[88px] sm:min-w-[120px] px-3 sm:px-5 py-1 rounded-full text-sm font-normal transition-colors ${activeTab === 'all'
-                          ? 'text-[#00B75A] bg-white shadow-sm'
-                          : 'text-[#64748B]'
-                          }`}
-                      >
-                        All Orders ({orders.length})
-                      </button>
-                      <button
-                        onClick={() => setActiveTab('express')}
-                        className={`inline-block flex-shrink-0 min-w-[88px] sm:min-w-[120px] px-3 sm:px-5 py-1 rounded-full text-sm font-normal transition-colors ${activeTab === 'express'
-                          ? 'text-[#00B75A] bg-white shadow-sm'
-                          : 'text-[#64748B]'
-                          }`}
-                      >
-                        Express ({expressCount})
-                      </button>
-                      <button
-                        onClick={() => setActiveTab('nearby')}
-                        className={`inline-block flex-shrink-0 min-w-[8px] sm:min-w-[120px] px-3 sm:px-5 py-1 rounded-full text-sm font-normal transition-colors ${activeTab === 'nearby'
-                          ? 'text-[#00B75A] bg-white shadow-sm'
-                          : 'text-[#64748B]'
-                          }`}
-                      >
-                        Nearby ({nearbyCount})
-                      </button>
-                    </YummyText>
-                  </div>
+            {/* Filter Tabs (single responsive row) */}
+            <div className="mb-6">
+              <div className="overflow-x-auto -mx-4 sm:mx-0 px-4 sm:px-0">
+                <div className="inline-flex items-center gap-2 bg-gray-50 p-1 rounded-full whitespace-nowrap">
+                  <YummyText>
+                    <button
+                      onClick={() => setActiveTab('all')}
+                      className={`inline-block flex-shrink-0 min-w-[88px] sm:min-w-[120px] px-3 sm:px-5 py-1 rounded-full text-sm font-normal transition-colors ${activeTab === 'all'
+                        ? 'text-[#00B75A] bg-white shadow-sm'
+                        : 'text-[#64748B]'
+                        }`}
+                    >
+                      All Orders ({orders.length})
+                    </button>
+                    <button
+                      onClick={() => setActiveTab('express')}
+                      className={`inline-block flex-shrink-0 min-w-[88px] sm:min-w-[120px] px-3 sm:px-5 py-1 rounded-full text-sm font-normal transition-colors ${activeTab === 'express'
+                        ? 'text-[#00B75A] bg-white shadow-sm'
+                        : 'text-[#64748B]'
+                        }`}
+                    >
+                      Express ({expressCount})
+                    </button>
+                    <button
+                      onClick={() => setActiveTab('nearby')}
+                      className={`inline-block flex-shrink-0 min-w-[8px] sm:min-w-[120px] px-3 sm:px-5 py-1 rounded-full text-sm font-normal transition-colors ${activeTab === 'nearby'
+                        ? 'text-[#00B75A] bg-white shadow-sm'
+                        : 'text-[#64748B]'
+                        }`}
+                    >
+                      Nearby ({nearbyCount})
+                    </button>
+                  </YummyText>
                 </div>
               </div>
+            </div>
 
-              {/* Orders List */}
-              <div className="max-h-[800px] overflow-y-auto pr-2">
-                {loading ? (
-                  <div className="flex items-center justify-center py-20">
-                    <div className="text-center">
-                      <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-[#00D68F] mx-auto mb-4"></div>
-                      <p className="text-[#64748B]">Loading available orders...</p>
-                    </div>
+            {/* Orders List */}
+            <div className="max-h-[800px] overflow-y-auto pr-2">
+              {loading ? (
+                <div className="flex items-center justify-center py-20">
+                  <div className="text-center">
+                    <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-[#00D68F] mx-auto mb-4"></div>
+                    <p className="text-[#64748B]">Loading available orders...</p>
                   </div>
-                ) : filteredOrders.length === 0 ? (
-                  <div className="text-center py-20">
-                    <div className="text-6xl mb-6">🔍</div>
-                    <div className="text-xl font-medium text-[#0F172A] mb-3">No Available Orders</div>
-                    <div className="text-sm text-[#64748B] max-w-md mx-auto">
-                      There are no delivery orders available in your area right now. Check back soon for new opportunities!
-                    </div>
+                </div>
+              ) : filteredOrders.length === 0 ? (
+                <div className="text-center py-20">
+                  <div className="text-6xl mb-6">🔍</div>
+                  <div className="text-xl font-medium text-[#0F172A] mb-3">No Available Orders</div>
+                  <div className="text-sm text-[#64748B] max-w-md mx-auto">
+                    There are no delivery orders available in your area right now. Check back soon for new opportunities!
                   </div>
-                ) : (
-                  filteredOrders.map((order) => (
-                    <OrderCard
-                      key={order._id || order.id}
-                      deliveryId={order._id || order.id}
-                      packageId={order.trackingNumber || order.id}
-                      priority={order.priority}
-                      size={order.size || order.packageDetails?.size}
-                      pickupName={order.pickupName || order.pickupAddress?.name}
-                      pickupAddress={order.pickupAddress?.street || order.pickupAddress}
-                      deliveryName={order.deliveryName || order.deliveryAddress?.name}
-                      deliveryAddress={order.deliveryAddress?.street || order.deliveryAddress}
-                      distance={order.distance || 'N/A'}
-                      time={order.estimatedTimeMinutes ? `${order.estimatedTimeMinutes} min` : order.time || 'N/A'}
-                      packageSize={order.packageSize || order.packageDetails?.weight || 'N/A'}
-                      price={order.price || 'N/A'}
-                      tips={order.tips || '0.00'}
-                      onAccept={handleAcceptOrder}
-                      onViewDetails={handleViewDetails}
-                      accepting={accepting === (order._id || order.id)}
-                    />
-                  ))
-                )}
-              </div>
-            </>
+                </div>
+              ) : (
+                filteredOrders.map((order) => (
+                  <OrderCard
+                    key={order._id || order.id}
+                    deliveryId={order._id || order.id}
+                    packageId={order.trackingNumber || order.id}
+                    priority={order.priority}
+                    size={order.size || order.packageDetails?.size}
+                    pickupName={order.pickupName || order.pickupAddress?.name}
+                    pickupAddress={order.pickupAddress?.street || order.pickupAddress}
+                    deliveryName={order.deliveryName || order.deliveryAddress?.name}
+                    deliveryAddress={order.deliveryAddress?.street || order.deliveryAddress}
+                    distance={order.distance || 'N/A'}
+                    time={order.estimatedTimeMinutes ? `${order.estimatedTimeMinutes} min` : order.time || 'N/A'}
+                    packageSize={order.packageSize || order.packageDetails?.weight || 'N/A'}
+                    price={order.price || 'N/A'}
+                    tips={order.tips || '0.00'}
+                    onAccept={handleAcceptOrder}
+                    onViewDetails={handleViewDetails}
+                    accepting={accepting === (order._id || order.id)}
+                  />
+                ))
+              )}
+            </div>
+          </>
           )}
 
           {/* Details drawer (simple bottom sheet) */}
@@ -644,8 +684,7 @@ const AvailableOrders = () =>
                   <div className="text-sm text-[#64748B] mb-2">Distance: {selectedOrder.distance || 'N/A'}</div>
 
                   {/* Calculated route distance + Potential earnings breakdown */}
-                  {(() =>
-                  {
+                  {(() => {
                     const pickupCoords = extractCoords(selectedOrder, 'pickup');
                     const deliveryCoords = extractCoords(selectedOrder, 'delivery');
                     const calculatedKm = calculateHaversineKm(pickupCoords, deliveryCoords);
