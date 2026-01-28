@@ -104,20 +104,23 @@ const DeliveryCard = ({ delivery }) => {
 
   return (
     <div className="bg-white rounded-2xl p-4 md:p-6 mb-4 relative" style={sideBottomShadow}>
-      {/* Mobile: Make Payment button at top-right */}
-      {(paymentStatus === 'pending' || paymentStatus === 'unpaid' || paymentStatus === 'failed') && (
-        <button
-          onClick={() => {
-            const deliveryId = delivery._id || delivery.id || delivery.trackingNumber;
-            window.dispatchEvent(new CustomEvent('payment:init', { detail: { deliveryId } }));
-          }}
-          className="md:hidden absolute top-3 right-3 px-3 py-1 rounded-full border border-black bg-white text-black text-xs font-medium z-20"
-          aria-label="Make Payment"
-          style={{ borderStyle: 'solid' }}
-        >
-          <YummyText className="text-xs font-medium">Make Payment</YummyText>
-        </button>
-      )}
+      {/* Mobile: Make Payment button at top-right (only for online/bank, not cash) */}
+      {(paymentStatus === 'pending' || paymentStatus === 'unpaid' || paymentStatus === 'failed') && (() => {
+        const method = (delivery.payment?.method || delivery.paymentMethod || delivery.payment?.paymentMethod || delivery.method || '').toString().toLowerCase();
+        return method !== 'cash' && method !== 'cash_on_delivery';
+      })() && (
+          <button
+            onClick={() => {
+              const deliveryId = delivery._id || delivery.id || delivery.trackingNumber;
+              window.dispatchEvent(new CustomEvent('payment:init', { detail: { deliveryId } }));
+            }}
+            className="md:hidden absolute top-3 right-3 px-3 py-1 rounded-full border border-black bg-white text-black text-xs font-medium z-20"
+            aria-label="Make Payment"
+            style={{ borderStyle: 'solid' }}
+          >
+            <YummyText className="text-xs font-medium">Make Payment</YummyText>
+          </button>
+        )}
       {/* Mobile & Desktop Layout */}
       <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
         <div className="flex items-start gap-3 md:gap-4 flex-1">
@@ -137,26 +140,33 @@ const DeliveryCard = ({ delivery }) => {
                   {delivery.status || 'Pending'}
                 </span>
 
-                {/* Payment tag */}
-                {paymentStatus === 'paid' ? (
-                  <span className="px-3 py-1 rounded-full text-xs font-medium bg-green-100 text-green-700">Paid</span>
-                ) : (
-                  <span className="px-3 py-1 rounded-full text-xs font-medium bg-orange-100 text-orange-700">Yet to pay</span>
+                {/* Payment tag on customer side: show Paid, Cash, or nothing (Make Payment button will show for unpaid online/bank) */}
+                {paymentStatus === 'paid' && (
+                  <span className="px-3 py-1 rounded-full text-xs font-medium bg-green-100 text-green-700 border border-green-200">Paid</span>
                 )}
+                {paymentStatus !== 'paid' && (() => {
+                  const method = (delivery.payment?.method || delivery.paymentMethod || delivery.payment?.paymentMethod || delivery.method || '').toString().toLowerCase().trim();
+                  return (method === 'cash' || method === 'cash_on_delivery' || method === 'cod') ? (
+                    <span className="px-3 py-1 rounded-full text-xs font-medium bg-white text-green-600 border border-green-300">Cash</span>
+                  ) : null;
+                })()}
 
-                {/* Desktop/Tablet: show Make Payment tag when unpaid */}
-                {(paymentStatus === 'pending' || paymentStatus === 'unpaid' || paymentStatus === 'failed') && (
-                  <button
-                    onClick={() => {
-                      const deliveryId = delivery._id || delivery.id || delivery.trackingNumber;
-                      window.dispatchEvent(new CustomEvent('payment:init', { detail: { deliveryId } }));
-                    }}
-                    className="hidden md:inline-flex px-3 py-1 rounded-full text-xs font-medium border-2 border-black bg-white text-black z-10"
-                    style={{ borderStyle: 'solid' }}
-                  >
-                    <YummyText className="text-xs font-medium">Make Payment</YummyText>
-                  </button>
-                )}
+                {/* Desktop/Tablet: show Make Payment tag when unpaid (only for online/bank, not cash) */}
+                {(paymentStatus === 'pending' || paymentStatus === 'unpaid' || paymentStatus === 'failed') && (() => {
+                  const method = (delivery.payment?.method || delivery.paymentMethod || delivery.payment?.paymentMethod || delivery.method || '').toString().toLowerCase().trim();
+                  return method !== 'cash' && method !== 'cash_on_delivery' && method !== 'cod';
+                })() && (
+                    <button
+                      onClick={() => {
+                        const deliveryId = delivery._id || delivery.id || delivery.trackingNumber;
+                        window.dispatchEvent(new CustomEvent('payment:init', { detail: { deliveryId } }));
+                      }}
+                      className="hidden md:inline-flex px-3 py-1 rounded-full text-xs font-medium border-2 border-black bg-white text-black z-10"
+                      style={{ borderStyle: 'solid' }}
+                    >
+                      <YummyText className="text-xs font-medium">Make Payment</YummyText>
+                    </button>
+                  )}
               </div>
             </div>
 
@@ -283,19 +293,22 @@ const MobileCompletedCard = ({ delivery }) => {
 
   return (
     <div className="bg-white rounded-2xl p-4 mb-3 border border-gray-100 relative">
-      {(paymentStatus === 'pending' || paymentStatus === 'unpaid' || paymentStatus === 'failed') && (
-        <button
-          onClick={() => {
-            const deliveryId = delivery._id || delivery.id || delivery.trackingNumber;
-            window.dispatchEvent(new CustomEvent('payment:init', { detail: { deliveryId } }));
-          }}
-          className="md:hidden absolute top-3 right-3 px-3 py-1 rounded-full border-2 border-black bg-white text-black text-xs font-medium z-20"
-          aria-label="Make Payment"
-          style={{ borderStyle: 'solid' }}
-        >
-          <YummyText className="text-xs font-medium">Make Payment</YummyText>
-        </button>
-      )}
+      {(paymentStatus === 'pending' || paymentStatus === 'unpaid' || paymentStatus === 'failed') && (() => {
+        const method = (delivery.payment?.method || delivery.paymentMethod || delivery.payment?.paymentMethod || delivery.method || '').toString().toLowerCase();
+        return method !== 'cash' && method !== 'cash_on_delivery';
+      })() && (
+          <button
+            onClick={() => {
+              const deliveryId = delivery._id || delivery.id || delivery.trackingNumber;
+              window.dispatchEvent(new CustomEvent('payment:init', { detail: { deliveryId } }));
+            }}
+            className="md:hidden absolute top-3 right-3 px-3 py-1 rounded-full border-2 border-black bg-white text-black text-xs font-medium z-20"
+            aria-label="Make Payment"
+            style={{ borderStyle: 'solid' }}
+          >
+            <YummyText className="text-xs font-medium">Make Payment</YummyText>
+          </button>
+        )}
       <div className="flex items-start justify-between mb-3">
         <div className="flex-1">
           <YummyText className="text-base font-medium text-[#0F172A] mb-1">
@@ -311,7 +324,7 @@ const MobileCompletedCard = ({ delivery }) => {
             <span>•</span>
             <span>Delivered: {formatDate(delivery.deliveredAt)}</span>
           </div>
-          <span className="px-3 py-1 bg-green-100 text-green-700 rounded-full text-xs font-medium">
+          <span className="px-3 py-1 bg-green-100 text-green-700 rounded-full text-xs font-medium border border-green-200">
             {delivery.status || 'Delivered'}
           </span>
         </div>
@@ -703,21 +716,13 @@ const MyDeliveries = () => {
 
       console.log('[MyDeliveries] Parsed items:', items);
 
-      // Filter out cancelled orders (keep unpaid/pending so users can pay later)
-      const validDeliveries = items.filter(d => {
-        const status = (d.status || '').toLowerCase();
-
-        // Exclude cancelled orders
-        if (status === 'cancelled' || status === 'canceled') {
-          return false;
-        }
-
-        return true;
-      });
+      // Keep all deliveries (including cancelled) so users can see paid/cancelled orders
+      const validDeliveries = Array.isArray(items) ? items : [];
 
       const active = validDeliveries.filter((d) => {
         const status = d?.status?.toLowerCase() || 'pending';
-        return status !== 'delivered' && status !== 'completed' && status !== 'cancelled';
+        // Consider only delivered/completed as completed; everything else (including cancelled) remains visible in Active
+        return status !== 'delivered' && status !== 'completed';
       });
 
       const completed = validDeliveries.filter((d) => {

@@ -194,7 +194,10 @@ const Dashboard = () => {
 
         setCookie('riderVerificationStatus', statusLower, 7);
         setCookie('riderAccountVerified', 'false', 7);
-       
+        setTimeout(() => {
+          console.log('[Dashboard] ⏰ 2 seconds elapsed, showing modal now');
+          setShowVerificationModal(true);
+        }, 2000);
         return false;
       }
 
