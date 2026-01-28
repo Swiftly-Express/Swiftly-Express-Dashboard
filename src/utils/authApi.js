@@ -33,6 +33,19 @@ apiClient.interceptors.request.use(
 
     if (!token) token = adminToken || riderToken || customerToken || authToken;
 
+    // Fallback: if no token found in cookies, check localStorage (helps after external redirects)
+    if (!token && typeof window !== 'undefined') {
+      try {
+        const lsAuth = localStorage.getItem('auth_token') || localStorage.getItem('customer_token') || localStorage.getItem('rider_token') || localStorage.getItem('admin_token');
+        if (lsAuth) {
+          token = lsAuth;
+          console.log('[authApi] ✓ Using token from localStorage for', config.url);
+        }
+      } catch (e) {
+        console.warn('[authApi] Failed to read token from localStorage', e);
+      }
+    }
+
     if (token) {
       try {
         if (typeof token === 'string') {
