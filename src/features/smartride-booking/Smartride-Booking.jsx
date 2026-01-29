@@ -155,6 +155,22 @@ export default function SmartRideBooking({ embedMode = false, initialData = {}, 
         return () => window.removeEventListener('message', handlePaymentMessage);
     }, [router]);
 
+    // Listen for rider acceptance events - show rider-found only when the created delivery is accepted
+    useEffect(() => {
+        const onDeliveryAccepted = (e) => {
+            const acceptedId = e?.detail?.deliveryId || e?.detail?.deliveryId || e?.detail?.delivery?._id || e?.detail?.delivery?.id;
+            if (!acceptedId) return;
+            if (deliveryId && String(acceptedId) === String(deliveryId)) {
+                setIsSearching(false);
+                setCurrentStep('rider-found');
+                try { localStorage.removeItem('smartride_delivery_id'); } catch (e) { }
+            }
+        };
+
+        window.addEventListener('delivery:accepted', onDeliveryAccepted);
+        return () => window.removeEventListener('delivery:accepted', onDeliveryAccepted);
+    }, [deliveryId]);
+
     // Add this at the top of SmartRideBooking component, right after the state declarations
 
     useEffect(() => {
@@ -180,6 +196,20 @@ export default function SmartRideBooking({ embedMode = false, initialData = {}, 
             }, 2000);
         }
     }, [router]);
+
+    // Restore SmartRide session on refresh: if a delivery id exists in localStorage, resume finding state
+    useEffect(() => {
+        try {
+            const stored = localStorage.getItem('smartride_delivery_id');
+            if (stored) {
+                setDeliveryId(stored);
+                setCurrentStep('finding-rider');
+                setIsSearching(true);
+            }
+        } catch (e) {
+            // ignore
+        }
+    }, []);
 
     const handleChange = (e) => {
         setFormData({
@@ -281,13 +311,109 @@ export default function SmartRideBooking({ embedMode = false, initialData = {}, 
         }
     };
 
-    const findRider = () => {
-        setCurrentStep('finding-rider');
-        setIsSearching(true);
-        setTimeout(() => {
+    const findRider = async () => {
+        try {
+            setCurrentStep('finding-rider');
+            setIsSearching(true);
+
+            // Build pickup/delivery objects (same as proceedToPayment) but do not require payment
+            const pickupCoords = formData.pickupPlace;
+            const deliveryCoords = formData.deliveryPlace;
+
+            const pickupAddrRaw = pickupCoords ? {
+                street: pickupCoords.street || '',
+                city: pickupCoords.city || '',
+                state: pickupCoords.state || pickupCoords.country || pickupCoords.city || '',
+                zipCode: pickupCoords.zipCode || '',
+                country: pickupCoords.country || '',
+                coordinates: pickupCoords.coordinates || { lat: 0, lng: 0 }
+            } : {
+                street: formData.pickupAddress || '',
+                city: '', state: '', zipCode: '', country: '', coordinates: { lat: 0, lng: 0 }
+            };
+
+            const deliveryAddrRaw = deliveryCoords ? {
+                street: deliveryCoords.street || '',
+                city: deliveryCoords.city || '',
+                state: deliveryCoords.state || deliveryCoords.country || deliveryCoords.city || '',
+                zipCode: deliveryCoords.zipCode || '',
+                country: deliveryCoords.country || '',
+                coordinates: deliveryCoords.coordinates || { lat: 0, lng: 0 }
+            } : {
+                street: formData.deliveryAddress || '',
+                city: '', state: '', zipCode: '', country: '', coordinates: { lat: 0, lng: 0 }
+            };
+
+            const { country: _pCountry, ...pickupNoCountry } = pickupAddrRaw;
+            const pickupAddr = {
+                ...pickupNoCountry,
+                state: pickupAddrRaw.state || pickupAddrRaw.city || 'Unknown',
+                zipCode: pickupAddrRaw.zipCode || '00000'
+            };
+
+            const { country: _dCountry, ...deliveryNoCountry } = deliveryAddrRaw;
+            const deliveryAddr = {
+                ...deliveryNoCountry,
+                state: deliveryAddrRaw.state || deliveryAddrRaw.city || 'Unknown',
+                zipCode: deliveryAddrRaw.zipCode || '00000'
+            };
+
+            const payload = {
+                senderName: formData.senderName,
+                senderPhone: formData.senderPhone,
+                pickupDate: formData.pickupDate,
+                recipientName: formData.recipientName,
+                recipientPhone: formData.recipientPhone,
+                recipientEmail: formData.recipientEmail,
+                pickupAddress: pickupAddr,
+                deliveryAddress: deliveryAddr,
+                packageDetails: {
+                    sizeCategory: formData.sizeCategory,
+                    weightCategory: formData.weightCategory,
+                    weight: formData.weight || `${formData.weightCategory} weight`,
+                    dimensions: formData.dimensions,
+                    description: formData.packageDescription
+                },
+                payment: { method: formData.paymentMethod || 'cash', notes: formData.paymentNotes },
+                deliveryType: 'smart_ride',
+                smartRide: true
+            };
+
+            let createResp = null;
+            if (formData.image) {
+                const fd = new FormData();
+                fd.append('image', formData.image);
+                Object.entries(payload).forEach(([k, v]) => {
+                    if (typeof v === 'object') fd.append(k, JSON.stringify(v));
+                    else fd.append(k, String(v));
+                });
+                createResp = await createDelivery(fd);
+            } else {
+                createResp = await createDelivery(payload);
+            }
+
+            const deliveryObj = createResp?.data?.delivery || createResp?.delivery || createResp?.data || createResp;
+            const dId = deliveryObj?._id || deliveryObj?.id || deliveryObj?.deliveryId || deliveryObj?.trackingNumber;
+            if (!dId) {
+                console.error('Create delivery response:', createResp);
+                throw new Error('Failed to create delivery (no id returned)');
+            }
+            setDeliveryId(dId);
+            try {
+                localStorage.setItem('smartride_delivery_id', String(dId));
+            } catch (e) { }
+
+            // Notify other parts of the app and remain in 'finding-rider' until a rider accepts
+            window.dispatchEvent(new Event('deliveries:refresh'));
+            window.dispatchEvent(new CustomEvent('delivery:created', { detail: createResp?.data || createResp }));
+
+        } catch (err) {
+            console.error('[SmartRide] findRider error:', err);
+            setToastMsg('Failed to start rider matching. Please try again.');
+            setShowToast(true);
+            setCurrentStep('summary');
             setIsSearching(false);
-            setCurrentStep('rider-found');
-        }, 3000);
+        }
     };
 
     const proceedToPayment = async () => {
@@ -1615,92 +1741,81 @@ export default function SmartRideBooking({ embedMode = false, initialData = {}, 
 
                     <div className="max-w-6xl mx-auto px-4 py-8">
                         {/* Map with centered bike icon */}
-                        <div className="bg-white rounded-3xl overflow-hidden shadow-sm mb-6 relative" style={{ height: '420px' }}>
-                            <GoogleMap
-                                center={{ lat: 6.5244, lng: 3.3792 }}
-                                zoom={13}
-                                showMarker={false}
-                                className="w-full h-full"
-                            />
+                        <div className="bg-white rounded-3xl overflow-hidden shadow-sm mb-6 relative" style={{ height: '320px' }}>
+                            <div className="relative w-full h-full">
+                                <GoogleMap
+                                    center={{ lat: 6.5244, lng: 3.3792 }}
+                                    zoom={13}
+                                    showMarker={false}
+                                    className="w-full h-full"
+                                />
 
-                            {/* Centered bike icon on map */}
-                            <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 z-10">
-                                <div className="w-16 h-16 bg-[#00B75A] rounded-2xl flex items-center justify-center shadow-lg">
-                                    <Bike className="w-8 h-8 text-white" />
-                                </div>
-                            </div>
-                        </div>
-
-                        {/* Status text and content */}
-                        <div className="text-center mb-8">
-                            {isSearching ? (
-                                <>
-                                    <h2 className="text-3xl font-semibold text-gray-900 mb-3">Finding Nearby Riders</h2>
-                                    <p className="text-gray-600 text-base">You can make payment as soon as you are paired with a rider.<br />Hold On</p>
-                                </>
-                            ) : (
-                                <>
-                                    <h2 className="text-3xl font-semibold text-gray-900 mb-3">Rider Found 🎉</h2>
-                                    <p className="text-gray-600 text-base mb-6">Great news! We found a rider near your pickup location.</p>
-                                    <Button
-                                        variant="primary"
-                                        className="!bg-white !text-[#0F172A] !border-2 !border-[#0F172A] !py-3 !px-12 !rounded-full hover:!bg-gray-50"
-                                        onClick={proceedToPayment}
-                                    >
-                                        Make Payment
-                                    </Button>
-                                </>
-                            )}
-                        </div>
-
-                        {/* Priority upsell while searching */}
-                        {isSearching && !boosted && (
-                            <div className="max-w-md mx-auto mb-6">
-                                <div className="bg-white p-4 rounded-xl shadow-sm border flex items-center justify-between">
-                                    <div>
-                                        <p className="font-medium">Get matched faster</p>
-                                        <p className="text-sm text-gray-600">Boost for +₦{calculateTotal().priorityFee} to increase matching speed</p>
-                                    </div>
-                                    <div>
-                                        <button
-                                            onClick={() => { setIsPriority(true); setBoosted(true); }}
-                                            className="px-4 py-2 bg-[#00B75A] text-white rounded-lg"
-                                        >
-                                            Boost ₦{calculateTotal().priorityFee}
-                                        </button>
+                                {/* Centered bike icon on map */}
+                                <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 z-10">
+                                    <div className="w-12 h-12 bg-[#00B75A] rounded-2xl flex items-center justify-center shadow-lg">
+                                        <Bike className="w-6 h-6 text-white" />
                                     </div>
                                 </div>
-                            </div>
-                        )}
 
-                        {isSearching && boosted && (
-                            <div className="max-w-md mx-auto mb-6">
-                                <div className="bg-[#FEFCE8] p-3 rounded-lg border border-yellow-200 text-yellow-800">Priority boost active — finding faster riders</div>
-                            </div>
-                        )}
-
-                        {/* Loader spinner above skeleton placeholders */}
-                        {isSearching && (
-                            <div className="flex items-center justify-center mb-6">
-                                <div className="animate-spin rounded-full h-12 w-12 border-4 border-[#00B75A] border-t-transparent"></div>
-                            </div>
-                        )}
-
-                        {/* Skeleton placeholders when searching */}
-                        {isSearching && (
-                            <div className="space-y-4 max-w-4xl mx-auto opacity-20">
-                                {[1, 2, 3].map((i) => (
-                                    <div key={i} className="bg-white rounded-xl p-4 shadow-sm border border-gray-100">
-                                        <div className="flex items-center gap-4">
-                                            <div className="w-16 h-16 bg-gray-200 rounded-lg"></div>
-                                            <div className="flex-1 space-y-2">
-                                                <div className="h-4 bg-gray-200 rounded w-3/4"></div>
-                                                <div className="h-3 bg-gray-200 rounded w-1/2"></div>
-                                            </div>
-                                            <div className="w-24 h-10 bg-gray-200 rounded-lg"></div>
+                                {/* Glass overlay while finding or when rider found (until rider-details) */}
+                                {(currentStep === 'finding-rider' || currentStep === 'rider-found') && currentStep !== 'rider-details' && (
+                                    <div className="absolute inset-0 z-20 flex items-center justify-center" style={{ background: 'rgba(255,255,255,0.6)', backdropFilter: 'blur(6px) saturate(120%)' }}>
+                                        {/* Loading area sits over the map */}
+                                        <div className="text-center">
+                                            {isSearching ? (
+                                                <>
+                                                    <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-[#00D68F] mx-auto mb-4"></div>
+                                                    <h2 className="text-2xl font-semibold text-gray-900 mb-2">Finding Nearby Riders</h2>
+                                                </>
+                                            ) : (
+                                                <>
+                                                    <h2 className="text-2xl font-semibold text-gray-900 mb-2">Rider Found 🎉</h2>
+                                                </>
+                                            )}
                                         </div>
                                     </div>
-                                ))}
+                                )}
+                            </div>
+                        </div>
+
+                        {/* Small accessible summary moved into map overlay; duplicate block removed */}
+
+                        {/* Priority upsell removed for SmartRide */}
+
+                        {/* Skeleton placeholders when searching (pulled closer to map) */}
+                        {isSearching && (
+                            <div className="max-w-5xl mx-auto -mt-4 opacity-20">
+                                <div className="bg-white rounded-3xl p-6 shadow-sm">
+                                    <div className="flex items-start gap-6 mb-4">
+                                        <div className="w-32 h-32 bg-gray-200 rounded-2xl overflow-hidden flex-shrink-0"></div>
+
+                                        <div className="flex-1">
+                                            <div className="h-5 bg-gray-200 rounded w-1/3 mb-2"></div>
+                                            <div className="h-3 bg-gray-200 rounded w-1/2 mb-3"></div>
+
+                                            <div className="grid grid-cols-3 gap-4 mt-2">
+                                                <div className="h-3 bg-gray-200 rounded w-full"></div>
+                                                <div className="h-3 bg-gray-200 rounded w-full"></div>
+                                                <div className="h-3 bg-gray-200 rounded w-full"></div>
+                                            </div>
+                                        </div>
+
+                                        <div className="flex flex-col gap-3 w-32">
+                                            <div className="h-9 bg-gray-200 rounded-full"></div>
+                                            <div className="h-9 bg-gray-200 rounded-full"></div>
+                                        </div>
+                                    </div>
+
+                                    <div className="border-t border-gray-200 pt-4">
+                                        <div className="flex items-center justify-between max-w-3xl mx-auto">
+                                            <div className="w-16 h-16 bg-gray-200 rounded-full"></div>
+                                            <div className="flex-1 h-1 bg-gray-200 mx-4"></div>
+                                            <div className="w-16 h-16 bg-gray-200 rounded-full"></div>
+                                            <div className="flex-1 h-1 bg-gray-200 mx-4"></div>
+                                            <div className="w-16 h-16 bg-gray-200 rounded-full"></div>
+                                        </div>
+                                    </div>
+                                </div>
                             </div>
                         )}
                     </div>

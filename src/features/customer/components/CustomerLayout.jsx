@@ -8,6 +8,7 @@ import {
   markNotificationAsRead,
   markAllNotificationsAsRead
 } from '../../../utils/authApi';
+import socketService from '../../../services/socket.service';
 import { getCookie, setCookie } from '../../../utils/cookies';
 
 const DEFAULT_AVATAR = 'https://api.dicebear.com/7.x/avataaars/svg?seed=User';
@@ -261,6 +262,18 @@ const CustomerLayout = ({ children }) => {
     loadAvatar();
     checkNotifications();
 
+    // Connect to socket for realtime delivery events (e.g., delivery:accepted)
+    try {
+      socketService.connect();
+      socketService.on('delivery:accepted', (data) => {
+        try {
+          window.dispatchEvent(new CustomEvent('delivery:accepted', { detail: data }));
+        } catch (e) { /* ignore */ }
+      });
+    } catch (e) {
+      console.warn('[CustomerLayout] Failed to init socket service', e);
+    }
+
     const notificationInterval = setInterval(() => {
       checkNotifications();
     }, 30000);
@@ -282,6 +295,9 @@ const CustomerLayout = ({ children }) => {
       window.removeEventListener('delivery:updated', handleDeliveryUpdated);
       window.removeEventListener('verification:completed', handleVerificationCompleted);
       clearInterval(notificationInterval);
+      try {
+        socketService.off('delivery:accepted');
+      } catch (e) { }
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);

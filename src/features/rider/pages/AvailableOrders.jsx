@@ -29,6 +29,7 @@ const OrderCard = ({
   packageId,
   priority,
   size,
+  smartRide,
   pickupName,
   pickupAddress,
   deliveryName,
@@ -50,6 +51,11 @@ const OrderCard = ({
           {priority && (
             <span className="px-3 py-1 rounded-lg text-xs font-normal bg-[#FF7A00] text-[#FFFFFF]">
               {priority}
+            </span>
+          )}
+          {smartRide && (
+            <span className="px-3 py-1 rounded-lg text-xs font-normal bg-[#00D68F] text-white">
+              SmartRide
             </span>
           )}
           {size && (
@@ -396,6 +402,7 @@ const AvailableOrders = () => {
     }
     setAccepting(deliveryId);
     try {
+      const acceptedOrder = orders.find(o => (o._id || o.id) === deliveryId || o.id === deliveryId || o._id === deliveryId);
       const response = await acceptDeliveryJob(deliveryId);
       console.log('[AvailableOrders] Job accepted:', response);
 
@@ -404,7 +411,8 @@ const AvailableOrders = () => {
 
       setOrders(prev => prev.filter(order => (order._id || order.id) !== deliveryId));
 
-      window.dispatchEvent(new CustomEvent('delivery:accepted', { detail: { deliveryId } }));
+      // Dispatch accepted event including delivery type and order payload so other clients can react
+      window.dispatchEvent(new CustomEvent('delivery:accepted', { detail: { deliveryId, deliveryType: acceptedOrder?.deliveryType || acceptedOrder?.type || null, order: acceptedOrder || null } }));
       // Navigate rider to Active Deliveries and let ActiveDeliveries refresh on event
       try {
         router.push('/rider/active', 'forward', 'push');
@@ -634,6 +642,7 @@ const AvailableOrders = () => {
                     deliveryId={order._id || order.id}
                     packageId={order.trackingNumber || order.id}
                     priority={order.priority}
+                    smartRide={(order.deliveryType === 'smart_ride') || order.smartRide === true}
                     size={order.size || order.packageDetails?.size}
                     pickupName={order.pickupName || order.pickupAddress?.name}
                     pickupAddress={order.pickupAddress?.street || order.pickupAddress}
