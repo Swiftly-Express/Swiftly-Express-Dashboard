@@ -1526,7 +1526,7 @@ export default function SmartRideBooking({ embedMode = false, initialData = {}, 
                                 <div className="space-y-2.5">
                                     {/* Base Fare */}
                                     <div className="flex justify-between items-center text-[#0F172A]">
-                                        <span className="text-[15px]">Base Fare (up to 2km)</span>
+                                        <span className="text-[15px]">Base Fare</span>
                                         <span className="text-[15px]">₦{pricing.baseFare.toLocaleString()}</span>
                                     </div>
 
