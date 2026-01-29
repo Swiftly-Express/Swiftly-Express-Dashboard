@@ -113,6 +113,36 @@ const RiderLayout = ({ children }) => {
       setIsOnline(!active);
     }
   };
+
+  const fetchNotifications = async (page = 1, append = false) => {
+    try {
+      setLoadingNotifications(true);
+      const response = await getNotifications(page, 20);
+      const data = response?.data || response;
+      const notificationsList = data?.notifications || data?.data || [];
+      const totalPages = data?.totalPages || data?.pages || 1;
+
+      // Merge read state from local cookie into the notifications
+      const merged = notificationsList.map(n => {
+        const id = n._id || n.id;
+        const locallyRead = readNotifIds.includes(id);
+        return { ...n, isRead: (n.isRead || n.read) || locallyRead, read: (n.isRead || n.read) || locallyRead };
+      });
+
+      if (append) {
+        setNotifications(prev => [...prev, ...merged]);
+      } else {
+        setNotifications(merged);
+      }
+
+      setHasMoreNotifications(page < totalPages);
+      setNotificationPage(page);
+    } catch (error) {
+      console.error('[RiderLayout] Failed to fetch notifications:', error);
+    } finally {
+      setLoadingNotifications(false);
+    }
+  };
   const [showNotifications, setShowNotifications] = useState(false);
   const [notifications, setNotifications] = useState([]);
   const [readNotifIds, setReadNotifIdsState] = useState(() => getReadNotifIds());
