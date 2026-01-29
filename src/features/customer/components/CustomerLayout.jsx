@@ -8,6 +8,7 @@ import {
   markNotificationAsRead,
   markAllNotificationsAsRead
 } from '../../../utils/authApi';
+import { getCookie, setCookie } from '../../../utils/cookies';
 
 const DEFAULT_AVATAR = 'https://api.dicebear.com/7.x/avataaars/svg?seed=User';
 
@@ -15,6 +16,23 @@ const CustomerLayout = ({ children }) => {
   const [avatarSrc, setAvatarSrc] = useState(DEFAULT_AVATAR);
   const [showNotifications, setShowNotifications] = useState(false);
   const [notifications, setNotifications] = useState([]);
+  // Local persistence for read notification IDs
+  const NOTIF_READ_COOKIE = 'customer_read_notifications';
+  const getReadNotifIds = () => {
+    try {
+      const v = getCookie(NOTIF_READ_COOKIE);
+      if (!v) return [];
+      return JSON.parse(v);
+    } catch (e) {
+      return [];
+    }
+  };
+  const setReadNotifIds = (ids) => {
+    try {
+      setCookie(NOTIF_READ_COOKIE, JSON.stringify(ids), 7);
+    } catch (e) { }
+  };
+  const [readNotifIds, setReadNotifIdsState] = useState(() => getReadNotifIds());
   const [unreadCount, setUnreadCount] = useState(0);
   const [notificationPage, setNotificationPage] = useState(1);
   const [hasMoreNotifications, setHasMoreNotifications] = useState(false);
@@ -67,11 +85,24 @@ const CustomerLayout = ({ children }) => {
 
   const checkNotifications = async () => {
     try {
-      const countResponse = await getUnreadNotificationCount();
-      const count = countResponse?.data?.count || countResponse?.count || 0;
-      setUnreadCount(count);
-    } catch (error) {
-      console.error('[CustomerLayout] Failed to fetch notification count:', error);
+      // Try fetching notifications and compute unread excluding locally-read IDs
+      const resp = await getNotifications(1, 100);
+      const list = resp?.data?.notifications || resp?.notifications || resp?.data || [];
+      const unread = list.filter(n => {
+        const id = n._id || n.id;
+        const alreadyRead = (n.isRead || n.read) || readNotifIds.includes(id);
+        return !alreadyRead;
+      }).length;
+      setUnreadCount(unread);
+    } catch (err) {
+      try {
+        const countResponse = await getUnreadNotificationCount();
+        const count = countResponse?.data?.count || countResponse?.count || 0;
+        const adjusted = Math.max(0, count - (readNotifIds?.length || 0));
+        setUnreadCount(adjusted);
+      } catch (error) {
+        console.error('[CustomerLayout] Failed to fetch notification count:', error);
+      }
     }
   };
 
@@ -109,6 +140,17 @@ const CustomerLayout = ({ children }) => {
       setNotifications(prev => prev.map(n => ({ ...n, isRead: true, read: true })));
       setUnreadCount(0);
 
+      // Persist read IDs for current notifications (fetch fresh list to be safe)
+      try {
+        const resp = await getNotifications(1, 100);
+        const list = resp?.data?.notifications || resp?.notifications || resp?.data || [];
+        const ids = list.map(n => n._id || n.id).filter(Boolean);
+        setReadNotifIds(ids);
+        setReadNotifIdsState(ids);
+      } catch (e) {
+        // ignore
+      }
+
       // Fire server-side mark-all in background and refresh shortly after
       (async () => {
         try {
@@ -142,6 +184,13 @@ const CustomerLayout = ({ children }) => {
       // Optimistically update UI
       setNotifications(prev => prev.map(n => ({ ...n, isRead: true, read: true })));
       setUnreadCount(0);
+
+      // Persist read IDs in cookie/state
+      try {
+        const allIds = notifications.map(n => n._id || n.id).filter(Boolean);
+        setReadNotifIds(allIds);
+        setReadNotifIdsState(allIds);
+      } catch (e) { }
 
       // Refresh from server in background (delayed to avoid race conditions)
       setTimeout(async () => {
@@ -184,6 +233,13 @@ const CustomerLayout = ({ children }) => {
       setNotifications(prev =>
         prev.map(n => (n._id === notificationId || n.id === notificationId) ? { ...n, isRead: true, read: true } : n)
       );
+
+      // Persist this ID locally so future server count refreshes won't show it again
+      setReadNotifIdsState(prev => {
+        const newIds = prev.includes(notificationId) ? prev : [...prev, notificationId];
+        try { setReadNotifIds(newIds); } catch (e) { }
+        return newIds;
+      });
 
       // Decrement unread count safely
       setUnreadCount(prev => Math.max(0, prev - 1));
@@ -351,7 +407,7 @@ const CustomerLayout = ({ children }) => {
                     <div className="divide-y divide-gray-100">
                       {notifications.map(notification => {
                         const notifId = notification._id || notification.id;
-                        const isRead = notification.isRead || notification.read;
+                        const isRead = (notification.isRead || notification.read) || readNotifIds.includes(notifId);
                         const notifType = notification.type || 'info';
                         const title = notification.title || notification.message?.substring(0, 50) || 'Notification';
                         const message = notification.message || notification.body || '';

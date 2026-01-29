@@ -274,12 +274,25 @@ const RiderLayout = ({ children }) => {
 
   const checkNotifications = async () => {
     try {
-      const countResponse = await getUnreadNotificationCount();
-      const count = countResponse?.data?.count || countResponse?.count || 0;
-      setUnreadCount(count);
-      // console.log('[RiderLayout] Unread notification count:', count);
+      // Prefer fetching a page of notifications so we can exclude IDs we've already marked locally
+      const resp = await getNotifications(1, 100);
+      const list = resp?.data?.notifications || resp?.notifications || resp?.data || [];
+      const unread = list.filter(n => {
+        const id = n._id || n.id;
+        const alreadyRead = (n.isRead || n.read) || readNotifIds.includes(id);
+        return !alreadyRead;
+      }).length;
+      setUnreadCount(unread);
     } catch (error) {
-      console.error('[RiderLayout] Failed to fetch notification count:', error);
+      // Fallback to count endpoint and subtract locally stored read IDs
+      try {
+        const countResponse = await getUnreadNotificationCount();
+        const count = countResponse?.data?.count || countResponse?.count || 0;
+        const adjusted = Math.max(0, count - (readNotifIds?.length || 0));
+        setUnreadCount(adjusted);
+      } catch (err) {
+        console.error('[RiderLayout] Failed to fetch notification count:', err);
+      }
     }
   };
 
