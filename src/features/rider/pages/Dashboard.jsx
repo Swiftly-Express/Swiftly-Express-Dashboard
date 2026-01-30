@@ -108,6 +108,7 @@ const AvailableOrderCard = ({ packageId, location, distance, price, onAccept }) 
 const Dashboard = () => {
   const router = useIonRouter();
   const [showVerificationModal, setShowVerificationModal] = useState(false);
+  const [showRejectedModal, setShowRejectedModal] = useState(false);
   const [userName, setUserName] = useState(() => {
     // Initialize from cookies immediately
     const cachedUserData = getJSONCookie('user_data');
@@ -193,6 +194,16 @@ const Dashboard = () => {
         console.log('[Dashboard] ⚠️ Verification status is NOT approved:', statusLower || '(empty string)');
         console.log('[Dashboard] → Setting riderAccountVerified cookie to FALSE');
         console.log('[Dashboard] → SHOWING modal in 2 seconds');
+
+        // If explicitly rejected by admin, clear the local submitted flag so the rider can re-submit
+        try {
+          if (statusLower === 'rejected') {
+            setCookie('verificationSubmitted', '', -1);
+            // Show a modal informing the rider of rejection unless they've dismissed it before
+            const dismissed = getCookie('verificationRejectedDismissed');
+            if (!dismissed) setShowRejectedModal(true);
+          }
+        } catch (e) { /* ignore */ }
 
         setCookie('riderVerificationStatus', statusLower, 7);
         setCookie('riderAccountVerified', 'false', 7);
@@ -410,6 +421,41 @@ const Dashboard = () => {
               </div>
             </div>
           </YummyText>
+
+          {/* Verification rejected notice (glassmorphism modal) */}
+          {showRejectedModal && (
+            <YummyText>
+              <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+                <div className="absolute inset-0 bg-black/40" style={{ backdropFilter: 'blur(6px)' }} />
+                <div className="relative bg-white bg-opacity-80 rounded-3xl shadow-2xl max-w-md w-full p-6 z-60" style={{ border: '1px solid rgba(255,255,255,0.35)' }}>
+                  <div className="text-center mb-4">
+                    <h3 className="text-xl font-semibold text-[#0A0A0A] mb-2">Verification Rejected</h3>
+                    <p className="text-sm text-[#4A5565]">Your verification application was rejected by our team. Please review the feedback and resubmit your documents.</p>
+                  </div>
+                  <div className="flex gap-3 mt-4">
+                    <button
+                      onClick={() => {
+                        setShowRejectedModal(false);
+                        setShowVerificationModal(true);
+                      }}
+                      className="flex-1 bg-[#00B75A] hover:bg-[#00A850] text-white py-2 rounded-full transition-colors"
+                    >
+                      Resubmit Documents
+                    </button>
+                    <button
+                      onClick={() => {
+                        try { setCookie('verificationRejectedDismissed', 'true', 30); } catch (e) { }
+                        setShowRejectedModal(false);
+                      }}
+                      className="flex-1 bg-white border border-gray-200 py-2 rounded-full transition-colors"
+                    >
+                      Don't show again
+                    </button>
+                  </div>
+                </div>
+              </div>
+            </YummyText>
+          )}
 
           {/* Stats Grid */}
           <YummyText>

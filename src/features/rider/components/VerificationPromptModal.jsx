@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { IonIcon } from '@ionic/react';
+import { IonIcon, IonToast } from '@ionic/react';
 import confetti from 'canvas-confetti';
 import {
   closeOutline,
@@ -23,6 +23,9 @@ const VerificationPromptModal = ({ isOpen, onClose }) => {
   const [currentStep, setCurrentStep] = useState(1);
   const [showSuccessModal, setShowSuccessModal] = useState(false);
   const [uploading, setUploading] = useState(false);
+  const [resubmitAttempted, setResubmitAttempted] = useState(false);
+  const [toastMsg, setToastMsg] = useState('');
+  const [showToast, setShowToast] = useState(false);
 
 
   useEffect(() => {
@@ -298,8 +301,9 @@ const VerificationPromptModal = ({ isOpen, onClose }) => {
 
     setUploading(true);
 
+    let submitData = null;
     try {
-      const submitData = new FormData();
+      submitData = new FormData();
 
       // Add all form fields
       submitData.append('contactInfo[phone]', formData.phoneNumber || '');
@@ -411,7 +415,68 @@ const VerificationPromptModal = ({ isOpen, onClose }) => {
     } catch (error) {
       console.error('[VerificationModal] ❌ Submission failed:', error);
 
-      if (error.status === 401 || error.message?.includes('token') || error.message?.includes('auth')) {
+      const serverMsg = (
+        (error?.response && (error.response.data?.message || error.response.data?.error || error.response.data)) ||
+        error?.data?.message ||
+        error?.message ||
+        ''
+      ).toString().toLowerCase();
+
+      // If server claims application already submitted, and we haven't retried yet,
+      // clear the local submitted flag and retry once.
+      if (!resubmitAttempted && (serverMsg.includes('already') && serverMsg.includes('submit') || serverMsg.includes('verification application already submitted'))) {
+        try {
+          setCookie('verificationSubmitted', '', -1);
+        } catch (e) { /* ignore */ }
+        setResubmitAttempted(true);
+        try {
+          setToastMsg('Retrying submission...');
+          setShowToast(true);
+          const retryResp = await submitRiderVerification(submitData);
+          const verificationData = {
+            contactInfo: {
+              phone: formData.phoneNumber,
+              streetAddress: formData.streetAddress,
+              city: formData.city,
+              state: formData.state,
+              zipCode: formData.zipCode
+            },
+            vehicle: {
+              type: formData.vehicleType,
+              makeModel: formData.makeModel,
+              year: formData.year,
+              licensePlate: formData.licensePlate
+            },
+            identity: {
+              idType: formData.idType,
+              idNumber: formData.idNumber
+            }
+          };
+
+          setJSONCookie('riderVerificationData', verificationData, 7);
+          setCookie('verificationCompleted', 'true', 7);
+          setCookie('verificationSubmitted', 'true', 7);
+          setCookie('riderAccountVerified', 'pending', 7);
+          setCookie('riderVerificationStatus', 'pending', 7);
+
+          try {
+            const profileResponse = await getRiderProfile();
+            const profile = profileResponse?.data?.driver || profileResponse?.driver || profileResponse?.data;
+            if (profile) {
+              const existingUserData = getJSONCookie('user_data') || {};
+              setJSONCookie('user_data', { ...existingUserData, ...profile, verificationStatus: 'pending' }, 7);
+            }
+          } catch (e) { /* ignore */ }
+
+          setShowSuccessModal(true);
+          return;
+        } catch (retryErr) {
+          console.error('[VerificationModal] Retry failed:', retryErr);
+          alert(retryErr.message || 'Failed to submit documents on retry. Please contact support.');
+        }
+      }
+
+      if (error.status === 401 || serverMsg.includes('token') || serverMsg.includes('auth')) {
         alert('Session expired. Please log in again and retry.');
         window.location.href = '/rider/login';
       } else {
@@ -522,6 +587,13 @@ const VerificationPromptModal = ({ isOpen, onClose }) => {
             <div className="text-center mb-6">
               <YummyText>
                 <h1 className="text-3xl font-bold text-[#00B75A] mb-2">Swiftly</h1>
+
+                <IonToast
+                  isOpen={showToast}
+                  message={toastMsg}
+                  duration={3000}
+                  onDidDismiss={() => setShowToast(false)}
+                />
                 <h2 className="text-3xl font-sm text-[#0A0A0A] mb-0">Verify Your Account</h2>
                 <p className="text-[#717182] text-xs font-[400]">Complete your rider profile to start delivering</p>
               </YummyText>

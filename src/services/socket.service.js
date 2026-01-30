@@ -1,4 +1,5 @@
 import { io } from 'socket.io-client';
+import { getCookie } from '../utils/cookies';
 
 class SocketService {
   constructor() {
@@ -6,17 +7,33 @@ class SocketService {
     this.baseURL = import.meta.env.VITE_API_BASE_URL || 'https://api.swiftlyxpress.com';
   }
 
+  getAuthToken() {
+    try {
+      return getCookie('customer_token') || getCookie('auth_token') || getCookie('rider_token') || null;
+    } catch (e) {
+      return null;
+    }
+  }
+
   connect() {
     if (this.socket) return;
-
     console.log('[SocketService] Connecting to:', this.baseURL);
+    const token = this.getAuthToken();
+    if (token) console.log('[SocketService] Using auth token for socket connection (masked):', String(token).slice(0, 10) + '...');
     this.socket = io(this.baseURL, {
       withCredentials: true,
-      transports: ['websocket', 'polling'], // Fallback to polling if websocket fails
+      // Try long-polling first so environments that block websockets still connect,
+      // then upgrade to websocket when available.
+      transports: ['polling', 'websocket'],
+      // Increase connect timeout to allow slow networks / server wakeups
+      timeout: 20000,
+      // Send auth token via socket.io auth payload so server can validate session on handshake
+      auth: token ? { token } : undefined,
       autoConnect: true,
       reconnection: true,
-      reconnectionAttempts: 5,
+      reconnectionAttempts: 10,
       reconnectionDelay: 1000,
+      reconnectionDelayMax: 5000
     });
 
     this.socket.on('connect', () => {
@@ -28,7 +45,15 @@ class SocketService {
     });
 
     this.socket.on('connect_error', (err) => {
-      console.error('[SocketService] Connection error:', err.message);
+      try {
+        console.error('[SocketService] Connection error:', err && (err.message || err));
+        // Provide additional debug when the websocket closed before open
+        if (err && err.message && String(err.message).toLowerCase().includes('websocket is closed')) {
+          console.warn('[SocketService] WebSocket closed before connection established — server may not support websocket or CORS may be blocking upgrades.');
+        }
+      } catch (e) {
+        console.error('[SocketService] connect_error handler failed', e);
+      }
     });
   }
 

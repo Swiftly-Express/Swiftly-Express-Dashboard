@@ -7,6 +7,7 @@ import { YummyText } from '../../../components/YummyText';
 import BanIcon from '../../../icons/Banicon';
 import TrackingMap from '../../../components/TrackingMap';
 import { getAvailableJobs, acceptDeliveryJob, getRiderProfile, getRiderDeliveries } from '../../../utils/authApi';
+import socketService from '../../../services/socket.service';
 import { getCookie, getJSONCookie, isRiderVerified, setCookie, setJSONCookie } from '../../../utils/cookies';
 
 
@@ -243,6 +244,14 @@ const AvailableOrders = () => {
         setCookie('riderVerificationStatus', backendStatus, 7);
         setCookie('riderAccountVerified', backendStatus, 7);
 
+        // If server explicitly rejected the application, clear the local "verificationSubmitted" flag
+        // so the rider can re-submit a new application.
+        try {
+          if (String(backendStatus).toLowerCase().includes('reject')) {
+            setCookie('verificationSubmitted', '', -1);
+          }
+        } catch (e) { /* ignore */ }
+
         // Update user_data with latest profile and normalized status
         const existingUserData = getJSONCookie('user_data') || {};
         setJSONCookie('user_data', { ...existingUserData, ...profile, verificationStatus: backendStatus }, 7);
@@ -406,13 +415,25 @@ const AvailableOrders = () => {
       const response = await acceptDeliveryJob(deliveryId);
       console.log('[AvailableOrders] Job accepted:', response);
 
+      // Extract canonical delivery object/id from API response if available
+      const respDelivery = response?.data?.delivery || response?.data || response;
+      const acceptedId = respDelivery?._id || respDelivery?.id || respDelivery?.deliveryId || deliveryId;
+
       setToastMsg('Order accepted successfully!');
       setShowToast(true);
 
-      setOrders(prev => prev.filter(order => (order._id || order.id) !== deliveryId));
+      // Remove order from local list by matching on canonical id or the original id
+      setOrders(prev => prev.filter(order => {
+        const oid = order._id || order.id || order.deliveryId;
+        return !(String(oid) === String(acceptedId) || String(oid) === String(deliveryId));
+      }));
 
       // Dispatch accepted event including delivery type and order payload so other clients can react
-      window.dispatchEvent(new CustomEvent('delivery:accepted', { detail: { deliveryId, deliveryType: acceptedOrder?.deliveryType || acceptedOrder?.type || null, order: acceptedOrder || null } }));
+      const acceptedDetail = { deliveryId: acceptedId, deliveryType: acceptedOrder?.deliveryType || acceptedOrder?.type || null, order: acceptedOrder || respDelivery || null };
+      window.dispatchEvent(new CustomEvent('delivery:accepted', { detail: acceptedDetail }));
+
+      // NOTE: Do not emit delivery:accepted from the rider client —
+      // the backend must emit to the customer room after accepting the job.
       // Navigate rider to Active Deliveries and let ActiveDeliveries refresh on event
       try {
         router.push('/rider/active', 'forward', 'push');

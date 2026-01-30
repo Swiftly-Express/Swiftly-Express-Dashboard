@@ -11,7 +11,8 @@ import GoogleMapsAutocomplete from '../../components/GoogleMapsAutocomplete';
 import StyledDropdown from '../../components/StyledDropdown';
 import axios from 'axios';
 import { getCookie, setCookie, deleteCookie } from '../../utils/cookies';
-import { createDelivery, cancelDelivery, isAuthenticated, getDeliveryEstimate } from '../../utils/authApi';
+import { createDelivery, cancelDelivery, isAuthenticated, getDeliveryEstimate, getDeliveryById } from '../../utils/authApi';
+import socketService from '../../services/socket.service';
 import { calculateDistance } from '../../utils/pricing';
 
 const API_BASE = import.meta.env.VITE_API_BASE_URL || 'https://api.swiftlyxpress.com';
@@ -157,18 +158,108 @@ export default function SmartRideBooking({ embedMode = false, initialData = {}, 
 
     // Listen for rider acceptance events - show rider-found only when the created delivery is accepted
     useEffect(() => {
-        const onDeliveryAccepted = (e) => {
-            const acceptedId = e?.detail?.deliveryId || e?.detail?.deliveryId || e?.detail?.delivery?._id || e?.detail?.delivery?.id;
-            if (!acceptedId) return;
-            if (deliveryId && String(acceptedId) === String(deliveryId)) {
+        const onDeliveryAccepted = async (e) => {
+            console.log('[SmartRide] 📢 delivery:accepted event received:', e?.detail);
+            const detail = e?.detail || {};
+
+            // Collect many possible id fields that backends/clients may use
+            const candidateIds = [
+                detail.deliveryId,
+                detail.delivery?._id,
+                detail.delivery?.id,
+                detail._id,
+                detail.id,
+                detail.order?._id,
+                detail.order?.id,
+                detail.order?.deliveryId,
+                detail.order?.trackingNumber,
+                detail.trackingNumber
+            ].filter(Boolean).map(String);
+
+            const storedId = String(deliveryId || localStorage.getItem('smartride_delivery_id') || '');
+            console.log('[SmartRide] Comparing candidate IDs to storedId:', { candidateIds, storedId, deliveryId });
+
+            const directMatch = storedId && candidateIds.some(id => String(id) === String(storedId));
+            if (directMatch) {
+                console.log('[SmartRide] ✅ Direct ID match found — moving to rider-found');
                 setIsSearching(false);
                 setCurrentStep('rider-found');
-                try { localStorage.removeItem('smartride_delivery_id'); } catch (e) { }
+                try {
+                    localStorage.setItem('smartride_step', 'rider-found');
+                    localStorage.setItem('smartride_rider_details', JSON.stringify(detail?.rider || {}));
+                } catch (err) { console.warn('[SmartRide] Failed to store rider details:', err); }
+                return;
             }
+
+            // If not a direct id match, attempt to match by payload (phones or addresses) as a fallback
+            try {
+                const order = detail.order || detail.delivery || null;
+                if (order) {
+                    const orderSender = (order.senderPhone || order.sender || order.fromPhone || order.from?.phone || order.fromPhoneNumber || '').toString();
+                    const orderRecipient = (order.recipientPhone || order.toPhone || order.to?.phone || order.recipientPhoneNumber || '').toString();
+                    const formSender = (formData.senderPhone || '').toString();
+                    const formRecipient = (formData.recipientPhone || '').toString();
+
+                    if (storedId && ((orderSender && formSender && orderSender === formSender) || (orderRecipient && formRecipient && orderRecipient === formRecipient))) {
+                        console.log('[SmartRide] ✅ Payload phone match — moving to rider-found');
+                        setIsSearching(false);
+                        setCurrentStep('rider-found');
+                        try {
+                            localStorage.setItem('smartride_step', 'rider-found');
+                            localStorage.setItem('smartride_rider_details', JSON.stringify(detail?.rider || {}));
+                        } catch (err) { console.warn('[SmartRide] Failed to store rider details:', err); }
+                        return;
+                    }
+                }
+            } catch (err) {
+                console.warn('[SmartRide] Payload matching failed:', err);
+            }
+
+            // Last-resort: validate stored delivery from API and see if its id now appears in the event payload
+            if (storedId) {
+                try {
+                    const resp = await getDeliveryById(storedId);
+                    const storedDelivery = resp?.data?.delivery || resp?.data || resp;
+                    const storedCanonicalId = storedDelivery?._id || storedDelivery?.id || storedDelivery?.deliveryId || storedDelivery?.trackingNumber;
+                    if (storedCanonicalId && candidateIds.some(id => String(id) === String(storedCanonicalId))) {
+                        console.log('[SmartRide] ✅ Matched via backend-validated canonical id — moving to rider-found');
+                        setIsSearching(false);
+                        setCurrentStep('rider-found');
+                        try {
+                            localStorage.setItem('smartride_step', 'rider-found');
+                            localStorage.setItem('smartride_rider_details', JSON.stringify(detail?.rider || {}));
+                        } catch (err) { console.warn('[SmartRide] Failed to store rider details:', err); }
+                        return;
+                    }
+                } catch (err) {
+                    console.warn('[SmartRide] Failed to validate stored delivery id via API:', err);
+                }
+            }
+
+            console.log('[SmartRide] No match for delivery:accepted event — ignoring');
         };
 
         window.addEventListener('delivery:accepted', onDeliveryAccepted);
-        return () => window.removeEventListener('delivery:accepted', onDeliveryAccepted);
+
+        // Also listen for socket events directly. Ensure socket is connected so listeners register.
+        const handleSocketAcceptance = (data) => {
+            console.log('[SmartRide] 🔌 Socket delivery:accepted received:', data);
+            onDeliveryAccepted({ detail: data });
+        };
+
+        try {
+            socketService.connect();
+            socketService.on('delivery:accepted', handleSocketAcceptance);
+        } catch (e) {
+            console.warn('[SmartRide] Socket listener failed:', e);
+        }
+
+        return () => {
+            window.removeEventListener('delivery:accepted', onDeliveryAccepted);
+            try {
+                socketService.off('delivery:accepted', handleSocketAcceptance);
+            } catch (e) { }
+        };
     }, [deliveryId]);
 
     // Add this at the top of SmartRideBooking component, right after the state declarations
@@ -197,18 +288,70 @@ export default function SmartRideBooking({ embedMode = false, initialData = {}, 
         }
     }, [router]);
 
-    // Restore SmartRide session on refresh: if a delivery id exists in localStorage, resume finding state
+    // Restore SmartRide session on refresh: validate stored delivery id before resuming finding state
     useEffect(() => {
-        try {
-            const stored = localStorage.getItem('smartride_delivery_id');
-            if (stored) {
-                setDeliveryId(stored);
-                setCurrentStep('finding-rider');
-                setIsSearching(true);
+        let mounted = true;
+        (async () => {
+            try {
+                const stored = localStorage.getItem('smartride_delivery_id');
+                const storedStep = localStorage.getItem('smartride_step');
+                if (!stored) return;
+
+                // Validate delivery exists and is still in an active matching state
+                try {
+                    const resp = await getDeliveryById(stored);
+                    const delivery = resp?.data?.delivery || resp?.data || resp;
+                    const type = (delivery?.deliveryType || delivery?.type || '').toString().toLowerCase();
+                    const status = (delivery?.status || '').toString().toLowerCase();
+
+                    const finalStatuses = ['delivered', 'cancelled', 'completed', 'expired', 'failed'];
+                    if (type !== 'smart_ride' || finalStatuses.includes(status)) {
+                        try {
+                            localStorage.removeItem('smartride_delivery_id');
+                            localStorage.removeItem('smartride_step');
+                            localStorage.removeItem('smartride_rider_details');
+                        } catch (e) { }
+                        return;
+                    }
+
+                    if (mounted) {
+                        setDeliveryId(stored);
+
+                        // Ensure we join the delivery room so server can target events to this client
+                        try {
+                            const room = `delivery:${stored}`;
+                            socketService.connect();
+                            const onConnectJoin = () => {
+                                try { socketService.joinRoom(room); } catch (e) { console.warn('[SmartRide] joinRoom failed on connect:', e); }
+                                try { socketService.off('connect', onConnectJoin); } catch (e) { }
+                            };
+                            try { socketService.on('connect', onConnectJoin); } catch (e) { }
+                            try { socketService.joinRoom(room); } catch (e) { }
+                        } catch (e) { console.warn('[SmartRide] Failed to join stored delivery room:', e); }
+
+                        // Restore to appropriate step based on delivery status
+                        if (status === 'accepted' || status === 'in_progress' || storedStep === 'rider-found') {
+                            setCurrentStep('rider-found');
+                            setIsSearching(false);
+                        } else {
+                            setCurrentStep('finding-rider');
+                            setIsSearching(true);
+                        }
+                    }
+                } catch (e) {
+                    // If fetching the delivery failed (not found or no access), clear stored id
+                    try {
+                        localStorage.removeItem('smartride_delivery_id');
+                        localStorage.removeItem('smartride_step');
+                        localStorage.removeItem('smartride_rider_details');
+                    } catch (er) { }
+                }
+            } catch (e) {
+                // ignore
             }
-        } catch (e) {
-            // ignore
-        }
+        })();
+
+        return () => { mounted = false; };
     }, []);
 
     const handleChange = (e) => {
@@ -403,6 +546,18 @@ export default function SmartRideBooking({ embedMode = false, initialData = {}, 
                 localStorage.setItem('smartride_delivery_id', String(dId));
             } catch (e) { }
 
+            // Join delivery-specific socket room so server can target events to this customer
+            try {
+                const room = `delivery:${dId}`;
+                socketService.connect();
+                const onConnectJoin = () => {
+                    try { socketService.joinRoom(room); } catch (e) { console.warn('[SmartRide] joinRoom failed on connect:', e); }
+                    try { socketService.off('connect', onConnectJoin); } catch (e) { }
+                };
+                try { socketService.on('connect', onConnectJoin); } catch (e) { }
+                try { socketService.joinRoom(room); } catch (e) { /* join will be attempted on connect */ }
+            } catch (e) { console.warn('[SmartRide] Failed to join delivery room:', e); }
+
             // Notify other parts of the app and remain in 'finding-rider' until a rider accepts
             window.dispatchEvent(new Event('deliveries:refresh'));
             window.dispatchEvent(new CustomEvent('delivery:created', { detail: createResp?.data || createResp }));
@@ -521,6 +676,21 @@ export default function SmartRideBooking({ embedMode = false, initialData = {}, 
             // Payment is optional for SmartRide — finalize booking now and allow payment later
             window.dispatchEvent(new Event('deliveries:refresh'));
             window.dispatchEvent(new CustomEvent('delivery:created', { detail: createResp?.data || createResp }));
+            try {
+                localStorage.setItem('smartride_delivery_id', String(dId));
+            } catch (e) { }
+
+            // Join delivery-specific room so customer receives backend-emitted events
+            try {
+                const room = `delivery:${dId}`;
+                socketService.connect();
+                const onConnectJoin = () => {
+                    try { socketService.joinRoom(room); } catch (e) { console.warn('[SmartRide] joinRoom failed on connect:', e); }
+                    try { socketService.off('connect', onConnectJoin); } catch (e) { }
+                };
+                try { socketService.on('connect', onConnectJoin); } catch (e) { }
+                try { socketService.joinRoom(room); } catch (e) { }
+            } catch (e) { console.warn('[SmartRide] Failed to join delivery room:', e); }
             setToastMsg('Delivery booked successfully!');
             setShowToast(true);
             setIsProcessingPayment(false);
@@ -722,7 +892,23 @@ export default function SmartRideBooking({ embedMode = false, initialData = {}, 
                                 <button
                                     type="button"
                                     aria-label="Close"
-                                    onClick={() => {
+                                    onClick={async () => {
+                                        // If in finding/found state, cancel the smart ride delivery
+                                        if ((currentStep === 'finding-rider' || currentStep === 'rider-found') && deliveryId) {
+                                            try {
+                                                await cancelDelivery(deliveryId);
+                                            } catch (e) {
+                                                console.warn('[SmartRide] Cancel delivery failed:', e);
+                                            }
+                                            try { localStorage.removeItem('smartride_delivery_id'); } catch (e) { }
+                                            // Notify other clients and server
+                                            try { socketService.connect(); socketService.emit('delivery:cancelled', { deliveryId }); } catch (e) { }
+                                            try { window.dispatchEvent(new CustomEvent('delivery:cancelled', { detail: { deliveryId } })); } catch (e) { }
+                                            setIsSearching(false);
+                                            setCurrentStep('form');
+                                            return;
+                                        }
+
                                         if (embedMode && typeof onClose === 'function') return onClose();
                                         return router.goBack();
                                     }}
@@ -1723,7 +1909,40 @@ export default function SmartRideBooking({ embedMode = false, initialData = {}, 
                                 <button
                                     type="button"
                                     aria-label="Close"
-                                    onClick={() => {
+                                    onClick={async () => {
+                                        // FIXED: Enhanced cancel logic to remove from available orders
+                                        if ((currentStep === 'finding-rider' || currentStep === 'rider-found') && deliveryId) {
+                                            try {
+                                                console.log('[SmartRide] 🚫 Cancelling delivery:', deliveryId);
+                                                await cancelDelivery(deliveryId, { reason: 'user_cancelled' });
+
+                                                // Clear all SmartRide session data
+                                                try {
+                                                    localStorage.removeItem('smartride_delivery_id');
+                                                    localStorage.removeItem('smartride_step');
+                                                    localStorage.removeItem('smartride_rider_details');
+                                                } catch (e) { }
+
+                                                // Notify system that delivery was cancelled
+                                                try {
+                                                    socketService.connect();
+                                                    socketService.emit('delivery:cancelled', { deliveryId });
+                                                } catch (e) { }
+
+                                                try {
+                                                    window.dispatchEvent(new CustomEvent('delivery:cancelled', { detail: { deliveryId } }));
+                                                } catch (e) { }
+
+                                                setIsSearching(false);
+                                                setDeliveryId(null);
+                                            } catch (e) {
+                                                console.warn('[SmartRide] Cancel delivery failed:', e);
+                                            }
+                                        }
+
+                                        // Reset to initial state
+                                        setCurrentStep('form');
+
                                         if (embedMode && typeof onClose === 'function') return onClose();
                                         return router.goBack();
                                     }}
@@ -1766,10 +1985,15 @@ export default function SmartRideBooking({ embedMode = false, initialData = {}, 
                                                 <>
                                                     <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-[#00D68F] mx-auto mb-4"></div>
                                                     <h2 className="text-2xl font-semibold text-gray-900 mb-2">Finding Nearby Riders</h2>
+                                                    <p className="text-sm text-gray-600">Looking for available riders in your area...</p>
                                                 </>
                                             ) : (
                                                 <>
-                                                    <h2 className="text-2xl font-semibold text-gray-900 mb-2">Rider Found 🎉</h2>
+                                                    <div className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                                                        <CheckCircle className="w-10 h-10 text-green-600" />
+                                                    </div>
+                                                    <h2 className="text-2xl font-semibold text-gray-900 mb-2">Rider Found! 🎉</h2>
+                                                    <p className="text-sm text-gray-600">A rider has accepted your delivery</p>
                                                 </>
                                             )}
                                         </div>
@@ -1777,10 +2001,6 @@ export default function SmartRideBooking({ embedMode = false, initialData = {}, 
                                 )}
                             </div>
                         </div>
-
-                        {/* Small accessible summary moved into map overlay; duplicate block removed */}
-
-                        {/* Priority upsell removed for SmartRide */}
 
                         {/* Skeleton placeholders when searching (pulled closer to map) */}
                         {isSearching && (
