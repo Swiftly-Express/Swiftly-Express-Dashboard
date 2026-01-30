@@ -51,7 +51,7 @@ const StatCard = ({ icon, title, value, subtitle, iconBg }) => (
   </div>
 );
 
-  const DeliveryCard = ({ packageId, status, from, to, customer, price, distance, time, statusColor, deliveryId, deliveryRaw, onStatusUpdated }) => {
+const DeliveryCard = ({ packageId, status, from, to, customer, price, distance, time, statusColor, deliveryId, deliveryRaw, onStatusUpdated }) => {
   const [contactOpen, setContactOpen] = useState(false);
   const router = useIonRouter();
 
@@ -64,7 +64,7 @@ const StatCard = ({ icon, title, value, subtitle, iconBg }) => (
       } catch (e) { return null; }
     };
 
-    const candidates = ['senderPhone','recipientPhone','customerPhone','phone','contact','fromPhone','toPhone','payload.senderPhone','payload.recipientPhone','order.senderPhone','order.recipientPhone'];
+    const candidates = ['senderPhone', 'recipientPhone', 'customerPhone', 'phone', 'contact', 'fromPhone', 'toPhone', 'payload.senderPhone', 'payload.recipientPhone', 'order.senderPhone', 'order.recipientPhone'];
     for (const p of candidates) {
       const v = get(obj, p);
       if (v && /[0-9]/.test(String(v))) return String(v).trim();
@@ -648,7 +648,7 @@ const Dashboard = () => {
                     'assigned': 'bg-gray-100 text-gray-600'
                   };
 
-                    return (
+                  return (
                     <DeliveryCard
                       key={delivery._id || delivery.id}
                       deliveryId={delivery._id || delivery.id}
