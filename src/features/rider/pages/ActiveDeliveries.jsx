@@ -27,28 +27,50 @@ const extractPhone = (delivery, role = 'pickup') => {
 
   console.log('[extractPhone] Extracting phone for role:', role);
 
-  // Quick direct checks for the most common form fields
-  const directChecks = [
+  // Helper to resolve dotted paths safely
+  const getNestedValue = (obj, path) => {
+    try {
+      const parts = path.split('.');
+      let cur = obj;
+      for (const p of parts) {
+        if (!cur) return null;
+        cur = cur[p];
+      }
+      return cur;
+    } catch (e) {
+      return null;
+    }
+  };
+
+  // Candidate paths that commonly store the form values or booking payload
+  const candidatePaths = [
     'senderPhone', 'senderPhoneNumber', 'recipientPhone', 'recipientPhoneNumber',
-    'pickupPhone', 'deliveryPhone', 'fromPhone', 'toPhone'
+    'pickupPhone', 'deliveryPhone', 'fromPhone', 'toPhone',
+    // common containers
+    'order.senderPhone', 'order.recipientPhone', 'booking.senderPhone', 'booking.recipientPhone',
+    'data.senderPhone', 'data.recipientPhone', 'payload.senderPhone', 'payload.recipientPhone',
+    'attributes.senderPhone', 'attributes.recipientPhone', 'meta.senderPhone', 'meta.recipientPhone',
+    // nested sender/recipient objects
+    'sender.phone', 'sender.phoneNumber', 'sender.contact', 'recipient.phone', 'recipient.phoneNumber', 'recipient.contact',
+    'pickup.phone', 'pickup.phoneNumber', 'dropoff.phone', 'dropoff.phoneNumber', 'deliveryAddress.phone', 'pickupAddress.phone'
   ];
 
-  for (const key of directChecks) {
-    if (delivery[key]) {
-      const s = String(delivery[key]).trim();
+  // Check candidate paths first (prioritize form fields)
+  for (const p of candidatePaths) {
+    const v = getNestedValue(delivery, p);
+    if (v) {
+      const s = String(v).trim();
       if (/[0-9]/.test(s)) return s;
     }
   }
 
-  // Prefer sender/recipient depending on role
+  // Prefer sender/recipient depending on role if still not found
   if (role === 'pickup') {
-    if (delivery.senderPhone) return String(delivery.senderPhone).trim();
-    if (delivery.pickup?.phone) return String(delivery.pickup.phone).trim();
-    if (delivery.from?.phone) return String(delivery.from.phone).trim();
+    const v = getNestedValue(delivery, 'senderPhone') || getNestedValue(delivery, 'sender.phone') || getNestedValue(delivery, 'pickup.phone') || getNestedValue(delivery, 'from.phone');
+    if (v && /[0-9]/.test(String(v))) return String(v).trim();
   } else {
-    if (delivery.recipientPhone) return String(delivery.recipientPhone).trim();
-    if (delivery.dropoff?.phone) return String(delivery.dropoff.phone).trim();
-    if (delivery.to?.phone) return String(delivery.to.phone).trim();
+    const v = getNestedValue(delivery, 'recipientPhone') || getNestedValue(delivery, 'recipient.phone') || getNestedValue(delivery, 'dropoff.phone') || getNestedValue(delivery, 'to.phone');
+    if (v && /[0-9]/.test(String(v))) return String(v).trim();
   }
 
   // Recursive scan: find first property whose key contains 'phone' or 'contact' and value contains digits
