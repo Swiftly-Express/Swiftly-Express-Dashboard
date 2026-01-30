@@ -55,12 +55,48 @@ const extractPhone = (delivery, role = 'pickup') => {
     'pickup.phone', 'pickup.phoneNumber', 'dropoff.phone', 'dropoff.phoneNumber', 'deliveryAddress.phone', 'pickupAddress.phone'
   ];
 
-  // Check candidate paths first (prioritize form fields)
+  // Strongly prioritized exact paths (prefer these — they match where the booking form writes values)
+  const prioritizedPickup = [
+    'senderPhone', 'data.senderPhone', 'payload.senderPhone', 'order.senderPhone', 'booking.senderPhone', 'attributes.senderPhone', 'meta.senderPhone',
+    'sender.phone', 'sender.phoneNumber', 'pickup.phone', 'pickup.phoneNumber', 'pickupPhone'
+  ];
+  const prioritizedDelivery = [
+    'recipientPhone', 'data.recipientPhone', 'payload.recipientPhone', 'order.recipientPhone', 'booking.recipientPhone', 'attributes.recipientPhone', 'meta.recipientPhone',
+    'recipient.phone', 'recipient.phoneNumber', 'dropoff.phone', 'dropoff.phoneNumber', 'deliveryPhone'
+  ];
+
+  const tryPaths = (paths) => {
+    for (const p of paths) {
+      const v = getNestedValue(delivery, p);
+      if (v) {
+        const s = String(v).trim();
+        if (/[0-9]/.test(s)) {
+          console.log(`[extractPhone] Found phone at path '${p}':`, s);
+          return s;
+        }
+      }
+    }
+    return null;
+  };
+
+  // Prefer prioritized lists first depending on role
+  if (role === 'pickup') {
+    const p = tryPaths(prioritizedPickup);
+    if (p) return p;
+  } else {
+    const p = tryPaths(prioritizedDelivery);
+    if (p) return p;
+  }
+
+  // Check other candidate paths if prioritized ones didn't yield a result
   for (const p of candidatePaths) {
     const v = getNestedValue(delivery, p);
     if (v) {
       const s = String(v).trim();
-      if (/[0-9]/.test(s)) return s;
+      if (/[0-9]/.test(s)) {
+        console.log(`[extractPhone] Found phone at candidate path '${p}':`, s);
+        return s;
+      }
     }
   }
 
@@ -480,6 +516,11 @@ const ActiveDeliveries = () => {
 
   const filteredDeliveries = filterDeliveriesByTab();
 
+  // Debug: surface which phone values are used for this card
+  try {
+    console.log('[DeliveryCard] deliveryId:', deliveryId, 'pickupPhone:', pickupPhone, 'deliveryPhone:', deliveryPhone);
+  } catch (e) { }
+
   return (
     <IonPage>
       <RiderLayout>
@@ -711,23 +752,11 @@ const DeliveryCard = ({
   deliveryRaw
 }) => {
   const [showMapFull, setShowMapFull] = useState(false);
-  const [touchStartY, setTouchStartY] = useState(null);
 
   const openMap = () => setShowMapFull(true);
   const closeMap = () => setShowMapFull(false);
 
-  const handleTouchStart = (e) => {
-    const y = e.touches && e.touches[0] && e.touches[0].clientY;
-    setTouchStartY(y);
-  };
-
-  const handleTouchMove = (e) => {
-    if (!touchStartY) return;
-    const y = e.touches && e.touches[0] && e.touches[0].clientY;
-    if (y - touchStartY > 80) {
-      closeMap();
-    }
-  };
+  // swipe-to-close removed; map closes only via X button
 
   return (
     <div id={`delivery-${deliveryId}`} className={isMobile ? "bg-white rounded-2xl mb-4 overflow-hidden ml-0.5 -mr-1" : "bg-white rounded-2xl mb-6 overflow-hidden ml-0.5"} style={sideBottomShadow}>
@@ -1001,18 +1030,13 @@ const DeliveryCard = ({
         </YummyText>
 
         {showMapFull && (
-          <div
-            className="fixed inset-0 bg-black/70 flex items-start justify-center"
-            style={{ zIndex: 99999 }}
-            onTouchStart={handleTouchStart}
-            onTouchMove={handleTouchMove}
-          >
+          <div className="fixed inset-0 bg-black/70 flex items-start justify-center" style={{ zIndex: 99999 }}>
             <div className="relative w-full h-full max-w-4xl bg-white">
               <button
                 onClick={closeMap}
                 aria-label="Close map"
-                className="absolute top-3 right-3 bg-white rounded-full p-2 shadow"
-                style={{ width: 40, height: 40, color: '#0A0A0A', fontSize: 18, lineHeight: '18px' }}
+                className="fixed top-4 right-4 z-[100000] bg-white rounded-full p-2 shadow-lg flex items-center justify-center"
+                style={{ width: 44, height: 44, color: '#0A0A0A', fontSize: 20, lineHeight: '20px' }}
               >
                 ×
               </button>
