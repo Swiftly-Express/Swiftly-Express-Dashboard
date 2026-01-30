@@ -109,13 +109,14 @@ const Support = () => {
             s.onload = () => { window._smartsuppLoaded = true; window._smartsuppLoadedBySupportPage = true; resolve(); };
             s.onerror = (err) => reject(err);
             s.setAttribute('data-smartsupp-loader', '1');
-            document.head.appendChild(s);
+            document.head.appendChild(s); 
           });
         } else {
           window._smartsuppLoadedBySupportPage = true;
         }
 
-        try { if (typeof window.smartsupp === 'function') { try { window.smartsupp('chat:open'); } catch (e) { } try { window.smartsupp('open'); } catch (e) { } } } catch (e) { }
+        try { if (typeof window.smartsupp === 'function') 
+          { try { window.smartsupp('chat:open'); } catch (e) { } try { window.smartsupp('open'); } catch (e) { } } } catch (e) { }
         try { if (window._smartsupp && typeof window._smartsupp.open === 'function') window._smartsupp.open(); } catch (e) { }
         try { const el = document.querySelector('.smartsupp-launcher, .smartsupp-button, [data-smartsupp]'); if (el) el.click(); } catch (e) { }
       } catch (err) {
