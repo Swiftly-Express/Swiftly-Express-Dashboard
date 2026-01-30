@@ -713,8 +713,86 @@ const AvailableOrders = () => {
                   <div className="text-sm text-[#0F172A] mb-2">Delivery: {selectedOrder.deliveryAddress?.street || selectedOrder.deliveryAddress || selectedOrder.deliveryName}</div>
                   <div className="text-sm text-[#64748B] mb-2">Distance: {selectedOrder.distance || 'N/A'}</div>
 
-                  {/* Calculated route distance + Potential earnings breakdown */}
+                  {/* Show uploaded image (if any) instead of earnings/route breakdown */}
                   {(() => {
+                    const findImage = (o) => {
+                      if (!o) return null;
+                      const candidates = [
+                        'image', 'images', 'packageImage', 'package?.image', 'package_image', 'payload.image', 'data.image', 'imageUrl', 'image_url'
+                      ];
+                      for (const k of candidates) {
+                        try {
+                          if (k.includes('?')) {
+                            // support optional chaining like 'package?.image'
+                            const parts = k.replace('?.', '.').split('.');
+                            let cur = o;
+                            for (const p of parts) {
+                              if (!cur) { cur = null; break; }
+                              cur = cur[p];
+                            }
+                            if (cur) return cur;
+                          } else if (k === 'images' && Array.isArray(o.images) && o.images.length > 0) {
+                            return o.images[0];
+                          } else if (o[k]) return o[k];
+                        } catch (e) { /* ignore */ }
+                      }
+                      // fallback: try nested package or payload objects
+                      if (o.package && (o.package.image || o.package.images)) return o.package.image || (Array.isArray(o.package.images) ? o.package.images[0] : null);
+                      if (o.payload && (o.payload.image || o.payload.images)) return o.payload.image || (Array.isArray(o.payload.images) ? o.payload.images[0] : null);
+                      return null;
+                    };
+
+                    const img = findImage(selectedOrder);
+                    if (img) {
+                      const src = typeof img === 'string' ? img : (img.url || img.path || img.src || null);
+                      if (src) {
+                        return (
+                          <div className="mb-2">
+                            <div className="text-xs text-[#64748B] mb-2">Uploaded package image</div>
+                            <div className="w-full h-48 rounded-lg overflow-hidden bg-gray-100 flex items-center justify-center">
+                              <img src={src} alt="Package" className="w-full h-full object-cover" />
+                            </div>
+                          </div>
+                        );
+                      }
+                    }
+
+                    // Deep-scan for any URL-like image string anywhere in the object
+                    const urlHint = /https?:\/\/.+\.(jpe?g|png|webp|gif|svg)(\?.*)?$/i;
+                    const shallowHint = /(uploads|images|cdn|s3)\/.+\.(jpe?g|png|webp|gif|svg)/i;
+                    const seen = new Set();
+                    const findUrl = (obj) => {
+                      if (!obj || typeof obj !== 'object' || seen.has(obj)) return null;
+                      seen.add(obj);
+                      for (const k of Object.keys(obj)) {
+                        try {
+                          const v = obj[k];
+                          if (!v) continue;
+                          if (typeof v === 'string') {
+                            const s = v.trim();
+                            if (urlHint.test(s) || shallowHint.test(s)) return s;
+                          } else if (typeof v === 'object') {
+                            const nested = findUrl(v);
+                            if (nested) return nested;
+                          }
+                        } catch (e) { }
+                      }
+                      return null;
+                    };
+
+                    const deepUrl = findUrl(selectedOrder);
+                    if (deepUrl) {
+                      return (
+                        <div className="mb-2">
+                          <div className="text-xs text-[#64748B] mb-2">Uploaded package image</div>
+                          <div className="w-full h-48 rounded-lg overflow-hidden bg-gray-100 flex items-center justify-center">
+                            <img src={deepUrl} alt="Package" className="w-full h-full object-cover" />
+                          </div>
+                        </div>
+                      );
+                    }
+
+                    // If no image found, fall back to showing the old breakdown info
                     const pickupCoords = extractCoords(selectedOrder, 'pickup');
                     const deliveryCoords = extractCoords(selectedOrder, 'delivery');
                     const calculatedKm = calculateHaversineKm(pickupCoords, deliveryCoords);

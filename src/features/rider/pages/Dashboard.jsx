@@ -7,7 +7,8 @@ import BlockIcon from "../../../icons/Blockicon";
 import NairaIcon from "../../../icons/Nairaicon";
 import AnalyticsIcon from "../../../icons/Analyticsicon";
 import VerificationPromptModal from '../components/VerificationPromptModal';
-import { getRiderProfile, getRiderDeliveries, getAvailableJobs, getRiderEarnings, getRiderVerificationStatus, acceptDeliveryJob } from '../../../utils/authApi';
+import { getRiderProfile, getRiderDeliveries, getAvailableJobs, getRiderEarnings, getRiderVerificationStatus, acceptDeliveryJob, updateDeliveryStatus } from '../../../utils/authApi';
+import CheckCircleIcon from '../../../icons/Circlecheck';
 import { getCookie, setCookie, getJSONCookie } from '../../../utils/cookies';
 
 // Shadow only on left, right and bottom - no top shadow for seamless blend
@@ -50,42 +51,166 @@ const StatCard = ({ icon, title, value, subtitle, iconBg }) => (
   </div>
 );
 
-const DeliveryCard = ({ packageId, status, from, to, customer, price, distance, time, statusColor }) => (
-  <div className="bg-gradient-to-br from-[#EFF6FF] to-[#EDFFF9] rounded-2xl p-3 md:p-5 mb-4">
-    <YummyText>
-      <div className="flex items-start justify-between -mb-4">
-        <div className="flex items-center gap-3">
-          <div className="text-base font-normal text-[#0F172A]">{packageId}</div>
-          <span className={`px-3 py-1 rounded-full text-xs font-normal ${statusColor}`}>
-            {status}
-          </span>
-        </div>
-        <div className="text-right">
-          <div className="text-xl font-sm text-[#00A63E]">{price}</div>
-          <div className="text-xs text-[#64748B]">{distance} · {time}</div>
-        </div>
-      </div>
+  const DeliveryCard = ({ packageId, status, from, to, customer, price, distance, time, statusColor, deliveryId, deliveryRaw, onStatusUpdated }) => {
+  const [contactOpen, setContactOpen] = useState(false);
+  const router = useIonRouter();
 
-      <div className="space-y-1 mb-4">
-        <div className="text-xs text-[#0F172A]">From: <span className="text-[#0F172A]">{from}</span></div>
-        <div className="text-xs text-[#0F172A]">To: <span className="text-[#0F172A]">{to}</span></div>
-        <div className="text-xs text-[#0F172A]">Customer: <span className="text-[#0F172A]">{customer}</span></div>
-      </div>
+  // Robust phone extractor for dashboard card
+  const findPhone = (obj) => {
+    if (!obj) return null;
+    const get = (o, path) => {
+      try {
+        return path.split('.').reduce((a, b) => (a && a[b] !== undefined) ? a[b] : null, o);
+      } catch (e) { return null; }
+    };
 
-      <div className="flex flex-col gap-3 md:flex-row md:items-center">
-        <button className="w-full md:flex-1 bg-[#00B75A] text-sm hover:bg-[#00B876] text-medium text-white py-2 rounded-xl transition-colors font-[400]">
-          Navigate
-        </button>
-        <button className="w-full md:flex-1 py-2 bg-white text-sm hover:bg-[#FFFFFF] rounded-xl transition-colors text-[#0A0A0A] font-[400]" style={{ border: "1px solid #0000001A" }}>
-          Contact Customer
-        </button>
-        <button className="w-full md:w-auto px-3 py-2 bg-white text-sm hover:bg-[#FFFFFF] rounded-xl transition-colors text-[#0A0A0A] font-[400]" style={{ border: "1px solid #0000001A" }}>
-          Update Status
-        </button>
-      </div>
-    </YummyText>
-  </div>
-);
+    const candidates = ['senderPhone','recipientPhone','customerPhone','phone','contact','fromPhone','toPhone','payload.senderPhone','payload.recipientPhone','order.senderPhone','order.recipientPhone'];
+    for (const p of candidates) {
+      const v = get(obj, p);
+      if (v && /[0-9]/.test(String(v))) return String(v).trim();
+    }
+
+    // recursive scan for keys with 'phone' or 'contact'
+    const seen = new Set();
+    const keyHint = /(phone|contact)/i;
+    const phoneRegex = /[0-9]/;
+    const scan = (o) => {
+      if (!o || typeof o !== 'object' || seen.has(o)) return null;
+      seen.add(o);
+      for (const k of Object.keys(o)) {
+        try {
+          const v = o[k];
+          if (!v) continue;
+          if (typeof v === 'string' || typeof v === 'number') {
+            const s = String(v).trim();
+            if (keyHint.test(k) && phoneRegex.test(s)) return s;
+          } else if (typeof v === 'object') {
+            const nested = scan(v);
+            if (nested) return nested;
+          }
+        } catch (e) { }
+      }
+      return null;
+    };
+    return scan(obj) || null;
+  };
+
+  const handleNavigate = () => {
+    try {
+      // Navigate to Active Deliveries and include hash so ActiveDeliveries can scroll into view
+      router.push(`/rider/active#delivery-${deliveryId}`, 'forward', 'push');
+    } catch (e) {
+      window.location.href = `/rider/active#delivery-${deliveryId}`;
+    }
+  };
+
+  const cleanNumber = (v) => typeof v === 'string' ? v.replace(/[^0-9+]/g, '') : (v ? String(v).replace(/[^0-9+]/g, '') : '');
+
+  const handleCall = () => {
+    const raw = findPhone(deliveryRaw) || deliveryRaw?.phone || deliveryRaw?.contact || '';
+    const num = cleanNumber(raw);
+    if (!num) return alert('Phone number not available');
+    try {
+      window.location.href = `tel:${num}`;
+    } catch (e) {
+      try { navigator.clipboard.writeText(num); alert(`Phone copied: ${num}`); } catch (er) { alert(num); }
+    }
+  };
+
+  const handleMessage = () => {
+    const raw = findPhone(deliveryRaw) || deliveryRaw?.phone || deliveryRaw?.contact || '';
+    const num = cleanNumber(raw);
+    if (!num) return alert('Phone number not available');
+    window.open(`https://wa.me/${num.replace(/^\+/, '')}`, '_blank');
+  };
+
+  const handleUpdate = async () => {
+    try {
+      const statusLower = (status || '').toLowerCase();
+      let newStatus = 'picked-up';
+      if (statusLower.includes('assigned') || statusLower.includes('pending')) newStatus = 'picked-up';
+      else if (statusLower.includes('picked')) newStatus = 'in-transit';
+      else if (statusLower.includes('transit') || statusLower.includes('in-transit')) newStatus = 'delivered';
+
+      // Backend usually requires currentLocation; mirror ActiveDeliveries behavior to request geolocation
+      let location = null;
+      if (navigator.geolocation) {
+        try {
+          const pos = await new Promise((resolve, reject) => {
+            navigator.geolocation.getCurrentPosition(resolve, reject, { enableHighAccuracy: false, timeout: 10000, maximumAge: 60000 });
+          });
+          location = { lat: pos.coords.latitude, lng: pos.coords.longitude };
+        } catch (err) {
+          console.warn('[Dashboard] Geolocation failed for status update:', err);
+        }
+      }
+
+      const payload = location ? { status: newStatus, currentLocation: location } : { status: newStatus };
+
+      await updateDeliveryStatus(deliveryId, payload);
+      if (onStatusUpdated) onStatusUpdated();
+    } catch (e) {
+      console.error('[Dashboard] Failed to update status:', e);
+      alert('Failed to update status. Try again.');
+    }
+  };
+
+  const isCompleted = (status || '').toLowerCase().includes('deliver') || (status || '').toLowerCase().includes('completed');
+
+  return (
+    <div className="bg-gradient-to-br from-[#EFF6FF] to-[#EDFFF9] rounded-2xl p-3 md:p-5 mb-4">
+      <YummyText>
+        <div className="flex items-start justify-between -mb-4">
+          <div className="flex items-center gap-3">
+            <div className="text-base font-normal text-[#0F172A]">{packageId}</div>
+            <span className={`px-3 py-1 rounded-full text-xs font-normal ${statusColor}`}>
+              {status}
+            </span>
+          </div>
+          <div className="text-right">
+            <div className="text-xl font-sm text-[#00A63E]">{price}</div>
+            <div className="text-xs text-[#64748B]">{distance} · {time}</div>
+          </div>
+        </div>
+
+        <div className="space-y-1 mb-4">
+          <div className="text-xs text-[#0F172A]">From: <span className="text-[#0F172A]">{from}</span></div>
+          <div className="text-xs text-[#0F172A]">To: <span className="text-[#0F172A]">{to}</span></div>
+          <div className="text-xs text-[#0F172A]">Customer: <span className="text-[#0F172A]">{customer}</span></div>
+        </div>
+
+        <div className="flex flex-col gap-3 md:flex-row md:items-center relative">
+          <button onClick={handleNavigate} className="w-full md:flex-1 bg-[#00B75A] text-sm hover:bg-[#00B876] text-medium text-white py-2 rounded-xl transition-colors font-[400]">
+            Navigate
+          </button>
+
+          <div className="relative w-full md:w-auto">
+            <button onClick={() => setContactOpen(v => !v)} className="w-full md:flex-1 py-2 bg-white text-sm hover:bg-[#FFFFFF] rounded-xl transition-colors text-[#0A0A0A] font-[400]" style={{ border: "1px solid #0000001A" }}>
+              Contact Customer
+            </button>
+            {contactOpen && (
+              <div className="absolute right-0 mt-2 bg-white border rounded-md shadow-lg z-50 w-40" style={{ border: '1px solid #E5E7EB' }}>
+                <button onClick={() => { setContactOpen(false); handleCall(); }} className="w-full text-left px-3 py-2 hover:bg-gray-50">Call</button>
+                <button onClick={() => { setContactOpen(false); handleMessage(); }} className="w-full text-left px-3 py-2 hover:bg-gray-50">Message</button>
+              </div>
+            )}
+          </div>
+
+          <div className="w-full md:w-auto flex items-center gap-2">
+            <button onClick={handleUpdate} className="w-full md:w-auto px-3 py-2 bg-white text-sm hover:bg-[#FFFFFF] rounded-xl transition-colors text-[#0A0A0A] font-[400]" style={{ border: "1px solid #0000001A" }}>
+              Update Status
+            </button>
+            {isCompleted && (
+              <div className="ml-2">
+                <CheckCircleIcon className="w-6 h-6 text-green-600" />
+              </div>
+            )}
+          </div>
+        </div>
+      </YummyText>
+    </div>
+  );
+};
 
 const AvailableOrderCard = ({ packageId, location, distance, price, onAccept }) => (
   <YummyText>
@@ -523,9 +648,11 @@ const Dashboard = () => {
                     'assigned': 'bg-gray-100 text-gray-600'
                   };
 
-                  return (
+                    return (
                     <DeliveryCard
                       key={delivery._id || delivery.id}
+                      deliveryId={delivery._id || delivery.id}
+                      deliveryRaw={delivery}
                       packageId={delivery.trackingNumber || delivery.deliveryId || 'N/A'}
                       status={delivery.status?.replace('_', ' ').replace(/\b\w/g, l => l.toUpperCase()) || 'Unknown'}
                       statusColor={statusColors[delivery.status] || 'bg-gray-100 text-gray-600'}
@@ -535,6 +662,7 @@ const Dashboard = () => {
                       price={`₦${delivery.amount?.toFixed(2) || delivery.price?.toFixed(2) || '0.00'}`}
                       distance={delivery.distance ? `${delivery.distance} km` : 'N/A'}
                       time={delivery.estimatedTime || 'N/A'}
+                      onStatusUpdated={fetchDashboardData}
                     />
                   );
                 })
