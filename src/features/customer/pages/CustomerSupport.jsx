@@ -28,7 +28,6 @@ const SupportCard = ({ icon, iconBg, title, subtitle, action, actionText }) => (
 
 const Support = () => {
   const [openIndex, setOpenIndex] = useState(null);
-  const [chatClicked, setChatClicked] = useState(false);
   const [formData, setFormData] = useState({
     name: '',
     email: '',
@@ -94,9 +93,85 @@ const Support = () => {
   };
 
   const handleLiveChat = () => {
-    setChatClicked(true);
-    setTimeout(() => setChatClicked(false), 3000); // Reset after 3 seconds
+    const openSmartsupp = async () => {
+      try {
+        // Ensure smartsupp key is set before loading
+        try {
+          window._smartsupp = window._smartsupp || {};
+          window._smartsupp.key = '2eaf5df30fc5db64d136a23ccd8bbe9722dc28f5';
+        } catch (e) { /* ignore */ }
+
+        if (!window._smartsuppLoaded) {
+          await new Promise((resolve, reject) => {
+            const s = document.createElement('script');
+            s.type = 'text/javascript';
+            s.async = true;
+            s.src = 'https://www.smartsuppchat.com/loader.js?';
+            s.onload = () => { window._smartsuppLoaded = true; window._smartsuppLoadedBySupportPage = true; resolve(); };
+            s.onerror = (err) => reject(err);
+            s.setAttribute('data-smartsupp-loader', '1');
+            document.head.appendChild(s);
+          });
+        } else {
+          // mark that this page requested the loader so we can clean up on unmount
+          window._smartsuppLoadedBySupportPage = true;
+        }
+
+        // Try known programmatic API shapes; fall back to clicking launcher node
+        try {
+          if (typeof window.smartsupp === 'function') {
+            // try a few common command names
+            try { window.smartsupp('chat:open'); } catch (e) { }
+            try { window.smartsupp('open'); } catch (e) { }
+          }
+        } catch (e) { }
+
+        try {
+          if (window._smartsupp && typeof window._smartsupp.open === 'function') {
+            window._smartsupp.open();
+          }
+        } catch (e) { }
+
+        // Fallback: attempt to click any visible smartsupp launcher button
+        try {
+          const el = document.querySelector('.smartsupp-launcher, .smartsupp-button, [data-smartsupp]');
+          if (el) el.click();
+        } catch (e) { }
+
+        // Visual feedback handled by Smartsupp widget itself
+      } catch (err) {
+        console.error('[CustomerSupport] Failed to load/open Smartsupp chat', err);
+      }
+    };
+
+    openSmartsupp();
   };
+
+  // Cleanup smartsupp script and launcher when leaving the support page
+  React.useEffect(() => {
+    return () => {
+      try {
+        if (window._smartsuppLoadedBySupportPage) {
+          // remove loader script(s) we added
+          const scripts = Array.from(document.querySelectorAll('script[data-smartsupp-loader]'));
+          scripts.forEach(s => s.parentNode && s.parentNode.removeChild(s));
+
+          // remove smartsupp injected elements (launcher, widget)
+          const selectors = ['.smartsupp-launcher', '.smartsupp-button', '[data-smartsupp]'];
+          selectors.forEach(sel => {
+            const els = Array.from(document.querySelectorAll(sel));
+            els.forEach(el => el.parentNode && el.parentNode.removeChild(el));
+          });
+
+          // unset globals
+          try { delete window._smartsuppLoaded; } catch (e) { window._smartsuppLoaded = false; }
+          try { delete window._smartsuppLoadedBySupportPage; } catch (e) { window._smartsuppLoadedBySupportPage = false; }
+          try { delete window._smartsupp; } catch (e) { window._smartsupp = undefined; }
+          try { delete window.smartsupp; } catch (e) { window.smartsupp = undefined; }
+        }
+      } catch (e) { /* ignore cleanup errors */ }
+    };
+  }, []);
 
   return (
     <IonPage>
@@ -146,7 +221,7 @@ const Support = () => {
               title="Live Chat"
               subtitle="Instant assistance"
               action={handleLiveChat}
-              actionText={chatClicked ? "Coming Soon" : "Start Chat"}
+              actionText={"Start Chat"}
             />
           </div>
 

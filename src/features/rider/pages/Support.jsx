@@ -93,9 +93,60 @@ const Support = () => {
   };
 
   const handleLiveChat = () => {
-    // Implement live chat functionality
-    alert('Live chat will open here');
+    const openSmartsupp = async () => {
+      try {
+        try {
+          window._smartsupp = window._smartsupp || {};
+          window._smartsupp.key = '2eaf5df30fc5db64d136a23ccd8bbe9722dc28f5';
+        } catch (e) { }
+
+        if (!window._smartsuppLoaded) {
+          await new Promise((resolve, reject) => {
+            const s = document.createElement('script');
+            s.type = 'text/javascript';
+            s.async = true;
+            s.src = 'https://www.smartsuppchat.com/loader.js?';
+            s.onload = () => { window._smartsuppLoaded = true; window._smartsuppLoadedBySupportPage = true; resolve(); };
+            s.onerror = (err) => reject(err);
+            s.setAttribute('data-smartsupp-loader', '1');
+            document.head.appendChild(s);
+          });
+        } else {
+          window._smartsuppLoadedBySupportPage = true;
+        }
+
+        try { if (typeof window.smartsupp === 'function') { try { window.smartsupp('chat:open'); } catch (e) { } try { window.smartsupp('open'); } catch (e) { } } } catch (e) { }
+        try { if (window._smartsupp && typeof window._smartsupp.open === 'function') window._smartsupp.open(); } catch (e) { }
+        try { const el = document.querySelector('.smartsupp-launcher, .smartsupp-button, [data-smartsupp]'); if (el) el.click(); } catch (e) { }
+      } catch (err) {
+        console.error('[RiderSupport] Failed to load/open Smartsupp chat', err);
+        alert('Live chat is unavailable');
+      }
+    };
+
+    openSmartsupp();
   };
+
+  // Cleanup smartsupp when leaving rider support page
+  React.useEffect(() => {
+    return () => {
+      try {
+        if (window._smartsuppLoadedBySupportPage) {
+          const scripts = Array.from(document.querySelectorAll('script[data-smartsupp-loader]'));
+          scripts.forEach(s => s.parentNode && s.parentNode.removeChild(s));
+          const selectors = ['.smartsupp-launcher', '.smartsupp-button', '[data-smartsupp]'];
+          selectors.forEach(sel => {
+            const els = Array.from(document.querySelectorAll(sel));
+            els.forEach(el => el.parentNode && el.parentNode.removeChild(el));
+          });
+          try { delete window._smartsuppLoaded; } catch (e) { window._smartsuppLoaded = false; }
+          try { delete window._smartsuppLoadedBySupportPage; } catch (e) { window._smartsuppLoadedBySupportPage = false; }
+          try { delete window._smartsupp; } catch (e) { window._smartsupp = undefined; }
+          try { delete window.smartsupp; } catch (e) { window.smartsupp = undefined; }
+        }
+      } catch (e) { /* ignore */ }
+    };
+  }, []);
 
   return (
     <IonPage>
