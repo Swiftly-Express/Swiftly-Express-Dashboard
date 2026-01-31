@@ -137,6 +137,22 @@ export default function SmartRideBooking({ embedMode = false, initialData = {}, 
     });
     const [deliveryData, setDeliveryData] = useState(null);
 
+    // Normalize any existing stored rider details on mount so UI uses vehicle fields
+    useEffect(() => {
+        try {
+            const stored = localStorage.getItem('smartride_rider_details');
+            if (!stored) return;
+            const parsed = JSON.parse(stored);
+            const norm = normalizeDriverProfile(parsed);
+            if (JSON.stringify(norm) !== JSON.stringify(parsed)) {
+                try { localStorage.setItem('smartride_rider_details', JSON.stringify(norm)); } catch (e) { }
+                setRiderDetails(norm);
+            } else {
+                setRiderDetails(parsed);
+            }
+        } catch (e) { }
+    }, []);
+
     // Persist form data so refresh doesn't force user to start over
     useEffect(() => {
         try {
@@ -169,6 +185,27 @@ export default function SmartRideBooking({ embedMode = false, initialData = {}, 
             }
         } catch (e) { }
         return null;
+    };
+
+    // Normalize various possible driver profile shapes into a consistent object
+    const normalizeDriverProfile = (profile) => {
+        if (!profile) return profile;
+        const out = { ...profile };
+        try {
+            const vehicle = profile.vehicle || profile.vehicleInfo || profile.vehicleDetails || profile.vehicle_data || {};
+            // fallback keys
+            const model = vehicle.model || vehicle.vehicleModel || vehicle.bikeModel || profile.bikeModel || profile.vehicleModel || '';
+            const plateNumber = vehicle.plateNumber || vehicle.plate || vehicle.plate_number || profile.plateNumber || profile.plate || '';
+            const profileImage = profile.profileImage || profile.profilePhoto || profile.imageUrl || profile.avatar || profile.photo || null;
+            const phone = profile.phone || profile.phoneNumber || profile.contact || profile.mobile || null;
+            const ridesCount = profile.ridesCount || profile.totalRides || profile.deliveriesCompleted || profile.completedDeliveries || null;
+
+            out.vehicle = { ...(out.vehicle || {}), model: model || undefined, plateNumber: plateNumber || undefined };
+            if (profileImage) out.profileImage = profileImage;
+            if (phone) out.phone = phone;
+            if (ridesCount != null) out.ridesCount = ridesCount;
+        } catch (e) { }
+        return out;
     };
 
     useEffect(() => {
@@ -269,7 +306,7 @@ export default function SmartRideBooking({ embedMode = false, initialData = {}, 
                         if (rd && (rd._id || rd.id)) {
                             const driverId = rd._id || rd.id;
                             const profile = await fetchDriverProfileById(driverId).catch(() => null);
-                            if (profile) finalRd = { ...(rd || {}), ...(profile || {}) };
+                            if (profile) finalRd = { ...(rd || {}), ...(normalizeDriverProfile(profile) || {}) };
                         }
 
                         if (storedStepNow === 'rider-details') {
@@ -387,7 +424,10 @@ export default function SmartRideBooking({ embedMode = false, initialData = {}, 
             const profile = e?.detail?.profile || null;
             const verificationData = e?.detail?.verificationData || null;
             if (profile) {
-                try { setRiderDetails(profile); localStorage.setItem('smartride_rider_details', JSON.stringify(profile)); } catch (err) { }
+                try {
+                    const norm = normalizeDriverProfile(profile);
+                    try { setRiderDetails(norm); localStorage.setItem('smartride_rider_details', JSON.stringify(norm)); } catch (err) { }
+                } catch (err) { }
             } else if (verificationData) {
                 // Merge verificationData into riderDetails
                 try {
@@ -480,7 +520,7 @@ export default function SmartRideBooking({ embedMode = false, initialData = {}, 
                         if (rd && (rd._id || rd.id)) {
                             const driverId = rd._id || rd.id;
                             const profile = await fetchDriverProfileById(driverId).catch(() => null);
-                            if (profile) finalRd = { ...(rd || {}), ...(profile || {}) };
+                            if (profile) finalRd = { ...(rd || {}), ...(normalizeDriverProfile(profile) || {}) };
                         }
                         try { localStorage.setItem('smartride_rider_details', JSON.stringify(finalRd)); } catch (e) { }
                         setRiderDetails(finalRd);
@@ -531,6 +571,50 @@ export default function SmartRideBooking({ embedMode = false, initialData = {}, 
             } catch (e) { }
         };
     }, [deliveryId]);
+
+    // Ensure rider profile (vehicle info) is fetched and merged when showing rider details
+    useEffect(() => {
+        let mounted = true;
+        const ensureProfile = async () => {
+            try {
+                // Prefer canonical delivery data when available
+                let rd = null;
+                if (deliveryId) {
+                    try {
+                        const resp = await getDeliveryById(deliveryId);
+                        const delivery = resp?.data?.delivery || resp?.data || resp;
+                        rd = delivery?.rider || delivery?.assignedDriver || delivery?.driver || null;
+                        if (delivery && mounted) try { setDeliveryData(delivery); } catch (e) { }
+                    } catch (e) { /* ignore */ }
+                }
+
+                // Fallback: use stored riderDetails
+                if (!rd) {
+                    try {
+                        const stored = localStorage.getItem('smartride_rider_details');
+                        rd = stored ? JSON.parse(stored) : riderDetails;
+                    } catch (e) { rd = riderDetails; }
+                }
+
+                if (!rd) return;
+
+                const driverId = rd._id || rd.id || rd.riderId;
+                if (!driverId) return;
+
+                const profile = await fetchDriverProfileById(driverId).catch(() => null);
+                if (profile && mounted) {
+                    const merged = { ...(rd || {}), ...(normalizeDriverProfile(profile) || {}) };
+                    try { localStorage.setItem('smartride_rider_details', JSON.stringify(merged)); } catch (e) { }
+                    setRiderDetails(merged);
+                }
+            } catch (e) {
+                console.warn('[SmartRide] ensureProfile failed:', e);
+            }
+        };
+
+        if (currentStep === 'rider-details') ensureProfile();
+        return () => { mounted = false; };
+    }, [currentStep, deliveryId]);
 
     // Fetch nearby riders when on Rider Matching step (so we call /api/customer/nearby-riders)
     useEffect(() => {
@@ -589,7 +673,41 @@ export default function SmartRideBooking({ embedMode = false, initialData = {}, 
             try {
                 const stored = localStorage.getItem('smartride_delivery_id');
                 const storedStep = localStorage.getItem('smartride_step');
-                if (!stored) return;
+
+                // If there's no stored delivery id, but there is a saved step, restore UI-only state
+                if (!stored) {
+                    if (storedStep) {
+                        try {
+                            const sd = storedStep;
+                            const storedRd = localStorage.getItem('smartride_rider_details');
+                            let parsedRd = null;
+                            if (storedRd) {
+                                try { parsedRd = JSON.parse(storedRd); } catch (e) { parsedRd = null; }
+                            }
+
+                            if (sd === 'rider-details') {
+                                setCurrentStep('rider-details');
+                                setIsSearching(false);
+                                if (parsedRd) try { setRiderDetails(parsedRd); } catch (e) { }
+                            } else if (sd === 'rider-found') {
+                                setCurrentStep('rider-found');
+                                setIsSearching(false);
+                                if (parsedRd) try { setRiderDetails(parsedRd); } catch (e) { }
+                            } else if (sd === 'finding-rider') {
+                                setCurrentStep('finding-rider');
+                                setIsSearching(true);
+                            }
+
+                            if (parsedRd) {
+                                const rid = parsedRd._id || parsedRd.id || parsedRd.riderId || parsedRd.driverId;
+                                if (rid) setRequestSentToRiderId(String(rid));
+                                const name = parsedRd.fullName || parsedRd.name || parsedRd.displayName || requestSentToRiderName;
+                                if (name) setRequestSentToRiderName(name);
+                            }
+                        } catch (e) { }
+                    }
+                    return;
+                }
 
                 // Validate delivery exists and is still in an active matching state
                 try {
@@ -644,7 +762,7 @@ export default function SmartRideBooking({ embedMode = false, initialData = {}, 
                                     const driverId = rd._id || rd.id;
                                     const profile = await fetchDriverProfileById(driverId).catch(() => null);
                                     if (profile) {
-                                        finalRd = { ...(rd || {}), ...(profile || {}) };
+                                        finalRd = { ...(rd || {}), ...(normalizeDriverProfile(profile) || {}) };
                                     }
                                 }
                                 try { if (finalRd) { setRiderDetails(finalRd); localStorage.setItem('smartride_rider_details', JSON.stringify(finalRd)); } } catch (e) { }
@@ -660,12 +778,17 @@ export default function SmartRideBooking({ embedMode = false, initialData = {}, 
                         }
                     }
                 } catch (e) {
-                    // If fetching the delivery failed (not found or no access), clear stored id
-                    try {
-                        localStorage.removeItem('smartride_delivery_id');
-                        localStorage.removeItem('smartride_step');
-                        localStorage.removeItem('smartride_rider_details');
-                    } catch (er) { }
+                    // Only clear stored delivery info when server indicates the resource is gone or access denied.
+                    const status = e?.response?.status || e?.status || null;
+                    if (status === 404 || status === 410 || status === 403) {
+                        try {
+                            localStorage.removeItem('smartride_delivery_id');
+                            localStorage.removeItem('smartride_step');
+                            localStorage.removeItem('smartride_rider_details');
+                        } catch (er) { }
+                    } else {
+                        console.warn('[SmartRide] getDeliveryById failed (kept stored state):', e);
+                    }
                 }
             } catch (e) {
                 // ignore
@@ -805,7 +928,17 @@ export default function SmartRideBooking({ embedMode = false, initialData = {}, 
         }
 
         setCurrentStep('finding-rider');
+        try { localStorage.setItem('smartride_step', 'finding-rider'); } catch (e) { }
     };
+
+    // Persist current step so a page refresh preserves progress
+    useEffect(() => {
+        try {
+            if (currentStep) {
+                localStorage.setItem('smartride_step', currentStep);
+            }
+        } catch (e) { }
+    }, [currentStep]);
 
     const searchAgain = () => {
         const coords = formData.pickupPlace?.coordinates;
@@ -973,14 +1106,24 @@ export default function SmartRideBooking({ embedMode = false, initialData = {}, 
         }
     };
 
-    const proceedToRiderDetails = (rider) => {
+    const proceedToRiderDetails = async (rider) => {
         setIsSearching(false);
         setCurrentStep('rider-details');
         try {
             localStorage.setItem('smartride_step', 'rider-details');
             const stored = localStorage.getItem('smartride_rider_details');
-            const details = rider || (stored ? JSON.parse(stored) : { name: requestSentToRiderName });
-            localStorage.setItem('smartride_rider_details', JSON.stringify(details || {}));
+            let details = rider || (stored ? JSON.parse(stored) : { name: requestSentToRiderName });
+
+            // If we have an id, try to fetch latest profile and merge vehicle info
+            try {
+                const driverId = details?._id || details?.id || details?.riderId;
+                if (driverId) {
+                    const profile = await fetchDriverProfileById(driverId).catch(() => null);
+                    if (profile) details = { ...(details || {}), ...(normalizeDriverProfile(profile) || {}) };
+                }
+            } catch (e) { console.warn('[SmartRide] Failed to fetch driver profile on proceed:', e); }
+
+            try { localStorage.setItem('smartride_rider_details', JSON.stringify(details || {})); } catch (e) { }
             setRiderDetails(details || {});
         } catch (e) { console.warn('[SmartRide] Failed to persist rider details on proceed:', e); }
     };
