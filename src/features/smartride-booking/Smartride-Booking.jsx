@@ -362,6 +362,66 @@ export default function SmartRideBooking({ embedMode = false, initialData = {}, 
         };
     }, [deliveryId]);
 
+    // Listen for delivery status updates (from rider actions) and refresh delivery/rider details
+    useEffect(() => {
+        if (!deliveryId) return;
+
+        const refreshDelivery = async (id) => {
+            try {
+                const resp = await getDeliveryById(id);
+                const delivery = resp?.data?.delivery || resp?.data || resp;
+                if (!delivery) return;
+
+                const rd = delivery?.rider || delivery?.assignedDriver || delivery?.driver || null;
+                if (rd) {
+                    try { localStorage.setItem('smartride_rider_details', JSON.stringify(rd)); } catch (e) { }
+                    setRiderDetails(rd);
+                }
+
+                // If delivery moved into active states, ensure stored step reflects progress
+                const status = (delivery.status || '').toString().toLowerCase();
+                if (status.includes('accepted') || status.includes('assigned') || status.includes('picked') || rd) {
+                    try {
+                        const storedStepNow = localStorage.getItem('smartride_step');
+                        if (storedStepNow !== 'rider-details') {
+                            localStorage.setItem('smartride_step', 'rider-found');
+                        }
+                    } catch (e) { }
+                }
+            } catch (e) {
+                console.warn('[SmartRide] Failed to refresh delivery on status update:', e);
+            }
+        };
+
+        const handleStatusChanged = (e) => {
+            const dId = e?.detail?.deliveryId || e?.detail?.id || e?.detail?.delivery?._id;
+            if (!dId) return;
+            if (String(dId) === String(deliveryId)) refreshDelivery(deliveryId);
+        };
+
+        const handleDeliveryUpdated = (e) => {
+            const dId = e?.detail?.deliveryId || e?.detail?.id || e?.detail?.delivery?._id;
+            if (!dId) return;
+            if (String(dId) === String(deliveryId)) refreshDelivery(deliveryId);
+        };
+
+        window.addEventListener('delivery:statusChanged', handleStatusChanged);
+        window.addEventListener('delivery:updated', handleDeliveryUpdated);
+        try {
+            socketService.on('delivery:statusChanged', handleStatusChanged);
+            socketService.on('delivery:updated', handleDeliveryUpdated);
+        } catch (e) { }
+
+        return () => {
+            window.removeEventListener('delivery:statusChanged', handleStatusChanged);
+            window.removeEventListener('delivery:updated', handleDeliveryUpdated);
+            try {
+                socketService.off('delivery:statusChanged', handleStatusChanged);
+                socketService.off('delivery:updated', handleDeliveryUpdated);
+            } catch (e) { }
+        };
+    }, [deliveryId]);
+
     // Fetch nearby riders when on Rider Matching step (so we call /api/customer/nearby-riders)
     useEffect(() => {
         const coords = formData.pickupPlace?.coordinates;
@@ -2452,42 +2512,54 @@ export default function SmartRideBooking({ embedMode = false, initialData = {}, 
                             <div className="flex items-start gap-8 mb-10">
                                 {/* Rider Photo */}
                                 <div className="w-40 h-40 bg-gray-200 rounded-2xl overflow-hidden flex-shrink-0">
-                                    <div className="w-full h-full bg-gradient-to-br from-gray-300 to-gray-400"></div>
+                                    {riderDetails?.profileImage ? (
+                                        <img src={riderDetails.profileImage} alt={riderDetails?.fullName || 'Rider'} className="w-full h-full object-cover" />
+                                    ) : (
+                                        <div className="w-full h-full bg-gradient-to-br from-gray-300 to-gray-400"></div>
+                                    )}
                                 </div>
 
                                 {/* Rider Info */}
                                 <div className="flex-1">
                                     <div className="flex items-center gap-3 mb-4">
-                                        <h3 className="text-2xl font-semibold text-gray-900">Kufre Sunday</h3>
+                                        <h3 className="text-2xl font-semibold text-gray-900">{riderDetails?.fullName || riderDetails?.name || requestSentToRiderName || 'Rider'}</h3>
                                         <span className="px-3 py-1.5 bg-green-100 text-green-700 text-xs rounded-full font-semibold border border-green-200">
-                                            Rider ID Verified
+                                            {riderDetails?.verified ? 'Rider ID Verified' : 'Rider'}
                                         </span>
-                                        <span className="text-gray-500 text-sm font-medium">120 Rides</span>
+                                        <span className="text-gray-500 text-sm font-medium">{riderDetails?.ridesCount ?? riderDetails?.totalRides ?? ''}</span>
                                     </div>
 
                                     <div className="grid grid-cols-3 gap-6 mt-6">
                                         <div>
                                             <p className="text-sm text-gray-500 mb-1">Bike Model</p>
-                                            <p className="font-semibold text-gray-900">Bajaj Boxer</p>
+                                            <p className="font-semibold text-gray-900">{riderDetails?.vehicle?.model || riderDetails?.bikeModel || '-'}</p>
                                         </div>
                                         <div>
                                             <p className="text-sm text-gray-500 mb-1">Plate number</p>
-                                            <p className="font-semibold text-gray-900">LAG 234 KJ</p>
+                                            <p className="font-semibold text-gray-900">{riderDetails?.vehicle?.plateNumber || riderDetails?.plateNumber || '-'}</p>
                                         </div>
                                         <div>
                                             <p className="text-sm text-gray-500 mb-1">Estimated Arrival</p>
-                                            <p className="font-semibold text-gray-900">6 mins</p>
+                                            <p className="font-semibold text-gray-900">{riderDetails?.estimatedArrivalMinutes ? `~${riderDetails.estimatedArrivalMinutes} mins` : (nearbyRiders[0]?.estimatedArrivalMinutes ? `~${nearbyRiders[0].estimatedArrivalMinutes} mins` : '-')}</p>
                                         </div>
                                     </div>
                                 </div>
 
                                 {/* Action Buttons */}
                                 <div className="flex flex-col gap-3">
-                                    <button className="flex items-center justify-center gap-2 px-8 py-3.5 bg-[#00B75A] text-white rounded-full hover:bg-[#00A050] transition-colors shadow-sm">
+                                    <button
+                                        type="button"
+                                        onClick={() => { const num = riderDetails?.phone || riderDetails?.phoneNumber || riderDetails?.contact; if (num) window.location.href = `tel:${num}`; }}
+                                        className="flex items-center justify-center gap-2 px-8 py-3.5 bg-[#00B75A] text-white rounded-full hover:bg-[#00A050] transition-colors shadow-sm"
+                                    >
                                         <Phone className="w-5 h-5" />
-                                        <span className="font-semibold">Call</span>
+                                        <span className="font-semibold">{riderDetails?.phone || riderDetails?.phoneNumber || riderDetails?.contact ? 'Call' : 'No Phone'}</span>
                                     </button>
-                                    <button className="flex items-center justify-center gap-2 px-8 py-3.5 bg-white border-2 border-[#00B75A] text-[#00B75A] rounded-full hover:bg-green-50 transition-colors">
+                                    <button
+                                        type="button"
+                                        onClick={() => { /* open chat/placeholder */ }}
+                                        className="flex items-center justify-center gap-2 px-8 py-3.5 bg-white border-2 border-[#00B75A] text-[#00B75A] rounded-full hover:bg-green-50 transition-colors"
+                                    >
                                         <MessageCircle className="w-5 h-5" />
                                         <span className="font-semibold">Chat</span>
                                     </button>
