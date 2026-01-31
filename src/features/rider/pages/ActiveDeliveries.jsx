@@ -5,6 +5,7 @@ import { YummyText } from '../../../components/YummyText';
 import TelephoneIcon from "../../../icons/Telephoneicon";
 import ChatIcon from "../../../icons/Chaticon";
 import TrackingMap from '../../../components/TrackingMap';
+import DeliveryChat from '../../../components/DeliveryChat';
 import BanIcon from '../../../icons/Banicon';
 import { copyOutline } from 'ionicons/icons';
 import { useDelivery } from '../../../contexts/DeliveryContext';
@@ -19,7 +20,8 @@ const sideBottomShadow = {
 
 // Helper: robustly extract a phone number from various delivery shapes,
 // prioritizing booking form fields but falling back to scanning nested objects.
-const extractPhone = (delivery, role = 'pickup') => {
+const extractPhone = (delivery, role = 'pickup') =>
+{
   if (!delivery) {
     console.warn('[extractPhone] No delivery object provided');
     return null;
@@ -28,7 +30,8 @@ const extractPhone = (delivery, role = 'pickup') => {
   console.log('[extractPhone] Extracting phone for role:', role);
 
   // Helper to resolve dotted paths safely
-  const getNestedValue = (obj, path) => {
+  const getNestedValue = (obj, path) =>
+  {
     try {
       const parts = path.split('.');
       let cur = obj;
@@ -65,7 +68,8 @@ const extractPhone = (delivery, role = 'pickup') => {
     'recipient.phone', 'recipient.phoneNumber', 'dropoff.phone', 'dropoff.phoneNumber', 'deliveryPhone'
   ];
 
-  const tryPaths = (paths) => {
+  const tryPaths = (paths) =>
+  {
     for (const p of paths) {
       const v = getNestedValue(delivery, p);
       if (v) {
@@ -114,7 +118,8 @@ const extractPhone = (delivery, role = 'pickup') => {
   const phoneRegex = /[0-9]/;
   const keyHint = /(phone|contact)/i;
 
-  const search = (obj) => {
+  const search = (obj) =>
+  {
     if (!obj || typeof obj !== 'object' || seen.has(obj)) return null;
     seen.add(obj);
     for (const k of Object.keys(obj)) {
@@ -166,7 +171,8 @@ const extractPhone = (delivery, role = 'pickup') => {
 };
 
 
-const ActiveDeliveries = () => {
+const ActiveDeliveries = () =>
+{
   const { activeDeliveries, updateDeliveryStatus: contextUpdateStatus } = useDelivery();
   const [deliveries, setDeliveries] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -178,18 +184,21 @@ const ActiveDeliveries = () => {
   const [stats, setStats] = useState({}); // { [deliveryId]: { distance, duration } }
 
   // Fetch rider's active deliveries on mount
-  useEffect(() => {
+  useEffect(() =>
+  {
     fetchActiveDeliveries();
 
     // Listen for delivery acceptance events and scroll to the accepted delivery
-    const handleDeliveryAccepted = async (event) => {
+    const handleDeliveryAccepted = async (event) =>
+    {
       const detail = event && event.detail ? event.detail : {};
       const deliveryId = detail.deliveryId || detail.id || null;
       await fetchActiveDeliveries();
 
       // Try to scroll the accepted delivery into view
       if (deliveryId) {
-        setTimeout(() => {
+        setTimeout(() =>
+        {
           const el = document.getElementById(`delivery-${deliveryId}`);
           if (el && el.scrollIntoView) {
             try { el.scrollIntoView({ behavior: 'smooth', block: 'center' }); } catch (e) { el.scrollIntoView(); }
@@ -199,7 +208,8 @@ const ActiveDeliveries = () => {
     };
 
     // Listen for delivery status updates
-    const handleDeliveryStatusChanged = () => {
+    const handleDeliveryStatusChanged = () =>
+    {
       fetchActiveDeliveries();
     };
 
@@ -209,7 +219,8 @@ const ActiveDeliveries = () => {
     const handlePaymentCompleted = () => fetchActiveDeliveries();
     window.addEventListener('payment:completed', handlePaymentCompleted);
 
-    return () => {
+    return () =>
+    {
       window.removeEventListener('delivery:accepted', handleDeliveryAccepted);
       window.removeEventListener('delivery:statusChanged', handleDeliveryStatusChanged);
       window.removeEventListener('payment:completed', handlePaymentCompleted);
@@ -217,13 +228,15 @@ const ActiveDeliveries = () => {
   }, []);
 
   // If navigated with a hash like #delivery-<id>, scroll that delivery into view after deliveries load
-  useEffect(() => {
+  useEffect(() =>
+  {
     if (!loading && deliveries && deliveries.length > 0) {
       try {
         const hash = window.location.hash;
         if (hash && hash.startsWith('#delivery-')) {
           const id = hash.replace('#', '');
-          setTimeout(() => {
+          setTimeout(() =>
+          {
             const el = document.getElementById(id);
             if (el && el.scrollIntoView) {
               try { el.scrollIntoView({ behavior: 'smooth', block: 'center' }); } catch (e) { el.scrollIntoView(); }
@@ -235,7 +248,8 @@ const ActiveDeliveries = () => {
   }, [loading, deliveries]);
 
   // Live Location Tracking
-  useEffect(() => {
+  useEffect(() =>
+  {
     // Only track if there are deliveries 'in-transit'
     const inTransitDeliveries = deliveries.filter(d =>
       (d.status?.toLowerCase() === 'in-transit' || d.status?.toLowerCase() === 'in transit')
@@ -250,11 +264,13 @@ const ActiveDeliveries = () => {
 
       if (navigator.geolocation) {
         watchId = navigator.geolocation.watchPosition(
-          (position) => {
+          (position) =>
+          {
             const { latitude, longitude } = position.coords;
             const location = { lat: latitude, lng: longitude };
 
-            inTransitDeliveries.forEach(delivery => {
+            inTransitDeliveries.forEach(delivery =>
+            {
               const deliveryId = delivery._id || delivery.id;
               socketService.emit('driver:location:update', {
                 deliveryId,
@@ -272,20 +288,23 @@ const ActiveDeliveries = () => {
       }
     }
 
-    return () => {
+    return () =>
+    {
       if (watchId) navigator.geolocation.clearWatch(watchId);
     };
   }, [deliveries]);
 
   // detect mobile view (small screens) to render mobile-optimized layout
-  useEffect(() => {
+  useEffect(() =>
+  {
     const check = () => setIsMobile(window.innerWidth <= 768);
     check();
     window.addEventListener('resize', check);
     return () => window.removeEventListener('resize', check);
   }, []);
 
-  const fetchActiveDeliveries = async () => {
+  const fetchActiveDeliveries = async () =>
+  {
     setLoading(true);
     try {
       const response = await getRiderDeliveries(1, 10);
@@ -305,7 +324,8 @@ const ActiveDeliveries = () => {
     }
   };
 
-  const handleStatusUpdate = async (deliveryId, newStatus) => {
+  const handleStatusUpdate = async (deliveryId, newStatus) =>
+  {
     setUpdatingStatus(deliveryId);
     try {
       // Backend requires: status and currentLocation (lat/lng)
@@ -322,17 +342,18 @@ const ActiveDeliveries = () => {
         let position = null;
         let lastError = null;
 
-        // Attempt 1: Standard request with reasonable settings
+        // Attempt 1: High accuracy (GPS when available) for better position
         try {
-          console.log('[ActiveDeliveries] Attempt 1: Standard request...');
-          position = await new Promise((resolve, reject) => {
+          console.log('[ActiveDeliveries] Attempt 1: High-accuracy request...');
+          position = await new Promise((resolve, reject) =>
+          {
             navigator.geolocation.getCurrentPosition(
               resolve,
               reject,
               {
-                enableHighAccuracy: false,
-                timeout: 10000,
-                maximumAge: 60000
+                enableHighAccuracy: true,
+                timeout: 15000,
+                maximumAge: 0
               }
             );
           });
@@ -342,18 +363,19 @@ const ActiveDeliveries = () => {
           lastError = err;
         }
 
-        // Attempt 2: Longer timeout
+        // Attempt 2: Longer timeout, still prefer fresh position
         if (!position) {
           try {
             console.log('[ActiveDeliveries] Attempt 2: Longer timeout...');
-            position = await new Promise((resolve, reject) => {
+            position = await new Promise((resolve, reject) =>
+            {
               navigator.geolocation.getCurrentPosition(
                 resolve,
                 reject,
                 {
-                  enableHighAccuracy: false,
-                  timeout: 20000,
-                  maximumAge: 120000
+                  enableHighAccuracy: true,
+                  timeout: 25000,
+                  maximumAge: 5000
                 }
               );
             });
@@ -368,7 +390,8 @@ const ActiveDeliveries = () => {
         if (!position) {
           try {
             console.log('[ActiveDeliveries] Attempt 3: Minimal options...');
-            position = await new Promise((resolve, reject) => {
+            position = await new Promise((resolve, reject) =>
+            {
               navigator.geolocation.getCurrentPosition(resolve, reject);
             });
             console.log('[ActiveDeliveries] ✅ Attempt 3 succeeded');
@@ -456,7 +479,8 @@ const ActiveDeliveries = () => {
     }
   };
 
-  const handleActionClick = (delivery) => {
+  const handleActionClick = (delivery) =>
+  {
     const status = (delivery.status || '').toLowerCase();
     let newStatus = 'picked-up';
 
@@ -474,7 +498,8 @@ const ActiveDeliveries = () => {
     handleStatusUpdate(delivery._id || delivery.id, newStatus);
   };
 
-  const handleProofUpload = async (deliveryId, file) => {
+  const handleProofUpload = async (deliveryId, file) =>
+  {
     try {
       const formData = new FormData();
       formData.append('proof', file);
@@ -495,8 +520,10 @@ const ActiveDeliveries = () => {
   };
 
 
-  const handleRouteStats = useCallback((deliveryId, { distance, duration }) => {
-    setStats(prev => {
+  const handleRouteStats = useCallback((deliveryId, { distance, duration }) =>
+  {
+    setStats(prev =>
+    {
       // Prevent update if values haven't changed
       if (prev[deliveryId]?.distance === distance && prev[deliveryId]?.duration === duration) {
         return prev;
@@ -509,22 +536,26 @@ const ActiveDeliveries = () => {
   }, []);
 
   // Filter deliveries by tab
-  const filterDeliveriesByTab = () => {
+  const filterDeliveriesByTab = () =>
+  {
     if (activeTab === 'yet-to-start') {
       // Deliveries that are assigned but not yet picked up
-      return deliveries.filter(d => {
+      return deliveries.filter(d =>
+      {
         const status = (d.status || '').toLowerCase();
         return status.includes('assigned') || status.includes('pending');
       });
     } else if (activeTab === 'in-progress') {
       // Deliveries that are picked up or in transit
-      return deliveries.filter(d => {
+      return deliveries.filter(d =>
+      {
         const status = (d.status || '').toLowerCase();
         return status.includes('picked') || status.includes('transit');
       });
     } else if (activeTab === 'completed') {
       // Completed/delivered deliveries
-      return deliveries.filter(d => {
+      return deliveries.filter(d =>
+      {
         const status = (d.status || '').toLowerCase();
         return status.includes('delivered') || status.includes('completed');
       });
@@ -565,7 +596,8 @@ const ActiveDeliveries = () => {
                   : 'text-[#64748B]'
                   }`}
               >
-                Yet to Start ({deliveries.filter(d => {
+                Yet to Start ({deliveries.filter(d =>
+                {
                   const status = (d.status || '').toLowerCase();
                   return status.includes('assigned') || status.includes('pending');
                 }).length})
@@ -577,7 +609,8 @@ const ActiveDeliveries = () => {
                   : 'text-[#64748B]'
                   }`}
               >
-                In Progress ({deliveries.filter(d => {
+                In Progress ({deliveries.filter(d =>
+                {
                   const status = (d.status || '').toLowerCase();
                   return status.includes('picked') || status.includes('transit');
                 }).length})
@@ -589,7 +622,8 @@ const ActiveDeliveries = () => {
                   : 'text-[#64748B]'
                   }`}
               >
-                Completed ({deliveries.filter(d => {
+                Completed ({deliveries.filter(d =>
+                {
                   const status = (d.status || '').toLowerCase();
                   return status.includes('delivered') || status.includes('completed');
                 }).length})
@@ -607,9 +641,11 @@ const ActiveDeliveries = () => {
                 </div>
               </div>
             ) : filteredDeliveries.length > 0 ? (
-              filteredDeliveries.map((delivery) => {
+              filteredDeliveries.map((delivery) =>
+              {
                 // Map status to color
-                const getStatusColor = (status) => {
+                const getStatusColor = (status) =>
+                {
                   const statusLower = status?.toLowerCase() || '';
                   if (statusLower.includes('picked') || statusLower.includes('transit')) return 'bg-blue-100 text-blue-600';
                   if (statusLower.includes('delivered') || statusLower.includes('completed')) return 'bg-green-100 text-green-600';
@@ -619,7 +655,8 @@ const ActiveDeliveries = () => {
                 };
 
                 // Format status text
-                const formatStatus = (status) => {
+                const formatStatus = (status) =>
+                {
                   if (!status) return 'Unknown';
                   return status.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
                 };
@@ -635,7 +672,8 @@ const ActiveDeliveries = () => {
                   (delivery.lastKnownLocation && [delivery.lastKnownLocation.lng, delivery.lastKnownLocation.lat]) || null;
 
                 // Get action button text based on status
-                const getActionButtonText = (status) => {
+                const getActionButtonText = (status) =>
+                {
                   const statusLower = status?.toLowerCase() || '';
                   if (statusLower.includes('assigned') || statusLower.includes('pending')) return 'Start Pickup';
                   if (statusLower.includes('route') && statusLower.includes('pickup')) return 'Arrived at Pickup';
@@ -650,7 +688,8 @@ const ActiveDeliveries = () => {
                 const pickupPhone = extractPhone(delivery, 'pickup');
                 const deliveryPhone = extractPhone(delivery, 'delivery');
 
-                const formatAddr = (addr) => {
+                const formatAddr = (addr) =>
+                {
                   if (!addr) return 'Address not available';
                   if (typeof addr === 'string') return addr;
                   // addr is likely an object with street, city, state, zipCode
@@ -768,7 +807,8 @@ const DeliveryCard = ({
   ,
   paymentStatus,
   deliveryRaw
-}) => {
+}) =>
+{
   const [showMapFull, setShowMapFull] = useState(false);
 
   const openMap = () => setShowMapFull(true);
@@ -788,7 +828,8 @@ const DeliveryCard = ({
                 {isMobile ? packageId.substring(0, 12) + '...' : packageId}
               </div>
               <button
-                onClick={() => {
+                onClick={() =>
+                {
                   try {
                     navigator.clipboard.writeText(packageId);
                     alert('Package ID copied to clipboard');
@@ -814,7 +855,8 @@ const DeliveryCard = ({
                 {paymentStatus === 'paid' && (
                   <span className="px-2 py-0.5 rounded-full text-xs font-normal bg-green-100 text-green-700">Paid</span>
                 )}
-                {paymentStatus !== 'paid' && (() => {
+                {paymentStatus !== 'paid' && (() =>
+                {
                   const method = (deliveryRaw.payment?.method || deliveryRaw.paymentMethod || deliveryRaw.payment?.paymentMethod || deliveryRaw.method || '').toString().toLowerCase().trim();
                   if (method === 'cash' || method === 'cash_on_delivery' || method === 'cod') {
                     return <span className="px-2 py-0.5 rounded-full text-xs font-normal bg-white text-green-600 border border-green-300">Cash</span>;
@@ -829,6 +871,15 @@ const DeliveryCard = ({
           <div className={isMobile ? "text-sm text-[#64748B]" : "text-base text-[#64748B] -mb-3"}>
             {distance} • Est. {time}
           </div>
+          {deliveryRaw?.earningsBreakdown && (
+            <div className="mt-2 pt-2 border-t border-[#00D68F]/20">
+              <div className="text-xs text-[#64748B]">Earnings</div>
+              <div className="flex flex-wrap gap-3 text-sm">
+                <span className="text-[#0F172A]">Your earnings: <strong className="text-[#00D68F]">₦{Number(deliveryRaw.earningsBreakdown.driverEarnings || 0).toLocaleString()}</strong></span>
+                <span className="text-[#64748B]">Total: ₦{Number(deliveryRaw.earningsBreakdown.deliveryTotal || 0).toLocaleString()}</span>
+              </div>
+            </div>
+          )}
         </div>
       </YummyText>
 
@@ -866,7 +917,8 @@ const DeliveryCard = ({
               </div>
               <div className="flex gap-2">
                 <button
-                  onClick={() => {
+                  onClick={() =>
+                  {
                     console.log('[Call Button] Pickup phone button clicked');
                     console.log('[Call Button] pickupPhone value:', pickupPhone);
 
@@ -930,7 +982,8 @@ const DeliveryCard = ({
               </div>
               <div className="flex gap-2">
                 <button
-                  onClick={() => {
+                  onClick={() =>
+                  {
                     console.log('[Call Button] Delivery phone button clicked');
                     console.log('[Call Button] deliveryPhone value:', deliveryPhone);
 
@@ -966,7 +1019,8 @@ const DeliveryCard = ({
                   Call
                 </button>
                 <button
-                  onClick={() => {
+                  onClick={() =>
+                  {
                     if (deliveryPhone) {
                       const num = deliveryPhone.replace(/[^0-9+]/g, '');
                       window.open(`https://wa.me/${num.replace(/^\+/, '')}`, '_blank');
@@ -1009,6 +1063,17 @@ const DeliveryCard = ({
             </div>
           </div>
         </YummyText>
+
+        {/* Chat with customer */}
+        <div className="mb-4">
+          <div className="text-xs font-medium text-[#64748B] mb-2">Chat with customer</div>
+          <DeliveryChat
+            deliveryId={deliveryId}
+            currentUserRole="driver"
+            className="rounded-xl border border-gray-200 overflow-hidden"
+            maxHeight="220px"
+          />
+        </div>
 
         {/* Desktop: show map below details */}
         {!isMobile && (

@@ -11,7 +11,7 @@ import GoogleMapsAutocomplete from '../../components/GoogleMapsAutocomplete';
 import StyledDropdown from '../../components/StyledDropdown';
 import axios from 'axios';
 import { getCookie, setCookie, deleteCookie } from '../../utils/cookies';
-import { createDelivery, cancelDelivery, isAuthenticated, getDeliveryEstimate, getDeliveryById } from '../../utils/authApi';
+import { createDelivery, cancelDelivery, isAuthenticated, getDeliveryEstimate, getDeliveryById, getNearbyRiders } from '../../utils/authApi';
 import socketService from '../../services/socket.service';
 import { calculateDistance } from '../../utils/pricing';
 
@@ -24,7 +24,8 @@ const apiClient = axios.create({
 });
 
 // Add request interceptor to attach auth token (match Book.jsx behavior)
-apiClient.interceptors.request.use((config) => {
+apiClient.interceptors.request.use((config) =>
+{
     const riderToken = getCookie('rider_token');
     const customerToken = getCookie('customer_token');
     const adminToken = getCookie('admin_token');
@@ -43,7 +44,8 @@ const sideBottomShadow = {
     boxShadow: '2px 2px 4px rgba(0,0,0,0.06), -2px 2px 4px rgba(0,0,0,0.06), 0 4px 8px rgba(0,0,0,0.08)'
 };
 
-export default function SmartRideBooking({ embedMode = false, initialData = {}, onClose = null }) {
+export default function SmartRideBooking({ embedMode = false, initialData = {}, onClose = null })
+{
     const router = useIonRouter();
     const [currentStep, setCurrentStep] = useState('form');
     const [isSearching, setIsSearching] = useState(false);
@@ -91,10 +93,17 @@ export default function SmartRideBooking({ embedMode = false, initialData = {}, 
     const [boosted, setBoosted] = useState(false);
     const [estimatedPrice, setEstimatedPrice] = useState(null);
     const [isCalculatingPrice, setIsCalculatingPrice] = useState(false);
+    const [nearbyRiders, setNearbyRiders] = useState([]);
+    const [nearbyRidersLoading, setNearbyRidersLoading] = useState(false);
+    const [requestSentToRiderId, setRequestSentToRiderId] = useState(null);
+    const [requestSentToRiderName, setRequestSentToRiderName] = useState(null);
+    const [isSendingRequest, setIsSendingRequest] = useState(false);
+    const [isCancellingRequest, setIsCancellingRequest] = useState(false);
     const [paymentHover, setPaymentHover] = useState(false);
     const [drawerHover, setDrawerHover] = useState('');
 
-    useEffect(() => {
+    useEffect(() =>
+    {
         const check = () => setIsMobile(window.innerWidth <= 768);
         check();
         window.addEventListener('resize', check);
@@ -102,11 +111,13 @@ export default function SmartRideBooking({ embedMode = false, initialData = {}, 
     }, []);
 
     // Calculate distance and fetch price whenever addresses change
-    useEffect(() => {
+    useEffect(() =>
+    {
         const pickupCoords = formData.pickupPlace?.coordinates;
         const deliveryCoords = formData.deliveryPlace?.coordinates;
 
-        const updatePrice = async () => {
+        const updatePrice = async () =>
+        {
             if (pickupCoords && deliveryCoords && pickupCoords.lat && deliveryCoords.lat) {
                 // Determine if special errand based on user selection or other logic? 
                 // SmartRide implies smartRide=true
@@ -140,8 +151,10 @@ export default function SmartRideBooking({ embedMode = false, initialData = {}, 
     }, [formData.pickupPlace, formData.deliveryPlace, isSpecialErrand]);
 
     // Listen for postMessage from payment callback popup (same behavior as Book.jsx)
-    useEffect(() => {
-        const handlePaymentMessage = (event) => {
+    useEffect(() =>
+    {
+        const handlePaymentMessage = (event) =>
+        {
             // Expecting { type: 'PAYMENT_REDIRECT', url: '...' }
             if (event.data?.type === 'PAYMENT_REDIRECT') {
                 const targetUrl = event.data.url || event.data.fullUrl;
@@ -157,8 +170,10 @@ export default function SmartRideBooking({ embedMode = false, initialData = {}, 
     }, [router]);
 
     // Listen for rider acceptance events - show rider-found only when the created delivery is accepted
-    useEffect(() => {
-        const onDeliveryAccepted = async (e) => {
+    useEffect(() =>
+    {
+        const onDeliveryAccepted = async (e) =>
+        {
             console.log('[SmartRide] 📢 delivery:accepted event received:', e?.detail);
             const detail = e?.detail || {};
 
@@ -242,7 +257,8 @@ export default function SmartRideBooking({ embedMode = false, initialData = {}, 
         window.addEventListener('delivery:accepted', onDeliveryAccepted);
 
         // Also listen for socket events directly. Ensure socket is connected so listeners register.
-        const handleSocketAcceptance = (data) => {
+        const handleSocketAcceptance = (data) =>
+        {
             console.log('[SmartRide] 🔌 Socket delivery:accepted received:', data);
             onDeliveryAccepted({ detail: data });
         };
@@ -254,7 +270,8 @@ export default function SmartRideBooking({ embedMode = false, initialData = {}, 
             console.warn('[SmartRide] Socket listener failed:', e);
         }
 
-        return () => {
+        return () =>
+        {
             window.removeEventListener('delivery:accepted', onDeliveryAccepted);
             try {
                 socketService.off('delivery:accepted', handleSocketAcceptance);
@@ -262,9 +279,60 @@ export default function SmartRideBooking({ embedMode = false, initialData = {}, 
         };
     }, [deliveryId]);
 
-    // Add this at the top of SmartRideBooking component, right after the state declarations
+    // Socket: rider declined the invitation — clear request state and show "Search again"
+    useEffect(() =>
+    {
+        socketService.connect();
+        const handleInvitationRejected = (data) =>
+        {
+            const eventId = data?.deliveryId ? String(data.deliveryId) : '';
+            const currentId = deliveryId ? String(deliveryId) : '';
+            if (eventId && currentId && eventId === currentId) {
+                setRequestSentToRiderId(null);
+                setRequestSentToRiderName(null);
+                setToastMsg('Rider declined. Search again?');
+                setShowToast(true);
+            }
+        };
+        socketService.on('delivery:invitation:rejected', handleInvitationRejected);
+        return () =>
+        {
+            try { socketService.off('delivery:invitation:rejected', handleInvitationRejected); } catch (e) { }
+        };
+    }, [deliveryId]);
 
-    useEffect(() => {
+    // Fetch nearby riders when on Rider Matching step (so we call /api/customer/nearby-riders)
+    useEffect(() =>
+    {
+        const coords = formData.pickupPlace?.coordinates;
+        const lat = coords?.lat;
+        const lng = coords?.lng;
+        if ((currentStep !== 'finding-rider' && currentStep !== 'rider-found') || lat == null || lng == null) {
+            setNearbyRiders([]);
+            return;
+        }
+        let cancelled = false;
+        setNearbyRidersLoading(true);
+        getNearbyRiders({ lat, lng, radiusKm: 20, limit: 1 })
+            .then((res) =>
+            {
+                if (cancelled) return;
+                const list = res?.data?.riders ?? res?.riders ?? (Array.isArray(res?.data) ? res.data : []);
+                setNearbyRiders(Array.isArray(list) ? list : []);
+            })
+            .catch(() =>
+            {
+                if (!cancelled) setNearbyRiders([]);
+            })
+            .finally(() =>
+            {
+                if (!cancelled) setNearbyRidersLoading(false);
+            });
+        return () => { cancelled = true; };
+    }, [currentStep, formData.pickupPlace?.coordinates?.lat, formData.pickupPlace?.coordinates?.lng]);
+
+    useEffect(() =>
+    {
         // Check if user came from public page via returnUrl after authentication
         const urlParams = new URLSearchParams(window.location.search);
         const returnUrl = urlParams.get('returnUrl');
@@ -282,16 +350,19 @@ export default function SmartRideBooking({ embedMode = false, initialData = {}, 
         if (!isAuthenticated()) {
             setToastMsg('Please log in to book a delivery');
             setShowToast(true);
-            setTimeout(() => {
+            setTimeout(() =>
+            {
                 router.push('/auth/customer/login?returnUrl=/customer/smartride-booking', 'root', 'replace');
             }, 2000);
         }
     }, [router]);
 
     // Restore SmartRide session on refresh: validate stored delivery id before resuming finding state
-    useEffect(() => {
+    useEffect(() =>
+    {
         let mounted = true;
-        (async () => {
+        (async () =>
+        {
             try {
                 const stored = localStorage.getItem('smartride_delivery_id');
                 const storedStep = localStorage.getItem('smartride_step');
@@ -317,11 +388,20 @@ export default function SmartRideBooking({ embedMode = false, initialData = {}, 
                     if (mounted) {
                         setDeliveryId(stored);
 
+                        // Restore request-sent state if this delivery was sent to an invited rider
+                        const invitedId = delivery?.invitedDriver?._id ?? delivery?.invitedDriver;
+                        if (invitedId) {
+                            setRequestSentToRiderId(String(invitedId));
+                            const name = delivery?.invitedDriver?.fullName ?? delivery?.invitedDriver?.name;
+                            if (name) setRequestSentToRiderName(name);
+                        }
+
                         // Ensure we join the delivery room so server can target events to this client
                         try {
                             const room = `delivery:${stored}`;
                             socketService.connect();
-                            const onConnectJoin = () => {
+                            const onConnectJoin = () =>
+                            {
                                 try { socketService.joinRoom(room); } catch (e) { console.warn('[SmartRide] joinRoom failed on connect:', e); }
                                 try { socketService.off('connect', onConnectJoin); } catch (e) { }
                             };
@@ -335,7 +415,7 @@ export default function SmartRideBooking({ embedMode = false, initialData = {}, 
                             setIsSearching(false);
                         } else {
                             setCurrentStep('finding-rider');
-                            setIsSearching(true);
+                            setIsSearching(false);
                         }
                     }
                 } catch (e) {
@@ -354,7 +434,8 @@ export default function SmartRideBooking({ embedMode = false, initialData = {}, 
         return () => { mounted = false; };
     }, []);
 
-    const handleChange = (e) => {
+    const handleChange = (e) =>
+    {
         setFormData({
             ...formData,
             [e.target.name]: e.target.value
@@ -362,7 +443,8 @@ export default function SmartRideBooking({ embedMode = false, initialData = {}, 
     };
 
     // Geocode manually typed address
-    const geocodeAddress = async (address, fieldType) => {
+    const geocodeAddress = async (address, fieldType) =>
+    {
         if (!address || address.trim().length < 5) return;
 
         try {
@@ -375,9 +457,11 @@ export default function SmartRideBooking({ embedMode = false, initialData = {}, 
                 const place = result.results[0];
                 const components = place.address_components || [];
 
-                const extract = () => {
+                const extract = () =>
+                {
                     const out = { city: '', state: '', postal_code: '', country: '' };
-                    components.forEach(c => {
+                    components.forEach(c =>
+                    {
                         if (c.types.includes('locality')) out.city = c.long_name;
                         if (c.types.includes('administrative_area_level_1')) out.state = c.long_name;
                         if (c.types.includes('postal_code')) out.postal_code = c.long_name;
@@ -413,22 +497,30 @@ export default function SmartRideBooking({ embedMode = false, initialData = {}, 
         }
     };
 
-    const handleSubmit = (e) => {
+    const handleSubmit = (e) =>
+    {
         e.preventDefault();
         console.log('Form submitted:', formData);
         setCurrentStep('summary');
     };
 
-    const calculateTotal = () => {
+    const calculateTotal = () =>
+    {
         if (estimatedPrice) {
+            const pb = estimatedPrice.pricingBreakdown || {};
+            const total = estimatedPrice.estimatedPrice ?? pb.total ?? 0;
             return {
-                total: estimatedPrice.total,
-                riderEarnings: estimatedPrice.pricingBreakdown?.riderEarnings || 0,
-                priorityFee: estimatedPrice.pricingBreakdown?.priorityFee || 0,
-                baseFare: estimatedPrice.pricingBreakdown?.baseFare || 0,
-                distance: estimatedPrice.distance || 0,
-                distanceCharge: estimatedPrice.pricingBreakdown?.distanceCharge || 0,
-                ...estimatedPrice.pricingBreakdown
+                total: Number(total),
+                riderEarnings: pb.riderEarnings || 0,
+                priorityFee: pb.priorityFee || 0,
+                baseFare: pb.baseFare ?? 0,
+                distance: estimatedPrice.distance ?? 0,
+                distanceCharge: pb.distanceCharge ?? 0,
+                smartRideFee: pb.smartRideFee ?? 0,
+                errandFee: pb.errandFee ?? 0,
+                waitingTimeFee: pb.waitingTimeFee ?? 0,
+                subtotal: pb.subtotal ?? total,
+                ...pb
             };
         }
         return {
@@ -437,13 +529,18 @@ export default function SmartRideBooking({ embedMode = false, initialData = {}, 
             priorityFee: 0,
             baseFare: 0,
             distance: 0,
-            distanceCharge: 0
+            distanceCharge: 0,
+            smartRideFee: 0,
+            errandFee: 0,
+            waitingTimeFee: 0,
+            subtotal: 0
         };
     };
 
     const breadcrumbSteps = ['Package Information', 'Package Summary', 'Rider Matching', 'Rider Details'];
 
-    const getCurrentStepIndex = () => {
+    const getCurrentStepIndex = () =>
+    {
         switch (currentStep) {
             case 'form': return 0;
             case 'summary': return 1;
@@ -454,80 +551,129 @@ export default function SmartRideBooking({ embedMode = false, initialData = {}, 
         }
     };
 
-    const findRider = async () => {
+    const handleBreadcrumbClick = (index) =>
+    {
+        if (index === 0) setCurrentStep('form');
+        else if (index === 1) setCurrentStep('summary');
+        else if (index === 2) setCurrentStep(currentStep === 'rider-details' ? 'rider-found' : 'finding-rider');
+        else if (index === 3) setCurrentStep('rider-details');
+    };
+
+    const findRider = async () =>
+    {
+        const pickupCoords = formData.pickupPlace;
+        const deliveryCoords = formData.deliveryPlace;
+        const hasPickupCoords = pickupCoords?.coordinates?.lat != null && pickupCoords?.coordinates?.lng != null;
+        const hasDeliveryCoords = deliveryCoords?.coordinates?.lat != null && deliveryCoords?.coordinates?.lng != null;
+
+        if (!hasPickupCoords || !hasDeliveryCoords) {
+            setToastMsg('Please select pickup and delivery locations on the map so we can find a rider.');
+            setShowToast(true);
+            return;
+        }
+
+        setCurrentStep('finding-rider');
+    };
+
+    const searchAgain = () =>
+    {
+        const coords = formData.pickupPlace?.coordinates;
+        const lat = coords?.lat;
+        const lng = coords?.lng;
+        if (lat == null || lng == null) return;
+        setNearbyRidersLoading(true);
+        getNearbyRiders({ lat, lng, radiusKm: 20, limit: 1 })
+            .then((res) =>
+            {
+                const list = res?.data?.riders ?? res?.riders ?? (Array.isArray(res?.data) ? res.data : []);
+                setNearbyRiders(Array.isArray(list) ? list : []);
+            })
+            .catch(() => setNearbyRiders([]))
+            .finally(() => setNearbyRidersLoading(false));
+    };
+
+    const sendRequestToRider = async (rider) =>
+    {
+        const riderId = rider?.riderId ?? rider?._id;
+        if (!riderId) return;
+
+        const pickupCoords = formData.pickupPlace;
+        const deliveryCoords = formData.deliveryPlace;
+        const hasPickupCoords = pickupCoords?.coordinates?.lat != null && pickupCoords?.coordinates?.lng != null;
+        const hasDeliveryCoords = deliveryCoords?.coordinates?.lat != null && deliveryCoords?.coordinates?.lng != null;
+        if (!hasPickupCoords || !hasDeliveryCoords) {
+            setToastMsg('Please select pickup and delivery locations on the map.');
+            setShowToast(true);
+            return;
+        }
+
+        const pickupAddrRaw = pickupCoords ? {
+            street: pickupCoords.street || '',
+            city: pickupCoords.city || '',
+            state: pickupCoords.state || pickupCoords.country || pickupCoords.city || '',
+            zipCode: pickupCoords.zipCode || '',
+            country: pickupCoords.country || '',
+            coordinates: pickupCoords.coordinates || { lat: 0, lng: 0 }
+        } : {
+            street: formData.pickupAddress || '',
+            city: '', state: '', zipCode: '', country: '', coordinates: { lat: 0, lng: 0 }
+        };
+        const deliveryAddrRaw = deliveryCoords ? {
+            street: deliveryCoords.street || '',
+            city: deliveryCoords.city || '',
+            state: deliveryCoords.state || deliveryCoords.country || deliveryCoords.city || '',
+            zipCode: deliveryCoords.zipCode || '',
+            country: deliveryCoords.country || '',
+            coordinates: deliveryCoords.coordinates || { lat: 0, lng: 0 }
+        } : {
+            street: formData.deliveryAddress || '',
+            city: '', state: '', zipCode: '', country: '', coordinates: { lat: 0, lng: 0 }
+        };
+        const { country: _pCountry, ...pickupNoCountry } = pickupAddrRaw;
+        const pickupAddr = {
+            ...pickupNoCountry,
+            state: pickupAddrRaw.state || pickupAddrRaw.city || 'Unknown',
+            zipCode: pickupAddrRaw.zipCode || '00000'
+        };
+        const { country: _dCountry, ...deliveryNoCountry } = deliveryAddrRaw;
+        const deliveryAddr = {
+            ...deliveryNoCountry,
+            state: deliveryAddrRaw.state || deliveryAddrRaw.city || 'Unknown',
+            zipCode: deliveryAddrRaw.zipCode || '00000'
+        };
+
+        const payload = {
+            senderName: formData.senderName,
+            senderPhone: formData.senderPhone,
+            recipientName: formData.recipientName,
+            recipientPhone: formData.recipientPhone,
+            recipientEmail: formData.recipientEmail,
+            pickupAddress: pickupAddr,
+            deliveryAddress: deliveryAddr,
+            packageDetails: {
+                sizeCategory: formData.sizeCategory,
+                weightCategory: formData.weightCategory,
+                weight: formData.weight || `${formData.weightCategory} weight`,
+                dimensions: formData.dimensions,
+                description: formData.packageDescription
+            },
+            paymentMethod: formData.paymentMethod || 'cash',
+            notes: formData.paymentNotes || '',
+            payment: { method: formData.paymentMethod || 'cash', notes: formData.paymentNotes },
+            deliveryType: 'smart_ride',
+            smartRide: true,
+            invitedDriver: String(riderId)
+        };
+
+        setIsSendingRequest(true);
         try {
-            setCurrentStep('finding-rider');
-            setIsSearching(true);
-
-            // Build pickup/delivery objects (same as proceedToPayment) but do not require payment
-            const pickupCoords = formData.pickupPlace;
-            const deliveryCoords = formData.deliveryPlace;
-
-            const pickupAddrRaw = pickupCoords ? {
-                street: pickupCoords.street || '',
-                city: pickupCoords.city || '',
-                state: pickupCoords.state || pickupCoords.country || pickupCoords.city || '',
-                zipCode: pickupCoords.zipCode || '',
-                country: pickupCoords.country || '',
-                coordinates: pickupCoords.coordinates || { lat: 0, lng: 0 }
-            } : {
-                street: formData.pickupAddress || '',
-                city: '', state: '', zipCode: '', country: '', coordinates: { lat: 0, lng: 0 }
-            };
-
-            const deliveryAddrRaw = deliveryCoords ? {
-                street: deliveryCoords.street || '',
-                city: deliveryCoords.city || '',
-                state: deliveryCoords.state || deliveryCoords.country || deliveryCoords.city || '',
-                zipCode: deliveryCoords.zipCode || '',
-                country: deliveryCoords.country || '',
-                coordinates: deliveryCoords.coordinates || { lat: 0, lng: 0 }
-            } : {
-                street: formData.deliveryAddress || '',
-                city: '', state: '', zipCode: '', country: '', coordinates: { lat: 0, lng: 0 }
-            };
-
-            const { country: _pCountry, ...pickupNoCountry } = pickupAddrRaw;
-            const pickupAddr = {
-                ...pickupNoCountry,
-                state: pickupAddrRaw.state || pickupAddrRaw.city || 'Unknown',
-                zipCode: pickupAddrRaw.zipCode || '00000'
-            };
-
-            const { country: _dCountry, ...deliveryNoCountry } = deliveryAddrRaw;
-            const deliveryAddr = {
-                ...deliveryNoCountry,
-                state: deliveryAddrRaw.state || deliveryAddrRaw.city || 'Unknown',
-                zipCode: deliveryAddrRaw.zipCode || '00000'
-            };
-
-            const payload = {
-                senderName: formData.senderName,
-                senderPhone: formData.senderPhone,
-                pickupDate: formData.pickupDate,
-                recipientName: formData.recipientName,
-                recipientPhone: formData.recipientPhone,
-                recipientEmail: formData.recipientEmail,
-                pickupAddress: pickupAddr,
-                deliveryAddress: deliveryAddr,
-                packageDetails: {
-                    sizeCategory: formData.sizeCategory,
-                    weightCategory: formData.weightCategory,
-                    weight: formData.weight || `${formData.weightCategory} weight`,
-                    dimensions: formData.dimensions,
-                    description: formData.packageDescription
-                },
-                payment: { method: formData.paymentMethod || 'cash', notes: formData.paymentNotes },
-                deliveryType: 'smart_ride',
-                smartRide: true
-            };
-
             let createResp = null;
             if (formData.image) {
                 const fd = new FormData();
                 fd.append('image', formData.image);
-                Object.entries(payload).forEach(([k, v]) => {
-                    if (typeof v === 'object') fd.append(k, JSON.stringify(v));
+                Object.entries(payload).forEach(([k, v]) =>
+                {
+                    if (typeof v === 'object' && v !== null && !(v instanceof File)) fd.append(k, JSON.stringify(v));
                     else fd.append(k, String(v));
                 });
                 createResp = await createDelivery(fd);
@@ -538,40 +684,71 @@ export default function SmartRideBooking({ embedMode = false, initialData = {}, 
             const deliveryObj = createResp?.data?.delivery || createResp?.delivery || createResp?.data || createResp;
             const dId = deliveryObj?._id || deliveryObj?.id || deliveryObj?.deliveryId || deliveryObj?.trackingNumber;
             if (!dId) {
-                console.error('Create delivery response:', createResp);
                 throw new Error('Failed to create delivery (no id returned)');
             }
             setDeliveryId(dId);
+            setRequestSentToRiderId(String(riderId));
+            setRequestSentToRiderName(rider?.fullName || 'Rider');
+            setIsSendingRequest(false);
             try {
                 localStorage.setItem('smartride_delivery_id', String(dId));
             } catch (e) { }
 
-            // Join delivery-specific socket room so server can target events to this customer
             try {
                 const room = `delivery:${dId}`;
                 socketService.connect();
-                const onConnectJoin = () => {
+                const onConnectJoin = () =>
+                {
                     try { socketService.joinRoom(room); } catch (e) { console.warn('[SmartRide] joinRoom failed on connect:', e); }
                     try { socketService.off('connect', onConnectJoin); } catch (e) { }
                 };
                 try { socketService.on('connect', onConnectJoin); } catch (e) { }
-                try { socketService.joinRoom(room); } catch (e) { /* join will be attempted on connect */ }
+                try { socketService.joinRoom(room); } catch (e) { }
             } catch (e) { console.warn('[SmartRide] Failed to join delivery room:', e); }
 
-            // Notify other parts of the app and remain in 'finding-rider' until a rider accepts
             window.dispatchEvent(new Event('deliveries:refresh'));
             window.dispatchEvent(new CustomEvent('delivery:created', { detail: createResp?.data || createResp }));
-
         } catch (err) {
-            console.error('[SmartRide] findRider error:', err);
-            setToastMsg('Failed to start rider matching. Please try again.');
+            console.error('[SmartRide] sendRequestToRider error:', err);
+            setToastMsg('Failed to send request to rider. Please try again.');
             setShowToast(true);
-            setCurrentStep('summary');
-            setIsSearching(false);
+            setIsSendingRequest(false);
         }
     };
 
-    const proceedToPayment = async () => {
+    const cancelRequest = async () =>
+    {
+        if (!deliveryId || isCancellingRequest) return;
+        setIsCancellingRequest(true);
+        try {
+            await cancelDelivery(deliveryId, { reason: 'user_cancelled' });
+            try {
+                localStorage.removeItem('smartride_delivery_id');
+                localStorage.removeItem('smartride_step');
+            } catch (e) { }
+            try {
+                socketService.connect();
+                socketService.emit('delivery:cancelled', { deliveryId });
+            } catch (e) { }
+            try {
+                window.dispatchEvent(new CustomEvent('delivery:cancelled', { detail: { deliveryId } }));
+            } catch (e) { }
+            setDeliveryId(null);
+            setRequestSentToRiderId(null);
+            setRequestSentToRiderName(null);
+            setToastMsg('Request cancelled. You can send a new request or search for another rider.');
+            setShowToast(true);
+        } catch (e) {
+            console.warn('[SmartRide] Cancel request failed:', e);
+            setToastMsg('Failed to cancel request. Please try again.');
+            setShowToast(true);
+        } finally {
+            setIsCancellingRequest(false);
+        }
+    };
+
+    const proceedToPayment = async () =>
+    {
         if (!formData.paymentMethod) {
             alert('Please select a payment method');
             setShowPaymentDrawer(true);
@@ -657,7 +834,8 @@ export default function SmartRideBooking({ embedMode = false, initialData = {}, 
             if (formData.image) {
                 const fd = new FormData();
                 fd.append('image', formData.image);
-                Object.entries(payload).forEach(([k, v]) => {
+                Object.entries(payload).forEach(([k, v]) =>
+                {
                     if (typeof v === 'object') fd.append(k, JSON.stringify(v));
                     else fd.append(k, String(v));
                 });
@@ -684,7 +862,8 @@ export default function SmartRideBooking({ embedMode = false, initialData = {}, 
             try {
                 const room = `delivery:${dId}`;
                 socketService.connect();
-                const onConnectJoin = () => {
+                const onConnectJoin = () =>
+                {
                     try { socketService.joinRoom(room); } catch (e) { console.warn('[SmartRide] joinRoom failed on connect:', e); }
                     try { socketService.off('connect', onConnectJoin); } catch (e) { }
                 };
@@ -730,7 +909,8 @@ export default function SmartRideBooking({ embedMode = false, initialData = {}, 
                 if (paymentReference) setCookie('pending_payment_id', String(paymentReference), 1);
             } catch (e) { }
 
-            const cleanupOnPaymentCancel = async (did) => {
+            const cleanupOnPaymentCancel = async (did) =>
+            {
                 try {
                     if (did) await cancelDelivery(did, { reason: 'payment_cancelled' });
                 } catch (cleanupErr) {
@@ -753,7 +933,8 @@ export default function SmartRideBooking({ embedMode = false, initialData = {}, 
 
                     // Monitor popup closure
                     try {
-                        const popupInterval = setInterval(() => {
+                        const popupInterval = setInterval(() =>
+                        {
                             try {
                                 if (!paymentWindow || paymentWindow.closed) {
                                     clearInterval(popupInterval);
@@ -788,10 +969,12 @@ export default function SmartRideBooking({ embedMode = false, initialData = {}, 
                     email: formData.recipientEmail || 'customer@swiftlyxpress.com',
                     amount: calculateTotal().total * 100, // Paystack expects kobo
                     ref: paymentReference,
-                    onClose: function () {
+                    onClose: function ()
+                    {
                         cleanupOnPaymentCancel(dId);
                     },
-                    callback: function (response) {
+                    callback: function (response)
+                    {
                         try { deleteCookie('pending_payment_delivery_id'); deleteCookie('pending_payment_id'); } catch (e) { }
                         // Navigate to payment callback route to let SPA finalize
                         try { router.push('/customer/payment/callback', 'root', 'replace'); } catch (e) { window.location.href = '/customer/payment/callback'; }
@@ -810,7 +993,8 @@ export default function SmartRideBooking({ embedMode = false, initialData = {}, 
     };
 
     // Helper for size category dropdown
-    const handleSizeCategoryChange = (label) => {
+    const handleSizeCategoryChange = (label) =>
+    {
         const valueMap = { 'Small': 'small', 'Medium': 'big', 'Very Big': 'very_big' };
         const defaultScaleMap = { small: 85, big: 100, very_big: 120 };
         const cat = valueMap[label];
@@ -829,12 +1013,14 @@ export default function SmartRideBooking({ embedMode = false, initialData = {}, 
         });
     };
 
-    const handleWeightCategoryChange = (label) => {
+    const handleWeightCategoryChange = (label) =>
+    {
         const valueMap = { 'Light': 'light', 'Heavy': 'heavy', 'Very Heavy': 'very_heavy' };
         setFormData({ ...formData, weightCategory: valueMap[label] });
     };
 
-    const handleSliderChange = (e) => {
+    const handleSliderChange = (e) =>
+    {
         const scale = parseInt(e.target.value, 10);
         const dimsMap = { small: [30, 30, 30], big: [50, 40, 30], very_big: [80, 60, 50] };
         // Derive category from scale thresholds so slider controls category too
@@ -856,7 +1042,8 @@ export default function SmartRideBooking({ embedMode = false, initialData = {}, 
         hideBubbleTimeout.current = setTimeout(() => setSliderBubble(null), 1200);
     };
 
-    const handleSliderMouseMove = () => {
+    const handleSliderMouseMove = () =>
+    {
         if (!sliderRef.current) return;
         const val = parseInt(sliderRef.current.value, 10);
         const min = 70; const max = 130;
@@ -864,7 +1051,8 @@ export default function SmartRideBooking({ embedMode = false, initialData = {}, 
         setSliderBubble({ percent, value: val });
     };
 
-    const handleSliderMouseLeave = () => {
+    const handleSliderMouseLeave = () =>
+    {
         if (hideBubbleTimeout.current) clearTimeout(hideBubbleTimeout.current);
         hideBubbleTimeout.current = setTimeout(() => setSliderBubble(null), 800);
     };
@@ -892,7 +1080,8 @@ export default function SmartRideBooking({ embedMode = false, initialData = {}, 
                                 <button
                                     type="button"
                                     aria-label="Close"
-                                    onClick={async () => {
+                                    onClick={async () =>
+                                    {
                                         // If in finding/found state, cancel the smart ride delivery
                                         if ((currentStep === 'finding-rider' || currentStep === 'rider-found') && deliveryId) {
                                             try {
@@ -924,7 +1113,7 @@ export default function SmartRideBooking({ embedMode = false, initialData = {}, 
                 {/* Breadcrumb */}
                 <YummyText>
                     <div className="max-w-4xl mx-auto -mt-6 px-0 sm:px-6 lg:px-8">
-                        <Breadcrumb steps={breadcrumbSteps} currentStep={getCurrentStepIndex()} />
+                        <Breadcrumb steps={breadcrumbSteps} currentStep={getCurrentStepIndex()} onStepClick={handleBreadcrumbClick} />
                     </div>
                 </YummyText>
 
@@ -957,7 +1146,8 @@ export default function SmartRideBooking({ embedMode = false, initialData = {}, 
                                                             formData.deliveryType === 'smart_ride' ? 'Smart Ride' :
                                                                 'Smart Ride'
                                             }
-                                            onChange={(label) => {
+                                            onChange={(label) =>
+                                            {
                                                 const deliveryTypeMap = {
                                                     'Express (Same day)': 'express',
                                                     'Standard (1-2 days)': 'standard',
@@ -1043,11 +1233,13 @@ export default function SmartRideBooking({ embedMode = false, initialData = {}, 
                                                 <GoogleMapsAutocomplete
                                                     value={formData.pickupAddress}
                                                     onChange={(val) => setFormData({ ...formData, pickupAddress: val })}
-                                                    onPlaceSelect={(place) => {
+                                                    onPlaceSelect={(place) =>
+                                                    {
                                                         console.log('Pickup place selected:', place);
                                                         setFormData({ ...formData, pickupAddress: `${place.street}${place.city ? ', ' + place.city : ''}`, pickupPlace: place });
                                                     }}
-                                                    onBlur={() => {
+                                                    onBlur={() =>
+                                                    {
                                                         // Geocode if user typed manually and didn't select from dropdown
                                                         if (formData.pickupAddress && !formData.pickupPlace?.coordinates) {
                                                             geocodeAddress(formData.pickupAddress, 'pickup');
@@ -1104,11 +1296,13 @@ export default function SmartRideBooking({ embedMode = false, initialData = {}, 
                                                 <GoogleMapsAutocomplete
                                                     value={formData.deliveryAddress}
                                                     onChange={(val) => setFormData({ ...formData, deliveryAddress: val })}
-                                                    onPlaceSelect={(place) => {
+                                                    onPlaceSelect={(place) =>
+                                                    {
                                                         console.log('Delivery place selected:', place);
                                                         setFormData({ ...formData, deliveryAddress: `${place.street}${place.city ? ', ' + place.city : ''}`, deliveryPlace: place });
                                                     }}
-                                                    onBlur={() => {
+                                                    onBlur={() =>
+                                                    {
                                                         // Geocode if user typed manually and didn't select from dropdown
                                                         if (formData.deliveryAddress && !formData.deliveryPlace?.coordinates) {
                                                             geocodeAddress(formData.deliveryAddress, 'delivery');
@@ -1385,7 +1579,8 @@ export default function SmartRideBooking({ embedMode = false, initialData = {}, 
                                                 id="package-image-upload"
                                                 accept="image/*"
                                                 className="hidden"
-                                                onChange={(e) => {
+                                                onChange={(e) =>
+                                                {
                                                     const file = e.target.files?.[0];
                                                     if (file) {
                                                         if (file.size > 10 * 1024 * 1024) {
@@ -1563,7 +1758,8 @@ export default function SmartRideBooking({ embedMode = false, initialData = {}, 
                                 <div className="p-6 space-y-3">
                                     <button
                                         type="button"
-                                        onClick={() => {
+                                        onClick={() =>
+                                        {
                                             setFormData({ ...formData, paymentMethod: 'cash' });
                                             setTimeout(() => setShowPaymentDrawer(false), 150);
                                         }}
@@ -1598,7 +1794,8 @@ export default function SmartRideBooking({ embedMode = false, initialData = {}, 
 
                                     <button
                                         type="button"
-                                        onClick={() => {
+                                        onClick={() =>
+                                        {
                                             setFormData({ ...formData, paymentMethod: 'card' });
                                             setTimeout(() => setShowPaymentDrawer(false), 150);
                                         }}
@@ -1638,7 +1835,8 @@ export default function SmartRideBooking({ embedMode = false, initialData = {}, 
 
                                     <button
                                         type="button"
-                                        onClick={() => {
+                                        onClick={() =>
+                                        {
                                             setFormData({ ...formData, paymentMethod: 'transfer' });
                                             setTimeout(() => setShowPaymentDrawer(false), 150);
                                         }}
@@ -1713,7 +1911,8 @@ export default function SmartRideBooking({ embedMode = false, initialData = {}, 
                                 <button
                                     type="button"
                                     aria-label="Close"
-                                    onClick={() => {
+                                    onClick={() =>
+                                    {
                                         if (embedMode && typeof onClose === 'function') return onClose();
                                         return router.goBack();
                                     }}
@@ -1727,7 +1926,7 @@ export default function SmartRideBooking({ embedMode = false, initialData = {}, 
 
                     {/* Breadcrumb */}
                     <div className="max-w-4xl mx-auto -mt-6 px-4 sm:px-6 lg:px-8">
-                        <Breadcrumb steps={breadcrumbSteps} currentStep={getCurrentStepIndex()} />
+                        <Breadcrumb steps={breadcrumbSteps} currentStep={getCurrentStepIndex()} onStepClick={handleBreadcrumbClick} />
                     </div>
 
                     <div className="max-w-5xl mx-auto px-4 pb-12">
@@ -1832,32 +2031,51 @@ export default function SmartRideBooking({ embedMode = false, initialData = {}, 
 
                             {/* Declared value removed */}
 
-                            {/* Pricing */}
+                            {/* Pricing - Smart Ride charge breakdown */}
                             <div className="bg-[#F0FDF4] rounded-xl p-6 mb-6">
                                 <h3 className="text-base font-semibold text-[#0F172A] mb-4">Cost Breakdown</h3>
                                 <div className="space-y-2.5">
                                     {/* Base Fare */}
                                     <div className="flex justify-between items-center text-[#0F172A]">
                                         <span className="text-[15px]">Base Fare</span>
-                                        <span className="text-[15px]">₦{pricing.baseFare.toLocaleString()}</span>
+                                        <span className="text-[15px]">₦{Number(pricing.baseFare || 0).toLocaleString()}</span>
                                     </div>
 
-
-                                    {/* Priority Fee (Smart Ride) */}
-                                    {pricing.priorityFee > 0 && (
-                                        <div className="flex justify-between items-center text-orange-700">
-                                            <span className="text-sm">Priority Delivery</span>
-                                            <span className="text-sm font-medium">+₦{pricing.priorityFee.toLocaleString()}</span>
+                                    {/* Smart Ride Fee */}
+                                    {(pricing.smartRideFee > 0 || (formData.deliveryType === 'smart_ride' && (pricing.total || 0) > (pricing.baseFare || 0))) && (
+                                        <div className="flex justify-between items-center text-[#0F172A]">
+                                            <span className="text-[15px]">Smart Ride</span>
+                                            <span className="text-[15px]">₦{Number(pricing.smartRideFee || Math.max(0, (pricing.total || 0) - (pricing.baseFare || 0) - (pricing.distanceCharge || 0))).toLocaleString()}</span>
                                         </div>
                                     )}
 
-                                    {/* Insurance removed */}
+                                    {/* Distance charge */}
+                                    {pricing.distanceCharge > 0 && (
+                                        <div className="flex justify-between items-center text-[#0F172A]">
+                                            <span className="text-[15px]">Distance ({Number(pricing.distance || 0).toFixed(1)} km)</span>
+                                            <span className="text-[15px]">₦{Number(pricing.distanceCharge).toLocaleString()}</span>
+                                        </div>
+                                    )}
+
+                                    {/* Priority / Errand (if ever used) */}
+                                    {pricing.priorityFee > 0 && (
+                                        <div className="flex justify-between items-center text-orange-700">
+                                            <span className="text-sm">Priority Delivery</span>
+                                            <span className="text-sm font-medium">+₦{Number(pricing.priorityFee).toLocaleString()}</span>
+                                        </div>
+                                    )}
+                                    {pricing.errandFee > 0 && (
+                                        <div className="flex justify-between items-center text-[#0F172A]">
+                                            <span className="text-[15px]">Special Errand</span>
+                                            <span className="text-[15px]">₦{Number(pricing.errandFee).toLocaleString()}</span>
+                                        </div>
+                                    )}
 
                                     {/* Total */}
                                     <div className="border-t border-gray-300 pt-3 mt-3">
                                         <div className="flex justify-between items-center">
                                             <span className="text-lg font-medium text-[#0F172A]">Total</span>
-                                            <span className="text-2xl font-medium text-[#00B75A]">₦{pricing.total.toLocaleString()}</span>
+                                            <span className="text-2xl font-medium text-[#00B75A]">₦{Number(pricing.total || 0).toLocaleString()}</span>
                                         </div>
                                     </div>
                                 </div>
@@ -1876,8 +2094,9 @@ export default function SmartRideBooking({ embedMode = false, initialData = {}, 
                                     variant="primary"
                                     className="!flex-1 !py-4 !bg-[#00B75A] !text-sm !font-[400] !rounded-full mt-6"
                                     onClick={findRider}
+                                    disabled={isSearching}
                                 >
-                                    Find a Rider
+                                    {isSearching ? 'Finding rider...' : 'Find a Rider'}
                                 </Button>
                             </div>
                         </div>
@@ -1909,7 +2128,8 @@ export default function SmartRideBooking({ embedMode = false, initialData = {}, 
                                 <button
                                     type="button"
                                     aria-label="Close"
-                                    onClick={async () => {
+                                    onClick={async () =>
+                                    {
                                         // FIXED: Enhanced cancel logic to remove from available orders
                                         if ((currentStep === 'finding-rider' || currentStep === 'rider-found') && deliveryId) {
                                             try {
@@ -1955,7 +2175,7 @@ export default function SmartRideBooking({ embedMode = false, initialData = {}, 
                     </div>
 
                     <div className="max-w-4xl mx-auto -mt-6 px-4">
-                        <Breadcrumb steps={breadcrumbSteps} currentStep={getCurrentStepIndex()} />
+                        <Breadcrumb steps={breadcrumbSteps} currentStep={getCurrentStepIndex()} onStepClick={handleBreadcrumbClick} />
                     </div>
 
                     <div className="max-w-6xl mx-auto px-4 py-8">
@@ -1976,18 +2196,17 @@ export default function SmartRideBooking({ embedMode = false, initialData = {}, 
                                     </div>
                                 </div>
 
-                                {/* Glass overlay while finding or when rider found (until rider-details) */}
-                                {(currentStep === 'finding-rider' || currentStep === 'rider-found') && currentStep !== 'rider-details' && (
+                                {/* Glass overlay: only when sending request (creating delivery) or when rider found */}
+                                {(currentStep === 'finding-rider' && isSendingRequest) || (currentStep === 'rider-found' && currentStep !== 'rider-details') ? (
                                     <div className="absolute inset-0 z-20 flex items-center justify-center" style={{ background: 'rgba(255,255,255,0.6)', backdropFilter: 'blur(6px) saturate(120%)' }}>
-                                        {/* Loading area sits over the map */}
                                         <div className="text-center">
-                                            {isSearching ? (
+                                            {isSendingRequest ? (
                                                 <>
                                                     <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-[#00D68F] mx-auto mb-4"></div>
-                                                    <h2 className="text-2xl font-semibold text-gray-900 mb-2">Finding Nearby Riders</h2>
-                                                    <p className="text-sm text-gray-600">Looking for available riders in your area...</p>
+                                                    <h2 className="text-2xl font-semibold text-gray-900 mb-2">Creating your delivery</h2>
+                                                    <p className="text-sm text-gray-600">One moment...</p>
                                                 </>
-                                            ) : (
+                                            ) : currentStep === 'rider-found' ? (
                                                 <>
                                                     <div className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-4">
                                                         <CheckCircle className="w-10 h-10 text-green-600" />
@@ -1995,46 +2214,122 @@ export default function SmartRideBooking({ embedMode = false, initialData = {}, 
                                                     <h2 className="text-2xl font-semibold text-gray-900 mb-2">Rider Found! 🎉</h2>
                                                     <p className="text-sm text-gray-600">A rider has accepted your delivery</p>
                                                 </>
-                                            )}
+                                            ) : null}
                                         </div>
                                     </div>
-                                )}
+                                ) : null}
                             </div>
                         </div>
 
-                        {/* Skeleton placeholders when searching (pulled closer to map) */}
-                        {isSearching && (
+                        {/* Single rider card + Send request / Request sent / Search again */}
+                        {isSendingRequest && (
                             <div className="max-w-5xl mx-auto -mt-4 opacity-20">
                                 <div className="bg-white rounded-3xl p-6 shadow-sm">
                                     <div className="flex items-start gap-6 mb-4">
                                         <div className="w-32 h-32 bg-gray-200 rounded-2xl overflow-hidden flex-shrink-0"></div>
-
                                         <div className="flex-1">
                                             <div className="h-5 bg-gray-200 rounded w-1/3 mb-2"></div>
                                             <div className="h-3 bg-gray-200 rounded w-1/2 mb-3"></div>
-
                                             <div className="grid grid-cols-3 gap-4 mt-2">
                                                 <div className="h-3 bg-gray-200 rounded w-full"></div>
                                                 <div className="h-3 bg-gray-200 rounded w-full"></div>
                                                 <div className="h-3 bg-gray-200 rounded w-full"></div>
                                             </div>
                                         </div>
-
                                         <div className="flex flex-col gap-3 w-32">
                                             <div className="h-9 bg-gray-200 rounded-full"></div>
                                             <div className="h-9 bg-gray-200 rounded-full"></div>
                                         </div>
                                     </div>
-
-                                    <div className="border-t border-gray-200 pt-4">
-                                        <div className="flex items-center justify-between max-w-3xl mx-auto">
-                                            <div className="w-16 h-16 bg-gray-200 rounded-full"></div>
-                                            <div className="flex-1 h-1 bg-gray-200 mx-4"></div>
-                                            <div className="w-16 h-16 bg-gray-200 rounded-full"></div>
-                                            <div className="flex-1 h-1 bg-gray-200 mx-4"></div>
-                                            <div className="w-16 h-16 bg-gray-200 rounded-full"></div>
+                                </div>
+                            </div>
+                        )}
+                        {!isSendingRequest && (currentStep === 'finding-rider' || currentStep === 'rider-found') && (
+                            <div className="max-w-5xl mx-auto mt-4">
+                                <div className="bg-white rounded-3xl p-6 shadow-sm border border-gray-100">
+                                    <h3 className="text-lg font-semibold text-[#0F172A] mb-3">
+                                        {requestSentToRiderId ? 'Request status' : 'Closest rider'}
+                                    </h3>
+                                    {nearbyRidersLoading ? (
+                                        <div className="flex items-center justify-center py-8">
+                                            <div className="animate-spin rounded-full h-8 w-8 border-2 border-[#00B75A] border-t-transparent"></div>
+                                            <span className="ml-3 text-sm text-gray-600">Loading riders...</span>
                                         </div>
-                                    </div>
+                                    ) : nearbyRiders.length === 0 && !requestSentToRiderId ? (
+                                        <p className="text-sm text-gray-600 py-4">No riders in your area right now.</p>
+                                    ) : nearbyRiders.length >= 1 ? (
+                                        <>
+                                            {(() =>
+                                            {
+                                                const r = nearbyRiders[0];
+                                                const rid = String(r?.riderId ?? r?._id ?? '');
+                                                const alreadySent = requestSentToRiderId === rid;
+                                                return (
+                                                    <div className="flex items-center gap-4 p-4 rounded-xl bg-gray-50 border border-gray-100">
+                                                        <div className="w-14 h-14 rounded-full bg-[#00B75A]/20 flex items-center justify-center flex-shrink-0 overflow-hidden">
+                                                            {r.profileImage ? (
+                                                                <img src={r.profileImage} alt="" className="w-full h-full object-cover" />
+                                                            ) : (
+                                                                <Bike className="w-7 h-7 text-[#00B75A]" />
+                                                            )}
+                                                        </div>
+                                                        <div className="flex-1 min-w-0">
+                                                            <p className="text-base font-medium text-[#0F172A]">{r.fullName || 'Rider'}</p>
+                                                            <p className="text-xs text-gray-500 mt-0.5">
+                                                                {r.distanceKm != null ? `~${r.distanceKm} km away` : 'Distance unknown'}
+                                                                {r.estimatedArrivalMinutes != null ? ` · ~${r.estimatedArrivalMinutes} min` : ''}
+                                                                {r.ratingDisplay ? ` · ${r.ratingDisplay}` : ''}
+                                                            </p>
+                                                            {alreadySent ? (
+                                                                <>
+                                                                    <p className="text-sm text-[#00B75A] font-medium mt-2">Request sent to {requestSentToRiderName || r.fullName || 'this rider'}. They can accept or decline.</p>
+                                                                    <button
+                                                                        type="button"
+                                                                        onClick={cancelRequest}
+                                                                        disabled={isCancellingRequest}
+                                                                        className="mt-3 px-5 py-2.5 border-2 border-red-200 text-red-600 rounded-full font-semibold text-sm hover:bg-red-50 disabled:opacity-60 disabled:cursor-not-allowed"
+                                                                    >
+                                                                        {isCancellingRequest ? 'Cancelling...' : 'Cancel request'}
+                                                                    </button>
+                                                                </>
+                                                            ) : (
+                                                                <button
+                                                                    type="button"
+                                                                    onClick={() => sendRequestToRider(r)}
+                                                                    disabled={isSendingRequest}
+                                                                    className="mt-3 px-5 py-2.5 bg-[#00B75A] text-white rounded-full font-semibold text-sm hover:bg-[#00A050] disabled:opacity-60 disabled:cursor-not-allowed"
+                                                                >
+                                                                    Send request
+                                                                </button>
+                                                            )}
+                                                        </div>
+                                                    </div>
+                                                );
+                                            })()}
+                                            {!requestSentToRiderId && (
+                                                <button
+                                                    type="button"
+                                                    onClick={searchAgain}
+                                                    disabled={nearbyRidersLoading}
+                                                    className="mt-4 w-full py-2.5 border-2 border-gray-200 text-gray-700 rounded-full font-semibold text-sm hover:bg-gray-50 disabled:opacity-60"
+                                                >
+                                                    Search again
+                                                </button>
+                                            )}
+                                        </>
+                                    ) : requestSentToRiderId ? (
+                                        <div className="py-4">
+                                            <p className="text-sm text-[#00B75A] font-medium mb-3">Request sent to {requestSentToRiderName || 'your rider'}. They can accept or decline.</p>
+                                            <button
+                                                type="button"
+                                                onClick={cancelRequest}
+                                                disabled={isCancellingRequest}
+                                                className="px-5 py-2.5 border-2 border-red-200 text-red-600 rounded-full font-semibold text-sm hover:bg-red-50 disabled:opacity-60 disabled:cursor-not-allowed"
+                                            >
+                                                {isCancellingRequest ? 'Cancelling...' : 'Cancel request'}
+                                            </button>
+                                        </div>
+                                    ) : null}
                                 </div>
                             </div>
                         )}
@@ -2061,7 +2356,8 @@ export default function SmartRideBooking({ embedMode = false, initialData = {}, 
                                 <button
                                     type="button"
                                     aria-label="Close"
-                                    onClick={() => {
+                                    onClick={() =>
+                                    {
                                         if (embedMode && typeof onClose === 'function') return onClose();
                                         return router.goBack();
                                     }}
@@ -2074,7 +2370,7 @@ export default function SmartRideBooking({ embedMode = false, initialData = {}, 
                     </div>
 
                     <div className="max-w-4xl mx-auto -mt-6 px-4">
-                        <Breadcrumb steps={breadcrumbSteps} currentStep={getCurrentStepIndex()} />
+                        <Breadcrumb steps={breadcrumbSteps} currentStep={getCurrentStepIndex()} onStepClick={handleBreadcrumbClick} />
                     </div>
 
                     <div className="max-w-6xl mx-auto px-4 py-8">
@@ -2224,7 +2520,8 @@ export default function SmartRideBooking({ embedMode = false, initialData = {}, 
                                 {/* Cash on Delivery */}
                                 <button
                                     type="button"
-                                    onClick={() => {
+                                    onClick={() =>
+                                    {
                                         setFormData({ ...formData, paymentMethod: 'cash' });
                                         setShowPaymentDrawer(false);
                                     }}
@@ -2262,7 +2559,8 @@ export default function SmartRideBooking({ embedMode = false, initialData = {}, 
                                 {/* Pay Online (Card) */}
                                 <button
                                     type="button"
-                                    onClick={() => {
+                                    onClick={() =>
+                                    {
                                         setFormData({ ...formData, paymentMethod: 'card' });
                                         setShowPaymentDrawer(false);
                                     }}
@@ -2305,7 +2603,8 @@ export default function SmartRideBooking({ embedMode = false, initialData = {}, 
                                 {/* Bank Transfer */}
                                 <button
                                     type="button"
-                                    onClick={() => {
+                                    onClick={() =>
+                                    {
                                         setFormData({ ...formData, paymentMethod: 'transfer' });
                                         setShowPaymentDrawer(false);
                                     }}
