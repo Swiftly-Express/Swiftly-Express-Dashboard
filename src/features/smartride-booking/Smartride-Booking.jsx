@@ -24,8 +24,7 @@ const apiClient = axios.create({
 });
 
 // Add request interceptor to attach auth token (match Book.jsx behavior)
-apiClient.interceptors.request.use((config) =>
-{
+apiClient.interceptors.request.use((config) => {
     const riderToken = getCookie('rider_token');
     const customerToken = getCookie('customer_token');
     const adminToken = getCookie('admin_token');
@@ -44,8 +43,7 @@ const sideBottomShadow = {
     boxShadow: '2px 2px 4px rgba(0,0,0,0.06), -2px 2px 4px rgba(0,0,0,0.06), 0 4px 8px rgba(0,0,0,0.08)'
 };
 
-export default function SmartRideBooking({ embedMode = false, initialData = {}, onClose = null })
-{
+export default function SmartRideBooking({ embedMode = false, initialData = {}, onClose = null }) {
     const router = useIonRouter();
     const [currentStep, setCurrentStep] = useState('form');
     const [isSearching, setIsSearching] = useState(false);
@@ -102,8 +100,7 @@ export default function SmartRideBooking({ embedMode = false, initialData = {}, 
     const [paymentHover, setPaymentHover] = useState(false);
     const [drawerHover, setDrawerHover] = useState('');
 
-    useEffect(() =>
-    {
+    useEffect(() => {
         const check = () => setIsMobile(window.innerWidth <= 768);
         check();
         window.addEventListener('resize', check);
@@ -111,13 +108,11 @@ export default function SmartRideBooking({ embedMode = false, initialData = {}, 
     }, []);
 
     // Calculate distance and fetch price whenever addresses change
-    useEffect(() =>
-    {
+    useEffect(() => {
         const pickupCoords = formData.pickupPlace?.coordinates;
         const deliveryCoords = formData.deliveryPlace?.coordinates;
 
-        const updatePrice = async () =>
-        {
+        const updatePrice = async () => {
             if (pickupCoords && deliveryCoords && pickupCoords.lat && deliveryCoords.lat) {
                 // Determine if special errand based on user selection or other logic? 
                 // SmartRide implies smartRide=true
@@ -151,10 +146,8 @@ export default function SmartRideBooking({ embedMode = false, initialData = {}, 
     }, [formData.pickupPlace, formData.deliveryPlace, isSpecialErrand]);
 
     // Listen for postMessage from payment callback popup (same behavior as Book.jsx)
-    useEffect(() =>
-    {
-        const handlePaymentMessage = (event) =>
-        {
+    useEffect(() => {
+        const handlePaymentMessage = (event) => {
             // Expecting { type: 'PAYMENT_REDIRECT', url: '...' }
             if (event.data?.type === 'PAYMENT_REDIRECT') {
                 const targetUrl = event.data.url || event.data.fullUrl;
@@ -170,10 +163,8 @@ export default function SmartRideBooking({ embedMode = false, initialData = {}, 
     }, [router]);
 
     // Listen for rider acceptance events - show rider-found only when the created delivery is accepted
-    useEffect(() =>
-    {
-        const onDeliveryAccepted = async (e) =>
-        {
+    useEffect(() => {
+        const onDeliveryAccepted = async (e) => {
             console.log('[SmartRide] 📢 delivery:accepted event received:', e?.detail);
             const detail = e?.detail || {};
 
@@ -257,8 +248,7 @@ export default function SmartRideBooking({ embedMode = false, initialData = {}, 
         window.addEventListener('delivery:accepted', onDeliveryAccepted);
 
         // Also listen for socket events directly. Ensure socket is connected so listeners register.
-        const handleSocketAcceptance = (data) =>
-        {
+        const handleSocketAcceptance = (data) => {
             console.log('[SmartRide] 🔌 Socket delivery:accepted received:', data);
             onDeliveryAccepted({ detail: data });
         };
@@ -270,8 +260,7 @@ export default function SmartRideBooking({ embedMode = false, initialData = {}, 
             console.warn('[SmartRide] Socket listener failed:', e);
         }
 
-        return () =>
-        {
+        return () => {
             window.removeEventListener('delivery:accepted', onDeliveryAccepted);
             try {
                 socketService.off('delivery:accepted', handleSocketAcceptance);
@@ -279,12 +268,47 @@ export default function SmartRideBooking({ embedMode = false, initialData = {}, 
         };
     }, [deliveryId]);
 
+    // Poll delivery status as a fallback when socket events are missed.
+    // This avoids forcing the customer to refresh the page while keeping them on the form.
+    useEffect(() => {
+        if (!deliveryId) return;
+        let cancelled = false;
+        let interval = null;
+
+        const poll = async () => {
+            try {
+                const resp = await getDeliveryById(deliveryId);
+                const delivery = resp?.data?.delivery || resp?.data || resp;
+                if (!delivery) return;
+
+                const status = (delivery.status || '').toString().toLowerCase();
+                const hasRider = !!(delivery.rider || delivery.assignedDriver || delivery.driverId);
+
+                // Consider accepted/assigned/picked-up as accepted
+                if (status.includes('accepted') || status.includes('assigned') || status.includes('picked') || hasRider) {
+                    const detail = { delivery: delivery, deliveryId: delivery._id || delivery.id || delivery.deliveryId || delivery.trackingNumber, order: delivery };
+                    console.log('[SmartRide] Poll detected acceptance for delivery:', detail.deliveryId);
+                    window.dispatchEvent(new CustomEvent('delivery:accepted', { detail }));
+                }
+            } catch (e) {
+                console.warn('[SmartRide] Polling delivery status failed:', e);
+            }
+        };
+
+        // Immediately poll once then every 5s while waiting
+        poll();
+        interval = setInterval(() => { if (!cancelled) poll(); }, 5000);
+
+        return () => {
+            cancelled = true;
+            if (interval) clearInterval(interval);
+        };
+    }, [deliveryId]);
+
     // Socket: rider declined the invitation — clear request state and show "Search again"
-    useEffect(() =>
-    {
+    useEffect(() => {
         socketService.connect();
-        const handleInvitationRejected = (data) =>
-        {
+        const handleInvitationRejected = (data) => {
             const eventId = data?.deliveryId ? String(data.deliveryId) : '';
             const currentId = deliveryId ? String(deliveryId) : '';
             if (eventId && currentId && eventId === currentId) {
@@ -295,15 +319,13 @@ export default function SmartRideBooking({ embedMode = false, initialData = {}, 
             }
         };
         socketService.on('delivery:invitation:rejected', handleInvitationRejected);
-        return () =>
-        {
+        return () => {
             try { socketService.off('delivery:invitation:rejected', handleInvitationRejected); } catch (e) { }
         };
     }, [deliveryId]);
 
     // Fetch nearby riders when on Rider Matching step (so we call /api/customer/nearby-riders)
-    useEffect(() =>
-    {
+    useEffect(() => {
         const coords = formData.pickupPlace?.coordinates;
         const lat = coords?.lat;
         const lng = coords?.lng;
@@ -314,25 +336,21 @@ export default function SmartRideBooking({ embedMode = false, initialData = {}, 
         let cancelled = false;
         setNearbyRidersLoading(true);
         getNearbyRiders({ lat, lng, radiusKm: 20, limit: 1 })
-            .then((res) =>
-            {
+            .then((res) => {
                 if (cancelled) return;
                 const list = res?.data?.riders ?? res?.riders ?? (Array.isArray(res?.data) ? res.data : []);
                 setNearbyRiders(Array.isArray(list) ? list : []);
             })
-            .catch(() =>
-            {
+            .catch(() => {
                 if (!cancelled) setNearbyRiders([]);
             })
-            .finally(() =>
-            {
+            .finally(() => {
                 if (!cancelled) setNearbyRidersLoading(false);
             });
         return () => { cancelled = true; };
     }, [currentStep, formData.pickupPlace?.coordinates?.lat, formData.pickupPlace?.coordinates?.lng]);
 
-    useEffect(() =>
-    {
+    useEffect(() => {
         // Check if user came from public page via returnUrl after authentication
         const urlParams = new URLSearchParams(window.location.search);
         const returnUrl = urlParams.get('returnUrl');
@@ -350,19 +368,16 @@ export default function SmartRideBooking({ embedMode = false, initialData = {}, 
         if (!isAuthenticated()) {
             setToastMsg('Please log in to book a delivery');
             setShowToast(true);
-            setTimeout(() =>
-            {
+            setTimeout(() => {
                 router.push('/auth/customer/login?returnUrl=/customer/smartride-booking', 'root', 'replace');
             }, 2000);
         }
     }, [router]);
 
     // Restore SmartRide session on refresh: validate stored delivery id before resuming finding state
-    useEffect(() =>
-    {
+    useEffect(() => {
         let mounted = true;
-        (async () =>
-        {
+        (async () => {
             try {
                 const stored = localStorage.getItem('smartride_delivery_id');
                 const storedStep = localStorage.getItem('smartride_step');
@@ -400,8 +415,7 @@ export default function SmartRideBooking({ embedMode = false, initialData = {}, 
                         try {
                             const room = `delivery:${stored}`;
                             socketService.connect();
-                            const onConnectJoin = () =>
-                            {
+                            const onConnectJoin = () => {
                                 try { socketService.joinRoom(room); } catch (e) { console.warn('[SmartRide] joinRoom failed on connect:', e); }
                                 try { socketService.off('connect', onConnectJoin); } catch (e) { }
                             };
@@ -410,7 +424,10 @@ export default function SmartRideBooking({ embedMode = false, initialData = {}, 
                         } catch (e) { console.warn('[SmartRide] Failed to join stored delivery room:', e); }
 
                         // Restore to appropriate step based on delivery status
-                        if (status === 'accepted' || status === 'in_progress' || storedStep === 'rider-found') {
+                        if (status === 'accepted' || status === 'in_progress' || storedStep === 'rider-details') {
+                            setCurrentStep('rider-details');
+                            setIsSearching(false);
+                        } else if (storedStep === 'rider-found') {
                             setCurrentStep('rider-found');
                             setIsSearching(false);
                         } else {
@@ -434,8 +451,7 @@ export default function SmartRideBooking({ embedMode = false, initialData = {}, 
         return () => { mounted = false; };
     }, []);
 
-    const handleChange = (e) =>
-    {
+    const handleChange = (e) => {
         setFormData({
             ...formData,
             [e.target.name]: e.target.value
@@ -443,8 +459,7 @@ export default function SmartRideBooking({ embedMode = false, initialData = {}, 
     };
 
     // Geocode manually typed address
-    const geocodeAddress = async (address, fieldType) =>
-    {
+    const geocodeAddress = async (address, fieldType) => {
         if (!address || address.trim().length < 5) return;
 
         try {
@@ -457,11 +472,9 @@ export default function SmartRideBooking({ embedMode = false, initialData = {}, 
                 const place = result.results[0];
                 const components = place.address_components || [];
 
-                const extract = () =>
-                {
+                const extract = () => {
                     const out = { city: '', state: '', postal_code: '', country: '' };
-                    components.forEach(c =>
-                    {
+                    components.forEach(c => {
                         if (c.types.includes('locality')) out.city = c.long_name;
                         if (c.types.includes('administrative_area_level_1')) out.state = c.long_name;
                         if (c.types.includes('postal_code')) out.postal_code = c.long_name;
@@ -497,15 +510,13 @@ export default function SmartRideBooking({ embedMode = false, initialData = {}, 
         }
     };
 
-    const handleSubmit = (e) =>
-    {
+    const handleSubmit = (e) => {
         e.preventDefault();
         console.log('Form submitted:', formData);
         setCurrentStep('summary');
     };
 
-    const calculateTotal = () =>
-    {
+    const calculateTotal = () => {
         if (estimatedPrice) {
             const pb = estimatedPrice.pricingBreakdown || {};
             const total = estimatedPrice.estimatedPrice ?? pb.total ?? 0;
@@ -539,8 +550,7 @@ export default function SmartRideBooking({ embedMode = false, initialData = {}, 
 
     const breadcrumbSteps = ['Package Information', 'Package Summary', 'Rider Matching', 'Rider Details'];
 
-    const getCurrentStepIndex = () =>
-    {
+    const getCurrentStepIndex = () => {
         switch (currentStep) {
             case 'form': return 0;
             case 'summary': return 1;
@@ -551,16 +561,14 @@ export default function SmartRideBooking({ embedMode = false, initialData = {}, 
         }
     };
 
-    const handleBreadcrumbClick = (index) =>
-    {
+    const handleBreadcrumbClick = (index) => {
         if (index === 0) setCurrentStep('form');
         else if (index === 1) setCurrentStep('summary');
         else if (index === 2) setCurrentStep(currentStep === 'rider-details' ? 'rider-found' : 'finding-rider');
         else if (index === 3) setCurrentStep('rider-details');
     };
 
-    const findRider = async () =>
-    {
+    const findRider = async () => {
         const pickupCoords = formData.pickupPlace;
         const deliveryCoords = formData.deliveryPlace;
         const hasPickupCoords = pickupCoords?.coordinates?.lat != null && pickupCoords?.coordinates?.lng != null;
@@ -575,16 +583,14 @@ export default function SmartRideBooking({ embedMode = false, initialData = {}, 
         setCurrentStep('finding-rider');
     };
 
-    const searchAgain = () =>
-    {
+    const searchAgain = () => {
         const coords = formData.pickupPlace?.coordinates;
         const lat = coords?.lat;
         const lng = coords?.lng;
         if (lat == null || lng == null) return;
         setNearbyRidersLoading(true);
         getNearbyRiders({ lat, lng, radiusKm: 20, limit: 1 })
-            .then((res) =>
-            {
+            .then((res) => {
                 const list = res?.data?.riders ?? res?.riders ?? (Array.isArray(res?.data) ? res.data : []);
                 setNearbyRiders(Array.isArray(list) ? list : []);
             })
@@ -592,8 +598,7 @@ export default function SmartRideBooking({ embedMode = false, initialData = {}, 
             .finally(() => setNearbyRidersLoading(false));
     };
 
-    const sendRequestToRider = async (rider) =>
-    {
+    const sendRequestToRider = async (rider) => {
         const riderId = rider?.riderId ?? rider?._id;
         if (!riderId) return;
 
@@ -671,8 +676,7 @@ export default function SmartRideBooking({ embedMode = false, initialData = {}, 
             if (formData.image) {
                 const fd = new FormData();
                 fd.append('image', formData.image);
-                Object.entries(payload).forEach(([k, v]) =>
-                {
+                Object.entries(payload).forEach(([k, v]) => {
                     if (typeof v === 'object' && v !== null && !(v instanceof File)) fd.append(k, JSON.stringify(v));
                     else fd.append(k, String(v));
                 });
@@ -697,8 +701,7 @@ export default function SmartRideBooking({ embedMode = false, initialData = {}, 
             try {
                 const room = `delivery:${dId}`;
                 socketService.connect();
-                const onConnectJoin = () =>
-                {
+                const onConnectJoin = () => {
                     try { socketService.joinRoom(room); } catch (e) { console.warn('[SmartRide] joinRoom failed on connect:', e); }
                     try { socketService.off('connect', onConnectJoin); } catch (e) { }
                 };
@@ -716,8 +719,7 @@ export default function SmartRideBooking({ embedMode = false, initialData = {}, 
         }
     };
 
-    const cancelRequest = async () =>
-    {
+    const cancelRequest = async () => {
         if (!deliveryId || isCancellingRequest) return;
         setIsCancellingRequest(true);
         try {
@@ -747,8 +749,18 @@ export default function SmartRideBooking({ embedMode = false, initialData = {}, 
         }
     };
 
-    const proceedToPayment = async () =>
-    {
+        const proceedToRiderDetails = (rider) => {
+            setIsSearching(false);
+            setCurrentStep('rider-details');
+            try {
+                localStorage.setItem('smartride_step', 'rider-details');
+                const stored = localStorage.getItem('smartride_rider_details');
+                const details = rider || (stored ? JSON.parse(stored) : { name: requestSentToRiderName });
+                localStorage.setItem('smartride_rider_details', JSON.stringify(details || {}));
+            } catch (e) { console.warn('[SmartRide] Failed to persist rider details on proceed:', e); }
+        };
+
+    const proceedToPayment = async () => {
         if (!formData.paymentMethod) {
             alert('Please select a payment method');
             setShowPaymentDrawer(true);
@@ -834,8 +846,7 @@ export default function SmartRideBooking({ embedMode = false, initialData = {}, 
             if (formData.image) {
                 const fd = new FormData();
                 fd.append('image', formData.image);
-                Object.entries(payload).forEach(([k, v]) =>
-                {
+                Object.entries(payload).forEach(([k, v]) => {
                     if (typeof v === 'object') fd.append(k, JSON.stringify(v));
                     else fd.append(k, String(v));
                 });
@@ -862,8 +873,7 @@ export default function SmartRideBooking({ embedMode = false, initialData = {}, 
             try {
                 const room = `delivery:${dId}`;
                 socketService.connect();
-                const onConnectJoin = () =>
-                {
+                const onConnectJoin = () => {
                     try { socketService.joinRoom(room); } catch (e) { console.warn('[SmartRide] joinRoom failed on connect:', e); }
                     try { socketService.off('connect', onConnectJoin); } catch (e) { }
                 };
@@ -909,8 +919,7 @@ export default function SmartRideBooking({ embedMode = false, initialData = {}, 
                 if (paymentReference) setCookie('pending_payment_id', String(paymentReference), 1);
             } catch (e) { }
 
-            const cleanupOnPaymentCancel = async (did) =>
-            {
+            const cleanupOnPaymentCancel = async (did) => {
                 try {
                     if (did) await cancelDelivery(did, { reason: 'payment_cancelled' });
                 } catch (cleanupErr) {
@@ -933,8 +942,7 @@ export default function SmartRideBooking({ embedMode = false, initialData = {}, 
 
                     // Monitor popup closure
                     try {
-                        const popupInterval = setInterval(() =>
-                        {
+                        const popupInterval = setInterval(() => {
                             try {
                                 if (!paymentWindow || paymentWindow.closed) {
                                     clearInterval(popupInterval);
@@ -969,12 +977,10 @@ export default function SmartRideBooking({ embedMode = false, initialData = {}, 
                     email: formData.recipientEmail || 'customer@swiftlyxpress.com',
                     amount: calculateTotal().total * 100, // Paystack expects kobo
                     ref: paymentReference,
-                    onClose: function ()
-                    {
+                    onClose: function () {
                         cleanupOnPaymentCancel(dId);
                     },
-                    callback: function (response)
-                    {
+                    callback: function (response) {
                         try { deleteCookie('pending_payment_delivery_id'); deleteCookie('pending_payment_id'); } catch (e) { }
                         // Navigate to payment callback route to let SPA finalize
                         try { router.push('/customer/payment/callback', 'root', 'replace'); } catch (e) { window.location.href = '/customer/payment/callback'; }
@@ -993,8 +999,7 @@ export default function SmartRideBooking({ embedMode = false, initialData = {}, 
     };
 
     // Helper for size category dropdown
-    const handleSizeCategoryChange = (label) =>
-    {
+    const handleSizeCategoryChange = (label) => {
         const valueMap = { 'Small': 'small', 'Medium': 'big', 'Very Big': 'very_big' };
         const defaultScaleMap = { small: 85, big: 100, very_big: 120 };
         const cat = valueMap[label];
@@ -1013,14 +1018,12 @@ export default function SmartRideBooking({ embedMode = false, initialData = {}, 
         });
     };
 
-    const handleWeightCategoryChange = (label) =>
-    {
+    const handleWeightCategoryChange = (label) => {
         const valueMap = { 'Light': 'light', 'Heavy': 'heavy', 'Very Heavy': 'very_heavy' };
         setFormData({ ...formData, weightCategory: valueMap[label] });
     };
 
-    const handleSliderChange = (e) =>
-    {
+    const handleSliderChange = (e) => {
         const scale = parseInt(e.target.value, 10);
         const dimsMap = { small: [30, 30, 30], big: [50, 40, 30], very_big: [80, 60, 50] };
         // Derive category from scale thresholds so slider controls category too
@@ -1042,8 +1045,7 @@ export default function SmartRideBooking({ embedMode = false, initialData = {}, 
         hideBubbleTimeout.current = setTimeout(() => setSliderBubble(null), 1200);
     };
 
-    const handleSliderMouseMove = () =>
-    {
+    const handleSliderMouseMove = () => {
         if (!sliderRef.current) return;
         const val = parseInt(sliderRef.current.value, 10);
         const min = 70; const max = 130;
@@ -1051,8 +1053,7 @@ export default function SmartRideBooking({ embedMode = false, initialData = {}, 
         setSliderBubble({ percent, value: val });
     };
 
-    const handleSliderMouseLeave = () =>
-    {
+    const handleSliderMouseLeave = () => {
         if (hideBubbleTimeout.current) clearTimeout(hideBubbleTimeout.current);
         hideBubbleTimeout.current = setTimeout(() => setSliderBubble(null), 800);
     };
@@ -1080,8 +1081,7 @@ export default function SmartRideBooking({ embedMode = false, initialData = {}, 
                                 <button
                                     type="button"
                                     aria-label="Close"
-                                    onClick={async () =>
-                                    {
+                                    onClick={async () => {
                                         // If in finding/found state, cancel the smart ride delivery
                                         if ((currentStep === 'finding-rider' || currentStep === 'rider-found') && deliveryId) {
                                             try {
@@ -1146,8 +1146,7 @@ export default function SmartRideBooking({ embedMode = false, initialData = {}, 
                                                             formData.deliveryType === 'smart_ride' ? 'Smart Ride' :
                                                                 'Smart Ride'
                                             }
-                                            onChange={(label) =>
-                                            {
+                                            onChange={(label) => {
                                                 const deliveryTypeMap = {
                                                     'Express (Same day)': 'express',
                                                     'Standard (1-2 days)': 'standard',
@@ -1233,13 +1232,11 @@ export default function SmartRideBooking({ embedMode = false, initialData = {}, 
                                                 <GoogleMapsAutocomplete
                                                     value={formData.pickupAddress}
                                                     onChange={(val) => setFormData({ ...formData, pickupAddress: val })}
-                                                    onPlaceSelect={(place) =>
-                                                    {
+                                                    onPlaceSelect={(place) => {
                                                         console.log('Pickup place selected:', place);
                                                         setFormData({ ...formData, pickupAddress: `${place.street}${place.city ? ', ' + place.city : ''}`, pickupPlace: place });
                                                     }}
-                                                    onBlur={() =>
-                                                    {
+                                                    onBlur={() => {
                                                         // Geocode if user typed manually and didn't select from dropdown
                                                         if (formData.pickupAddress && !formData.pickupPlace?.coordinates) {
                                                             geocodeAddress(formData.pickupAddress, 'pickup');
@@ -1296,13 +1293,11 @@ export default function SmartRideBooking({ embedMode = false, initialData = {}, 
                                                 <GoogleMapsAutocomplete
                                                     value={formData.deliveryAddress}
                                                     onChange={(val) => setFormData({ ...formData, deliveryAddress: val })}
-                                                    onPlaceSelect={(place) =>
-                                                    {
+                                                    onPlaceSelect={(place) => {
                                                         console.log('Delivery place selected:', place);
                                                         setFormData({ ...formData, deliveryAddress: `${place.street}${place.city ? ', ' + place.city : ''}`, deliveryPlace: place });
                                                     }}
-                                                    onBlur={() =>
-                                                    {
+                                                    onBlur={() => {
                                                         // Geocode if user typed manually and didn't select from dropdown
                                                         if (formData.deliveryAddress && !formData.deliveryPlace?.coordinates) {
                                                             geocodeAddress(formData.deliveryAddress, 'delivery');
@@ -1579,8 +1574,7 @@ export default function SmartRideBooking({ embedMode = false, initialData = {}, 
                                                 id="package-image-upload"
                                                 accept="image/*"
                                                 className="hidden"
-                                                onChange={(e) =>
-                                                {
+                                                onChange={(e) => {
                                                     const file = e.target.files?.[0];
                                                     if (file) {
                                                         if (file.size > 10 * 1024 * 1024) {
@@ -1758,8 +1752,7 @@ export default function SmartRideBooking({ embedMode = false, initialData = {}, 
                                 <div className="p-6 space-y-3">
                                     <button
                                         type="button"
-                                        onClick={() =>
-                                        {
+                                        onClick={() => {
                                             setFormData({ ...formData, paymentMethod: 'cash' });
                                             setTimeout(() => setShowPaymentDrawer(false), 150);
                                         }}
@@ -1794,8 +1787,7 @@ export default function SmartRideBooking({ embedMode = false, initialData = {}, 
 
                                     <button
                                         type="button"
-                                        onClick={() =>
-                                        {
+                                        onClick={() => {
                                             setFormData({ ...formData, paymentMethod: 'card' });
                                             setTimeout(() => setShowPaymentDrawer(false), 150);
                                         }}
@@ -1835,8 +1827,7 @@ export default function SmartRideBooking({ embedMode = false, initialData = {}, 
 
                                     <button
                                         type="button"
-                                        onClick={() =>
-                                        {
+                                        onClick={() => {
                                             setFormData({ ...formData, paymentMethod: 'transfer' });
                                             setTimeout(() => setShowPaymentDrawer(false), 150);
                                         }}
@@ -1911,8 +1902,7 @@ export default function SmartRideBooking({ embedMode = false, initialData = {}, 
                                 <button
                                     type="button"
                                     aria-label="Close"
-                                    onClick={() =>
-                                    {
+                                    onClick={() => {
                                         if (embedMode && typeof onClose === 'function') return onClose();
                                         return router.goBack();
                                     }}
@@ -2128,8 +2118,7 @@ export default function SmartRideBooking({ embedMode = false, initialData = {}, 
                                 <button
                                     type="button"
                                     aria-label="Close"
-                                    onClick={async () =>
-                                    {
+                                    onClick={async () => {
                                         // FIXED: Enhanced cancel logic to remove from available orders
                                         if ((currentStep === 'finding-rider' || currentStep === 'rider-found') && deliveryId) {
                                             try {
@@ -2259,8 +2248,7 @@ export default function SmartRideBooking({ embedMode = false, initialData = {}, 
                                         <p className="text-sm text-gray-600 py-4">No riders in your area right now.</p>
                                     ) : nearbyRiders.length >= 1 ? (
                                         <>
-                                            {(() =>
-                                            {
+                                            {(() => {
                                                 const r = nearbyRiders[0];
                                                 const rid = String(r?.riderId ?? r?._id ?? '');
                                                 const alreadySent = requestSentToRiderId === rid;
@@ -2281,17 +2269,29 @@ export default function SmartRideBooking({ embedMode = false, initialData = {}, 
                                                                 {r.ratingDisplay ? ` · ${r.ratingDisplay}` : ''}
                                                             </p>
                                                             {alreadySent ? (
-                                                                <>
-                                                                    <p className="text-sm text-[#00B75A] font-medium mt-2">Request sent to {requestSentToRiderName || r.fullName || 'this rider'}. They can accept or decline.</p>
-                                                                    <button
-                                                                        type="button"
-                                                                        onClick={cancelRequest}
-                                                                        disabled={isCancellingRequest}
-                                                                        className="mt-3 px-5 py-2.5 border-2 border-red-200 text-red-600 rounded-full font-semibold text-sm hover:bg-red-50 disabled:opacity-60 disabled:cursor-not-allowed"
-                                                                    >
-                                                                        {isCancellingRequest ? 'Cancelling...' : 'Cancel request'}
-                                                                    </button>
-                                                                </>
+                                                                currentStep === 'rider-found' ? (
+                                                                    <div className="mt-3">
+                                                                        <button
+                                                                            type="button"
+                                                                            onClick={() => proceedToRiderDetails(r)}
+                                                                            className="px-5 py-2.5 bg-[#00B75A] text-white rounded-full font-semibold text-sm hover:bg-[#00A050]"
+                                                                        >
+                                                                            Proceed
+                                                                        </button>
+                                                                    </div>
+                                                                ) : (
+                                                                    <>
+                                                                        <p className="text-sm text-[#00B75A] font-medium mt-2">Request sent to {requestSentToRiderName || r.fullName || 'this rider'}. They can accept or decline.</p>
+                                                                        <button
+                                                                            type="button"
+                                                                            onClick={cancelRequest}
+                                                                            disabled={isCancellingRequest}
+                                                                            className="mt-3 px-5 py-2.5 border-2 border-red-200 text-red-600 rounded-full font-semibold text-sm hover:bg-red-50 disabled:opacity-60 disabled:cursor-not-allowed"
+                                                                        >
+                                                                            {isCancellingRequest ? 'Cancelling...' : 'Cancel request'}
+                                                                        </button>
+                                                                    </>
+                                                                )
                                                             ) : (
                                                                 <button
                                                                     type="button"
@@ -2319,15 +2319,29 @@ export default function SmartRideBooking({ embedMode = false, initialData = {}, 
                                         </>
                                     ) : requestSentToRiderId ? (
                                         <div className="py-4">
-                                            <p className="text-sm text-[#00B75A] font-medium mb-3">Request sent to {requestSentToRiderName || 'your rider'}. They can accept or decline.</p>
-                                            <button
-                                                type="button"
-                                                onClick={cancelRequest}
-                                                disabled={isCancellingRequest}
-                                                className="px-5 py-2.5 border-2 border-red-200 text-red-600 rounded-full font-semibold text-sm hover:bg-red-50 disabled:opacity-60 disabled:cursor-not-allowed"
-                                            >
-                                                {isCancellingRequest ? 'Cancelling...' : 'Cancel request'}
-                                            </button>
+                                            {currentStep === 'rider-found' ? (
+                                                <div>
+                                                    <button
+                                                        type="button"
+                                                        onClick={() => proceedToRiderDetails()}
+                                                        className="px-5 py-2.5 bg-[#00B75A] text-white rounded-full font-semibold text-sm hover:bg-[#00A050]"
+                                                    >
+                                                        Proceed
+                                                    </button>
+                                                </div>
+                                            ) : (
+                                                <>
+                                                    <p className="text-sm text-[#00B75A] font-medium mb-3">Request sent to {requestSentToRiderName || 'your rider'}. They can accept or decline.</p>
+                                                    <button
+                                                        type="button"
+                                                        onClick={cancelRequest}
+                                                        disabled={isCancellingRequest}
+                                                        className="px-5 py-2.5 border-2 border-red-200 text-red-600 rounded-full font-semibold text-sm hover:bg-red-50 disabled:opacity-60 disabled:cursor-not-allowed"
+                                                    >
+                                                        {isCancellingRequest ? 'Cancelling...' : 'Cancel request'}
+                                                    </button>
+                                                </>
+                                            )}
                                         </div>
                                     ) : null}
                                 </div>
@@ -2356,8 +2370,7 @@ export default function SmartRideBooking({ embedMode = false, initialData = {}, 
                                 <button
                                     type="button"
                                     aria-label="Close"
-                                    onClick={() =>
-                                    {
+                                    onClick={() => {
                                         if (embedMode && typeof onClose === 'function') return onClose();
                                         return router.goBack();
                                     }}
@@ -2520,8 +2533,7 @@ export default function SmartRideBooking({ embedMode = false, initialData = {}, 
                                 {/* Cash on Delivery */}
                                 <button
                                     type="button"
-                                    onClick={() =>
-                                    {
+                                    onClick={() => {
                                         setFormData({ ...formData, paymentMethod: 'cash' });
                                         setShowPaymentDrawer(false);
                                     }}
@@ -2559,8 +2571,7 @@ export default function SmartRideBooking({ embedMode = false, initialData = {}, 
                                 {/* Pay Online (Card) */}
                                 <button
                                     type="button"
-                                    onClick={() =>
-                                    {
+                                    onClick={() => {
                                         setFormData({ ...formData, paymentMethod: 'card' });
                                         setShowPaymentDrawer(false);
                                     }}
@@ -2603,8 +2614,7 @@ export default function SmartRideBooking({ embedMode = false, initialData = {}, 
                                 {/* Bank Transfer */}
                                 <button
                                     type="button"
-                                    onClick={() =>
-                                    {
+                                    onClick={() => {
                                         setFormData({ ...formData, paymentMethod: 'transfer' });
                                         setShowPaymentDrawer(false);
                                     }}

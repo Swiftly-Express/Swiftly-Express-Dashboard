@@ -8,6 +8,7 @@ import NairaIcon from "../../../icons/Nairaicon";
 import AnalyticsIcon from "../../../icons/Analyticsicon";
 import VerificationPromptModal from '../components/VerificationPromptModal';
 import { getRiderProfile, getRiderDeliveries, getAvailableJobs, getRiderEarnings, getRiderVerificationStatus, acceptDeliveryJob, updateDeliveryStatus, updateDriverLocation } from '../../../utils/authApi';
+import socketService from '../../../services/socket.service';
 import CheckCircleIcon from '../../../icons/Circlecheck';
 import { getCookie, setCookie, getJSONCookie } from '../../../utils/cookies';
 
@@ -16,8 +17,7 @@ const sideBottomShadow = {
   boxShadow: '2px 2px 4px rgba(0,0,0,0.06), -2px 2px 4px rgba(0,0,0,0.06), 0 4px 8px rgba(0,0,0,0.08)'
 };
 
-export const shouldShowVerificationModal = () =>
-{
+export const shouldShowVerificationModal = () => {
   const isVerified = getCookie('riderAccountVerified') === 'true';
   if (isVerified) return false;
 
@@ -31,8 +31,7 @@ export const shouldShowVerificationModal = () =>
   return hoursSince >= 24;
 };
 
-export const markVerificationModalShown = () =>
-{
+export const markVerificationModalShown = () => {
   setCookie(
     'lastVerificationModalShownAt',
     Date.now().toString(),
@@ -53,17 +52,14 @@ const StatCard = ({ icon, title, value, subtitle, iconBg }) => (
   </div>
 );
 
-const DeliveryCard = ({ packageId, status, from, to, customer, price, distance, time, statusColor, deliveryId, deliveryRaw, onStatusUpdated }) =>
-{
+const DeliveryCard = ({ packageId, status, from, to, customer, price, distance, time, statusColor, deliveryId, deliveryRaw, onStatusUpdated }) => {
   const [contactOpen, setContactOpen] = useState(false);
   const router = useIonRouter();
 
   // Robust phone extractor for dashboard card
-  const findPhone = (obj) =>
-  {
+  const findPhone = (obj) => {
     if (!obj) return null;
-    const get = (o, path) =>
-    {
+    const get = (o, path) => {
       try {
         return path.split('.').reduce((a, b) => (a && a[b] !== undefined) ? a[b] : null, o);
       } catch (e) { return null; }
@@ -79,8 +75,7 @@ const DeliveryCard = ({ packageId, status, from, to, customer, price, distance, 
     const seen = new Set();
     const keyHint = /(phone|contact)/i;
     const phoneRegex = /[0-9]/;
-    const scan = (o) =>
-    {
+    const scan = (o) => {
       if (!o || typeof o !== 'object' || seen.has(o)) return null;
       seen.add(o);
       for (const k of Object.keys(o)) {
@@ -101,8 +96,7 @@ const DeliveryCard = ({ packageId, status, from, to, customer, price, distance, 
     return scan(obj) || null;
   };
 
-  const handleNavigate = () =>
-  {
+  const handleNavigate = () => {
     try {
       // Navigate to Active Deliveries and include hash so ActiveDeliveries can scroll into view
       router.push(`/rider/active#delivery-${deliveryId}`, 'forward', 'push');
@@ -113,8 +107,7 @@ const DeliveryCard = ({ packageId, status, from, to, customer, price, distance, 
 
   const cleanNumber = (v) => typeof v === 'string' ? v.replace(/[^0-9+]/g, '') : (v ? String(v).replace(/[^0-9+]/g, '') : '');
 
-  const handleCall = () =>
-  {
+  const handleCall = () => {
     const raw = findPhone(deliveryRaw) || deliveryRaw?.phone || deliveryRaw?.contact || '';
     const num = cleanNumber(raw);
     if (!num) return alert('Phone number not available');
@@ -125,16 +118,14 @@ const DeliveryCard = ({ packageId, status, from, to, customer, price, distance, 
     }
   };
 
-  const handleMessage = () =>
-  {
+  const handleMessage = () => {
     const raw = findPhone(deliveryRaw) || deliveryRaw?.phone || deliveryRaw?.contact || '';
     const num = cleanNumber(raw);
     if (!num) return alert('Phone number not available');
     window.open(`https://wa.me/${num.replace(/^\+/, '')}`, '_blank');
   };
 
-  const handleUpdate = async () =>
-  {
+  const handleUpdate = async () => {
     try {
       const statusLower = (status || '').toLowerCase();
       let newStatus = 'picked-up';
@@ -146,8 +137,7 @@ const DeliveryCard = ({ packageId, status, from, to, customer, price, distance, 
       let location = null;
       if (navigator.geolocation) {
         try {
-          const pos = await new Promise((resolve, reject) =>
-          {
+          const pos = await new Promise((resolve, reject) => {
             navigator.geolocation.getCurrentPosition(resolve, reject, { enableHighAccuracy: true, timeout: 15000, maximumAge: 0 });
           });
           location = { lat: pos.coords.latitude, lng: pos.coords.longitude };
@@ -241,14 +231,12 @@ const AvailableOrderCard = ({ packageId, location, distance, price, onAccept }) 
   </YummyText>
 );
 
-const Dashboard = () =>
-{
+const Dashboard = () => {
   const router = useIonRouter();
   const [showVerificationModal, setShowVerificationModal] = useState(false);
   const [showRejectedModal, setShowRejectedModal] = useState(false);
   const [rejectionFeedback, setRejectionFeedback] = useState('');
-  const [userName, setUserName] = useState(() =>
-  {
+  const [userName, setUserName] = useState(() => {
     // Initialize from cookies immediately
     const cachedUserData = getJSONCookie('user_data');
     if (cachedUserData) {
@@ -275,28 +263,24 @@ const Dashboard = () =>
   const [loading, setLoading] = useState(true);
 
   // When rejected modal is shown, fetch verification details to display admin feedback
-  useEffect(() =>
-  {
+  useEffect(() => {
     if (!showRejectedModal) return;
     let cancelled = false;
     getRiderVerificationStatus()
-      .then((res) =>
-      {
+      .then((res) => {
         if (cancelled) return;
         const verification = res?.data?.verification || res?.verification;
         const notes = verification?.adminNotes;
         setRejectionFeedback(notes && String(notes).trim() ? String(notes).trim() : '');
       })
-      .catch(() =>
-      {
+      .catch(() => {
         if (!cancelled) setRejectionFeedback('');
       });
     return () => { cancelled = true; };
   }, [showRejectedModal]);
 
   // Check verification status - extracted outside useEffect so it can be called from event listeners
-  const checkVerificationStatus = async () =>
-  {
+  const checkVerificationStatus = async () => {
     try {
       console.log('[Dashboard] 🔍 Starting verification check...');
 
@@ -342,8 +326,7 @@ const Dashboard = () =>
 
         setCookie('riderVerificationStatus', '', 7);
         setCookie('riderAccountVerified', 'false', 7);
-        setTimeout(() =>
-        {
+        setTimeout(() => {
           console.log('[Dashboard] ⏰ 2 seconds elapsed, showing modal now');
           setShowVerificationModal(true);
         }, 2000);
@@ -368,8 +351,7 @@ const Dashboard = () =>
 
         setCookie('riderVerificationStatus', statusLower, 7);
         setCookie('riderAccountVerified', 'false', 7);
-        setTimeout(() =>
-        {
+        setTimeout(() => {
           console.log('[Dashboard] ⏰ 2 seconds elapsed, showing modal now');
           setShowVerificationModal(true);
         }, 2000);
@@ -390,8 +372,7 @@ const Dashboard = () =>
       // If error and user is new, show modal
       const hasEverSubmitted = getCookie('verificationSubmitted') === 'true';
       if (!hasEverSubmitted) {
-        setTimeout(() =>
-        {
+        setTimeout(() => {
           setShowVerificationModal(true);
         }, 2000);
       } else {
@@ -401,8 +382,7 @@ const Dashboard = () =>
     }
   };
 
-  useEffect(() =>
-  {
+  useEffect(() => {
     fetchUserProfile();
     fetchDashboardData();
 
@@ -410,8 +390,7 @@ const Dashboard = () =>
     checkVerificationStatus();
 
     // Listen for verification completion to close modal and refresh status
-    const handleVerificationComplete = async () =>
-    {
+    const handleVerificationComplete = async () => {
       // Close modal immediately
       setShowVerificationModal(false);
 
@@ -438,8 +417,7 @@ const Dashboard = () =>
     window.addEventListener('verification:completed', handleVerificationComplete);
 
     // Also listen for kyc:updated event from admin
-    const handleKYCUpdate = async (event) =>
-    {
+    const handleKYCUpdate = async (event) => {
       console.log('[Dashboard] 🔔 kyc:updated event received:', event?.detail);
       if (event?.detail?.action === 'approved') {
         console.log('[Dashboard] → KYC was APPROVED, refreshing verification status');
@@ -450,8 +428,7 @@ const Dashboard = () =>
     window.addEventListener('kyc:updated', handleKYCUpdate);
 
     // Refresh dashboard when deliveries change elsewhere in the app
-    const handleDeliveryEvent = (event) =>
-    {
+    const handleDeliveryEvent = (event) => {
       fetchDashboardData();
     };
 
@@ -460,8 +437,7 @@ const Dashboard = () =>
     window.addEventListener('delivery:updated', handleDeliveryEvent);
     window.addEventListener('delivery:completed', handleDeliveryEvent);
 
-    return () =>
-    {
+    return () => {
       window.removeEventListener('verification:completed', handleVerificationComplete);
       window.removeEventListener('kyc:updated', handleKYCUpdate);
       window.removeEventListener('delivery:accepted', handleDeliveryEvent);
@@ -472,14 +448,11 @@ const Dashboard = () =>
   }, []);
 
   // Update driver location periodically so customers see nearby riders and ETA (every 25s when on dashboard)
-  useEffect(() =>
-  {
+  useEffect(() => {
     if (!navigator.geolocation) return;
-    const sendLocation = () =>
-    {
+    const sendLocation = () => {
       navigator.geolocation.getCurrentPosition(
-        (pos) =>
-        {
+        (pos) => {
           const lat = pos.coords.latitude;
           const lng = pos.coords.longitude;
           updateDriverLocation(lat, lng).catch(() => { });
@@ -493,8 +466,7 @@ const Dashboard = () =>
     return () => clearInterval(interval);
   }, []);
 
-  const fetchUserProfile = async () =>
-  {
+  const fetchUserProfile = async () => {
     try {
       const response = await getRiderProfile();
       const profile = response?.data?.driver || response?.driver || response?.data;
@@ -520,8 +492,7 @@ const Dashboard = () =>
     }
   };
 
-  const fetchDashboardData = async () =>
-  {
+  const fetchDashboardData = async () => {
     try {
       setLoading(true);
 
@@ -547,15 +518,13 @@ const Dashboard = () =>
       const earnings = earningsRes?.data || earningsRes;
       const todayEarnings = earnings?.today?.total || earnings?.todayEarnings || 0;
       const weeklyEarnings = earnings?.weekly?.total || earnings?.weeklyEarnings || 0;
-      const todayDeliveries = earnings?.today?.count || deliveries.filter(d =>
-      {
+      const todayDeliveries = earnings?.today?.count || deliveries.filter(d => {
         const deliveryDate = new Date(d.createdAt);
         const today = new Date();
         return deliveryDate.toDateString() === today.toDateString();
       }).length || 0;
 
-      const todayCompleted = deliveries.filter(d =>
-      {
+      const todayCompleted = deliveries.filter(d => {
         const deliveryDate = new Date(d.createdAt);
         const today = new Date();
         return deliveryDate.toDateString() === today.toDateString() && d.status === 'delivered';
@@ -583,8 +552,7 @@ const Dashboard = () =>
     }
   };
 
-  const formatAddress = (addr) =>
-  {
+  const formatAddress = (addr) => {
     if (!addr) return 'N/A';
     if (typeof addr === 'string') return addr;
     const parts = [];
@@ -596,8 +564,7 @@ const Dashboard = () =>
     return joined || 'N/A';
   };
 
-  const handleCloseModal = () =>
-  {
+  const handleCloseModal = () => {
     setShowVerificationModal(false);
   };
 
@@ -637,8 +604,7 @@ const Dashboard = () =>
                   </div>
                   <div className="flex gap-3 mt-4">
                     <button
-                      onClick={() =>
-                      {
+                      onClick={() => {
                         setShowRejectedModal(false);
                         setShowVerificationModal(true);
                       }}
@@ -647,8 +613,7 @@ const Dashboard = () =>
                       Resubmit Documents
                     </button>
                     <button
-                      onClick={() =>
-                      {
+                      onClick={() => {
                         try { setCookie('verificationRejectedDismissed', 'true', 30); } catch (e) { }
                         setShowRejectedModal(false);
                       }}
@@ -719,8 +684,7 @@ const Dashboard = () =>
               ) : activeDeliveries.length === 0 ? (
                 <div className="text-center py-8 text-gray-500 text-sm md:text-medium sm:text-medium">No active deliveries at the moment</div>
               ) : (
-                activeDeliveries.map((delivery) =>
-                {
+                activeDeliveries.map((delivery) => {
                   const statusColors = {
                     'picked_up': 'bg-blue-100 text-blue-600',
                     'in_transit': 'bg-blue-100 text-blue-600',
@@ -783,12 +747,35 @@ const Dashboard = () =>
                     location={formatAddress(order.pickupAddress || order.pickup?.address)}
                     distance={order.distance ? `${order.distance} km away` : 'N/A'}
                     price={`₦${order.amount?.toFixed(2) || order.price?.toFixed(2) || '0.00'}`}
-                    onAccept={async () =>
-                    {
+                    onAccept={async () => {
                       try {
                         const acceptResp = await acceptDeliveryJob(order._id || order.id || order.deliveryId);
                         console.log('[Dashboard] Accepted order from dashboard:', acceptResp);
-                        window.dispatchEvent(new CustomEvent('delivery:accepted', { detail: { deliveryId: order._id || order.id || order.deliveryId } }));
+
+                        // Extract canonical delivery object from response
+                        const respDelivery = acceptResp?.data?.delivery || acceptResp?.data || acceptResp;
+                        const acceptedId = respDelivery?._id || respDelivery?.id || order._id || order.id || order.deliveryId;
+
+                        // Remove accepted order from local availableOrders list
+                        try {
+                          setAvailableOrders(prev => prev.filter(o => (o._id || o.id || o.deliveryId) !== acceptedId));
+                        } catch (e) { /* ignore */ }
+
+                        // Dispatch a more detailed delivery:accepted event so other components (and local listeners) can act
+                        const acceptedDetail = { deliveryId: acceptedId, deliveryType: respDelivery?.deliveryType || order?.deliveryType || null, order: respDelivery || order };
+                        window.dispatchEvent(new CustomEvent('delivery:accepted', { detail: acceptedDetail }));
+
+                        // Also emit the acceptance via socket so the server can notify the customer room
+                        try {
+                          socketService.connect();
+                          socketService.emit('delivery:accepted', acceptedDetail);
+                        } catch (e) {
+                          console.warn('[Dashboard] Failed to emit delivery:accepted via socketService', e);
+                        }
+
+                        // Refresh dashboard data to sync counts
+                        try { fetchDashboardData(); } catch (e) { /* ignore */ }
+
                         try { router.push('/rider/active', 'forward', 'push'); } catch (e) { window.location.href = '/rider/active'; }
                       } catch (err) {
                         console.error('[Dashboard] Failed to accept order from dashboard:', err);

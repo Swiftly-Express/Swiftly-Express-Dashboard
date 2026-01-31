@@ -6,7 +6,7 @@ import RiderLayout from '../components/RiderLayout';
 import { YummyText } from '../../../components/YummyText';
 import BanIcon from '../../../icons/Banicon';
 import TrackingMap from '../../../components/TrackingMap';
-import { getAvailableJobs, acceptDeliveryJob, rejectDeliveryJob, getRiderProfile, getRiderDeliveries, updateDriverLocation } from '../../../utils/authApi';
+import { getAvailableJobs, acceptDeliveryJob, rejectDeliveryJob, getRiderProfile, getRiderDeliveries, updateDriverLocation, getRiderEarnings } from '../../../utils/authApi';
 import socketService from '../../../services/socket.service';
 import { getCookie, getJSONCookie, isRiderVerified, setCookie, setJSONCookie } from '../../../utils/cookies';
 
@@ -154,9 +154,8 @@ const OrderCard = ({
   </div>
 );
 
-const AvailableOrders = () =>
-{
-  const [activeTab, setActiveTab] = useState('express');
+const AvailableOrders = () => {
+  const [activeTab, setActiveTab] = useState('all');
   const [orders, setOrders] = useState([]);
   const [loading, setLoading] = useState(true);
   const [accepting, setAccepting] = useState(null);
@@ -164,8 +163,7 @@ const AvailableOrders = () =>
   const [toastMsg, setToastMsg] = useState('');
   const [showToast, setShowToast] = useState(false);
   const [isVerified, setIsVerified] = useState(false);
-  const [verificationStatus, setVerificationStatus] = useState(() =>
-  {
+  const [verificationStatus, setVerificationStatus] = useState(() => {
     try {
       const ud = getJSONCookie('user_data') || {};
       return ud.verificationStatus || getCookie('riderVerificationStatus') || null;
@@ -175,10 +173,10 @@ const AvailableOrders = () =>
   });
   const [isAvailable, setIsAvailable] = useState(true);
   const [completedDeliveriesCount, setCompletedDeliveriesCount] = useState(0);
+  const [avgPerDeliveryRaw, setAvgPerDeliveryRaw] = useState(0);
   const [lastRefresh, setLastRefresh] = useState(Date.now());
   const [selectedOrder, setSelectedOrder] = useState(null);
-  const [currentRiderId, setCurrentRiderId] = useState(() =>
-  {
+  const [currentRiderId, setCurrentRiderId] = useState(() => {
     try {
       const ud = getJSONCookie('user_data') || {};
       return ud._id || ud.id || null;
@@ -191,8 +189,7 @@ const AvailableOrders = () =>
   const [locationError, setLocationError] = useState(null);
   const [locationAccuracyM, setLocationAccuracyM] = useState(null); // accuracy in meters (from coords.accuracy)
   // lock body scroll when drawer/modal is open
-  useEffect(() =>
-  {
+  useEffect(() => {
     if (selectedOrder) {
       const prev = document.body.style.overflow;
       document.body.style.overflow = 'hidden';
@@ -202,8 +199,7 @@ const AvailableOrders = () =>
   }, [selectedOrder]);
 
   // Debug: Check tokens on mount
-  useEffect(() =>
-  {
+  useEffect(() => {
     const riderToken = getCookie('rider_token');
     const customerToken = getCookie('customer_token');
     const authToken = getCookie('auth_token');
@@ -220,8 +216,7 @@ const AvailableOrders = () =>
   const router = useIonRouter();
 
   // Check verification status from backend
-  const checkVerificationStatus = async () =>
-  {
+  const checkVerificationStatus = async () => {
     try {
       console.log('[AvailableOrders] 🔍 Fetching verification status from backend...');
       const response = await getRiderProfile();
@@ -312,11 +307,9 @@ const AvailableOrders = () =>
     }
   };
 
-  useEffect(() =>
-  {
+  useEffect(() => {
     // Initial verification check with backend
-    checkVerificationStatus().then(verified =>
-    {
+    checkVerificationStatus().then(verified => {
       console.log('[AvailableOrders] Initial verification check:', verified);
       if (verified) {
         fetchAvailableJobs();
@@ -324,8 +317,7 @@ const AvailableOrders = () =>
     });
 
     // Fetch count of completed deliveries to determine "new user" state
-    const fetchCompleted = async () =>
-    {
+    const fetchCompleted = async () => {
       try {
         const resp = await getRiderDeliveries(1, 100);
         const deliveries = resp?.data?.deliveries || resp?.deliveries || resp?.data || [];
@@ -339,10 +331,22 @@ const AvailableOrders = () =>
     };
 
     fetchCompleted();
+    // Fetch rider earnings to get avgPerDelivery for potential earnings calculation
+    const fetchAvg = async () => {
+      try {
+        const resp = await getRiderEarnings();
+        const data = resp?.data?.earnings || resp?.earnings || resp?.data || resp || {};
+        const avg = data?.averagePerDelivery || data?.avgPerDelivery || data?.average || 0;
+        setAvgPerDeliveryRaw(Number(avg) || 0);
+        console.log('[AvailableOrders] avgPerDelivery fetched:', avg);
+      } catch (e) {
+        console.warn('[AvailableOrders] Failed to fetch rider earnings for avgPerDelivery', e);
+      }
+    };
+    fetchAvg();
 
     // Listen for verification completion
-    const handleVerificationComplete = async (event) =>
-    {
+    const handleVerificationComplete = async (event) => {
       console.log('[AvailableOrders] Verification completed event received:', event.detail);
       // Re-check verification status from backend
       const verified = await checkVerificationStatus();
@@ -360,15 +364,13 @@ const AvailableOrders = () =>
     };
 
     window.addEventListener('verification:completed', handleVerificationComplete);
-    return () =>
-    {
+    return () => {
       window.removeEventListener('verification:completed', handleVerificationComplete);
     };
   }, []);
 
   // Fetch available jobs on mount and when page changes
-  useEffect(() =>
-  {
+  useEffect(() => {
     if (isVerified) {
       fetchAvailableJobs();
     }
@@ -377,18 +379,15 @@ const AvailableOrders = () =>
   // Auto-refresh removed — use pull-to-refresh or manual refresh instead
 
   // Listen for new deliveries created by customers
-  useEffect(() =>
-  {
-    const handleDeliveryCreated = (event) =>
-    {
+  useEffect(() => {
+    const handleDeliveryCreated = (event) => {
       console.log('[AvailableOrders] New delivery created, refreshing jobs:', event.detail);
       setToastMsg('New delivery available!');
       setShowToast(true);
       fetchAvailableJobs();
     };
 
-    const handleDeliveriesRefresh = () =>
-    {
+    const handleDeliveriesRefresh = () => {
       console.log('[AvailableOrders] Deliveries refresh requested');
       fetchAvailableJobs();
     };
@@ -396,34 +395,29 @@ const AvailableOrders = () =>
     window.addEventListener('delivery:created', handleDeliveryCreated);
     window.addEventListener('deliveries:refresh', handleDeliveriesRefresh);
 
-    return () =>
-    {
+    return () => {
       window.removeEventListener('delivery:created', handleDeliveryCreated);
       window.removeEventListener('deliveries:refresh', handleDeliveriesRefresh);
     };
   }, []);
 
   // Socket: real-time invitation when a customer requests this rider
-  useEffect(() =>
-  {
+  useEffect(() => {
     socketService.connect();
-    const handleInvitation = (data) =>
-    {
+    const handleInvitation = (data) => {
       console.log('[AvailableOrders] delivery:invitation received:', data);
       setToastMsg('A customer requested you for a delivery');
       setShowToast(true);
       fetchAvailableJobs();
     };
     socketService.on('delivery:invitation', handleInvitation);
-    return () =>
-    {
+    return () => {
       try { socketService.off('delivery:invitation', handleInvitation); } catch (e) { }
     };
   }, []);
 
   // Send current location to backend so you show up in "nearby riders" (pickup within ~20 km)
-  const sendLocationToBackend = React.useCallback((showToastOnSuccess = false) =>
-  {
+  const sendLocationToBackend = React.useCallback((showToastOnSuccess = false) => {
     if (!navigator.geolocation) {
       setLocationStatus('error');
       setLocationError('Geolocation not supported');
@@ -432,16 +426,14 @@ const AvailableOrders = () =>
     setLocationStatus('updating');
     setLocationError(null);
     navigator.geolocation.getCurrentPosition(
-      (pos) =>
-      {
+      (pos) => {
         const lat = pos.coords.latitude;
         const lng = pos.coords.longitude;
         const acc = pos.coords.accuracy; // meters, may be undefined
         if (typeof acc === 'number') setLocationAccuracyM(Math.round(acc));
         else setLocationAccuracyM(null);
         updateDriverLocation(lat, lng)
-          .then(() =>
-          {
+          .then(() => {
             setLocationStatus('updated');
             setLocationError(null);
             if (showToastOnSuccess) {
@@ -449,8 +441,7 @@ const AvailableOrders = () =>
               setShowToast(true);
             }
           })
-          .catch((err) =>
-          {
+          .catch((err) => {
             setLocationStatus('error');
             const msg = err?.response?.data?.message || err?.message || 'Failed to update location';
             setLocationError(msg);
@@ -461,8 +452,7 @@ const AvailableOrders = () =>
             console.error('[AvailableOrders] updateDriverLocation failed:', err);
           });
       },
-      (err) =>
-      {
+      (err) => {
         setLocationStatus('error');
         const msg = err?.message === 'User denied the request for Geolocation.'
           ? 'Location permission denied. Allow location in your browser to appear in nearby riders.'
@@ -479,16 +469,14 @@ const AvailableOrders = () =>
   }, []);
 
   // Share location on mount and periodically so customers can find you
-  useEffect(() =>
-  {
+  useEffect(() => {
     if (!navigator.geolocation) return;
     sendLocationToBackend();
     const interval = setInterval(sendLocationToBackend, 20000);
     return () => clearInterval(interval);
   }, [sendLocationToBackend]);
 
-  const fetchAvailableJobs = async () =>
-  {
+  const fetchAvailableJobs = async () => {
     setLoading(true);
     try {
       console.log('[AvailableOrders] Fetching available jobs from API...');
@@ -527,8 +515,7 @@ const AvailableOrders = () =>
   };
 
   // Small helper to safely parse numbers from currency or string fields
-  const parseAmount = (val) =>
-  {
+  const parseAmount = (val) => {
     if (val === null || val === undefined) return 0;
     if (typeof val === 'number') return val;
     const s = String(val);
@@ -538,8 +525,14 @@ const AvailableOrders = () =>
     return Number.isNaN(n) ? 0 : n;
   };
 
-  const handleAcceptOrder = async (deliveryId) =>
-  {
+  const formatCurrency = (val) => {
+    if (val === null || val === undefined) return '₦0.00';
+    const num = typeof val === 'string' ? parseFloat(val.replace(/[$,N\s]/g, '')) : Number(val);
+    if (Number.isNaN(num)) return '₦0.00';
+    return `₦${num.toLocaleString('en-NG', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+  };
+
+  const handleAcceptOrder = async (deliveryId) => {
     if (!isAvailable) {
       setToastMsg('You must be available/active to accept orders. Please update your status in your profile.');
       setShowToast(true);
@@ -568,8 +561,7 @@ const AvailableOrders = () =>
       setShowToast(true);
 
       // Remove order from local list by matching on canonical id or the original id
-      setOrders(prev => prev.filter(order =>
-      {
+      setOrders(prev => prev.filter(order => {
         const oid = order._id || order.id || order.deliveryId;
         return !(String(oid) === String(acceptedId) || String(oid) === String(deliveryId));
       }));
@@ -577,6 +569,14 @@ const AvailableOrders = () =>
       // Dispatch accepted event including delivery type and order payload so other clients can react
       const acceptedDetail = { deliveryId: acceptedId, deliveryType: acceptedOrder?.deliveryType || acceptedOrder?.type || null, order: acceptedOrder || respDelivery || null };
       window.dispatchEvent(new CustomEvent('delivery:accepted', { detail: acceptedDetail }));
+
+      // Also emit via socket so server can notify the customer room (fallback if server relies on socket events)
+      try {
+        socketService.connect();
+        socketService.emit('delivery:accepted', acceptedDetail);
+      } catch (e) {
+        console.warn('[AvailableOrders] Failed to emit delivery:accepted via socketService', e);
+      }
 
       // NOTE: Do not emit delivery:accepted from the rider client —
       // the backend must emit to the customer room after accepting the job.
@@ -596,8 +596,7 @@ const AvailableOrders = () =>
     }
   };
 
-  const handleRejectOrder = async (deliveryId) =>
-  {
+  const handleRejectOrder = async (deliveryId) => {
     setRejecting(deliveryId);
     try {
       await rejectDeliveryJob(deliveryId);
@@ -616,8 +615,7 @@ const AvailableOrders = () =>
     }
   };
 
-  const handleViewDetails = (deliveryId) =>
-  {
+  const handleViewDetails = (deliveryId) => {
     // Scroll the card into view so rider doesn't lose context
     const el = document.getElementById(`order-${deliveryId}`);
     if (el && el.scrollIntoView) {
@@ -628,25 +626,22 @@ const AvailableOrders = () =>
   };
 
   // Express = normal ride (not Smart Ride); Nearby = within 2.5 km
-  const filteredOrders = orders.filter(order =>
-  {
+  const filteredOrders = orders.filter(order => {
     if (activeTab === 'express') return !order.smartRide && order.deliveryType !== 'smart_ride';
-    if (activeTab === 'nearby') return parseFloat(order.distance) <= 2.5;
+    if (activeTab === 'express') return !order.smartRide && order.deliveryType !== 'smart_ride';
     return true;
   });
 
   const expressCount = orders.filter(o => !o.smartRide && o.deliveryType !== 'smart_ride').length;
   const nearbyCount = orders.filter(o => parseFloat(o.distance) <= 2.5).length;
 
-  const handleRefresh = async (event) =>
-  {
+  const handleRefresh = async (event) => {
     await fetchAvailableJobs();
     event.detail.complete();
   };
 
   // Helper to extract coords from various payload shapes
-  const extractCoords = (order, which) =>
-  {
+  const extractCoords = (order, which) => {
     // which = 'pickup' or 'delivery'
     try {
       if (!order) return null;
@@ -667,8 +662,7 @@ const AvailableOrders = () =>
   };
 
   // Haversine formula to calculate distance in kilometers between two [lng, lat] points
-  const calculateHaversineKm = (a, b) =>
-  {
+  const calculateHaversineKm = (a, b) => {
     try {
       if (!a || !b || a.length < 2 || b.length < 2) return null;
       const toRad = (deg) => deg * (Math.PI / 180);
@@ -774,7 +768,7 @@ const AvailableOrders = () =>
               />
               <StatCard
                 title="Potential Earnings"
-                value={completedDeliveriesCount === 0 ? '₦0.00' : `₦${(orders.reduce((sum, order) => sum + parseAmount(order.amount || order.price || 0), 0)).toLocaleString('en-NG', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`}
+                value={completedDeliveriesCount === 0 ? '₦0.00' : formatCurrency(Number(avgPerDeliveryRaw) || 0)}
                 subtitle=""
                 color="text-[#00A63E]"
               />
@@ -797,6 +791,16 @@ const AvailableOrders = () =>
               <div className="overflow-x-auto -mx-4 sm:mx-0 px-4 sm:px-0">
                 <div className="inline-flex items-center gap-2 bg-gray-50 p-1 rounded-full whitespace-nowrap">
                   <YummyText>
+                    <button
+                      onClick={() => setActiveTab('all')}
+                      className={`inline-block flex-shrink-0 min-w-[88px] sm:min-w-[120px] px-3 sm:px-5 py-1 rounded-full text-sm font-normal transition-colors ${activeTab === 'all'
+                        ? 'text-[#00B75A] bg-white shadow-sm'
+                        : 'text-[#64748B]'
+                        }`}
+                    >
+                      All ({orders.length})
+                    </button>
+
                     <button
                       onClick={() => setActiveTab('express')}
                       className={`inline-block flex-shrink-0 min-w-[88px] sm:min-w-[120px] px-3 sm:px-5 py-1 rounded-full text-sm font-normal transition-colors ${activeTab === 'express'
@@ -838,8 +842,7 @@ const AvailableOrders = () =>
                   </div>
                 </div>
               ) : (
-                filteredOrders.map((order) =>
-                {
+                filteredOrders.map((order) => {
                   const orderId = order._id || order.id;
                   const invitedDriverId = order.invitedDriver?._id ?? order.invitedDriver;
                   const isRequestedForMe = !!invitedDriverId && !!currentRiderId && (String(invitedDriverId) === String(currentRiderId));
@@ -904,10 +907,8 @@ const AvailableOrders = () =>
                   <div className="text-sm text-[#64748B] mb-2">Distance: {selectedOrder.distance || 'N/A'}</div>
 
                   {/* Show uploaded image (if any) instead of earnings/route breakdown */}
-                  {(() =>
-                  {
-                    const findImage = (o) =>
-                    {
+                  {(() => {
+                    const findImage = (o) => {
                       if (!o) return null;
                       const candidates = [
                         'image', 'images', 'packageImage', 'package?.image', 'package_image', 'payload.image', 'data.image', 'imageUrl', 'image_url'
@@ -953,8 +954,7 @@ const AvailableOrders = () =>
                     const urlHint = /https?:\/\/.+\.(jpe?g|png|webp|gif|svg)(\?.*)?$/i;
                     const shallowHint = /(uploads|images|cdn|s3)\/.+\.(jpe?g|png|webp|gif|svg)/i;
                     const seen = new Set();
-                    const findUrl = (obj) =>
-                    {
+                    const findUrl = (obj) => {
                       if (!obj || typeof obj !== 'object' || seen.has(obj)) return null;
                       seen.add(obj);
                       for (const k of Object.keys(obj)) {
@@ -1001,10 +1001,17 @@ const AvailableOrders = () =>
                         ) : null}
 
                         <div className="text-xs text-[#64748B]">Potential earnings</div>
-                        <div className="text-lg font-medium text-[#00D68F]">₦{total.toFixed(2)}</div>
-                        <div className="text-xs text-[#94A3B8]">Breakdown: ₦{base.toFixed(2)} base {tips > 0 ? `+ ₦${tips.toFixed(2)} tips` : ''}</div>
-                        {completedDeliveriesCount === 0 && (
-                          <div className="text-xs text-[#64748B] mt-1">Note: Potential Earnings remains 0 until you complete your delivery.</div>
+                        {completedDeliveriesCount === 0 ? (
+                          <>
+                            <div className="text-lg font-medium text-[#00D68F]">₦{total.toFixed(2)}</div>
+                            <div className="text-xs text-[#94A3B8]">Breakdown: ₦{base.toFixed(2)} base {tips > 0 ? `+ ₦${tips.toFixed(2)} tips` : ''}</div>
+                            <div className="text-xs text-[#64748B] mt-1">Note: Potential Earnings remains 0 until you complete your delivery.</div>
+                          </>
+                        ) : (
+                          <>
+                            <div className="text-lg font-medium text-[#00D68F]">{formatCurrency(avgPerDeliveryRaw)}</div>
+                            <div className="text-xs text-[#94A3B8]">Using your avg earnings per delivery</div>
+                          </>
                         )}
                       </div>
                     );
