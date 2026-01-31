@@ -105,6 +105,7 @@ export default function SmartRideBooking({ embedMode = false, initialData = {}, 
             return json ? JSON.parse(json) : null;
         } catch (e) { return null; }
     });
+    const [deliveryData, setDeliveryData] = useState(null);
 
     useEffect(() => {
         const check = () => setIsMobile(window.innerWidth <= 768);
@@ -198,6 +199,7 @@ export default function SmartRideBooking({ embedMode = false, initialData = {}, 
                     const storedStepNow = localStorage.getItem('smartride_step');
                     const rd = detail?.rider || {};
                     // If user already proceeded to rider-details, preserve that choice
+                    try { setDeliveryData(detail?.delivery || detail?.order || detail || null); } catch (e) {}
                     if (storedStepNow === 'rider-details') {
                         setIsSearching(false);
                         setRiderDetails(rd || {});
@@ -306,6 +308,32 @@ export default function SmartRideBooking({ embedMode = false, initialData = {}, 
         };
     }, [deliveryId]);
 
+    // Listen for verification completion events to sync rider profile data
+    useEffect(() => {
+        const handleVerificationCompleted = (e) => {
+            const profile = e?.detail?.profile || null;
+            const verificationData = e?.detail?.verificationData || null;
+            if (profile) {
+                try { setRiderDetails(profile); localStorage.setItem('smartride_rider_details', JSON.stringify(profile)); } catch (err) { }
+            } else if (verificationData) {
+                // Merge verificationData into riderDetails
+                try {
+                    const existing = riderDetails || {};
+                    const merged = {
+                        ...existing,
+                        phone: verificationData.contactInfo?.phone || existing.phone,
+                        vehicle: { ...(existing.vehicle || {}), ...(verificationData.vehicle || {}) }
+                    };
+                    setRiderDetails(merged);
+                    localStorage.setItem('smartride_rider_details', JSON.stringify(merged));
+                } catch (err) { }
+            }
+        };
+
+        window.addEventListener('verification:completed', handleVerificationCompleted);
+        return () => window.removeEventListener('verification:completed', handleVerificationCompleted);
+    }, [riderDetails]);
+
     // Poll delivery status as a fallback when socket events are missed.
     // This avoids forcing the customer to refresh the page while keeping them on the form.
     useEffect(() => {
@@ -377,6 +405,7 @@ export default function SmartRideBooking({ embedMode = false, initialData = {}, 
                     try { localStorage.setItem('smartride_rider_details', JSON.stringify(rd)); } catch (e) { }
                     setRiderDetails(rd);
                 }
+                try { setDeliveryData(delivery); } catch (e) {}
 
                 // If delivery moved into active states, ensure stored step reflects progress
                 const status = (delivery.status || '').toString().toLowerCase();
@@ -500,6 +529,7 @@ export default function SmartRideBooking({ embedMode = false, initialData = {}, 
 
                     if (mounted) {
                         setDeliveryId(stored);
+                        try { setDeliveryData(null); } catch (e) {}
 
                         // Restore request-sent state if this delivery was sent to an invited rider
                         const invitedId = delivery?.invitedDriver?._id ?? delivery?.invitedDriver;
@@ -521,8 +551,12 @@ export default function SmartRideBooking({ embedMode = false, initialData = {}, 
                             try { socketService.joinRoom(room); } catch (e) { }
                         } catch (e) { console.warn('[SmartRide] Failed to join stored delivery room:', e); }
 
+                        // Store fetched delivery data for UI tracking and rider details
+                        try { setDeliveryData(delivery); } catch (e) {}
+
                         // Restore to appropriate step based on delivery status
                         if (status === 'accepted' || status === 'in_progress' || storedStep === 'rider-details') {
+                            try { if (delivery?.rider) { setRiderDetails(delivery.rider); localStorage.setItem('smartride_rider_details', JSON.stringify(delivery.rider)); } } catch (e) {}
                             setCurrentStep('rider-details');
                             setIsSearching(false);
                         } else if (storedStep === 'rider-found') {
