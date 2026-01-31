@@ -13,11 +13,14 @@ import { getAnalyticsOverview, getRevenueAnalytics, getDriverAnalytics } from '.
 ChartJS.register(CategoryScale, LinearScale, PointElement, LineElement, BarElement, ArcElement, Title, Tooltip, Legend, Filler);
 
 // Rider Card Component with Flip Animation
-const RiderCard = ({ rider }) => {
+const RiderCard = ({ rider }) =>
+{
   const [showRank, setShowRank] = useState(false);
 
-  useEffect(() => {
-    const interval = setInterval(() => {
+  useEffect(() =>
+  {
+    const interval = setInterval(() =>
+    {
       setShowRank(prev => !prev);
     }, 2000);
 
@@ -98,7 +101,8 @@ const RiderCard = ({ rider }) => {
   );
 };
 
-const AnalyticsReports = () => {
+const AnalyticsReports = () =>
+{
   // Component state
   const [timePeriod, setTimePeriod] = useState('Last 6 Months');
   const [loading, setLoading] = useState(true);
@@ -113,7 +117,8 @@ const AnalyticsReports = () => {
   const [revenueOrdersChartData, setRevenueOrdersChartData] = useState(null);
 
   // Fetch all analytics data
-  const fetchAnalyticsData = async (isRefresh = false) => {
+  const fetchAnalyticsData = async (isRefresh = false) =>
+  {
     try {
       if (isRefresh) {
         setRefreshing(true);
@@ -220,31 +225,36 @@ const AnalyticsReports = () => {
   };
 
   // Fetch data on mount, when time period changes, or after KYC approval/rejection
-  useEffect(() => {
+  useEffect(() =>
+  {
     fetchAnalyticsData();
     const handleResize = () => setIsMobile(window.innerWidth < 768);
     window.addEventListener('resize', handleResize);
 
     // Listen for KYC approval/rejection events to refresh stats
-    const handleKycUpdate = () => {
+    const handleKycUpdate = () =>
+    {
       fetchAnalyticsData(true);
     };
     window.addEventListener('kyc:updated', handleKycUpdate);
 
-    return () => {
+    return () =>
+    {
       window.removeEventListener('resize', handleResize);
       window.removeEventListener('kyc:updated', handleKycUpdate);
     };
   }, [timePeriod]);
 
   // Format currency
-  const formatCurrency = (amount) => {
+  const formatCurrency = (amount) =>
+  {
     if (!amount && amount !== 0) return '₦0';
     return `₦${Number(amount).toLocaleString('en-NG', { minimumFractionDigits: 0, maximumFractionDigits: 0 })}`;
   };
 
   // Format number with K/M suffix
-  const formatNumber = (num) => {
+  const formatNumber = (num) =>
+  {
     if (!num && num !== 0) return '0';
     if (num >= 1000000) return `${(num / 1000000).toFixed(1)}M`;
     if (num >= 1000) return `${(num / 1000).toFixed(1)}K`;
@@ -252,7 +262,8 @@ const AnalyticsReports = () => {
   };
 
   // Calculate percentage change
-  const calculatePercentChange = (current, previous) => {
+  const calculatePercentChange = (current, previous) =>
+  {
     if (!previous || previous === 0) return '+0%';
     const change = ((current - previous) / previous) * 100;
     const sign = change >= 0 ? '+' : '';
@@ -260,7 +271,8 @@ const AnalyticsReports = () => {
   };
 
   // Process revenue data for charts
-  const processRevenueOrdersData = () => {
+  const processRevenueOrdersData = () =>
+  {
     console.log('[Analytics] Processing revenue data:', revenueData);
 
     // Handle different response structures
@@ -278,7 +290,8 @@ const AnalyticsReports = () => {
       return [];
     }
 
-    const processed = dataArray.map(item => {
+    const processed = dataArray.map(item =>
+    {
       // Format month to be more readable (e.g., "2026-01" -> "Jan 2026")
       let monthLabel = item.month || item.period || item.date || item._id || '';
       if (monthLabel.match(/^\d{4}-\d{2}$/)) {
@@ -290,7 +303,9 @@ const AnalyticsReports = () => {
       return {
         month: monthLabel,
         revenue: Number(item.revenue || item.totalRevenue || item.value || item.amount || 0),
-        orders: Number(item.orders || item.orderCount || item.totalOrders || item.deliveries || 0)
+        orders: Number(item.orders || item.orderCount || item.totalOrders || item.deliveries || 0),
+        riderEarnings: Number(item.riderEarnings || 0),
+        companyEarnings: Number(item.companyEarnings || 0)
       };
     });
 
@@ -299,7 +314,8 @@ const AnalyticsReports = () => {
   };
 
   // Build chart payload to force react-chartjs-2 to re-render with fresh object
-  useEffect(() => {
+  useEffect(() =>
+  {
     const data = processRevenueOrdersData();
     console.log('[Analytics] Building chart with processed data:', data);
 
@@ -323,6 +339,26 @@ const AnalyticsReports = () => {
           borderWidth: 2
         },
         {
+          label: 'Rider earnings',
+          data: data.map(d => Number(d.riderEarnings) || 0),
+          borderColor: '#10B981',
+          backgroundColor: 'rgba(16, 185, 129, 0.1)',
+          yAxisID: 'y',
+          tension: 0.4,
+          fill: true,
+          borderWidth: 2
+        },
+        {
+          label: 'Company earnings',
+          data: data.map(d => Number(d.companyEarnings) || 0),
+          borderColor: '#3B82F6',
+          backgroundColor: 'rgba(59, 130, 246, 0.1)',
+          yAxisID: 'y',
+          tension: 0.4,
+          fill: true,
+          borderWidth: 2
+        },
+        {
           label: 'Orders',
           data: data.map(d => Number(d.orders) || 0),
           borderColor: '#F97316',
@@ -340,7 +376,8 @@ const AnalyticsReports = () => {
   }, [revenueData]);
 
   // Process order status data
-  const processOrderStatusData = () => {
+  const processOrderStatusData = () =>
+  {
     if (!overviewData) return [];
 
     // Try different possible locations for order status data
@@ -375,13 +412,15 @@ const AnalyticsReports = () => {
   };
 
   // Process top riders data
-  const processTopRiders = () => {
+  const processTopRiders = () =>
+  {
     if (!driverData?.topDrivers && !driverData?.data) return [];
 
     const drivers = driverData.topDrivers || driverData.data || [];
     if (!Array.isArray(drivers)) return [];
 
-    return drivers.slice(0, 5).map((driver, index) => {
+    return drivers.slice(0, 5).map((driver, index) =>
+    {
       const earnings = driver.totalEarnings || driver.earnings || 0;
       const deliveries = driver.deliveryCount || driver.deliveries || driver.totalDeliveries || 0;
       const rating = driver.rating || driver.averageRating || 4.5;
@@ -403,7 +442,8 @@ const AnalyticsReports = () => {
   };
 
   // Generate user growth data
-  const generateUserGrowthData = () => {
+  const generateUserGrowthData = () =>
+  {
     // Try to get data from revenue analytics monthlyBreakdown
     let dataArray = [];
     if (revenueData?.data?.monthlyBreakdown && Array.isArray(revenueData.data.monthlyBreakdown)) {
@@ -418,7 +458,8 @@ const AnalyticsReports = () => {
 
     // If we have monthly breakdown data, generate growth patterns
     if (dataArray.length > 0) {
-      return dataArray.map((item, index) => {
+      return dataArray.map((item, index) =>
+      {
         // Format month to be more readable
         let monthLabel = item.month || item.period || item.date || '';
         if (monthLabel.match(/^\d{4}-\d{2}$/)) {
@@ -454,7 +495,8 @@ const AnalyticsReports = () => {
   };
 
   // Generate peak hours data
-  const generatePeakHoursData = () => {
+  const generatePeakHoursData = () =>
+  {
     const peakData = overviewData?.peakHours || [];
     if (Array.isArray(peakData) && peakData.length > 0) {
       return peakData;
@@ -677,6 +719,23 @@ const AnalyticsReports = () => {
                 Monthly performance metrics
               </YummyText>
 
+              {(revenueData?.data?.totalRiderEarnings != null || revenueData?.data?.totalCompanyEarnings != null) && (
+                <div className="flex flex-wrap gap-4 mb-4 p-3 bg-gray-50 rounded-lg">
+                  {revenueData?.data?.totalRiderEarnings != null && (
+                    <div>
+                      <span className="text-xs text-[#64748B]">Total rider earnings</span>
+                      <p className="text-lg font-semibold text-[#10B981]">{formatCurrency(revenueData.data.totalRiderEarnings)}</p>
+                    </div>
+                  )}
+                  {revenueData?.data?.totalCompanyEarnings != null && (
+                    <div>
+                      <span className="text-xs text-[#64748B]">Total company earnings</span>
+                      <p className="text-lg font-semibold text-[#3B82F6]">{formatCurrency(revenueData.data.totalCompanyEarnings)}</p>
+                    </div>
+                  )}
+                </div>
+              )}
+
               {revenueOrdersChartData && revenueOrdersChartData.labels && revenueOrdersChartData.labels.length > 0 ? (
                 <div style={{ height: '300px' }}>
                   <Line
@@ -702,9 +761,11 @@ const AnalyticsReports = () => {
                           borderWidth: 1,
                           padding: 12,
                           callbacks: {
-                            label: (context) => {
+                            label: (context) =>
+                            {
                               const label = context.dataset.label || '';
-                              const value = label === 'Revenue' ? formatCurrency(context.parsed.y) : context.parsed.y;
+                              const isCurrency = ['Revenue', 'Rider earnings', 'Company earnings'].includes(label);
+                              const value = isCurrency ? formatCurrency(context.parsed.y) : context.parsed.y;
                               return `${label}: ${value}`;
                             }
                           }
@@ -718,7 +779,8 @@ const AnalyticsReports = () => {
                           grid: { color: '#f0f0f0' },
                           ticks: {
                             color: '#666666',
-                            callback: function (value) {
+                            callback: function (value)
+                            {
                               return formatCurrency(value);
                             }
                           }

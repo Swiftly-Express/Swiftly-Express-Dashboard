@@ -4,7 +4,8 @@ import { IonPage, IonContent, IonToast } from '@ionic/react';
 import CustomerLayout from '../components/CustomerLayout';
 import { YummyText } from '../../../components/YummyText';
 import Loader from '../../../components/Loader';
-import TrackingMap from '../../../components/TrackingMap'; // NEW
+import TrackingMap from '../../../components/TrackingMap';
+import DeliveryChat from '../../../components/DeliveryChat';
 // RatingModal is mounted globally in CustomerLayout and triggered via window events
 import { getDeliveryByTracking, rateDriver } from '../../../utils/authApi';
 import socketService from '../../../services/socket.service'; // NEW
@@ -17,7 +18,8 @@ const sideBottomShadow = {
   boxShadow: '2px 2px 4px rgba(0,0,0,0.06), -2px 2px 4px rgba(0,0,0,0.06), 0 4px 8px rgba(0,0,0,0.08)'
 };
 
-const Track = () => {
+const Track = () =>
+{
   const [trackingId, setTrackingId] = useState('');
   const [deliveryData, setDeliveryData] = useState(null);
   const [loading, setLoading] = useState(false);
@@ -28,11 +30,13 @@ const Track = () => {
   const params = useParams();
 
   // Auto-fetch when a trackingId is present in the URL (e.g. /track/SX-...)
-  useEffect(() => {
+  useEffect(() =>
+  {
     const paramId = params?.trackingId;
     if (!paramId) return;
 
-    const fetchByParam = async () => {
+    const fetchByParam = async () =>
+    {
       if (paramId && paramId !== trackingId) {
         setTrackingId(paramId);
         setLoading(true);
@@ -57,8 +61,10 @@ const Track = () => {
   }, [params?.trackingId]);
 
   // Listen for delivery updates and refresh if the current delivery changes
-  useEffect(() => {
-    const handleDeliveryUpdated = (event) => {
+  useEffect(() =>
+  {
+    const handleDeliveryUpdated = (event) =>
+    {
       if (deliveryData && event.detail) {
         const updatedDeliveryId = event.detail.deliveryId || event.detail.id;
         const currentDeliveryId = deliveryData._id || deliveryData.id;
@@ -83,7 +89,8 @@ const Track = () => {
             !hasRated &&
             !deliveryData.rating &&
             !deliveryData.customerRating) {
-            setTimeout(() => {
+            setTimeout(() =>
+            {
               window.dispatchEvent(new CustomEvent('rating:show', { detail: deliveryData }));
             }, 1500);
           }
@@ -102,7 +109,8 @@ const Track = () => {
       socketService.connect();
       socketService.joinRoom(deliveryId);
 
-      const handleLocationUpdate = (data) => {
+      const handleLocationUpdate = (data) =>
+      {
         if (data && data.location) {
           console.log('[Track] Driver location updated:', data.location);
           setDriverLocation(data.location);
@@ -111,10 +119,9 @@ const Track = () => {
 
       socketService.on('delivery:location:updated', handleLocationUpdate);
 
-      // Initialize driver location from deliveryData if available
+      // Initialize driver location from deliveryData: prefer currentLocation, then estimatedRiderLocation
       if (deliveryData.currentLocation) {
         const loc = deliveryData.currentLocation;
-        // Handle GeoJSON [lng, lat] or {lat, lng}
         if (Array.isArray(loc)) {
           setDriverLocation({ lat: loc[1], lng: loc[0] });
         } else if (loc.lat && loc.lng) {
@@ -122,21 +129,29 @@ const Track = () => {
         } else if (loc.coordinates) {
           setDriverLocation({ lat: loc.coordinates[1], lng: loc.coordinates[0] });
         }
+      } else if (deliveryData.estimatedRiderLocation) {
+        const loc = deliveryData.estimatedRiderLocation;
+        if (loc.lat != null && loc.lng != null) {
+          setDriverLocation({ lat: Number(loc.lat), lng: Number(loc.lng) });
+        }
       }
 
-      socketCleanup = () => {
+      socketCleanup = () =>
+      {
         socketService.leaveRoom(deliveryId);
         socketService.off('delivery:location:updated', handleLocationUpdate);
       };
     }
 
-    return () => {
+    return () =>
+    {
       window.removeEventListener('delivery:updated', handleDeliveryUpdated);
       socketCleanup();
     };
   }, [deliveryData]);
 
-  const handleTrack = async (e) => {
+  const handleTrack = async (e) =>
+  {
     e.preventDefault();
 
     if (!trackingId.trim()) {
@@ -162,7 +177,8 @@ const Track = () => {
       const alreadyRated = data.rating || data.customerRating || data.hasRated;
 
       if (isCompleted && !alreadyRated && !hasRated) {
-        setTimeout(() => {
+        setTimeout(() =>
+        {
           window.dispatchEvent(new CustomEvent('rating:show', { detail: data }));
         }, 2000);
       }
@@ -177,7 +193,8 @@ const Track = () => {
     }
   };
 
-  const getStatusColor = (status) => {
+  const getStatusColor = (status) =>
+  {
     const statusLower = status?.toLowerCase() || '';
     if (statusLower === 'delivered') return 'bg-green-500';
     if (statusLower === 'in-transit' || statusLower === 'in transit') return 'bg-blue-500';
@@ -186,7 +203,8 @@ const Track = () => {
     return 'bg-gray-400';
   };
 
-  const getStatusBadge = (status) => {
+  const getStatusBadge = (status) =>
+  {
     const statusLower = status?.toLowerCase() || '';
     if (statusLower === 'delivered') return 'bg-green-100 text-green-700';
     if (statusLower === 'in-transit' || statusLower === 'in transit') return 'bg-[#00B75A] text-[#FFFFFF]';
@@ -195,7 +213,8 @@ const Track = () => {
     return 'bg-gray-100 text-gray-700';
   };
 
-  const formatDate = (dateString) => {
+  const formatDate = (dateString) =>
+  {
     if (!dateString) return 'N/A';
     try {
       const date = new Date(dateString);
@@ -209,7 +228,8 @@ const Track = () => {
     }
   };
 
-  const formatTime = (dateString) => {
+  const formatTime = (dateString) =>
+  {
     if (!dateString) return '';
     try {
       const date = new Date(dateString);
@@ -236,7 +256,8 @@ const Track = () => {
   const recipientAddressLine = deliveryData?.deliveryAddress?.street || deliveryData?.deliveryAddress?.address || deliveryData?.deliveryAddress || deliveryData?.deliveryAddressString || '';
 
   // Handle rating submission
-  const handleSubmitRating = async (ratingData) => {
+  const handleSubmitRating = async (ratingData) =>
+  {
     try {
       console.log('[Track] Submitting rating:', ratingData);
       // Only send rating field - backend doesn't accept comment or driverId
@@ -333,8 +354,26 @@ const Track = () => {
           {/* Tracking Result */}
           {!loading && deliveryData && (
             <div className="space-y-6">
-              {/* Map */}
+              {/* Map and status card */}
               <div className="bg-white rounded-2xl overflow-hidden" style={sideBottomShadow}>
+                {/* Status: rider ETA to pickup, ETA to delivery, or arrived */}
+                {(deliveryData.estimatedArrivalMinutes != null && (statusLower === 'assigned' || statusLower === 'picked-up' || statusLower === 'picked up')) ||
+                  (deliveryData.estimatedTimeMinutes != null && (statusLower === 'in-transit' || statusLower === 'in transit')) ||
+                  (statusLower === 'delivered') ? (
+                  <div className="px-4 py-3 border-b border-gray-100 bg-[#F8FAFC]">
+                    <YummyText className="text-sm font-medium text-[#0F172A]">
+                      {statusLower === 'delivered'
+                        ? (deliveryData.deliveryTime || deliveryData.deliveredAt
+                          ? `Driver has arrived at delivery location · ${formatDate(deliveryData.deliveryTime || deliveryData.deliveredAt)} ${formatTime(deliveryData.deliveryTime || deliveryData.deliveredAt)}`
+                          : 'Driver has arrived at delivery location')
+                        : (statusLower === 'in-transit' || statusLower === 'in transit') && deliveryData.estimatedTimeMinutes != null
+                          ? `Estimated time to delivery: ~${deliveryData.estimatedTimeMinutes} min`
+                          : deliveryData.estimatedArrivalMinutes != null
+                            ? `Rider arriving at pickup in ~${deliveryData.estimatedArrivalMinutes} min`
+                            : null}
+                    </YummyText>
+                  </div>
+                ) : null}
                 <div className="h-64 relative">
                   {deliveryData.pickupAddress?.coordinates && deliveryData.deliveryAddress?.coordinates ? (
                     <TrackingMap
@@ -363,6 +402,17 @@ const Track = () => {
                   )}
                 </div>
               </div>
+
+              {/* Chat with rider (when driver is assigned) */}
+              {deliveryData.driver && (deliveryData._id || deliveryData.id) && (
+                <div style={sideBottomShadow} className="rounded-2xl overflow-hidden">
+                  <DeliveryChat
+                    deliveryId={deliveryData._id || deliveryData.id}
+                    currentUserRole="customer"
+                    maxHeight="280px"
+                  />
+                </div>
+              )}
 
               {/* Package Details and Recipient Information */}
               <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">

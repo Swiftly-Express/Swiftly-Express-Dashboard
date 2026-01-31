@@ -6,7 +6,7 @@ import RiderLayout from '../components/RiderLayout';
 import { YummyText } from '../../../components/YummyText';
 import BanIcon from '../../../icons/Banicon';
 import TrackingMap from '../../../components/TrackingMap';
-import { getAvailableJobs, acceptDeliveryJob, getRiderProfile, getRiderDeliveries } from '../../../utils/authApi';
+import { getAvailableJobs, acceptDeliveryJob, rejectDeliveryJob, getRiderProfile, getRiderDeliveries, updateDriverLocation } from '../../../utils/authApi';
 import socketService from '../../../services/socket.service';
 import { getCookie, getJSONCookie, isRiderVerified, setCookie, setJSONCookie } from '../../../utils/cookies';
 
@@ -42,13 +42,21 @@ const OrderCard = ({
   tips,
   onAccept,
   onViewDetails,
-  accepting
+  onReject,
+  accepting,
+  rejecting,
+  isRequestedForMe
 }) => (
   <div id={`order-${deliveryId}`} className="bg-white rounded-2xl p-4 sm:p-6 mb-4" style={sideBottomShadow}>
     <YummyText>
       <div className="flex flex-col sm:flex-row items-start sm:justify-between mb-4">
-        <div className="flex items-center gap-3 mb-3 sm:mb-0">
+        <div className="flex items-center gap-3 mb-3 sm:mb-0 flex-wrap">
           <div className="text-lg font-normal text-[#0F172A]">{packageId}</div>
+          {isRequestedForMe && (
+            <span className="px-3 py-1 rounded-lg text-xs font-normal bg-[#6366F1] text-white">
+              Customer requested you
+            </span>
+          )}
           {priority && (
             <span className="px-3 py-1 rounded-lg text-xs font-normal bg-[#FF7A00] text-[#FFFFFF]">
               {priority}
@@ -129,6 +137,15 @@ const OrderCard = ({
         >
           {accepting ? 'Accepting...' : 'Accept Order'}
         </button>
+        {isRequestedForMe && onReject && (
+          <button
+            onClick={() => onReject(deliveryId)}
+            disabled={rejecting === deliveryId}
+            className={`w-full sm:flex-1 bg-white border border-red-200 hover:bg-red-50 text-red-600 rounded-lg transition-colors font-[400] py-2 ${rejecting === deliveryId ? 'opacity-50 cursor-not-allowed' : ''}`}
+          >
+            {rejecting === deliveryId ? 'Declining...' : 'Decline'}
+          </button>
+        )}
         <button onClick={() => onViewDetails && onViewDetails(deliveryId)} className="w-full sm:flex-1 bg-white border border-gray-200 hover:bg-gray-50 rounded-lg transition-colors text-[#0F172A] font-[400] py-2" style={{ border: "1px solid #0000001A" }}>
           View Details
         </button>
@@ -137,8 +154,9 @@ const OrderCard = ({
   </div>
 );
 
-const AvailableOrders = () => {
-  const [activeTab, setActiveTab] = useState('all');
+const AvailableOrders = () =>
+{
+  const [activeTab, setActiveTab] = useState('express');
   const [orders, setOrders] = useState([]);
   const [loading, setLoading] = useState(true);
   const [accepting, setAccepting] = useState(null);
@@ -146,7 +164,8 @@ const AvailableOrders = () => {
   const [toastMsg, setToastMsg] = useState('');
   const [showToast, setShowToast] = useState(false);
   const [isVerified, setIsVerified] = useState(false);
-  const [verificationStatus, setVerificationStatus] = useState(() => {
+  const [verificationStatus, setVerificationStatus] = useState(() =>
+  {
     try {
       const ud = getJSONCookie('user_data') || {};
       return ud.verificationStatus || getCookie('riderVerificationStatus') || null;
@@ -158,8 +177,22 @@ const AvailableOrders = () => {
   const [completedDeliveriesCount, setCompletedDeliveriesCount] = useState(0);
   const [lastRefresh, setLastRefresh] = useState(Date.now());
   const [selectedOrder, setSelectedOrder] = useState(null);
+  const [currentRiderId, setCurrentRiderId] = useState(() =>
+  {
+    try {
+      const ud = getJSONCookie('user_data') || {};
+      return ud._id || ud.id || null;
+    } catch (e) {
+      return null;
+    }
+  });
+  const [rejecting, setRejecting] = useState(null);
+  const [locationStatus, setLocationStatus] = useState('idle'); // 'idle' | 'updating' | 'updated' | 'error'
+  const [locationError, setLocationError] = useState(null);
+  const [locationAccuracyM, setLocationAccuracyM] = useState(null); // accuracy in meters (from coords.accuracy)
   // lock body scroll when drawer/modal is open
-  useEffect(() => {
+  useEffect(() =>
+  {
     if (selectedOrder) {
       const prev = document.body.style.overflow;
       document.body.style.overflow = 'hidden';
@@ -169,7 +202,8 @@ const AvailableOrders = () => {
   }, [selectedOrder]);
 
   // Debug: Check tokens on mount
-  useEffect(() => {
+  useEffect(() =>
+  {
     const riderToken = getCookie('rider_token');
     const customerToken = getCookie('customer_token');
     const authToken = getCookie('auth_token');
@@ -186,7 +220,8 @@ const AvailableOrders = () => {
   const router = useIonRouter();
 
   // Check verification status from backend
-  const checkVerificationStatus = async () => {
+  const checkVerificationStatus = async () =>
+  {
     try {
       console.log('[AvailableOrders] 🔍 Fetching verification status from backend...');
       const response = await getRiderProfile();
@@ -212,6 +247,10 @@ const AvailableOrders = () => {
       // Also accept boolean flags that some backends may set
       if (profile?.isVerified === true || profile?.verified === true || profile?.verification?.isApproved === true) {
         isApproved = true;
+      }
+
+      if (profile?._id || profile?.id) {
+        setCurrentRiderId(profile._id || profile.id);
       }
 
       // Fallback: check cookies/user_data for a verification hint
@@ -273,9 +312,11 @@ const AvailableOrders = () => {
     }
   };
 
-  useEffect(() => {
+  useEffect(() =>
+  {
     // Initial verification check with backend
-    checkVerificationStatus().then(verified => {
+    checkVerificationStatus().then(verified =>
+    {
       console.log('[AvailableOrders] Initial verification check:', verified);
       if (verified) {
         fetchAvailableJobs();
@@ -283,7 +324,8 @@ const AvailableOrders = () => {
     });
 
     // Fetch count of completed deliveries to determine "new user" state
-    const fetchCompleted = async () => {
+    const fetchCompleted = async () =>
+    {
       try {
         const resp = await getRiderDeliveries(1, 100);
         const deliveries = resp?.data?.deliveries || resp?.deliveries || resp?.data || [];
@@ -299,7 +341,8 @@ const AvailableOrders = () => {
     fetchCompleted();
 
     // Listen for verification completion
-    const handleVerificationComplete = async (event) => {
+    const handleVerificationComplete = async (event) =>
+    {
       console.log('[AvailableOrders] Verification completed event received:', event.detail);
       // Re-check verification status from backend
       const verified = await checkVerificationStatus();
@@ -317,13 +360,15 @@ const AvailableOrders = () => {
     };
 
     window.addEventListener('verification:completed', handleVerificationComplete);
-    return () => {
+    return () =>
+    {
       window.removeEventListener('verification:completed', handleVerificationComplete);
     };
   }, []);
 
   // Fetch available jobs on mount and when page changes
-  useEffect(() => {
+  useEffect(() =>
+  {
     if (isVerified) {
       fetchAvailableJobs();
     }
@@ -332,15 +377,18 @@ const AvailableOrders = () => {
   // Auto-refresh removed — use pull-to-refresh or manual refresh instead
 
   // Listen for new deliveries created by customers
-  useEffect(() => {
-    const handleDeliveryCreated = (event) => {
+  useEffect(() =>
+  {
+    const handleDeliveryCreated = (event) =>
+    {
       console.log('[AvailableOrders] New delivery created, refreshing jobs:', event.detail);
       setToastMsg('New delivery available!');
       setShowToast(true);
       fetchAvailableJobs();
     };
 
-    const handleDeliveriesRefresh = () => {
+    const handleDeliveriesRefresh = () =>
+    {
       console.log('[AvailableOrders] Deliveries refresh requested');
       fetchAvailableJobs();
     };
@@ -348,13 +396,99 @@ const AvailableOrders = () => {
     window.addEventListener('delivery:created', handleDeliveryCreated);
     window.addEventListener('deliveries:refresh', handleDeliveriesRefresh);
 
-    return () => {
+    return () =>
+    {
       window.removeEventListener('delivery:created', handleDeliveryCreated);
       window.removeEventListener('deliveries:refresh', handleDeliveriesRefresh);
     };
   }, []);
 
-  const fetchAvailableJobs = async () => {
+  // Socket: real-time invitation when a customer requests this rider
+  useEffect(() =>
+  {
+    socketService.connect();
+    const handleInvitation = (data) =>
+    {
+      console.log('[AvailableOrders] delivery:invitation received:', data);
+      setToastMsg('A customer requested you for a delivery');
+      setShowToast(true);
+      fetchAvailableJobs();
+    };
+    socketService.on('delivery:invitation', handleInvitation);
+    return () =>
+    {
+      try { socketService.off('delivery:invitation', handleInvitation); } catch (e) { }
+    };
+  }, []);
+
+  // Send current location to backend so you show up in "nearby riders" (pickup within ~20 km)
+  const sendLocationToBackend = React.useCallback((showToastOnSuccess = false) =>
+  {
+    if (!navigator.geolocation) {
+      setLocationStatus('error');
+      setLocationError('Geolocation not supported');
+      return;
+    }
+    setLocationStatus('updating');
+    setLocationError(null);
+    navigator.geolocation.getCurrentPosition(
+      (pos) =>
+      {
+        const lat = pos.coords.latitude;
+        const lng = pos.coords.longitude;
+        const acc = pos.coords.accuracy; // meters, may be undefined
+        if (typeof acc === 'number') setLocationAccuracyM(Math.round(acc));
+        else setLocationAccuracyM(null);
+        updateDriverLocation(lat, lng)
+          .then(() =>
+          {
+            setLocationStatus('updated');
+            setLocationError(null);
+            if (showToastOnSuccess) {
+              setToastMsg('Location updated. You\'ll appear for customers within ~20 km of their pickup.');
+              setShowToast(true);
+            }
+          })
+          .catch((err) =>
+          {
+            setLocationStatus('error');
+            const msg = err?.response?.data?.message || err?.message || 'Failed to update location';
+            setLocationError(msg);
+            if (showToastOnSuccess) {
+              setToastMsg(msg);
+              setShowToast(true);
+            }
+            console.error('[AvailableOrders] updateDriverLocation failed:', err);
+          });
+      },
+      (err) =>
+      {
+        setLocationStatus('error');
+        const msg = err?.message === 'User denied the request for Geolocation.'
+          ? 'Location permission denied. Allow location in your browser to appear in nearby riders.'
+          : err?.message || 'Could not get your location';
+        setLocationError(msg);
+        if (showToastOnSuccess) {
+          setToastMsg(msg);
+          setShowToast(true);
+        }
+        console.error('[AvailableOrders] getCurrentPosition failed:', err);
+      },
+      { enableHighAccuracy: true, timeout: 20000, maximumAge: 0 }
+    );
+  }, []);
+
+  // Share location on mount and periodically so customers can find you
+  useEffect(() =>
+  {
+    if (!navigator.geolocation) return;
+    sendLocationToBackend();
+    const interval = setInterval(sendLocationToBackend, 20000);
+    return () => clearInterval(interval);
+  }, [sendLocationToBackend]);
+
+  const fetchAvailableJobs = async () =>
+  {
     setLoading(true);
     try {
       console.log('[AvailableOrders] Fetching available jobs from API...');
@@ -393,7 +527,8 @@ const AvailableOrders = () => {
   };
 
   // Small helper to safely parse numbers from currency or string fields
-  const parseAmount = (val) => {
+  const parseAmount = (val) =>
+  {
     if (val === null || val === undefined) return 0;
     if (typeof val === 'number') return val;
     const s = String(val);
@@ -403,7 +538,8 @@ const AvailableOrders = () => {
     return Number.isNaN(n) ? 0 : n;
   };
 
-  const handleAcceptOrder = async (deliveryId) => {
+  const handleAcceptOrder = async (deliveryId) =>
+  {
     if (!isAvailable) {
       setToastMsg('You must be available/active to accept orders. Please update your status in your profile.');
       setShowToast(true);
@@ -418,12 +554,22 @@ const AvailableOrders = () => {
       // Extract canonical delivery object/id from API response if available
       const respDelivery = response?.data?.delivery || response?.data || response;
       const acceptedId = respDelivery?._id || respDelivery?.id || respDelivery?.deliveryId || deliveryId;
-
-      setToastMsg('Order accepted successfully!');
+      const data = response?.data || {};
+      const earnings = data.potentialRiderEarnings;
+      const etaMin = data.estimatedArrivalMinutes;
+      let msg = 'Order accepted successfully!';
+      if (earnings != null || etaMin != null) {
+        const parts = [];
+        if (earnings != null) parts.push(`Your earnings: ₦${Number(earnings).toLocaleString()}`);
+        if (etaMin != null) parts.push(`~${etaMin} min to pickup`);
+        if (parts.length) msg += ' ' + parts.join(' · ');
+      }
+      setToastMsg(msg);
       setShowToast(true);
 
       // Remove order from local list by matching on canonical id or the original id
-      setOrders(prev => prev.filter(order => {
+      setOrders(prev => prev.filter(order =>
+      {
         const oid = order._id || order.id || order.deliveryId;
         return !(String(oid) === String(acceptedId) || String(oid) === String(deliveryId));
       }));
@@ -450,7 +596,28 @@ const AvailableOrders = () => {
     }
   };
 
-  const handleViewDetails = (deliveryId) => {
+  const handleRejectOrder = async (deliveryId) =>
+  {
+    setRejecting(deliveryId);
+    try {
+      await rejectDeliveryJob(deliveryId);
+      setToastMsg('Delivery request declined. It is now available to other riders.');
+      setShowToast(true);
+      setOrders(prev => prev.filter(o => (o._id || o.id) !== deliveryId));
+      if (selectedOrder && (selectedOrder._id || selectedOrder.id) === deliveryId) {
+        setSelectedOrder(null);
+      }
+    } catch (error) {
+      console.error('[AvailableOrders] Failed to reject job:', error);
+      setToastMsg(error?.message || error?.response?.data?.message || 'Failed to decline');
+      setShowToast(true);
+    } finally {
+      setRejecting(null);
+    }
+  };
+
+  const handleViewDetails = (deliveryId) =>
+  {
     // Scroll the card into view so rider doesn't lose context
     const el = document.getElementById(`order-${deliveryId}`);
     if (el && el.scrollIntoView) {
@@ -460,23 +627,26 @@ const AvailableOrders = () => {
     if (order) setSelectedOrder(order);
   };
 
-  const filteredOrders = orders.filter(order => {
-    if (activeTab === 'all') return true;
-    if (activeTab === 'express') return order.priority === 'Express';
+  // Express = normal ride (not Smart Ride); Nearby = within 2.5 km
+  const filteredOrders = orders.filter(order =>
+  {
+    if (activeTab === 'express') return !order.smartRide && order.deliveryType !== 'smart_ride';
     if (activeTab === 'nearby') return parseFloat(order.distance) <= 2.5;
     return true;
   });
 
-  const expressCount = orders.filter(o => o.priority === 'Express').length;
+  const expressCount = orders.filter(o => !o.smartRide && o.deliveryType !== 'smart_ride').length;
   const nearbyCount = orders.filter(o => parseFloat(o.distance) <= 2.5).length;
 
-  const handleRefresh = async (event) => {
+  const handleRefresh = async (event) =>
+  {
     await fetchAvailableJobs();
     event.detail.complete();
   };
 
   // Helper to extract coords from various payload shapes
-  const extractCoords = (order, which) => {
+  const extractCoords = (order, which) =>
+  {
     // which = 'pickup' or 'delivery'
     try {
       if (!order) return null;
@@ -497,7 +667,8 @@ const AvailableOrders = () => {
   };
 
   // Haversine formula to calculate distance in kilometers between two [lng, lat] points
-  const calculateHaversineKm = (a, b) => {
+  const calculateHaversineKm = (a, b) =>
+  {
     try {
       if (!a || !b || a.length < 2 || b.length < 2) return null;
       const toRad = (deg) => deg * (Math.PI / 180);
@@ -535,6 +706,25 @@ const AvailableOrders = () => {
               </div>
               <div className="text-[#4A5565] text-[15px] font-[400]">
                 Accept orders in your area and start earning
+              </div>
+              <div className="text-[#64748B] text-[13px] mt-2">
+                Your location is shared so customers can find you nearby (within ~20 km of their pickup). Keep this page open in the area you want to receive jobs. We use high-accuracy GPS when available—allow location and wait a few seconds for a better fix.
+              </div>
+              <div className="flex flex-wrap items-center gap-2 mt-3">
+                <span className={`text-[13px] ${locationStatus === 'updated' ? 'text-[#00B75A]' : locationStatus === 'error' ? 'text-red-600' : 'text-[#64748B]'}`}>
+                  {locationStatus === 'idle' && 'Location: waiting…'}
+                  {locationStatus === 'updating' && 'Location: updating (high accuracy)…'}
+                  {locationStatus === 'updated' && (locationAccuracyM != null ? `Location: shared ✓ (~${locationAccuracyM} m)` : 'Location: shared ✓')}
+                  {locationStatus === 'error' && (locationError || 'Location: failed')}
+                </span>
+                <button
+                  type="button"
+                  onClick={() => sendLocationToBackend(true)}
+                  disabled={locationStatus === 'updating'}
+                  className="px-3 py-1.5 text-[13px] font-medium rounded-full border border-[#00B75A] text-[#00B75A] hover:bg-[#00B75A]/10 disabled:opacity-60"
+                >
+                  {locationStatus === 'updating' ? 'Updating…' : 'Update my location'}
+                </button>
               </div>
             </div>
           </YummyText>
@@ -608,15 +798,6 @@ const AvailableOrders = () => {
                 <div className="inline-flex items-center gap-2 bg-gray-50 p-1 rounded-full whitespace-nowrap">
                   <YummyText>
                     <button
-                      onClick={() => setActiveTab('all')}
-                      className={`inline-block flex-shrink-0 min-w-[88px] sm:min-w-[120px] px-3 sm:px-5 py-1 rounded-full text-sm font-normal transition-colors ${activeTab === 'all'
-                        ? 'text-[#00B75A] bg-white shadow-sm'
-                        : 'text-[#64748B]'
-                        }`}
-                    >
-                      All Orders ({orders.length})
-                    </button>
-                    <button
                       onClick={() => setActiveTab('express')}
                       className={`inline-block flex-shrink-0 min-w-[88px] sm:min-w-[120px] px-3 sm:px-5 py-1 rounded-full text-sm font-normal transition-colors ${activeTab === 'express'
                         ? 'text-[#00B75A] bg-white shadow-sm'
@@ -627,7 +808,7 @@ const AvailableOrders = () => {
                     </button>
                     <button
                       onClick={() => setActiveTab('nearby')}
-                      className={`inline-block flex-shrink-0 min-w-[8px] sm:min-w-[120px] px-3 sm:px-5 py-1 rounded-full text-sm font-normal transition-colors ${activeTab === 'nearby'
+                      className={`inline-block flex-shrink-0 min-w-[88px] sm:min-w-[120px] px-3 sm:px-5 py-1 rounded-full text-sm font-normal transition-colors ${activeTab === 'nearby'
                         ? 'text-[#00B75A] bg-white shadow-sm'
                         : 'text-[#64748B]'
                         }`}
@@ -657,28 +838,37 @@ const AvailableOrders = () => {
                   </div>
                 </div>
               ) : (
-                filteredOrders.map((order) => (
-                  <OrderCard
-                    key={order._id || order.id}
-                    deliveryId={order._id || order.id}
-                    packageId={order.trackingNumber || order.id}
-                    priority={order.priority}
-                    smartRide={(order.deliveryType === 'smart_ride') || order.smartRide === true}
-                    size={order.size || order.packageDetails?.size}
-                    pickupName={order.pickupName || order.pickupAddress?.name}
-                    pickupAddress={order.pickupAddress?.street || order.pickupAddress}
-                    deliveryName={order.deliveryName || order.deliveryAddress?.name}
-                    deliveryAddress={order.deliveryAddress?.street || order.deliveryAddress}
-                    distance={order.distance || 'N/A'}
-                    time={order.estimatedTimeMinutes ? `${order.estimatedTimeMinutes} min` : order.time || 'N/A'}
-                    packageSize={order.packageSize || order.packageDetails?.weight || 'N/A'}
-                    price={order.price || 'N/A'}
-                    tips={order.tips || '0.00'}
-                    onAccept={handleAcceptOrder}
-                    onViewDetails={handleViewDetails}
-                    accepting={accepting === (order._id || order.id)}
-                  />
-                ))
+                filteredOrders.map((order) =>
+                {
+                  const orderId = order._id || order.id;
+                  const invitedDriverId = order.invitedDriver?._id ?? order.invitedDriver;
+                  const isRequestedForMe = !!invitedDriverId && !!currentRiderId && (String(invitedDriverId) === String(currentRiderId));
+                  return (
+                    <OrderCard
+                      key={orderId}
+                      deliveryId={orderId}
+                      packageId={order.trackingNumber || order.id}
+                      priority={order.priority}
+                      smartRide={(order.deliveryType === 'smart_ride') || order.smartRide === true}
+                      size={order.size || order.packageDetails?.size}
+                      pickupName={order.pickupName || order.pickupAddress?.name}
+                      pickupAddress={order.pickupAddress?.street || order.pickupAddress}
+                      deliveryName={order.deliveryName || order.deliveryAddress?.name}
+                      deliveryAddress={order.deliveryAddress?.street || order.deliveryAddress}
+                      distance={order.distance || 'N/A'}
+                      time={order.estimatedTimeMinutes ? `${order.estimatedTimeMinutes} min` : order.time || 'N/A'}
+                      packageSize={order.packageSize || order.packageDetails?.weight || 'N/A'}
+                      price={order.price || 'N/A'}
+                      tips={order.tips || '0.00'}
+                      onAccept={handleAcceptOrder}
+                      onViewDetails={handleViewDetails}
+                      onReject={handleRejectOrder}
+                      accepting={accepting === orderId}
+                      rejecting={rejecting}
+                      isRequestedForMe={isRequestedForMe}
+                    />
+                  );
+                })
               )}
             </div>
           </>
@@ -714,8 +904,10 @@ const AvailableOrders = () => {
                   <div className="text-sm text-[#64748B] mb-2">Distance: {selectedOrder.distance || 'N/A'}</div>
 
                   {/* Show uploaded image (if any) instead of earnings/route breakdown */}
-                  {(() => {
-                    const findImage = (o) => {
+                  {(() =>
+                  {
+                    const findImage = (o) =>
+                    {
                       if (!o) return null;
                       const candidates = [
                         'image', 'images', 'packageImage', 'package?.image', 'package_image', 'payload.image', 'data.image', 'imageUrl', 'image_url'
@@ -761,7 +953,8 @@ const AvailableOrders = () => {
                     const urlHint = /https?:\/\/.+\.(jpe?g|png|webp|gif|svg)(\?.*)?$/i;
                     const shallowHint = /(uploads|images|cdn|s3)\/.+\.(jpe?g|png|webp|gif|svg)/i;
                     const seen = new Set();
-                    const findUrl = (obj) => {
+                    const findUrl = (obj) =>
+                    {
                       if (!obj || typeof obj !== 'object' || seen.has(obj)) return null;
                       seen.add(obj);
                       for (const k of Object.keys(obj)) {

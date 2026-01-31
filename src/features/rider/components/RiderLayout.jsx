@@ -1,7 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import RiderSidebar from './RiderSidebar';
 import { YummyText } from '../../../components/YummyText';
-import {
+import
+{
   getRiderProfile,
   getUnreadNotificationCount,
   getNotifications,
@@ -14,7 +15,8 @@ import { getCookie, setCookie, getJSONCookie } from '../../../utils/cookies';
 
 // Notification read IDs persistence
 const NOTIF_READ_COOKIE = 'rider_read_notifications';
-const getReadNotifIds = () => {
+const getReadNotifIds = () =>
+{
   try {
     const val = getCookie(NOTIF_READ_COOKIE);
     if (!val) return [];
@@ -23,14 +25,16 @@ const getReadNotifIds = () => {
     return [];
   }
 };
-const setReadNotifIds = (ids) => {
+const setReadNotifIds = (ids) =>
+{
   try {
     setCookie(NOTIF_READ_COOKIE, JSON.stringify(ids), 7);
   } catch (e) { }
 };
 
 // Generate mock avatar based on user name
-const generateMockAvatar = (name) => {
+const generateMockAvatar = (name) =>
+{
   if (!name || name === 'Rider') {
     return 'https://api.dicebear.com/7.x/avataaars/svg?seed=Rider';
   }
@@ -39,7 +43,8 @@ const generateMockAvatar = (name) => {
 };
 
 // Get user-specific profile image key
-const getProfileImageKey = () => {
+const getProfileImageKey = () =>
+{
   try {
     const userData = getJSONCookie('user_data');
     if (userData) {
@@ -54,8 +59,10 @@ const getProfileImageKey = () => {
   return 'profile_image'; // fallback
 };
 
-const RiderLayout = ({ children }) => {
-  const [profileImage, setProfileImage] = useState(() => {
+const RiderLayout = ({ children }) =>
+{
+  const [profileImage, setProfileImage] = useState(() =>
+  {
     const imageKey = getProfileImageKey();
     const cachedImage = getCookie(imageKey);
     if (cachedImage && !cachedImage.includes('dicebear') && !cachedImage.includes('profileimage.svg')) {
@@ -76,20 +83,23 @@ const RiderLayout = ({ children }) => {
   });
   const [userName, setUserName] = useState('Rider');
   // Persist online state in cookie, default to true if not set
-  const [isOnline, setIsOnline] = useState(() => {
+  const [isOnline, setIsOnline] = useState(() =>
+  {
     const cookieVal = getCookie('rider_is_online');
     if (cookieVal === 'false') return false;
     return true;
   });
   // Helper to sync online state to backend and admin
-  const syncOnlineStateToBackend = async (active) => {
+  const syncOnlineStateToBackend = async (active) =>
+  {
     try {
       let payload = { isActive: !!active };
       // If going online, try to get location
       if (active && navigator.geolocation) {
         try {
-          const position = await new Promise((resolve, reject) => {
-            navigator.geolocation.getCurrentPosition(resolve, reject, { enableHighAccuracy: false, timeout: 10000, maximumAge: 60000 });
+          const position = await new Promise((resolve, reject) =>
+          {
+            navigator.geolocation.getCurrentPosition(resolve, reject, { enableHighAccuracy: true, timeout: 15000, maximumAge: 0 });
           });
           payload.currentLocation = { lat: position.coords.latitude, lng: position.coords.longitude };
         } catch (e) {
@@ -114,7 +124,8 @@ const RiderLayout = ({ children }) => {
     }
   };
 
-  const fetchNotifications = async (page = 1, append = false) => {
+  const fetchNotifications = async (page = 1, append = false) =>
+  {
     try {
       setLoadingNotifications(true);
       const response = await getNotifications(page, 20);
@@ -123,7 +134,8 @@ const RiderLayout = ({ children }) => {
       const totalPages = data?.totalPages || data?.pages || 1;
 
       // Merge read state from local cookie into the notifications
-      const merged = notificationsList.map(n => {
+      const merged = notificationsList.map(n =>
+      {
         const id = n._id || n.id;
         const locallyRead = readNotifIds.includes(id);
         return { ...n, isRead: (n.isRead || n.read) || locallyRead, read: (n.isRead || n.read) || locallyRead };
@@ -152,7 +164,8 @@ const RiderLayout = ({ children }) => {
   const [loadingNotifications, setLoadingNotifications] = useState(false);
 
   // Keep a simple cookie copy of the profile image so mobile sidebar can read the same image key
-  useEffect(() => {
+  useEffect(() =>
+  {
     try {
       if (profileImage) setCookie('profile_image', profileImage, 7);
     } catch (e) {
@@ -160,7 +173,8 @@ const RiderLayout = ({ children }) => {
     }
   }, [profileImage]);
 
-  useEffect(() => {
+  useEffect(() =>
+  {
     fetchUserProfile();
     checkNotifications();
 
@@ -173,12 +187,14 @@ const RiderLayout = ({ children }) => {
     }
 
     // On login, always set online and sync to backend
-    const handleLogin = () => {
+    const handleLogin = () =>
+    {
       setIsOnline(true);
       syncOnlineStateToBackend(true);
     };
     // On logout, set offline and sync to backend
-    const handleLogout = () => {
+    const handleLogout = () =>
+    {
       setIsOnline(false);
       syncOnlineStateToBackend(false);
     };
@@ -187,12 +203,14 @@ const RiderLayout = ({ children }) => {
     window.addEventListener('user:logout', handleLogout);
 
     // Poll notification count every 30 seconds
-    const notificationInterval = setInterval(() => {
+    const notificationInterval = setInterval(() =>
+    {
       checkNotifications();
     }, 30000);
 
     // Listen for profile updates
-    const handleProfileUpdate = (event) => {
+    const handleProfileUpdate = (event) =>
+    {
       console.log('[RiderLayout] Profile updated event received:', event.detail);
       if (event.detail?.profileImage || event.detail?.profilePhoto) {
         const newImage = event.detail.profileImage || event.detail.profilePhoto;
@@ -208,7 +226,8 @@ const RiderLayout = ({ children }) => {
       }
     };
 
-    const handleVerificationComplete = (event) => {
+    const handleVerificationComplete = (event) =>
+    {
       console.log('[RiderLayout] Verification completed, refreshing profile');
       fetchUserProfile();
       // Also refresh notifications/count
@@ -216,15 +235,18 @@ const RiderLayout = ({ children }) => {
     };
 
     // Listen for delivery status changes to check for new notifications
-    const handleDeliveryUpdated = () => {
+    const handleDeliveryUpdated = () =>
+    {
       checkNotifications();
     };
 
-    const handleOrderAvailable = () => {
+    const handleOrderAvailable = () =>
+    {
       checkNotifications();
     };
 
-    const handleEarningsUpdated = () => {
+    const handleEarningsUpdated = () =>
+    {
       checkNotifications();
     };
 
@@ -237,7 +259,8 @@ const RiderLayout = ({ children }) => {
     window.addEventListener('earnings:updated', handleEarningsUpdated);
     window.addEventListener('payout:scheduled', handleEarningsUpdated);
 
-    return () => {
+    return () =>
+    {
       window.removeEventListener('user:login', handleLogin);
       window.removeEventListener('user:logout', handleLogout);
       window.removeEventListener('profile:updated', handleProfileUpdate);
@@ -252,7 +275,8 @@ const RiderLayout = ({ children }) => {
     };
   }, []);
 
-  const fetchUserProfile = async () => {
+  const fetchUserProfile = async () =>
+  {
     try {
       // Load cached profile image immediately
       const imageKey = getProfileImageKey();
@@ -302,12 +326,14 @@ const RiderLayout = ({ children }) => {
     }
   };
 
-  const checkNotifications = async () => {
+  const checkNotifications = async () =>
+  {
     try {
       // Prefer fetching a page of notifications so we can exclude IDs we've already marked locally
       const resp = await getNotifications(1, 100);
       const list = resp?.data?.notifications || resp?.notifications || resp?.data || [];
-      const unread = list.filter(n => {
+      const unread = list.filter(n =>
+      {
         const id = n._id || n.id;
         const alreadyRead = (n.isRead || n.read) || readNotifIds.includes(id);
         return !alreadyRead;
@@ -326,14 +352,16 @@ const RiderLayout = ({ children }) => {
     }
   };
 
-  const handleAvailabilityToggle = () => {
+  const handleAvailabilityToggle = () =>
+  {
     const newState = !isOnline;
     setIsOnline(newState);
     syncOnlineStateToBackend(newState);
   };
 
 
-  const toggleNotifications = async () => {
+  const toggleNotifications = async () =>
+  {
     const newState = !showNotifications;
     setShowNotifications(newState);
 
@@ -355,13 +383,15 @@ const RiderLayout = ({ children }) => {
         // fallback: preserve existing
       }
 
-      (async () => {
+      (async () =>
+      {
         try {
           await markAllNotificationsAsRead();
         } catch (err) {
           console.warn('[RiderLayout] markAllNotificationsAsRead failed', err);
         }
-        setTimeout(async () => {
+        setTimeout(async () =>
+        {
           try {
             await fetchNotifications(1, false);
             await checkNotifications();
@@ -373,7 +403,8 @@ const RiderLayout = ({ children }) => {
     }
   };
 
-  const handleMarkAllAsRead = async (e) => {
+  const handleMarkAllAsRead = async (e) =>
+  {
     if (e) {
       e.preventDefault();
       e.stopPropagation();
@@ -395,7 +426,8 @@ const RiderLayout = ({ children }) => {
       } catch (e) { }
 
       // Refresh from server in background (delayed to avoid race conditions)
-      setTimeout(async () => {
+      setTimeout(async () =>
+      {
         try {
           await fetchNotifications(1, false);
           await checkNotifications();
@@ -419,7 +451,8 @@ const RiderLayout = ({ children }) => {
     }
   };
 
-  const handleMarkAsRead = async (notificationId, e) => {
+  const handleMarkAsRead = async (notificationId, e) =>
+  {
     if (e) {
       e.stopPropagation();
     }
@@ -434,7 +467,8 @@ const RiderLayout = ({ children }) => {
         prev.map(n => (n._id === notificationId || n.id === notificationId) ? { ...n, isRead: true, read: true } : n)
       );
       // Add to read IDs in cookie/state
-      setReadNotifIdsState(prev => {
+      setReadNotifIdsState(prev =>
+      {
         const newIds = prev.includes(notificationId) ? prev : [...prev, notificationId];
         try { setReadNotifIds(newIds); } catch (e) { }
         return newIds;
@@ -450,7 +484,8 @@ const RiderLayout = ({ children }) => {
     }
   };
 
-  const loadMoreNotifications = () => {
+  const loadMoreNotifications = () =>
+  {
     if (!loadingNotifications && hasMoreNotifications) {
       fetchNotifications(notificationPage + 1, true);
     }
@@ -599,7 +634,8 @@ const RiderLayout = ({ children }) => {
                 ) : (
                   <>
                     <div className="divide-y divide-gray-100">
-                      {notifications.map(notification => {
+                      {notifications.map(notification =>
+                      {
                         const notifId = notification._id || notification.id;
                         const isRead = (notification.isRead || notification.read) || readNotifIds.includes(notifId);
                         const notifType = notification.type || 'info';
@@ -608,7 +644,8 @@ const RiderLayout = ({ children }) => {
                         const timestamp = notification.createdAt || notification.timestamp || new Date().toISOString();
 
                         // Icon based on type
-                        const getIcon = () => {
+                        const getIcon = () =>
+                        {
                           if (notifType === 'order' || notifType === 'available_order') return '📋';
                           if (notifType === 'delivery' || notifType === 'active_delivery') return '📦';
                           if (notifType === 'earning' || notifType === 'earnings') return '💰';
@@ -620,7 +657,8 @@ const RiderLayout = ({ children }) => {
                           return '🔔';
                         };
 
-                        const getBgColor = () => {
+                        const getBgColor = () =>
+                        {
                           if (notifType === 'order' || notifType === 'available_order') return 'bg-indigo-100';
                           if (notifType === 'delivery' || notifType === 'active_delivery') return 'bg-blue-100';
                           if (notifType === 'earning' || notifType === 'earnings') return 'bg-green-100';
@@ -638,7 +676,8 @@ const RiderLayout = ({ children }) => {
                             className={`p-4 hover:bg-gray-50 transition-colors cursor-pointer ${!isRead ? 'bg-blue-50' : ''}`}
                             onMouseDown={(e) => e.stopPropagation()}
                             onTouchStart={(e) => e.stopPropagation()}
-                            onClick={(e) => {
+                            onClick={(e) =>
+                            {
                               e.stopPropagation();
                               if (!isRead) {
                                 handleMarkAsRead(notifId, e);

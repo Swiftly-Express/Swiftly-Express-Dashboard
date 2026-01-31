@@ -5,6 +5,7 @@ import CustomerLayout from '../components/CustomerLayout';
 import PaymentFailedModal from '../components/PaymentFailedModal';
 import { YummyText } from '../../../components/YummyText';
 import Loader from '../../../components/Loader';
+import DeliveryChat from '../../../components/DeliveryChat';
 import { getCustomerDeliveries, rateDriver, cancelDelivery, initializePayment } from '../../../utils/authApi';
 import { getCookie, deleteCookie, setCookie, getJSONCookie } from '../../../utils/cookies';
 
@@ -13,7 +14,8 @@ const sideBottomShadow = {
 };
 
 // Helper function to get status styling
-const getStatusStyle = (status) => {
+const getStatusStyle = (status) =>
+{
   const statusLower = status?.toLowerCase() || 'pending';
 
   const styles = {
@@ -33,7 +35,8 @@ const getStatusStyle = (status) => {
 };
 
 // Helper function to calculate progress
-const getProgress = (status) => {
+const getProgress = (status) =>
+{
   const statusLower = status?.toLowerCase() || 'pending';
 
   const progressMap = {
@@ -52,7 +55,8 @@ const getProgress = (status) => {
 };
 
 // Helper function to format date
-const formatDate = (dateString) => {
+const formatDate = (dateString) =>
+{
   if (!dateString) return 'N/A';
 
   try {
@@ -67,14 +71,16 @@ const formatDate = (dateString) => {
   }
 };
 
-const DeliveryCard = ({ delivery }) => {
+const DeliveryCard = ({ delivery }) =>
+{
   const [isOpen, setIsOpen] = useState(false);
   const [showCopyToast, setShowCopyToast] = useState(false);
   const statusStyle = getStatusStyle(delivery.status);
   const progress = getProgress(delivery.status);
   const paymentStatus = (delivery.paymentStatus || delivery.payment?.status || '').toLowerCase();
 
-  const handleToggleDetails = () => {
+  const handleToggleDetails = () =>
+  {
     const newIsOpen = !isOpen;
     setIsOpen(newIsOpen);
 
@@ -92,7 +98,8 @@ const DeliveryCard = ({ delivery }) => {
     }
   };
 
-  const handleCopyPackageId = async () => {
+  const handleCopyPackageId = async () =>
+  {
     const packageId = delivery.trackingNumber || delivery.trackingId || delivery.id || delivery._id;
     try {
       await navigator.clipboard.writeText(packageId);
@@ -105,12 +112,14 @@ const DeliveryCard = ({ delivery }) => {
   return (
     <div className="bg-white rounded-2xl p-4 md:p-6 mb-4 relative" style={sideBottomShadow}>
       {/* Mobile: Make Payment button at top-right (only for online/bank, not cash) */}
-      {(paymentStatus === 'pending' || paymentStatus === 'unpaid' || paymentStatus === 'failed') && (() => {
+      {(paymentStatus === 'pending' || paymentStatus === 'unpaid' || paymentStatus === 'failed') && (() =>
+      {
         const method = (delivery.payment?.method || delivery.paymentMethod || delivery.payment?.paymentMethod || delivery.method || '').toString().toLowerCase();
         return method !== 'cash' && method !== 'cash_on_delivery';
       })() && (
           <button
-            onClick={() => {
+            onClick={() =>
+            {
               const deliveryId = delivery._id || delivery.id || delivery.trackingNumber;
               window.dispatchEvent(new CustomEvent('payment:init', { detail: { deliveryId } }));
             }}
@@ -144,7 +153,8 @@ const DeliveryCard = ({ delivery }) => {
                 {paymentStatus === 'paid' && (
                   <span className="px-3 py-1 rounded-full text-xs font-medium bg-green-100 text-green-700 border border-green-200">Paid</span>
                 )}
-                {paymentStatus !== 'paid' && (() => {
+                {paymentStatus !== 'paid' && (() =>
+                {
                   const method = (delivery.payment?.method || delivery.paymentMethod || delivery.payment?.paymentMethod || delivery.method || '').toString().toLowerCase().trim();
                   return (method === 'cash' || method === 'cash_on_delivery' || method === 'cod') ? (
                     <span className="px-3 py-1 rounded-full text-xs font-medium bg-white text-green-600 border border-gray-200">Cash</span>
@@ -152,12 +162,14 @@ const DeliveryCard = ({ delivery }) => {
                 })()}
 
                 {/* Desktop/Tablet: show Make Payment tag when unpaid (only for online/bank, not cash) */}
-                {(paymentStatus === 'pending' || paymentStatus === 'unpaid' || paymentStatus === 'failed') && (() => {
+                {(paymentStatus === 'pending' || paymentStatus === 'unpaid' || paymentStatus === 'failed') && (() =>
+                {
                   const method = (delivery.payment?.method || delivery.paymentMethod || delivery.payment?.paymentMethod || delivery.method || '').toString().toLowerCase().trim();
                   return method !== 'cash' && method !== 'cash_on_delivery' && method !== 'cod';
                 })() && (
                     <button
-                      onClick={() => {
+                      onClick={() =>
+                      {
                         const deliveryId = delivery._id || delivery.id || delivery.trackingNumber;
                         window.dispatchEvent(new CustomEvent('payment:init', { detail: { deliveryId } }));
                       }}
@@ -243,6 +255,34 @@ const DeliveryCard = ({ delivery }) => {
                 {delivery.deliveryAddress?.street}, {delivery.deliveryAddress?.city}, {delivery.deliveryAddress?.state}
               </div>
             </div>
+            {delivery.earningsBreakdown && (
+              <div className="md:col-span-2 mt-2 p-3 bg-gray-50 rounded-xl">
+                <div className="text-xs font-medium text-[#64748B] mb-2">Earnings breakdown</div>
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-2 text-sm">
+                  <div>
+                    <span className="text-[#64748B]">Total</span>
+                    <p className="font-medium text-[#0F172A]">₦{Number(delivery.earningsBreakdown.deliveryTotal || 0).toLocaleString()}</p>
+                  </div>
+                  <div>
+                    <span className="text-[#64748B]">Rider</span>
+                    <p className="font-medium text-[#0F172A]">₦{Number(delivery.earningsBreakdown.driverEarnings || 0).toLocaleString()}</p>
+                  </div>
+                  <div>
+                    <span className="text-[#64748B]">Platform ({delivery.earningsBreakdown.companyPercentage ?? 0}%)</span>
+                    <p className="font-medium text-[#0F172A]">₦{Number(delivery.earningsBreakdown.companyEarnings || 0).toLocaleString()}</p>
+                  </div>
+                </div>
+              </div>
+            )}
+            <div className="md:col-span-2 mt-3">
+              <div className="text-xs font-medium text-[#64748B] mb-2">Chat with rider</div>
+              <DeliveryChat
+                deliveryId={delivery._id || delivery.id}
+                currentUserRole="customer"
+                className="rounded-xl border border-gray-200 overflow-hidden"
+                maxHeight="240px"
+              />
+            </div>
           </div>
         </div>
       )}
@@ -258,12 +298,14 @@ const DeliveryCard = ({ delivery }) => {
 };
 
 // Mobile Completed Delivery Card
-const MobileCompletedCard = ({ delivery }) => {
+const MobileCompletedCard = ({ delivery }) =>
+{
   const [isOpen, setIsOpen] = useState(false);
   const [showCopyToast, setShowCopyToast] = useState(false);
   const paymentStatus = (delivery.paymentStatus || delivery.payment?.status || '').toLowerCase();
 
-  const handleToggleDetails = () => {
+  const handleToggleDetails = () =>
+  {
     const newIsOpen = !isOpen;
     setIsOpen(newIsOpen);
 
@@ -281,7 +323,8 @@ const MobileCompletedCard = ({ delivery }) => {
     }
   };
 
-  const handleCopyPackageId = async () => {
+  const handleCopyPackageId = async () =>
+  {
     const packageId = delivery.trackingNumber || delivery.trackingId || delivery.id || delivery._id;
     try {
       await navigator.clipboard.writeText(packageId);
@@ -293,12 +336,14 @@ const MobileCompletedCard = ({ delivery }) => {
 
   return (
     <div className="bg-white rounded-2xl p-4 mb-3 border border-gray-100 relative">
-      {(paymentStatus === 'pending' || paymentStatus === 'unpaid' || paymentStatus === 'failed') && (() => {
+      {(paymentStatus === 'pending' || paymentStatus === 'unpaid' || paymentStatus === 'failed') && (() =>
+      {
         const method = (delivery.payment?.method || delivery.paymentMethod || delivery.payment?.paymentMethod || delivery.method || '').toString().toLowerCase();
         return method !== 'cash' && method !== 'cash_on_delivery';
       })() && (
           <button
-            onClick={() => {
+            onClick={() =>
+            {
               const deliveryId = delivery._id || delivery.id || delivery.trackingNumber;
               window.dispatchEvent(new CustomEvent('payment:init', { detail: { deliveryId } }));
             }}
@@ -391,13 +436,15 @@ const MobileCompletedCard = ({ delivery }) => {
 };
 
 // Desktop Table Row
-const CompletedDeliveryRow = ({ delivery }) => {
+const CompletedDeliveryRow = ({ delivery }) =>
+{
   const [isOpen, setIsOpen] = useState(false);
   const [showCopyToast, setShowCopyToast] = useState(false);
 
   const hasRated = delivery.rating || delivery.customerRating || delivery.hasRated;
 
-  const handleToggleDetails = () => {
+  const handleToggleDetails = () =>
+  {
     const newIsOpen = !isOpen;
     setIsOpen(newIsOpen);
 
@@ -415,7 +462,8 @@ const CompletedDeliveryRow = ({ delivery }) => {
     }
   };
 
-  const handleCopyPackageId = async () => {
+  const handleCopyPackageId = async () =>
+  {
     const packageId = delivery.trackingNumber || delivery.trackingId || delivery.id || delivery._id;
     try {
       await navigator.clipboard.writeText(packageId);
@@ -519,7 +567,8 @@ const CompletedDeliveryRow = ({ delivery }) => {
   );
 };
 
-const MyDeliveries = () => {
+const MyDeliveries = () =>
+{
   const [activeTab, setActiveTab] = useState('active');
   const [activeDeliveries, setActiveDeliveries] = useState([]);
   const [completedDeliveries, setCompletedDeliveries] = useState([]);
@@ -533,11 +582,13 @@ const MyDeliveries = () => {
   const [showPaymentFailedModal, setShowPaymentFailedModal] = useState(false);
   const [cancelledOrder, setCancelledOrder] = useState(null);
 
-  useEffect(() => {
+  useEffect(() =>
+  {
     fetchDeliveries();
 
     // Check for pending payment and cancel order if payment not completed
-    const checkPendingPayment = async () => {
+    const checkPendingPayment = async () =>
+    {
       const pendingDeliveryId = getCookie('pending_payment_delivery_id');
 
       if (pendingDeliveryId) {
@@ -573,18 +624,22 @@ const MyDeliveries = () => {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [page]);
 
-  useEffect(() => {
-    const handleRefresh = () => {
+  useEffect(() =>
+  {
+    const handleRefresh = () =>
+    {
       console.log('[MyDeliveries] Received refresh event');
       fetchDeliveries();
     };
 
-    const handleDeliveryCreated = (event) => {
+    const handleDeliveryCreated = (event) =>
+    {
       console.log('[MyDeliveries] Delivery created:', event.detail);
       fetchDeliveries();
     };
 
-    const handleDeliveryUpdated = (event) => {
+    const handleDeliveryUpdated = (event) =>
+    {
       console.log('[MyDeliveries] Delivery updated:', event.detail);
       fetchDeliveries();
     };
@@ -593,7 +648,8 @@ const MyDeliveries = () => {
     window.addEventListener('delivery:created', handleDeliveryCreated);
     window.addEventListener('delivery:updated', handleDeliveryUpdated);
     // Listen for pay-later requests from delivery cards
-    const handlePaymentInit = async (ev) => {
+    const handlePaymentInit = async (ev) =>
+    {
       try {
         const deliveryId = ev?.detail?.deliveryId;
         if (!deliveryId) return;
@@ -628,7 +684,8 @@ const MyDeliveries = () => {
         if (deliveryId) setCookie('pending_payment_delivery_id', String(deliveryId), 1);
         if (paymentReference) setCookie('pending_payment_id', String(paymentReference), 1);
 
-        const cleanupOnPaymentCancel = async (did) => {
+        const cleanupOnPaymentCancel = async (did) =>
+        {
           try { if (did) await cancelDelivery(did, { reason: 'payment_cancelled' }); } catch (cleanupErr) { console.warn('[MyDeliveries] cleanup failed', cleanupErr); }
           try { deleteCookie('pending_payment_delivery_id'); deleteCookie('pending_payment_id'); } catch (e) { }
           setToastMessage('Payment was not completed. Your booking was cancelled.');
@@ -641,7 +698,8 @@ const MyDeliveries = () => {
             else window.open(authorizationUrl, '_blank');
 
             // monitor popup close
-            const popupInterval = setInterval(() => {
+            const popupInterval = setInterval(() =>
+            {
               try {
                 if (!paymentWindow || paymentWindow.closed) {
                   clearInterval(popupInterval);
@@ -668,7 +726,8 @@ const MyDeliveries = () => {
             amount: (amount || 0) * 100,
             ref: paymentReference,
             onClose: function () { cleanupOnPaymentCancel(deliveryId); },
-            callback: function () {
+            callback: function ()
+            {
               try { deleteCookie('pending_payment_delivery_id'); deleteCookie('pending_payment_id'); } catch (e) { };
               try { window.location.href = '/customer/payment/callback'; } catch (e) { window.location.href = '/customer/payment/callback'; }
             }
@@ -684,7 +743,8 @@ const MyDeliveries = () => {
 
     window.addEventListener('payment:init', handlePaymentInit);
 
-    return () => {
+    return () =>
+    {
       window.removeEventListener('deliveries:refresh', handleRefresh);
       window.removeEventListener('delivery:created', handleDeliveryCreated);
       window.removeEventListener('delivery:updated', handleDeliveryUpdated);
@@ -692,7 +752,8 @@ const MyDeliveries = () => {
     };
   }, []);
 
-  async function fetchDeliveries() {
+  async function fetchDeliveries()
+  {
     setLoading(true);
     setError('');
     try {
@@ -719,13 +780,15 @@ const MyDeliveries = () => {
       // Keep all deliveries (including cancelled) so users can see paid/cancelled orders
       const validDeliveries = Array.isArray(items) ? items : [];
 
-      const active = validDeliveries.filter((d) => {
+      const active = validDeliveries.filter((d) =>
+      {
         const status = d?.status?.toLowerCase() || 'pending';
         // Consider only delivered/completed as completed; everything else (including cancelled) remains visible in Active
         return status !== 'delivered' && status !== 'completed';
       });
 
-      const completed = validDeliveries.filter((d) => {
+      const completed = validDeliveries.filter((d) =>
+      {
         const status = d?.status?.toLowerCase() || '';
         return status === 'delivered' || status === 'completed';
       });
@@ -886,7 +949,8 @@ const MyDeliveries = () => {
   );
 
   // Handle rating submission
-  async function handleSubmitRating(ratingData) {
+  async function handleSubmitRating(ratingData)
+  {
     try {
       console.log('[MyDeliveries] Submitting rating:', ratingData);
       // Only send rating field - backend doesn't accept comment or driverId
@@ -897,7 +961,8 @@ const MyDeliveries = () => {
       console.log('[MyDeliveries] Rating submitted successfully:', response);
 
       // Update the delivery in the list to reflect rating
-      setCompletedDeliveries(prev => prev.map(d => {
+      setCompletedDeliveries(prev => prev.map(d =>
+      {
         if ((d._id || d.id) === ratingData.deliveryId) {
           return {
             ...d,

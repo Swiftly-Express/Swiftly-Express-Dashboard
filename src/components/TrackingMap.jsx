@@ -44,11 +44,18 @@ const TrackingMap = ({ pickupLocation, dropoffLocation, driverLocation, onRouteS
         height: '100%'
     };
 
+    // Center map on delivery area (pickup + dropoff), not on driver, so the map doesn't open on a far-away driver location (e.g. Onitsha)
     const center = useMemo(() =>
     {
-        if (driver) return driver;
+        if (pickup && dropoff) {
+            return {
+                lat: (pickup.lat + dropoff.lat) / 2,
+                lng: (pickup.lng + dropoff.lng) / 2
+            };
+        }
         if (pickup) return pickup;
         if (dropoff) return dropoff;
+        if (driver) return driver;
         return { lat: 6.5244, lng: 3.3792 }; // Default to Lagos, Nigeria
     }, [driver, pickup, dropoff]);
 
@@ -71,7 +78,7 @@ const TrackingMap = ({ pickupLocation, dropoffLocation, driverLocation, onRouteS
 
             directionsService.route(
                 {
-                    origin: driver || pickup, // Start from driver if available
+                    origin: pickup,
                     destination: dropoff,
                     // eslint-disable-next-line no-undef
                     travelMode: google.maps.TravelMode.DRIVING
@@ -98,9 +105,9 @@ const TrackingMap = ({ pickupLocation, dropoffLocation, driverLocation, onRouteS
                 }
             );
         }
-    }, [isLoaded, pickup, dropoff, driver]); // Re-fetch if driver moves to maintain accurate ETA
+    }, [isLoaded, pickup, dropoff]); // Route is pickup → dropoff only; driver is a marker
 
-    // Fit bounds
+    // Fit bounds so pickup, dropoff (and driver if present) are all visible, with padding
     useEffect(() =>
     {
         if (map && isLoaded && (pickup || dropoff || driver)) {
@@ -109,7 +116,7 @@ const TrackingMap = ({ pickupLocation, dropoffLocation, driverLocation, onRouteS
             if (pickup) bounds.extend(pickup);
             if (dropoff) bounds.extend(dropoff);
             if (driver) bounds.extend(driver);
-            map.fitBounds(bounds);
+            map.fitBounds(bounds, 48);
         }
     }, [map, isLoaded, pickup, dropoff, driver]);
 
