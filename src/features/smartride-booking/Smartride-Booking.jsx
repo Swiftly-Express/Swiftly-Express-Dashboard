@@ -99,6 +99,12 @@ export default function SmartRideBooking({ embedMode = false, initialData = {}, 
     const [isCancellingRequest, setIsCancellingRequest] = useState(false);
     const [paymentHover, setPaymentHover] = useState(false);
     const [drawerHover, setDrawerHover] = useState('');
+    const [riderDetails, setRiderDetails] = useState(() => {
+        try {
+            const json = localStorage.getItem('smartride_rider_details');
+            return json ? JSON.parse(json) : null;
+        } catch (e) { return null; }
+    });
 
     useEffect(() => {
         const check = () => setIsMobile(window.innerWidth <= 768);
@@ -188,12 +194,28 @@ export default function SmartRideBooking({ embedMode = false, initialData = {}, 
             const directMatch = storedId && candidateIds.some(id => String(id) === String(storedId));
             if (directMatch) {
                 console.log('[SmartRide] ✅ Direct ID match found — moving to rider-found');
-                setIsSearching(false);
-                setCurrentStep('rider-found');
                 try {
-                    localStorage.setItem('smartride_step', 'rider-found');
-                    localStorage.setItem('smartride_rider_details', JSON.stringify(detail?.rider || {}));
-                } catch (err) { console.warn('[SmartRide] Failed to store rider details:', err); }
+                    const storedStepNow = localStorage.getItem('smartride_step');
+                    const rd = detail?.rider || {};
+                    // If user already proceeded to rider-details, preserve that choice
+                    if (storedStepNow === 'rider-details') {
+                        setIsSearching(false);
+                        setRiderDetails(rd || {});
+                        try { localStorage.setItem('smartride_rider_details', JSON.stringify(rd || {})); } catch (err) { }
+                    } else if (storedStepNow === 'rider-found') {
+                        setIsSearching(false);
+                        setCurrentStep('rider-found');
+                        setRiderDetails(rd || {});
+                    } else {
+                        setIsSearching(false);
+                        setCurrentStep('rider-found');
+                        setRiderDetails(rd || {});
+                        try {
+                            localStorage.setItem('smartride_step', 'rider-found');
+                            localStorage.setItem('smartride_rider_details', JSON.stringify(rd || {}));
+                        } catch (err) { console.warn('[SmartRide] Failed to store rider details:', err); }
+                    }
+                } catch (err) { console.warn('[SmartRide] delivery accept handling error:', err); }
                 return;
             }
 
@@ -208,12 +230,20 @@ export default function SmartRideBooking({ embedMode = false, initialData = {}, 
 
                     if (storedId && ((orderSender && formSender && orderSender === formSender) || (orderRecipient && formRecipient && orderRecipient === formRecipient))) {
                         console.log('[SmartRide] ✅ Payload phone match — moving to rider-found');
-                        setIsSearching(false);
-                        setCurrentStep('rider-found');
                         try {
-                            localStorage.setItem('smartride_step', 'rider-found');
-                            localStorage.setItem('smartride_rider_details', JSON.stringify(detail?.rider || {}));
-                        } catch (err) { console.warn('[SmartRide] Failed to store rider details:', err); }
+                            const storedStepNow = localStorage.getItem('smartride_step');
+                            if (storedStepNow === 'rider-details') {
+                                setIsSearching(false);
+                                try { localStorage.setItem('smartride_rider_details', JSON.stringify(detail?.rider || {})); } catch (err) { }
+                            } else {
+                                setIsSearching(false);
+                                setCurrentStep('rider-found');
+                                try {
+                                    localStorage.setItem('smartride_step', 'rider-found');
+                                    localStorage.setItem('smartride_rider_details', JSON.stringify(detail?.rider || {}));
+                                } catch (err) { console.warn('[SmartRide] Failed to store rider details:', err); }
+                            }
+                        } catch (err) { console.warn('[SmartRide] delivery accept handling error:', err); }
                         return;
                     }
                 }
@@ -229,12 +259,20 @@ export default function SmartRideBooking({ embedMode = false, initialData = {}, 
                     const storedCanonicalId = storedDelivery?._id || storedDelivery?.id || storedDelivery?.deliveryId || storedDelivery?.trackingNumber;
                     if (storedCanonicalId && candidateIds.some(id => String(id) === String(storedCanonicalId))) {
                         console.log('[SmartRide] ✅ Matched via backend-validated canonical id — moving to rider-found');
-                        setIsSearching(false);
-                        setCurrentStep('rider-found');
                         try {
-                            localStorage.setItem('smartride_step', 'rider-found');
-                            localStorage.setItem('smartride_rider_details', JSON.stringify(detail?.rider || {}));
-                        } catch (err) { console.warn('[SmartRide] Failed to store rider details:', err); }
+                            const storedStepNow = localStorage.getItem('smartride_step');
+                            if (storedStepNow === 'rider-details') {
+                                setIsSearching(false);
+                                try { localStorage.setItem('smartride_rider_details', JSON.stringify(detail?.rider || {})); } catch (err) { }
+                            } else {
+                                setIsSearching(false);
+                                setCurrentStep('rider-found');
+                                try {
+                                    localStorage.setItem('smartride_step', 'rider-found');
+                                    localStorage.setItem('smartride_rider_details', JSON.stringify(detail?.rider || {}));
+                                } catch (err) { console.warn('[SmartRide] Failed to store rider details:', err); }
+                            }
+                        } catch (err) { console.warn('[SmartRide] delivery accept handling error:', err); }
                         return;
                     }
                 } catch (err) {
@@ -757,6 +795,7 @@ export default function SmartRideBooking({ embedMode = false, initialData = {}, 
             const stored = localStorage.getItem('smartride_rider_details');
             const details = rider || (stored ? JSON.parse(stored) : { name: requestSentToRiderName });
             localStorage.setItem('smartride_rider_details', JSON.stringify(details || {}));
+            setRiderDetails(details || {});
         } catch (e) { console.warn('[SmartRide] Failed to persist rider details on proceed:', e); }
     };
 
