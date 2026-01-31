@@ -749,16 +749,16 @@ export default function SmartRideBooking({ embedMode = false, initialData = {}, 
         }
     };
 
-        const proceedToRiderDetails = (rider) => {
-            setIsSearching(false);
-            setCurrentStep('rider-details');
-            try {
-                localStorage.setItem('smartride_step', 'rider-details');
-                const stored = localStorage.getItem('smartride_rider_details');
-                const details = rider || (stored ? JSON.parse(stored) : { name: requestSentToRiderName });
-                localStorage.setItem('smartride_rider_details', JSON.stringify(details || {}));
-            } catch (e) { console.warn('[SmartRide] Failed to persist rider details on proceed:', e); }
-        };
+    const proceedToRiderDetails = (rider) => {
+        setIsSearching(false);
+        setCurrentStep('rider-details');
+        try {
+            localStorage.setItem('smartride_step', 'rider-details');
+            const stored = localStorage.getItem('smartride_rider_details');
+            const details = rider || (stored ? JSON.parse(stored) : { name: requestSentToRiderName });
+            localStorage.setItem('smartride_rider_details', JSON.stringify(details || {}));
+        } catch (e) { console.warn('[SmartRide] Failed to persist rider details on proceed:', e); }
+    };
 
     const proceedToPayment = async () => {
         if (!formData.paymentMethod) {
