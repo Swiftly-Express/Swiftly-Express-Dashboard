@@ -3,16 +3,14 @@ import { getDeliveryMessages, sendDeliveryMessage } from '../utils/authApi';
 import socketService from '../services/socket.service';
 import { YummyText } from './YummyText';
 
-const DeliveryChat = ({ deliveryId, currentUserRole = 'customer', className = '', maxHeight = '280px' }) =>
-{
+const DeliveryChat = ({ deliveryId, currentUserRole = 'customer', className = '', maxHeight = '280px' }) => {
   const [messages, setMessages] = useState([]);
   const [loading, setLoading] = useState(true);
   const [sending, setSending] = useState(false);
   const [inputValue, setInputValue] = useState('');
   const listRef = useRef(null);
 
-  useEffect(() =>
-  {
+  useEffect(() => {
     if (!deliveryId) {
       setMessages([]);
       setLoading(false);
@@ -21,29 +19,24 @@ const DeliveryChat = ({ deliveryId, currentUserRole = 'customer', className = ''
     let cancelled = false;
     setLoading(true);
     getDeliveryMessages(deliveryId)
-      .then((res) =>
-      {
+      .then((res) => {
         if (cancelled) return;
         const list = res?.data?.messages || res?.messages || [];
         setMessages(Array.isArray(list) ? list : []);
       })
-      .catch(() =>
-      {
+      .catch(() => {
         if (!cancelled) setMessages([]);
       })
-      .finally(() =>
-      {
+      .finally(() => {
         if (!cancelled) setLoading(false);
       });
     return () => { cancelled = true; };
   }, [deliveryId]);
 
-  useEffect(() =>
-  {
+  useEffect(() => {
     if (!deliveryId) return;
 
-    const joinDeliveryRoom = () =>
-    {
+    const joinDeliveryRoom = () => {
       socketService.emit('join:delivery', { deliveryId });
       socketService.joinRoom(deliveryId);
     };
@@ -52,11 +45,9 @@ const DeliveryChat = ({ deliveryId, currentUserRole = 'customer', className = ''
     // Join only when socket is connected (and re-join on reconnect) so the server receives join events
     const unsubConnect = socketService.onConnect(joinDeliveryRoom);
 
-    const handleNewMessage = (data) =>
-    {
+    const handleNewMessage = (data) => {
       if (data?.deliveryId === deliveryId && data?.message) {
-        setMessages((prev) =>
-        {
+        setMessages((prev) => {
           if (prev.some((m) => (m._id || m.id) === (data.message._id || data.message.id))) return prev;
           return [...prev, data.message];
         });
@@ -64,8 +55,7 @@ const DeliveryChat = ({ deliveryId, currentUserRole = 'customer', className = ''
     };
     socketService.on('delivery:chat:message', handleNewMessage);
 
-    return () =>
-    {
+    return () => {
       unsubConnect();
       socketService.off('delivery:chat:message', handleNewMessage);
       socketService.leaveDelivery(deliveryId);
@@ -73,13 +63,11 @@ const DeliveryChat = ({ deliveryId, currentUserRole = 'customer', className = ''
     };
   }, [deliveryId]);
 
-  useEffect(() =>
-  {
+  useEffect(() => {
     if (listRef.current) listRef.current.scrollTop = listRef.current.scrollHeight;
   }, [messages]);
 
-  const handleSend = async (e) =>
-  {
+  const handleSend = async (e) => {
     e?.preventDefault();
     const text = (inputValue || '').trim();
     if (!text || !deliveryId || sending) return;
@@ -89,8 +77,7 @@ const DeliveryChat = ({ deliveryId, currentUserRole = 'customer', className = ''
       const res = await sendDeliveryMessage(deliveryId, text);
       const msg = res?.data?.message || res?.message;
       if (msg) {
-        setMessages((prev) =>
-        {
+        setMessages((prev) => {
           if (prev.some((m) => (m._id || m.id) === (msg._id || msg.id))) return prev;
           return [...prev, msg];
         });
@@ -102,8 +89,7 @@ const DeliveryChat = ({ deliveryId, currentUserRole = 'customer', className = ''
     }
   };
 
-  const formatTime = (dateStr) =>
-  {
+  const formatTime = (dateStr) => {
     if (!dateStr) return '';
     try {
       const d = new Date(dateStr);
@@ -130,8 +116,7 @@ const DeliveryChat = ({ deliveryId, currentUserRole = 'customer', className = ''
         ) : messages.length === 0 ? (
           <p className="text-sm text-[#64748B]">No messages yet. Say hello!</p>
         ) : (
-          messages.map((m) =>
-          {
+          messages.map((m) => {
             const isMe = m.senderRole === currentUserRole;
             return (
               <div
