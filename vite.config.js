@@ -17,16 +17,28 @@ export default defineConfig({
         target: process.env.VITE_API_PROXY || 'https://api.swiftlyxpress.com',
         changeOrigin: true,
         secure: false,
+        // Increase timeouts to tolerate slower backends in dev; allow websockets
+        proxyTimeout: 30000,
+        timeout: 30000,
+        ws: true,
         configure: (proxy, options) => {
           proxy.on('proxyReq', (proxyReq, req, res) => {
             // Override origin to bypass CORS
-            proxyReq.removeHeader('origin');
-            proxyReq.removeHeader('referer');
-            proxyReq.setHeader('origin', 'https://swiftlyxpress.com');
-            proxyReq.setHeader('referer', 'https://swiftlyxpress.com/');
+            try {
+              proxyReq.removeHeader('origin');
+              proxyReq.removeHeader('referer');
+              proxyReq.setHeader('origin', 'https://swiftlyxpress.com');
+              proxyReq.setHeader('referer', 'https://swiftlyxpress.com/');
+            } catch (e) { }
           });
           proxy.on('error', (err, req, res) => {
-            console.warn('[vite proxy] error proxying', req.url, err && err.message);
+            try {
+              console.warn('[vite proxy] error proxying', req && req.url, err && err.message);
+              if (res && !res.headersSent) {
+                res.writeHead && res.writeHead(504, { 'Content-Type': 'application/json' });
+                res.end && res.end(JSON.stringify({ error: 'Upstream service unreachable', details: err && err.message }));
+              }
+            } catch (e) { console.warn('[vite proxy] error handler failed', e); }
           });
         }
       }

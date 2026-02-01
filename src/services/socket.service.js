@@ -23,32 +23,56 @@ class SocketService {
 
   connect() {
     if (this.socket) return;
-    console.log("[SocketService] Connecting to:", this.baseURL);
+
+    // Determine socket URL: allow explicit VITE_SOCKET_URL, otherwise derive from API base
+    const envSocket = import.meta.env.VITE_SOCKET_URL || null;
+    let socketUrl = envSocket || this.baseURL;
+    try {
+      if (!envSocket && typeof socketUrl === 'string') {
+        // Convert http(s) -> ws(s) so socket.io connects to correct protocol
+        socketUrl = socketUrl.replace(/^http:/i, 'ws:').replace(/^https:/i, 'wss:');
+      }
+    } catch (e) { /* ignore conversion errors */ }
+
+    console.log('[SocketService] Connecting to socket URL:', socketUrl);
     const token = this.getAuthToken();
     if (token)
-      console.log(
-        "[SocketService] Using auth token for socket connection (masked):",
-        String(token).slice(0, 10) + "...",
-      );
-    this.socket = io(this.baseURL, {
-      withCredentials: true,
-      // Try long-polling first so environments that block websockets still connect,
-      // then upgrade to websocket when available.
-      transports: ["polling", "websocket"],
-      // Increase connect timeout to allow slow networks / server wakeups
-      timeout: 20000,
-      // Send auth token via socket.io auth payload so server can validate session on handshake
-      auth: token ? { token } : undefined,
-      autoConnect: true,
-      reconnection: true,
-      reconnectionAttempts: 10,
-      reconnectionDelay: 1000,
-      reconnectionDelayMax: 5000,
-    });
+      console.log('[SocketService] Using auth token for socket connection (masked):', String(token).slice(0, 10) + '...');
 
-    this.socket.on("connect", () => {
-      console.log("[SocketService] Connected. ID:", this.socket.id);
-    });
+    try {
+      this.socket = io(socketUrl, {
+        withCredentials: true,
+        // Try long-polling first so environments that block websockets still connect,
+        // then upgrade to websocket when available.
+        transports: ["polling", "websocket"],
+        // Increase connect timeout to allow slow networks / server wakeups
+        timeout: 20000,
+        // Send auth token via socket.io auth payload so server can validate session on handshake
+        auth: token ? { token } : undefined,
+        autoConnect: true,
+        reconnection: true,
+        reconnectionAttempts: 10,
+        reconnectionDelay: 1000,
+        reconnectionDelayMax: 5000,
+      });
+
+      this.socket.on("connect", () => {
+        console.log("[SocketService] Connected. ID:", this.socket.id);
+      });
+
+      // General error handler
+      this.socket.on('error', (err) => {
+        try { console.error('[SocketService] Socket error:', err); } catch (e) { }
+      });
+
+      this.socket.on('reconnect_failed', () => {
+        console.warn('[SocketService] Reconnect failed after maximum attempts');
+      });
+    } catch (e) {
+      console.error('[SocketService] Failed to initialize socket.io client:', e);
+      this.socket = null;
+      return;
+    }
 
     this.socket.on("disconnect", (reason) => {
       console.log("[SocketService] Disconnected:", reason);
@@ -70,6 +94,10 @@ class SocketService {
             "[SocketService] WebSocket closed before connection established — server may not support websocket or CORS may be blocking upgrades.",
           );
         }
+        // Socket hang up is commonly a TLS or backend termination; hint to developer
+        if (err && err.message && String(err.message).toLowerCase().includes('socket hang up')) {
+          console.warn('[SocketService] Detected socket hang up — check backend availability, TLS certs, and proxy settings.');
+        }
       } catch (e) {
         console.error("[SocketService] connect_error handler failed", e);
       }
@@ -85,7 +113,7 @@ class SocketService {
     this.connect();
     if (this.socket.connected) {
       callback();
-      return () => {};
+      return () => { };
     }
     const fn = () => callback();
     this.socket.once("connect", fn);

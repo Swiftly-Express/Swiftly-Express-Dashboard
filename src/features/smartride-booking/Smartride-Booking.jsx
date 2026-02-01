@@ -138,6 +138,8 @@ export default function SmartRideBooking({ embedMode = false, initialData = {}, 
     });
     const [deliveryData, setDeliveryData] = useState(null);
     const [showChat, setShowChat] = useState(false);
+    const [driverLocation, setDriverLocation] = useState(null);
+    const [unreadMessageCount, setUnreadMessageCount] = useState(0);
 
     // Normalize any existing stored rider details on mount so UI uses vehicle fields
     useEffect(() => {
@@ -624,6 +626,113 @@ export default function SmartRideBooking({ embedMode = false, initialData = {}, 
         return () => { mounted = false; };
     }, [currentStep, deliveryId]);
 
+    // Real-time tracking for rider-details step: listen for location and status updates
+    useEffect(() => {
+        if (currentStep !== 'rider-details' || !deliveryId) return;
+
+        let socketCleanup = () => { };
+
+        try {
+            socketService.connect();
+            const room = `delivery:${deliveryId}`;
+
+            const onConnectJoin = () => {
+                try { socketService.joinRoom(room); } catch (e) { }
+            };
+
+            socketService.on('connect', onConnectJoin);
+            try { socketService.joinRoom(room); } catch (e) { }
+
+            const handleLocationUpdate = (data) => {
+                if (data && data.location) {
+                    console.log('[SmartRide] Driver location updated:', data.location);
+                    setDriverLocation(data.location);
+                }
+            };
+
+            const handleDeliveryStatusUpdate = async (data) => {
+                console.log('[SmartRide] Delivery status updated:', data);
+                const newStatus = data?.status || data?.delivery?.status;
+                if (newStatus) {
+                    try {
+                        const resp = await getDeliveryById(deliveryId);
+                        const delivery = resp?.data?.delivery || resp?.data || resp;
+                        if (delivery) {
+                            setDeliveryData(delivery);
+                            const rd = delivery?.rider || delivery?.assignedDriver || delivery?.driver;
+                            if (rd) {
+                                const driverId = rd._id || rd.id;
+                                const profile = await fetchDriverProfileById(driverId).catch(() => null);
+                                const merged = profile ? { ...(rd || {}), ...(normalizeDriverProfile(profile) || {}) } : rd;
+                                setRiderDetails(merged);
+                                try { localStorage.setItem('smartride_rider_details', JSON.stringify(merged)); } catch (e) { }
+                                try { setJSONCookie('smartride_rider_details', merged); } catch (e) { }
+                            }
+                        }
+                    } catch (e) { console.warn('[SmartRide] Failed to refresh on status update:', e); }
+                }
+            };
+
+            const handleNewMessage = (data) => {
+                console.log('[SmartRide] Received chat message:', data);
+
+                // Extract message and sender info
+                const messageData = data?.message || data;
+                const senderRole = messageData?.senderRole || data?.senderRole || data?.role;
+
+                // Only count messages from driver (not from customer/self)
+                if (senderRole === 'driver' || senderRole === 'rider') {
+                    console.log('[SmartRide] Message from driver/rider, showChat:', showChat);
+                    // Don't increment if chat modal is open
+                    if (!showChat) {
+                        setUnreadMessageCount(prev => {
+                            const newCount = prev + 1;
+                            console.log('[SmartRide] Incrementing unread count to:', newCount);
+                            return newCount;
+                        });
+                    }
+                }
+            };
+
+            socketService.on('delivery:location:updated', handleLocationUpdate);
+            socketService.on('delivery:statusChanged', handleDeliveryStatusUpdate);
+            socketService.on('delivery:updated', handleDeliveryStatusUpdate);
+            socketService.on('delivery:chat:message', handleNewMessage);
+
+            // Initialize driver location from deliveryData
+            if (deliveryData) {
+                if (deliveryData.currentLocation) {
+                    const loc = deliveryData.currentLocation;
+                    if (Array.isArray(loc)) {
+                        setDriverLocation({ lat: loc[1], lng: loc[0] });
+                    } else if (loc.lat && loc.lng) {
+                        setDriverLocation(loc);
+                    } else if (loc.coordinates) {
+                        setDriverLocation({ lat: loc.coordinates[1], lng: loc.coordinates[0] });
+                    }
+                } else if (deliveryData.estimatedRiderLocation) {
+                    const loc = deliveryData.estimatedRiderLocation;
+                    if (loc.lat != null && loc.lng != null) {
+                        setDriverLocation({ lat: Number(loc.lat), lng: Number(loc.lng) });
+                    }
+                }
+            }
+
+            socketCleanup = () => {
+                try { socketService.off('connect', onConnectJoin); } catch (e) { }
+                try { socketService.leaveRoom(room); } catch (e) { }
+                try { socketService.off('delivery:location:updated', handleLocationUpdate); } catch (e) { }
+                try { socketService.off('delivery:statusChanged', handleDeliveryStatusUpdate); } catch (e) { }
+                try { socketService.off('delivery:updated', handleDeliveryStatusUpdate); } catch (e) { }
+                try { socketService.off('delivery:chat:message', handleNewMessage); } catch (e) { }
+            };
+        } catch (e) {
+            console.warn('[SmartRide] Real-time tracking setup failed:', e);
+        }
+
+        return () => { socketCleanup(); };
+    }, [currentStep, deliveryId, deliveryData, showChat]);
+
     // Fetch nearby riders when on Rider Matching step (so we call /api/customer/nearby-riders)
     useEffect(() => {
         const coords = formData.pickupPlace?.coordinates;
@@ -698,25 +807,32 @@ export default function SmartRideBooking({ embedMode = false, initialData = {}, 
                             } catch (e) { parsedRd = null; }
 
                             if (sd === 'rider-details') {
-                                setCurrentStep('rider-details');
-                                setIsSearching(false);
-                                if (parsedRd) try { setRiderDetails(parsedRd); } catch (e) { }
+                                if (mounted) {
+                                    setCurrentStep('rider-details');
+                                    setIsSearching(false);
+                                    if (parsedRd) try { setRiderDetails(parsedRd); } catch (e) { }
+                                    console.log('[SmartRide] Restored rider-details step without delivery id');
+                                }
                             } else if (sd === 'rider-found') {
-                                setCurrentStep('rider-found');
-                                setIsSearching(false);
-                                if (parsedRd) try { setRiderDetails(parsedRd); } catch (e) { }
+                                if (mounted) {
+                                    setCurrentStep('rider-found');
+                                    setIsSearching(false);
+                                    if (parsedRd) try { setRiderDetails(parsedRd); } catch (e) { }
+                                }
                             } else if (sd === 'finding-rider') {
-                                setCurrentStep('finding-rider');
-                                setIsSearching(true);
+                                if (mounted) {
+                                    setCurrentStep('finding-rider');
+                                    setIsSearching(true);
+                                }
                             }
 
-                            if (parsedRd) {
+                            if (parsedRd && mounted) {
                                 const rid = parsedRd._id || parsedRd.id || parsedRd.riderId || parsedRd.driverId;
                                 if (rid) setRequestSentToRiderId(String(rid));
                                 const name = parsedRd.fullName || parsedRd.name || parsedRd.displayName || requestSentToRiderName;
                                 if (name) setRequestSentToRiderName(name);
                             }
-                        } catch (e) { }
+                        } catch (e) { console.warn('[SmartRide] Failed to restore UI-only step:', e); }
                     }
                     return;
                 }
@@ -743,7 +859,8 @@ export default function SmartRideBooking({ embedMode = false, initialData = {}, 
 
                     if (mounted) {
                         setDeliveryId(stored);
-                        try { setDeliveryData(null); } catch (e) { }
+                        console.log('[SmartRide] Restored delivery id:', stored);
+                        try { setDeliveryData(delivery); } catch (e) { }
 
                         // Restore request-sent state if this delivery was sent to an invited rider
                         const invitedId = delivery?.invitedDriver?._id ?? delivery?.invitedDriver;
@@ -765,11 +882,8 @@ export default function SmartRideBooking({ embedMode = false, initialData = {}, 
                             try { socketService.joinRoom(room); } catch (e) { }
                         } catch (e) { console.warn('[SmartRide] Failed to join stored delivery room:', e); }
 
-                        // Store fetched delivery data for UI tracking and rider details
-                        try { setDeliveryData(delivery); } catch (e) { }
-
-                        // Restore to appropriate step based on delivery status
-                        if (status === 'accepted' || status === 'in_progress' || storedStep === 'rider-details') {
+                        // Restore to appropriate step based on delivery status and stored step
+                        if (status === 'accepted' || status === 'in_progress' || status === 'picked-up' || status === 'in-transit' || storedStep === 'rider-details') {
                             try {
                                 const rd = delivery?.rider || delivery?.assignedDriver || delivery?.driver || null;
                                 let finalRd = rd;
@@ -780,17 +894,31 @@ export default function SmartRideBooking({ embedMode = false, initialData = {}, 
                                         finalRd = { ...(rd || {}), ...(normalizeDriverProfile(profile) || {}) };
                                     }
                                 }
-                                try { if (finalRd) { setRiderDetails(finalRd); localStorage.setItem('smartride_rider_details', JSON.stringify(finalRd)); } } catch (e) { }
-                                try { if (finalRd) { setJSONCookie('smartride_rider_details', finalRd); } } catch (e) { }
-                            } catch (e) { }
+                                if (finalRd) {
+                                    try { setRiderDetails(finalRd); localStorage.setItem('smartride_rider_details', JSON.stringify(finalRd)); } catch (e) { }
+                                    try { setJSONCookie('smartride_rider_details', finalRd); } catch (e) { }
+                                } else {
+                                    // If no rider in delivery, try to restore from stored rider details
+                                    try {
+                                        const storedRd = localStorage.getItem('smartride_rider_details');
+                                        if (storedRd) {
+                                            const parsedRd = JSON.parse(storedRd);
+                                            setRiderDetails(parsedRd);
+                                        }
+                                    } catch (e) { }
+                                }
+                            } catch (e) { console.warn('[SmartRide] Failed to restore rider details:', e); }
                             setCurrentStep('rider-details');
                             setIsSearching(false);
+                            console.log('[SmartRide] Restored to rider-details step');
                         } else if (storedStep === 'rider-found') {
                             setCurrentStep('rider-found');
                             setIsSearching(false);
+                            console.log('[SmartRide] Restored to rider-found step');
                         } else {
                             setCurrentStep('finding-rider');
                             setIsSearching(false);
+                            console.log('[SmartRide] Restored to finding-rider step');
                         }
                     }
                 } catch (e) {
@@ -1503,20 +1631,6 @@ export default function SmartRideBooking({ embedMode = false, initialData = {}, 
                         </div>
                     </div>
                 </YummyText>
-
-                {/* Chat modal / bottom sheet */}
-                {showChat && (
-                    <div className="fixed inset-0 z-50 flex items-end justify-center">
-                        <div className="absolute inset-0 bg-black/40" onClick={() => setShowChat(false)} />
-                        <div className="w-full md:w-2/3 lg:w-1/2 bg-white rounded-t-xl shadow-xl p-3">
-                            <div className="flex items-center justify-between mb-2">
-                                <h4 className="text-lg font-semibold">Chat</h4>
-                                <button onClick={() => setShowChat(false)} className="text-gray-600">Close</button>
-                            </div>
-                            <DeliveryChat deliveryId={deliveryId} currentUserRole="customer" maxHeight="60vh" />
-                        </div>
-                    </div>
-                )}
 
                 {/* Breadcrumb */}
                 <YummyText>
@@ -2798,11 +2912,11 @@ export default function SmartRideBooking({ embedMode = false, initialData = {}, 
                         {/* Map with route visualization */}
                         <div className="bg-white rounded-3xl overflow-hidden shadow-sm mb-8 relative" style={{ height: isMobile ? '240px' : '400px' }}>
                             <GoogleMap
-                                center={{ lat: 6.5244, lng: 3.3792 }}
+                                center={driverLocation || formData.pickupPlace?.coordinates || { lat: 6.5244, lng: 3.3792 }}
                                 zoom={13}
                                 pickupLocation={formData.pickupPlace?.coordinates || { lat: 6.5244, lng: 3.3792 }}
                                 deliveryLocation={formData.deliveryPlace?.coordinates || { lat: 6.5344, lng: 3.3892 }}
-                                riderLocation={{ lat: 6.5294, lng: 3.3842 }}
+                                riderLocation={driverLocation || { lat: 6.5294, lng: 3.3842 }}
                                 showRoute={true}
                                 className="w-full h-full"
                             />
@@ -2865,11 +2979,19 @@ export default function SmartRideBooking({ embedMode = false, initialData = {}, 
                                     </button>
                                     <button
                                         type="button"
-                                        onClick={() => { setShowChat(true); }}
-                                        className="w-full md:w-auto flex items-center justify-center gap-2 px-6 py-3 bg-white border-2 border-[#00B75A] text-[#00B75A] rounded-full hover:bg-green-50 transition-colors"
+                                        onClick={() => {
+                                            setShowChat(true);
+                                            setUnreadMessageCount(0);
+                                        }}
+                                        className="w-full md:w-auto flex items-center justify-center gap-2 px-6 py-3 bg-white border-2 border-[#00B75A] text-[#00B75A] rounded-full hover:bg-green-50 transition-colors relative"
                                     >
                                         <MessageCircle className="w-5 h-5" />
                                         <span className="font-semibold">Chat</span>
+                                        {unreadMessageCount > 0 && (
+                                            <span className="absolute -top-1 -right-1 bg-red-500 text-white text-xs rounded-full w-5 h-5 flex items-center justify-center font-semibold">
+                                                {unreadMessageCount > 9 ? '9+' : unreadMessageCount}
+                                            </span>
+                                        )}
                                     </button>
                                 </div>
                             </div>
@@ -2913,6 +3035,22 @@ export default function SmartRideBooking({ embedMode = false, initialData = {}, 
                         </div>
                     </div>
                 </YummyText>
+
+                {/* Chat modal / bottom sheet for rider-details */}
+                {showChat && (
+                    <div className="fixed inset-0 z-50 flex items-end justify-center">
+                        <div className="absolute inset-0 bg-black/40" onClick={() => setShowChat(false)} />
+                        <div className="relative w-full md:w-2/3 lg:w-1/2 bg-white rounded-t-3xl shadow-2xl p-4 max-h-[80vh] flex flex-col">
+                            <div className="flex items-center justify-between mb-3 pb-3 border-b">
+                                <h4 className="text-lg font-semibold text-gray-900">Chat with Rider</h4>
+                                <button onClick={() => setShowChat(false)} className="text-gray-500 hover:text-gray-700 text-sm font-medium px-3 py-1 rounded-lg hover:bg-gray-100">Close</button>
+                            </div>
+                            <div className="flex-1 overflow-hidden">
+                                <DeliveryChat deliveryId={deliveryId} currentUserRole="customer" maxHeight="60vh" />
+                            </div>
+                        </div>
+                    </div>
+                )}
             </div>
         );
     }

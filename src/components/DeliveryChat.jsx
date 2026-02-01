@@ -9,6 +9,8 @@ const DeliveryChat = ({ deliveryId, currentUserRole = 'customer', className = ''
   const [sending, setSending] = useState(false);
   const [inputValue, setInputValue] = useState('');
   const listRef = useRef(null);
+  const typingTimeoutRef = useRef(null);
+  const [isTyping, setIsTyping] = useState(false);
 
   useEffect(() => {
     if (!deliveryId) {
@@ -66,6 +68,37 @@ const DeliveryChat = ({ deliveryId, currentUserRole = 'customer', className = ''
   useEffect(() => {
     if (listRef.current) listRef.current.scrollTop = listRef.current.scrollHeight;
   }, [messages]);
+
+  // Auto-refresh messages when not typing (polling fallback)
+  useEffect(() => {
+    if (!deliveryId || isTyping) return;
+
+    const refreshMessages = async () => {
+      try {
+        const res = await getDeliveryMessages(deliveryId);
+        const list = res?.data?.messages || res?.messages || [];
+        if (Array.isArray(list)) {
+          setMessages(list);
+        }
+      } catch (e) {
+        console.error('[ExpressChat] Failed to refresh messages:', e);
+      }
+    };
+
+    // Poll every 3 seconds when not typing
+    const interval = setInterval(refreshMessages, 3000);
+
+    return () => clearInterval(interval);
+  }, [deliveryId, isTyping]);
+
+  // Cleanup typing timeout on unmount
+  useEffect(() => {
+    return () => {
+      if (typingTimeoutRef.current) {
+        clearTimeout(typingTimeoutRef.current);
+      }
+    };
+  }, []);
 
   const handleSend = async (e) => {
     e?.preventDefault();
@@ -149,7 +182,22 @@ const DeliveryChat = ({ deliveryId, currentUserRole = 'customer', className = ''
         <input
           type="text"
           value={inputValue}
-          onChange={(e) => setInputValue(e.target.value)}
+          onChange={(e) => {
+            setInputValue(e.target.value);
+
+            // Mark as typing
+            setIsTyping(true);
+
+            // Clear existing timeout
+            if (typingTimeoutRef.current) {
+              clearTimeout(typingTimeoutRef.current);
+            }
+
+            // Set new timeout to mark as not typing after 2 seconds of inactivity
+            typingTimeoutRef.current = setTimeout(() => {
+              setIsTyping(false);
+            }, 2000);
+          }}
           placeholder="Type a message..."
           className="flex-1 px-3 py-2 rounded-lg border border-gray-200 text-sm text-[#0F172A] placeholder:text-[#94A3B8] focus:outline-none focus:ring-2 focus:ring-[#00B75A] focus:border-transparent"
           maxLength={2000}
