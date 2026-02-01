@@ -10,9 +10,10 @@ import GoogleMap from '../../components/TrackingMap';
 import GoogleMapsAutocomplete from '../../components/GoogleMapsAutocomplete';
 import StyledDropdown from '../../components/StyledDropdown';
 import axios from 'axios';
-import { getCookie, setCookie, deleteCookie } from '../../utils/cookies';
+import { getCookie, setCookie, deleteCookie, setJSONCookie, getJSONCookie } from '../../utils/cookies';
 import { createDelivery, cancelDelivery, isAuthenticated, getDeliveryEstimate, getDeliveryById, getNearbyRiders } from '../../utils/authApi';
 import socketService from '../../services/socket.service';
+import DeliveryChat from './DeliveryChat';
 import { calculateDistance } from '../../utils/pricing';
 
 const API_BASE = import.meta.env.VITE_API_BASE_URL || 'https://api.swiftlyxpress.com';
@@ -136,6 +137,7 @@ export default function SmartRideBooking({ embedMode = false, initialData = {}, 
         } catch (e) { return null; }
     });
     const [deliveryData, setDeliveryData] = useState(null);
+    const [showChat, setShowChat] = useState(false);
 
     // Normalize any existing stored rider details on mount so UI uses vehicle fields
     useEffect(() => {
@@ -290,7 +292,7 @@ export default function SmartRideBooking({ embedMode = false, initialData = {}, 
                 detail.trackingNumber
             ].filter(Boolean).map(String);
 
-            const storedId = String(deliveryId || localStorage.getItem('smartride_delivery_id') || '');
+            const storedId = String(deliveryId || localStorage.getItem('smartride_delivery_id') || getCookie('smartride_delivery_id') || '');
             console.log('[SmartRide] Comparing candidate IDs to storedId:', { candidateIds, storedId, deliveryId });
 
             const directMatch = storedId && candidateIds.some(id => String(id) === String(storedId));
@@ -313,6 +315,7 @@ export default function SmartRideBooking({ embedMode = false, initialData = {}, 
                             setIsSearching(false);
                             setRiderDetails(finalRd || {});
                             try { localStorage.setItem('smartride_rider_details', JSON.stringify(finalRd || {})); } catch (err) { }
+                            try { setJSONCookie('smartride_rider_details', finalRd || {}); } catch (err) { }
                         } else if (storedStepNow === 'rider-found') {
                             setIsSearching(false);
                             setCurrentStep('rider-found');
@@ -325,6 +328,9 @@ export default function SmartRideBooking({ embedMode = false, initialData = {}, 
                                 localStorage.setItem('smartride_step', 'rider-found');
                                 localStorage.setItem('smartride_rider_details', JSON.stringify(finalRd || {}));
                             } catch (err) { console.warn('[SmartRide] Failed to store rider details:', err); }
+                            try { setCookie('smartride_step', 'rider-found'); } catch (err) { }
+                            try { setJSONCookie('smartride_rider_details', finalRd || {}); } catch (err) { }
+                            try { setJSONCookie('smartride_rider_details', finalRd || {}); } catch (err) { }
                         }
                     } catch (err) { console.warn('[SmartRide] delivery accept handling error:', err); }
                 } catch (err) { console.warn('[SmartRide] delivery accept handling error:', err); }
@@ -427,6 +433,7 @@ export default function SmartRideBooking({ embedMode = false, initialData = {}, 
                 try {
                     const norm = normalizeDriverProfile(profile);
                     try { setRiderDetails(norm); localStorage.setItem('smartride_rider_details', JSON.stringify(norm)); } catch (err) { }
+                    try { setJSONCookie('smartride_rider_details', norm); } catch (err) { }
                 } catch (err) { }
             } else if (verificationData) {
                 // Merge verificationData into riderDetails
@@ -605,6 +612,7 @@ export default function SmartRideBooking({ embedMode = false, initialData = {}, 
                 if (profile && mounted) {
                     const merged = { ...(rd || {}), ...(normalizeDriverProfile(profile) || {}) };
                     try { localStorage.setItem('smartride_rider_details', JSON.stringify(merged)); } catch (e) { }
+                    try { setJSONCookie('smartride_rider_details', merged); } catch (e) { }
                     setRiderDetails(merged);
                 }
             } catch (e) {
@@ -671,19 +679,23 @@ export default function SmartRideBooking({ embedMode = false, initialData = {}, 
         let mounted = true;
         (async () => {
             try {
-                const stored = localStorage.getItem('smartride_delivery_id');
-                const storedStep = localStorage.getItem('smartride_step');
+                const stored = localStorage.getItem('smartride_delivery_id') || getCookie('smartride_delivery_id');
+                const storedStep = localStorage.getItem('smartride_step') || getCookie('smartride_step');
 
                 // If there's no stored delivery id, but there is a saved step, restore UI-only state
                 if (!stored) {
                     if (storedStep) {
                         try {
                             const sd = storedStep;
-                            const storedRd = localStorage.getItem('smartride_rider_details');
                             let parsedRd = null;
-                            if (storedRd) {
-                                try { parsedRd = JSON.parse(storedRd); } catch (e) { parsedRd = null; }
-                            }
+                            try {
+                                const storedRd = localStorage.getItem('smartride_rider_details');
+                                if (storedRd) parsedRd = JSON.parse(storedRd);
+                                else {
+                                    const cookieRd = getJSONCookie('smartride_rider_details');
+                                    if (cookieRd) parsedRd = cookieRd;
+                                }
+                            } catch (e) { parsedRd = null; }
 
                             if (sd === 'rider-details') {
                                 setCurrentStep('rider-details');
@@ -723,6 +735,9 @@ export default function SmartRideBooking({ embedMode = false, initialData = {}, 
                             localStorage.removeItem('smartride_step');
                             localStorage.removeItem('smartride_rider_details');
                         } catch (e) { }
+                        try { deleteCookie('smartride_delivery_id'); } catch (e) { }
+                        try { deleteCookie('smartride_step'); } catch (e) { }
+                        try { deleteCookie('smartride_rider_details'); } catch (e) { }
                         return;
                     }
 
@@ -766,6 +781,7 @@ export default function SmartRideBooking({ embedMode = false, initialData = {}, 
                                     }
                                 }
                                 try { if (finalRd) { setRiderDetails(finalRd); localStorage.setItem('smartride_rider_details', JSON.stringify(finalRd)); } } catch (e) { }
+                                try { if (finalRd) { setJSONCookie('smartride_rider_details', finalRd); } } catch (e) { }
                             } catch (e) { }
                             setCurrentStep('rider-details');
                             setIsSearching(false);
@@ -929,6 +945,7 @@ export default function SmartRideBooking({ embedMode = false, initialData = {}, 
 
         setCurrentStep('finding-rider');
         try { localStorage.setItem('smartride_step', 'finding-rider'); } catch (e) { }
+        try { setCookie('smartride_step', 'finding-rider'); } catch (e) { }
     };
 
     // Persist current step so a page refresh preserves progress
@@ -936,6 +953,7 @@ export default function SmartRideBooking({ embedMode = false, initialData = {}, 
         try {
             if (currentStep) {
                 localStorage.setItem('smartride_step', currentStep);
+                try { setCookie('smartride_step', currentStep); } catch (e) { }
             }
         } catch (e) { }
     }, [currentStep]);
@@ -1054,6 +1072,9 @@ export default function SmartRideBooking({ embedMode = false, initialData = {}, 
             try {
                 localStorage.setItem('smartride_delivery_id', String(dId));
             } catch (e) { }
+            try {
+                setCookie('smartride_delivery_id', String(dId));
+            } catch (e) { }
 
             try {
                 const room = `delivery:${dId}`;
@@ -1085,6 +1106,8 @@ export default function SmartRideBooking({ embedMode = false, initialData = {}, 
                 localStorage.removeItem('smartride_delivery_id');
                 localStorage.removeItem('smartride_step');
             } catch (e) { }
+            try { deleteCookie('smartride_delivery_id'); } catch (e) { }
+            try { deleteCookie('smartride_step'); } catch (e) { }
             try {
                 socketService.connect();
                 socketService.emit('delivery:cancelled', { deliveryId });
@@ -1111,6 +1134,7 @@ export default function SmartRideBooking({ embedMode = false, initialData = {}, 
         setCurrentStep('rider-details');
         try {
             localStorage.setItem('smartride_step', 'rider-details');
+            try { setCookie('smartride_step', 'rider-details'); } catch (e) { }
             const stored = localStorage.getItem('smartride_rider_details');
             let details = rider || (stored ? JSON.parse(stored) : { name: requestSentToRiderName });
 
@@ -1124,6 +1148,7 @@ export default function SmartRideBooking({ embedMode = false, initialData = {}, 
             } catch (e) { console.warn('[SmartRide] Failed to fetch driver profile on proceed:', e); }
 
             try { localStorage.setItem('smartride_rider_details', JSON.stringify(details || {})); } catch (e) { }
+            try { setJSONCookie('smartride_rider_details', details || {}); } catch (e) { }
             setRiderDetails(details || {});
         } catch (e) { console.warn('[SmartRide] Failed to persist rider details on proceed:', e); }
     };
@@ -1458,6 +1483,7 @@ export default function SmartRideBooking({ embedMode = false, initialData = {}, 
                                                 console.warn('[SmartRide] Cancel delivery failed:', e);
                                             }
                                             try { localStorage.removeItem('smartride_delivery_id'); } catch (e) { }
+                                            try { deleteCookie('smartride_delivery_id'); } catch (e) { }
                                             // Notify other clients and server
                                             try { socketService.connect(); socketService.emit('delivery:cancelled', { deliveryId }); } catch (e) { }
                                             try { window.dispatchEvent(new CustomEvent('delivery:cancelled', { detail: { deliveryId } })); } catch (e) { }
@@ -1477,6 +1503,20 @@ export default function SmartRideBooking({ embedMode = false, initialData = {}, 
                         </div>
                     </div>
                 </YummyText>
+
+                {/* Chat modal / bottom sheet */}
+                {showChat && (
+                    <div className="fixed inset-0 z-50 flex items-end justify-center">
+                        <div className="absolute inset-0 bg-black/40" onClick={() => setShowChat(false)} />
+                        <div className="w-full md:w-2/3 lg:w-1/2 bg-white rounded-t-xl shadow-xl p-3">
+                            <div className="flex items-center justify-between mb-2">
+                                <h4 className="text-lg font-semibold">Chat</h4>
+                                <button onClick={() => setShowChat(false)} className="text-gray-600">Close</button>
+                            </div>
+                            <DeliveryChat deliveryId={deliveryId} currentUserRole="customer" maxHeight="60vh" />
+                        </div>
+                    </div>
+                )}
 
                 {/* Breadcrumb */}
                 <YummyText>
@@ -2756,7 +2796,7 @@ export default function SmartRideBooking({ embedMode = false, initialData = {}, 
 
                     <div className="max-w-6xl mx-auto px-4 py-8">
                         {/* Map with route visualization */}
-                        <div className="bg-white rounded-3xl overflow-hidden shadow-sm mb-8 relative" style={{ height: '400px' }}>
+                        <div className="bg-white rounded-3xl overflow-hidden shadow-sm mb-8 relative" style={{ height: isMobile ? '240px' : '400px' }}>
                             <GoogleMap
                                 center={{ lat: 6.5244, lng: 3.3792 }}
                                 zoom={13}
@@ -2778,9 +2818,9 @@ export default function SmartRideBooking({ embedMode = false, initialData = {}, 
                         <div className="bg-white rounded-3xl p-8 shadow-sm">
                             <h2 className="text-2xl font-semibold text-gray-900 mb-8">Rider Details</h2>
 
-                            <div className="flex items-start gap-8 mb-10">
+                            <div className="flex flex-col md:flex-row items-start gap-6 md:gap-8 mb-10">
                                 {/* Rider Photo */}
-                                <div className="w-40 h-40 bg-gray-200 rounded-2xl overflow-hidden flex-shrink-0">
+                                <div className="w-24 h-24 md:w-40 md:h-40 bg-gray-200 rounded-2xl overflow-hidden flex-shrink-0">
                                     {riderDetails?.profileImage ? (
                                         <img src={riderDetails.profileImage} alt={riderDetails?.fullName || 'Rider'} className="w-full h-full object-cover" />
                                     ) : (
@@ -2789,7 +2829,7 @@ export default function SmartRideBooking({ embedMode = false, initialData = {}, 
                                 </div>
 
                                 {/* Rider Info */}
-                                <div className="flex-1">
+                                <div className="flex-1 w-full">
                                     <div className="flex items-center gap-3 mb-4">
                                         <h3 className="text-2xl font-semibold text-gray-900">{riderDetails?.fullName || riderDetails?.name || requestSentToRiderName || 'Rider'}</h3>
                                         <span className="px-3 py-1.5 bg-green-100 text-green-700 text-xs rounded-full font-semibold border border-green-200">
@@ -2797,8 +2837,7 @@ export default function SmartRideBooking({ embedMode = false, initialData = {}, 
                                         </span>
                                         <span className="text-gray-500 text-sm font-medium">{riderDetails?.ridesCount ?? riderDetails?.totalRides ?? ''}</span>
                                     </div>
-
-                                    <div className="grid grid-cols-3 gap-6 mt-6">
+                                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4 md:gap-6 mt-4 md:mt-6">
                                         <div>
                                             <p className="text-sm text-gray-500 mb-1">Bike Model</p>
                                             <p className="font-semibold text-gray-900">{riderDetails?.vehicle?.model || riderDetails?.bikeModel || '-'}</p>
@@ -2815,19 +2854,19 @@ export default function SmartRideBooking({ embedMode = false, initialData = {}, 
                                 </div>
 
                                 {/* Action Buttons */}
-                                <div className="flex flex-col gap-3">
+                                <div className="flex flex-col md:flex-col gap-3 w-full md:w-auto">
                                     <button
                                         type="button"
                                         onClick={() => { const num = riderDetails?.phone || riderDetails?.phoneNumber || riderDetails?.contact; if (num) window.location.href = `tel:${num}`; }}
-                                        className="flex items-center justify-center gap-2 px-8 py-3.5 bg-[#00B75A] text-white rounded-full hover:bg-[#00A050] transition-colors shadow-sm"
+                                        className="w-full md:w-auto flex items-center justify-center gap-2 px-6 py-3 bg-[#00B75A] text-white rounded-full hover:bg-[#00A050] transition-colors shadow-sm"
                                     >
                                         <Phone className="w-5 h-5" />
                                         <span className="font-semibold">{riderDetails?.phone || riderDetails?.phoneNumber || riderDetails?.contact ? 'Call' : 'No Phone'}</span>
                                     </button>
                                     <button
                                         type="button"
-                                        onClick={() => { /* open chat/placeholder */ }}
-                                        className="flex items-center justify-center gap-2 px-8 py-3.5 bg-white border-2 border-[#00B75A] text-[#00B75A] rounded-full hover:bg-green-50 transition-colors"
+                                        onClick={() => { setShowChat(true); }}
+                                        className="w-full md:w-auto flex items-center justify-center gap-2 px-6 py-3 bg-white border-2 border-[#00B75A] text-[#00B75A] rounded-full hover:bg-green-50 transition-colors"
                                     >
                                         <MessageCircle className="w-5 h-5" />
                                         <span className="font-semibold">Chat</span>
