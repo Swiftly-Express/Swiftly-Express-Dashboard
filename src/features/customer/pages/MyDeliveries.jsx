@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { IonContent, IonPage, IonIcon, IonToast } from '@ionic/react';
 import { eye, eyeOff, arrowForward, copy } from 'ionicons/icons';
+import { useHistory } from 'react-router-dom';
 import CustomerLayout from '../components/CustomerLayout';
 import PaymentFailedModal from '../components/PaymentFailedModal';
 import { YummyText } from '../../../components/YummyText';
@@ -14,8 +15,7 @@ const sideBottomShadow = {
 };
 
 // Helper function to get status styling
-const getStatusStyle = (status) =>
-{
+const getStatusStyle = (status) => {
   const statusLower = status?.toLowerCase() || 'pending';
 
   const styles = {
@@ -35,8 +35,7 @@ const getStatusStyle = (status) =>
 };
 
 // Helper function to calculate progress
-const getProgress = (status) =>
-{
+const getProgress = (status) => {
   const statusLower = status?.toLowerCase() || 'pending';
 
   const progressMap = {
@@ -55,8 +54,7 @@ const getProgress = (status) =>
 };
 
 // Helper function to format date
-const formatDate = (dateString) =>
-{
+const formatDate = (dateString) => {
   if (!dateString) return 'N/A';
 
   try {
@@ -71,16 +69,15 @@ const formatDate = (dateString) =>
   }
 };
 
-const DeliveryCard = ({ delivery }) =>
-{
+const DeliveryCard = ({ delivery }) => {
+  const history = useHistory();
   const [isOpen, setIsOpen] = useState(false);
   const [showCopyToast, setShowCopyToast] = useState(false);
   const statusStyle = getStatusStyle(delivery.status);
   const progress = getProgress(delivery.status);
   const paymentStatus = (delivery.paymentStatus || delivery.payment?.status || '').toLowerCase();
 
-  const handleToggleDetails = () =>
-  {
+  const handleToggleDetails = () => {
     const newIsOpen = !isOpen;
     setIsOpen(newIsOpen);
 
@@ -98,8 +95,19 @@ const DeliveryCard = ({ delivery }) =>
     }
   };
 
-  const handleCopyPackageId = async () =>
-  {
+  const handleTrack = (e) => {
+    e.stopPropagation();
+    const packageId = delivery.trackingNumber || delivery.trackingId || delivery.id || delivery._id;
+    if (packageId) {
+      history.push(`/customer/track/${packageId}`);
+    }
+  };
+
+  const handleCardClick = () => {
+    handleToggleDetails();
+  };
+
+  const handleCopyPackageId = async () => {
     const packageId = delivery.trackingNumber || delivery.trackingId || delivery.id || delivery._id;
     try {
       await navigator.clipboard.writeText(packageId);
@@ -110,16 +118,19 @@ const DeliveryCard = ({ delivery }) =>
   };
 
   return (
-    <div className="bg-white rounded-2xl p-4 md:p-6 mb-4 relative" style={sideBottomShadow}>
+    <div
+      className="bg-white rounded-2xl p-4 md:p-6 mb-4 relative cursor-pointer hover:shadow-lg transition-shadow"
+      style={sideBottomShadow}
+      onClick={handleCardClick}
+    >
       {/* Mobile: Make Payment button at top-right (only for online/bank, not cash) */}
-      {(paymentStatus === 'pending' || paymentStatus === 'unpaid' || paymentStatus === 'failed') && (() =>
-      {
+      {(paymentStatus === 'pending' || paymentStatus === 'unpaid' || paymentStatus === 'failed') && (() => {
         const method = (delivery.payment?.method || delivery.paymentMethod || delivery.payment?.paymentMethod || delivery.method || '').toString().toLowerCase();
         return method !== 'cash' && method !== 'cash_on_delivery';
       })() && (
           <button
-            onClick={() =>
-            {
+            onClick={(e) => {
+              e.stopPropagation();
               const deliveryId = delivery._id || delivery.id || delivery.trackingNumber;
               window.dispatchEvent(new CustomEvent('payment:init', { detail: { deliveryId } }));
             }}
@@ -153,8 +164,7 @@ const DeliveryCard = ({ delivery }) =>
                 {paymentStatus === 'paid' && (
                   <span className="px-3 py-1 rounded-full text-xs font-medium bg-green-100 text-green-700 border border-green-200">Paid</span>
                 )}
-                {paymentStatus !== 'paid' && (() =>
-                {
+                {paymentStatus !== 'paid' && (() => {
                   const method = (delivery.payment?.method || delivery.paymentMethod || delivery.payment?.paymentMethod || delivery.method || '').toString().toLowerCase().trim();
                   return (method === 'cash' || method === 'cash_on_delivery' || method === 'cod') ? (
                     <span className="px-3 py-1 rounded-full text-xs font-medium bg-white text-green-600 border border-gray-200">Cash</span>
@@ -162,14 +172,13 @@ const DeliveryCard = ({ delivery }) =>
                 })()}
 
                 {/* Desktop/Tablet: show Make Payment tag when unpaid (only for online/bank, not cash) */}
-                {(paymentStatus === 'pending' || paymentStatus === 'unpaid' || paymentStatus === 'failed') && (() =>
-                {
+                {(paymentStatus === 'pending' || paymentStatus === 'unpaid' || paymentStatus === 'failed') && (() => {
                   const method = (delivery.payment?.method || delivery.paymentMethod || delivery.payment?.paymentMethod || delivery.method || '').toString().toLowerCase().trim();
                   return method !== 'cash' && method !== 'cash_on_delivery' && method !== 'cod';
                 })() && (
                     <button
-                      onClick={() =>
-                      {
+                      onClick={(e) => {
+                        e.stopPropagation();
                         const deliveryId = delivery._id || delivery.id || delivery.trackingNumber;
                         window.dispatchEvent(new CustomEvent('payment:init', { detail: { deliveryId } }));
                       }}
@@ -208,14 +217,17 @@ const DeliveryCard = ({ delivery }) =>
           </div>
         </div>
 
-        {/* View Details Button */}
+        {/* Track Button */}
         <button
-          onClick={handleToggleDetails}
+          onClick={handleTrack}
           className="flex items-center justify-center gap-2 text-sm text-[#64748B] shadow-sm px-4 py-2 rounded-xl hover:text-[#0F172A] hover:border-gray-800 transition-colors w-full md:w-auto"
           style={{ border: '1.5px solid #0000001A' }}
         >
-          <IonIcon icon={isOpen ? eyeOff : eye} className="text-lg" />
-          <YummyText>{isOpen ? 'Hide' : 'View'} Details</YummyText>
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <circle cx="12" cy="12" r="10" />
+            <polyline points="12 6 12 12 16 14" />
+          </svg>
+          <YummyText>Track</YummyText>
         </button>
       </div>
 
@@ -298,14 +310,13 @@ const DeliveryCard = ({ delivery }) =>
 };
 
 // Mobile Completed Delivery Card
-const MobileCompletedCard = ({ delivery }) =>
-{
+const MobileCompletedCard = ({ delivery }) => {
+  const history = useHistory();
   const [isOpen, setIsOpen] = useState(false);
   const [showCopyToast, setShowCopyToast] = useState(false);
   const paymentStatus = (delivery.paymentStatus || delivery.payment?.status || '').toLowerCase();
 
-  const handleToggleDetails = () =>
-  {
+  const handleToggleDetails = () => {
     const newIsOpen = !isOpen;
     setIsOpen(newIsOpen);
 
@@ -323,8 +334,19 @@ const MobileCompletedCard = ({ delivery }) =>
     }
   };
 
-  const handleCopyPackageId = async () =>
-  {
+  const handleTrack = (e) => {
+    e.stopPropagation();
+    const packageId = delivery.trackingNumber || delivery.trackingId || delivery.id || delivery._id;
+    if (packageId) {
+      history.push(`/customer/track/${packageId}`);
+    }
+  };
+
+  const handleCardClick = () => {
+    handleToggleDetails();
+  };
+
+  const handleCopyPackageId = async () => {
     const packageId = delivery.trackingNumber || delivery.trackingId || delivery.id || delivery._id;
     try {
       await navigator.clipboard.writeText(packageId);
@@ -335,15 +357,17 @@ const MobileCompletedCard = ({ delivery }) =>
   };
 
   return (
-    <div className="bg-white rounded-2xl p-4 mb-3 border border-gray-100 relative">
-      {(paymentStatus === 'pending' || paymentStatus === 'unpaid' || paymentStatus === 'failed') && (() =>
-      {
+    <div
+      className="bg-white rounded-2xl p-4 mb-3 border border-gray-100 relative cursor-pointer hover:shadow-lg transition-shadow"
+      onClick={handleCardClick}
+    >
+      {(paymentStatus === 'pending' || paymentStatus === 'unpaid' || paymentStatus === 'failed') && (() => {
         const method = (delivery.payment?.method || delivery.paymentMethod || delivery.payment?.paymentMethod || delivery.method || '').toString().toLowerCase();
         return method !== 'cash' && method !== 'cash_on_delivery';
       })() && (
           <button
-            onClick={() =>
-            {
+            onClick={(e) => {
+              e.stopPropagation();
               const deliveryId = delivery._id || delivery.id || delivery.trackingNumber;
               window.dispatchEvent(new CustomEvent('payment:init', { detail: { deliveryId } }));
             }}
@@ -375,12 +399,16 @@ const MobileCompletedCard = ({ delivery }) =>
         </div>
         <div className="flex items-center gap-3 ml-2">
           <button
-            onClick={handleToggleDetails}
+            onClick={handleTrack}
+            className="px-3 py-1.5 text-[#64748B] rounded-lg hover:text-[#0F172A] transition-colors text-xs font-medium border"
+            style={{ border: '1.5px solid #0000001A' }}
+          >
+            <YummyText>Track</YummyText>
+          </button>
+          <button
+            onClick={(e) => { e.stopPropagation(); }}
             className="text-[#64748B] hover:text-[#0F172A] transition-colors"
           >
-            <IonIcon icon={isOpen ? eyeOff : eye} className="text-xl" />
-          </button>
-          <button className="text-[#64748B] hover:text-[#0F172A] transition-colors">
             <img src="/downloadicon.svg" alt="Download" className="w-5 h-5" />
           </button>
         </div>
@@ -436,15 +464,22 @@ const MobileCompletedCard = ({ delivery }) =>
 };
 
 // Desktop Table Row
-const CompletedDeliveryRow = ({ delivery }) =>
-{
+const CompletedDeliveryRow = ({ delivery }) => {
+  const history = useHistory();
   const [isOpen, setIsOpen] = useState(false);
   const [showCopyToast, setShowCopyToast] = useState(false);
 
   const hasRated = delivery.rating || delivery.customerRating || delivery.hasRated;
 
-  const handleToggleDetails = () =>
-  {
+  const handleTrack = (e) => {
+    e.stopPropagation();
+    const packageId = delivery.trackingNumber || delivery.trackingId || delivery.id || delivery._id;
+    if (packageId) {
+      history.push(`/customer/track/${packageId}`);
+    }
+  };
+
+  const handleToggleDetails = () => {
     const newIsOpen = !isOpen;
     setIsOpen(newIsOpen);
 
@@ -462,8 +497,7 @@ const CompletedDeliveryRow = ({ delivery }) =>
     }
   };
 
-  const handleCopyPackageId = async () =>
-  {
+  const handleCopyPackageId = async () => {
     const packageId = delivery.trackingNumber || delivery.trackingId || delivery.id || delivery._id;
     try {
       await navigator.clipboard.writeText(packageId);
@@ -475,7 +509,7 @@ const CompletedDeliveryRow = ({ delivery }) =>
 
   return (
     <>
-      <tr className="border-b border-gray-100 hover:bg-gray-50">
+      <tr className="border-b border-gray-100 hover:bg-gray-50 cursor-pointer" onClick={handleToggleDetails}>
         <td className="py-4 px-4 text-sm font-medium text-[#0A0A0A]">
           {delivery.packageDetails?.description || 'Package'}
         </td>
@@ -500,17 +534,21 @@ const CompletedDeliveryRow = ({ delivery }) =>
         <td className="py-4 px-4">
           <div className="flex items-center justify-center gap-3">
             <button
-              onClick={handleToggleDetails}
-              className="text-[#0A0A0A] hover:text-[#0F172A] transition-colors"
+              onClick={handleTrack}
+              className="px-3 py-1.5 text-[#64748B] rounded-lg hover:text-[#0F172A] transition-colors text-xs font-medium border"
+              style={{ border: '1.5px solid #0000001A' }}
             >
-              <IonIcon icon={isOpen ? eyeOff : eye} className="text-xl" />
+              <YummyText>Track</YummyText>
             </button>
             {hasRated && (
               <span className="text-xs text-green-600 flex items-center gap-1">
                 ⭐ {delivery.rating || delivery.customerRating}
               </span>
             )}
-            <button className="text-[#0A0A0A] hover:text-[#0F172A] transition-colors">
+            <button
+              onClick={(e) => { e.stopPropagation(); }}
+              className="text-[#0A0A0A] hover:text-[#0F172A] transition-colors"
+            >
               <img src="/downloadicon.svg" alt="Download" className="w-5 h-5" />
             </button>
           </div>
@@ -567,8 +605,7 @@ const CompletedDeliveryRow = ({ delivery }) =>
   );
 };
 
-const MyDeliveries = () =>
-{
+const MyDeliveries = () => {
   const [activeTab, setActiveTab] = useState('active');
   const [activeDeliveries, setActiveDeliveries] = useState([]);
   const [completedDeliveries, setCompletedDeliveries] = useState([]);
@@ -582,13 +619,11 @@ const MyDeliveries = () =>
   const [showPaymentFailedModal, setShowPaymentFailedModal] = useState(false);
   const [cancelledOrder, setCancelledOrder] = useState(null);
 
-  useEffect(() =>
-  {
+  useEffect(() => {
     fetchDeliveries();
 
     // Check for pending payment and cancel order if payment not completed
-    const checkPendingPayment = async () =>
-    {
+    const checkPendingPayment = async () => {
       const pendingDeliveryId = getCookie('pending_payment_delivery_id');
 
       if (pendingDeliveryId) {
@@ -621,35 +656,50 @@ const MyDeliveries = () =>
     };
 
     checkPendingPayment();
+
+    // Refresh deliveries when user returns to the page (e.g., after payment)
+    const handleVisibilityChange = () => {
+      if (!document.hidden) {
+        console.log('[MyDeliveries] Page became visible, refreshing deliveries');
+        fetchDeliveries();
+      }
+    };
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+
+    return () => {
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
+    };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [page]);
 
-  useEffect(() =>
-  {
-    const handleRefresh = () =>
-    {
+  useEffect(() => {
+    const handleRefresh = () => {
       console.log('[MyDeliveries] Received refresh event');
       fetchDeliveries();
     };
 
-    const handleDeliveryCreated = (event) =>
-    {
+    const handleDeliveryCreated = (event) => {
       console.log('[MyDeliveries] Delivery created:', event.detail);
       fetchDeliveries();
     };
 
-    const handleDeliveryUpdated = (event) =>
-    {
+    const handleDeliveryUpdated = (event) => {
       console.log('[MyDeliveries] Delivery updated:', event.detail);
+      fetchDeliveries();
+    };
+
+    const handlePaymentCompleted = (event) => {
+      console.log('[MyDeliveries] Payment completed:', event.detail);
+      // Refresh deliveries to show updated payment status
       fetchDeliveries();
     };
 
     window.addEventListener('deliveries:refresh', handleRefresh);
     window.addEventListener('delivery:created', handleDeliveryCreated);
     window.addEventListener('delivery:updated', handleDeliveryUpdated);
+    window.addEventListener('payment:completed', handlePaymentCompleted);
     // Listen for pay-later requests from delivery cards
-    const handlePaymentInit = async (ev) =>
-    {
+    const handlePaymentInit = async (ev) => {
       try {
         const deliveryId = ev?.detail?.deliveryId;
         if (!deliveryId) return;
@@ -684,11 +734,13 @@ const MyDeliveries = () =>
         if (deliveryId) setCookie('pending_payment_delivery_id', String(deliveryId), 1);
         if (paymentReference) setCookie('pending_payment_id', String(paymentReference), 1);
 
-        const cleanupOnPaymentCancel = async (did) =>
-        {
-          try { if (did) await cancelDelivery(did, { reason: 'payment_cancelled' }); } catch (cleanupErr) { console.warn('[MyDeliveries] cleanup failed', cleanupErr); }
+        const cleanupOnPaymentCancel = async (did) => {
+          try {
+            // Don't cancel the booking - just clear payment cookies and notify user
+            console.log('[MyDeliveries] Payment window closed without completion for delivery:', did);
+          } catch (cleanupErr) { console.warn('[MyDeliveries] cleanup failed', cleanupErr); }
           try { deleteCookie('pending_payment_delivery_id'); deleteCookie('pending_payment_id'); } catch (e) { }
-          setToastMessage('Payment was not completed. Your booking was cancelled.');
+          setToastMessage('Payment was not completed. You can try paying again.');
           setShowToast(true);
         };
 
@@ -698,13 +750,20 @@ const MyDeliveries = () =>
             else window.open(authorizationUrl, '_blank');
 
             // monitor popup close
-            const popupInterval = setInterval(() =>
-            {
+            const popupInterval = setInterval(() => {
               try {
                 if (!paymentWindow || paymentWindow.closed) {
                   clearInterval(popupInterval);
-                  const pending = getCookie('pending_payment_id');
-                  if (pending) cleanupOnPaymentCancel(deliveryId);
+                  // Only show error if pending cookies still exist (payment wasn't completed)
+                  // If cookies were deleted, payment was successful
+                  setTimeout(() => {
+                    const pending = getCookie('pending_payment_id');
+                    if (pending) {
+                      cleanupOnPaymentCancel(deliveryId);
+                    } else {
+                      console.log('[MyDeliveries] Payment window closed but cookies cleared - payment completed successfully');
+                    }
+                  }, 1500); // Increased delay to allow PaymentSuccess to clear cookies
                 }
               } catch (e) { clearInterval(popupInterval); }
             }, 1000);
@@ -726,8 +785,7 @@ const MyDeliveries = () =>
             amount: (amount || 0) * 100,
             ref: paymentReference,
             onClose: function () { cleanupOnPaymentCancel(deliveryId); },
-            callback: function ()
-            {
+            callback: function () {
               try { deleteCookie('pending_payment_delivery_id'); deleteCookie('pending_payment_id'); } catch (e) { };
               try { window.location.href = '/customer/payment/callback'; } catch (e) { window.location.href = '/customer/payment/callback'; }
             }
@@ -743,17 +801,16 @@ const MyDeliveries = () =>
 
     window.addEventListener('payment:init', handlePaymentInit);
 
-    return () =>
-    {
+    return () => {
       window.removeEventListener('deliveries:refresh', handleRefresh);
       window.removeEventListener('delivery:created', handleDeliveryCreated);
       window.removeEventListener('delivery:updated', handleDeliveryUpdated);
+      window.removeEventListener('payment:completed', handlePaymentCompleted);
       window.removeEventListener('payment:init', handlePaymentInit);
     };
   }, []);
 
-  async function fetchDeliveries()
-  {
+  async function fetchDeliveries() {
     setLoading(true);
     setError('');
     try {
@@ -780,15 +837,13 @@ const MyDeliveries = () =>
       // Keep all deliveries (including cancelled) so users can see paid/cancelled orders
       const validDeliveries = Array.isArray(items) ? items : [];
 
-      const active = validDeliveries.filter((d) =>
-      {
+      const active = validDeliveries.filter((d) => {
         const status = d?.status?.toLowerCase() || 'pending';
         // Consider only delivered/completed as completed; everything else (including cancelled) remains visible in Active
         return status !== 'delivered' && status !== 'completed';
       });
 
-      const completed = validDeliveries.filter((d) =>
-      {
+      const completed = validDeliveries.filter((d) => {
         const status = d?.status?.toLowerCase() || '';
         return status === 'delivered' || status === 'completed';
       });
@@ -949,8 +1004,7 @@ const MyDeliveries = () =>
   );
 
   // Handle rating submission
-  async function handleSubmitRating(ratingData)
-  {
+  async function handleSubmitRating(ratingData) {
     try {
       console.log('[MyDeliveries] Submitting rating:', ratingData);
       // Only send rating field - backend doesn't accept comment or driverId
@@ -961,8 +1015,7 @@ const MyDeliveries = () =>
       console.log('[MyDeliveries] Rating submitted successfully:', response);
 
       // Update the delivery in the list to reflect rating
-      setCompletedDeliveries(prev => prev.map(d =>
-      {
+      setCompletedDeliveries(prev => prev.map(d => {
         if ((d._id || d.id) === ratingData.deliveryId) {
           return {
             ...d,

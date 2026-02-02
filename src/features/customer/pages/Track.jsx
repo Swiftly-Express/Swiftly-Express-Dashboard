@@ -117,7 +117,40 @@ const Track = () =>
         }
       };
 
+      const handleStatusUpdate = (data) =>
+      {
+        console.log('[Track] Socket status update received:', data);
+        if (data) {
+          const newStatus = data.status || data.newStatus;
+          if (newStatus) {
+            // Update the status in current delivery data
+            setDeliveryData(prev => ({
+              ...prev,
+              status: newStatus,
+              updatedAt: new Date().toISOString()
+            }));
+
+            // Show toast notification
+            setToastMsg(`✅ Status updated to: ${newStatus}`);
+            setShowToast(true);
+
+            // Show rating modal if delivery is completed and not yet rated
+            if ((newStatus?.toLowerCase() === 'delivered' || newStatus?.toLowerCase() === 'completed') &&
+              !hasRated &&
+              !deliveryData.rating &&
+              !deliveryData.customerRating) {
+              setTimeout(() =>
+              {
+                window.dispatchEvent(new CustomEvent('rating:show', { detail: deliveryData }));
+              }, 1500);
+            }
+          }
+        }
+      };
+
       socketService.on('delivery:location:updated', handleLocationUpdate);
+      socketService.on('delivery:statusChanged', handleStatusUpdate);
+      socketService.on('delivery:updated', handleStatusUpdate);
 
       // Initialize driver location from deliveryData: prefer currentLocation, then estimatedRiderLocation
       if (deliveryData.currentLocation) {
@@ -140,6 +173,8 @@ const Track = () =>
       {
         socketService.leaveRoom(deliveryId);
         socketService.off('delivery:location:updated', handleLocationUpdate);
+        socketService.off('delivery:statusChanged', handleStatusUpdate);
+        socketService.off('delivery:updated', handleStatusUpdate);
       };
     }
 

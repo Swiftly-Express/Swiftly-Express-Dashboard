@@ -55,7 +55,19 @@ export default function SmartRideBooking({ embedMode = false, initialData = {}, 
 
     const [formData, setFormData] = useState(() => {
         try {
-            const saved = localStorage.getItem('smartride_form_data');
+            const userId = (() => {
+                try {
+                    const userDataCookie = getCookie('user_data');
+                    if (userDataCookie) {
+                        const userData = JSON.parse(userDataCookie);
+                        return userData._id || userData.id || null;
+                    }
+                } catch (e) { }
+                return null;
+            })();
+
+            const key = userId ? `smartride_form_data_${userId}` : 'smartride_form_data';
+            const saved = localStorage.getItem(key);
             const base = saved ? JSON.parse(saved) : {};
             return {
                 deliveryType: 'smart_ride',
@@ -132,7 +144,9 @@ export default function SmartRideBooking({ embedMode = false, initialData = {}, 
     const [drawerHover, setDrawerHover] = useState('');
     const [riderDetails, setRiderDetails] = useState(() => {
         try {
-            const json = localStorage.getItem('smartride_rider_details');
+            const userId = getCurrentUserId();
+            const key = userId ? `smartride_rider_details_${userId}` : 'smartride_rider_details';
+            const json = localStorage.getItem(key);
             return json ? JSON.parse(json) : null;
         } catch (e) { return null; }
     });
@@ -141,31 +155,79 @@ export default function SmartRideBooking({ embedMode = false, initialData = {}, 
     const [driverLocation, setDriverLocation] = useState(null);
     const [unreadMessageCount, setUnreadMessageCount] = useState(0);
 
+    // Get current user ID for user-specific storage
+    const getCurrentUserId = () => {
+        try {
+            const userDataCookie = getCookie('user_data');
+            if (userDataCookie) {
+                const userData = JSON.parse(userDataCookie);
+                return userData._id || userData.id || null;
+            }
+        } catch (e) {
+            console.error('[SmartRide] Failed to get user ID:', e);
+        }
+        return null;
+    };
+
+    const currentUserId = getCurrentUserId();
+
+    // Helper functions for user-specific storage
+    const getStorageKey = (baseName) => {
+        return currentUserId ? `${baseName}_${currentUserId}` : baseName;
+    };
+
+    const setSmartRideStorage = (baseName, value) => {
+        if (!currentUserId) return; // Don't store if no user logged in
+        const key = getStorageKey(baseName);
+        try {
+            if (typeof value === 'string') {
+                localStorage.setItem(key, value);
+            } else {
+                localStorage.setItem(key, JSON.stringify(value));
+            }
+        } catch (e) {
+            console.error('[SmartRide] Storage error:', e);
+        }
+    };
+
+    const getSmartRideStorage = (baseName) => {
+        const key = getStorageKey(baseName);
+        try {
+            return localStorage.getItem(key);
+        } catch (e) {
+            return null;
+        }
+    };
+
     // Normalize any existing stored rider details on mount so UI uses vehicle fields
     useEffect(() => {
+        if (!currentUserId) return;
         try {
-            const stored = localStorage.getItem('smartride_rider_details');
+            const key = `smartride_rider_details_${currentUserId}`;
+            const stored = localStorage.getItem(key);
             if (!stored) return;
             const parsed = JSON.parse(stored);
             const norm = normalizeDriverProfile(parsed);
             if (JSON.stringify(norm) !== JSON.stringify(parsed)) {
-                try { localStorage.setItem('smartride_rider_details', JSON.stringify(norm)); } catch (e) { }
+                try { localStorage.setItem(key, JSON.stringify(norm)); } catch (e) { }
                 setRiderDetails(norm);
             } else {
                 setRiderDetails(parsed);
             }
         } catch (e) { }
-    }, []);
+    }, [currentUserId]);
 
-    // Persist form data so refresh doesn't force user to start over
+    // Persist form data so refresh doesn't force user to start over (user-specific)
     useEffect(() => {
+        if (!currentUserId) return; // Only persist if user is logged in
         try {
             const timeout = setTimeout(() => {
-                try { localStorage.setItem('smartride_form_data', JSON.stringify(formData)); } catch (e) { }
+                const key = `smartride_form_data_${currentUserId}`;
+                try { localStorage.setItem(key, JSON.stringify(formData)); } catch (e) { }
             }, 300);
             return () => clearTimeout(timeout);
         } catch (e) { }
-    }, [formData]);
+    }, [formData, currentUserId]);
 
     // Helper: attempt to fetch a driver's public/profile info by id (best-effort)
     const fetchDriverProfileById = async (driverId) => {
@@ -196,18 +258,29 @@ export default function SmartRideBooking({ embedMode = false, initialData = {}, 
         if (!profile) return profile;
         const out = { ...profile };
         try {
-            const vehicle = profile.vehicle || profile.vehicleInfo || profile.vehicleDetails || profile.vehicle_data || {};
+            const vehicle = profile.vehicle || profile.vehicleInfo || profile.vehicleDetails || profile.vehicle_data || profile.verification?.vehicle || {};
+            const verification = profile.verification || {};
+
             // fallback keys
-            const model = vehicle.model || vehicle.vehicleModel || vehicle.bikeModel || profile.bikeModel || profile.vehicleModel || '';
-            const plateNumber = vehicle.plateNumber || vehicle.plate || vehicle.plate_number || profile.plateNumber || profile.plate || '';
-            const profileImage = profile.profileImage || profile.profilePhoto || profile.imageUrl || profile.avatar || profile.photo || null;
-            const phone = profile.phone || profile.phoneNumber || profile.contact || profile.mobile || null;
+            const model = vehicle.model || vehicle.vehicleModel || vehicle.bikeModel || vehicle.makeModel || profile.bikeModel || profile.vehicleModel || '';
+            const plateNumber = vehicle.plateNumber || vehicle.plate || vehicle.plate_number || vehicle.licensePlate || profile.plateNumber || profile.plate || '';
+            const profileImage = profile.profileImage || profile.profilePhoto || profile.imageUrl || profile.avatar || profile.photo || verification.profilePhotoUrl || null;
+            const phone = profile.phone || profile.phoneNumber || profile.contact || profile.mobile || verification.contactInfo?.phone || null;
             const ridesCount = profile.ridesCount || profile.totalRides || profile.deliveriesCompleted || profile.completedDeliveries || null;
+
+            // Extract verification documents
+            const idDocumentUrl = verification.idDocumentUrl || profile.idDocumentUrl || null;
+            const driversLicenseUrl = verification.vehicle?.driversLicenseUrl || verification.driversLicenseUrl || profile.driversLicenseUrl || null;
+            const verificationStatus = verification.verificationStatus || profile.verificationStatus || null;
 
             out.vehicle = { ...(out.vehicle || {}), model: model || undefined, plateNumber: plateNumber || undefined };
             if (profileImage) out.profileImage = profileImage;
             if (phone) out.phone = phone;
             if (ridesCount != null) out.ridesCount = ridesCount;
+            if (idDocumentUrl) out.idDocumentUrl = idDocumentUrl;
+            if (driversLicenseUrl) out.driversLicenseUrl = driversLicenseUrl;
+            if (verificationStatus) out.verificationStatus = verificationStatus;
+            if (verification) out.verification = verification;
         } catch (e) { }
         return out;
     };
@@ -1401,12 +1474,8 @@ export default function SmartRideBooking({ embedMode = false, initialData = {}, 
                 try { socketService.on('connect', onConnectJoin); } catch (e) { }
                 try { socketService.joinRoom(room); } catch (e) { }
             } catch (e) { console.warn('[SmartRide] Failed to join delivery room:', e); }
-            setToastMsg('Delivery booked successfully!');
+            setToastMsg('Delivery booked successfully! Initializing payment...');
             setShowToast(true);
-            setIsProcessingPayment(false);
-            setIsCreating(false);
-            try { router.push('/customer/deliveries', 'root', 'replace'); } catch (e) { window.location.href = '/customer/deliveries'; }
-            return;
 
             // Open popup synchronously to preserve user gesture
             let paymentWindow = null;
@@ -1442,14 +1511,18 @@ export default function SmartRideBooking({ embedMode = false, initialData = {}, 
 
             const cleanupOnPaymentCancel = async (did) => {
                 try {
-                    if (did) await cancelDelivery(did, { reason: 'payment_cancelled' });
+                    // Don't cancel the booking - just clear payment cookies and notify user
+                    console.log('[SmartRide] Payment window closed without completion for delivery:', did);
                 } catch (cleanupErr) {
-                    console.warn('[SmartRide] Failed to cancel delivery on backend:', cleanupErr);
+                    console.warn('[SmartRide] Cleanup error:', cleanupErr);
                 }
                 try { deleteCookie('pending_payment_delivery_id'); deleteCookie('pending_payment_id'); } catch (e) { }
                 setIsProcessingPayment(false);
-                setToastMsg('Payment was not completed. Your booking was cancelled.');
+                setIsCreating(false);
+                setToastMsg('Payment was not completed. Your booking is still pending. You can try paying again.');
                 setShowToast(true);
+                // Navigate to deliveries page
+                try { router.push('/customer/deliveries', 'root', 'replace'); } catch (e) { window.location.href = '/customer/deliveries'; }
             };
 
             // If hosted authorization URL is provided, navigate popup to it
@@ -1503,19 +1576,38 @@ export default function SmartRideBooking({ embedMode = false, initialData = {}, 
                     },
                     callback: function (response) {
                         try { deleteCookie('pending_payment_delivery_id'); deleteCookie('pending_payment_id'); } catch (e) { }
+                        setIsProcessingPayment(false);
+                        setIsCreating(false);
                         // Navigate to payment callback route to let SPA finalize
                         try { router.push('/customer/payment/callback', 'root', 'replace'); } catch (e) { window.location.href = '/customer/payment/callback'; }
                     }
                 });
 
-                handler.openIframe();
-                setIsProcessingPayment(false);
-                return;
+                try {
+                    handler.openIframe();
+                    setIsProcessingPayment(false);
+                    setIsCreating(false);
+                    return;
+                } catch (iframeErr) {
+                    console.error('[SmartRide] Paystack iframe failed to open:', iframeErr);
+                    // Fallback: open payment callback route in a new tab so user can complete payment
+                    try {
+                        window.open('/customer/payment/callback', '_blank');
+                    } catch (openErr) {
+                        console.warn('[SmartRide] Fallback window.open also failed:', openErr);
+                    }
+                    setIsProcessingPayment(false);
+                    setIsCreating(false);
+                    // Navigate to deliveries even if iframe fails
+                    try { router.push('/customer/deliveries', 'root', 'replace'); } catch (e) { window.location.href = '/customer/deliveries'; }
+                    return;
+                }
             }
         } catch (err) {
             console.error('Payment error', err);
             alert(err?.message || 'Payment failed');
             setIsProcessingPayment(false);
+            setIsCreating(false);
         }
     };
 
@@ -2593,10 +2685,10 @@ export default function SmartRideBooking({ embedMode = false, initialData = {}, 
                                 </div>
                             </div>
 
-                            <div className="flex gap-4">
+                            <div className="flex gap-4 relative z-10">
                                 <button
                                     type="button"
-                                    className="px-4 py-2 mt-6 bg-white border border-gray-200 hover:bg-gray-50 rounded-full transition-colors text-[#000000] font-medium text-[15px]"
+                                    className="px-4 py-2 mt-6 bg-white border border-gray-200 hover:bg-gray-50 rounded-full transition-colors text-[#000000] font-medium text-[15px] pointer-events-auto"
                                     onClick={() => setCurrentStep('form')}
                                 >
                                     Back
@@ -2604,7 +2696,7 @@ export default function SmartRideBooking({ embedMode = false, initialData = {}, 
 
                                 <Button
                                     variant="primary"
-                                    className="!flex-1 !py-4 !bg-[#00B75A] !text-sm !font-[400] !rounded-full mt-6"
+                                    className="!flex-1 !py-4 !bg-[#00B75A] !text-sm !font-[400] !rounded-full mt-6 pointer-events-auto"
                                     onClick={findRider}
                                     disabled={isSearching}
                                 >
@@ -2935,11 +3027,25 @@ export default function SmartRideBooking({ embedMode = false, initialData = {}, 
                             <div className="flex flex-col md:flex-row items-start gap-6 md:gap-8 mb-10">
                                 {/* Rider Photo */}
                                 <div className="w-24 h-24 md:w-40 md:h-40 bg-gray-200 rounded-2xl overflow-hidden flex-shrink-0">
-                                    {riderDetails?.profileImage ? (
-                                        <img src={riderDetails.profileImage} alt={riderDetails?.fullName || 'Rider'} className="w-full h-full object-cover" />
-                                    ) : (
-                                        <div className="w-full h-full bg-gradient-to-br from-gray-300 to-gray-400"></div>
-                                    )}
+                                    {riderDetails?.profileImage || riderDetails?.profilePhoto || riderDetails?.imageUrl || riderDetails?.avatar || deliveryData?.rider?.profileImage || deliveryData?.driver?.profileImage ? (
+                                        <img
+                                            src={riderDetails?.profileImage || riderDetails?.profilePhoto || riderDetails?.imageUrl || riderDetails?.avatar || deliveryData?.rider?.profileImage || deliveryData?.driver?.profileImage}
+                                            alt={riderDetails?.fullName || riderDetails?.name || 'Rider'}
+                                            className="w-full h-full object-cover"
+                                            onError={(e) => {
+                                                e.target.style.display = 'none';
+                                                e.target.nextSibling.style.display = 'flex';
+                                            }}
+                                        />
+                                    ) : null}
+                                    <div
+                                        className="w-full h-full bg-gradient-to-br from-[#00B75A] to-[#00A04A] flex items-center justify-center"
+                                        style={{ display: (riderDetails?.profileImage || riderDetails?.profilePhoto || riderDetails?.imageUrl || riderDetails?.avatar || deliveryData?.rider?.profileImage || deliveryData?.driver?.profileImage) ? 'none' : 'flex' }}
+                                    >
+                                        <span className="text-white text-4xl md:text-6xl font-bold">
+                                            {(riderDetails?.fullName || riderDetails?.name || 'R')?.charAt(0)?.toUpperCase()}
+                                        </span>
+                                    </div>
                                 </div>
 
                                 {/* Rider Info */}
@@ -2952,6 +3058,12 @@ export default function SmartRideBooking({ embedMode = false, initialData = {}, 
                                         <span className="text-gray-500 text-sm font-medium">{riderDetails?.ridesCount ?? riderDetails?.totalRides ?? ''}</span>
                                     </div>
                                     <div className="grid grid-cols-1 md:grid-cols-3 gap-4 md:gap-6 mt-4 md:mt-6">
+                                        <div>
+                                            <p className="text-sm text-gray-500 mb-1">Phone Number</p>
+                                            <p className="font-semibold text-gray-900">
+                                                {riderDetails?.phone || riderDetails?.phoneNumber || riderDetails?.contact || deliveryData?.rider?.phone || deliveryData?.rider?.phoneNumber || deliveryData?.assignedRider?.phone || deliveryData?.driver?.phone || '-'}
+                                            </p>
+                                        </div>
                                         <div>
                                             <p className="text-sm text-gray-500 mb-1">Bike Model</p>
                                             <p className="font-semibold text-gray-900">{riderDetails?.vehicle?.model || riderDetails?.bikeModel || '-'}</p>
@@ -2971,11 +3083,20 @@ export default function SmartRideBooking({ embedMode = false, initialData = {}, 
                                 <div className="flex flex-col md:flex-col gap-3 w-full md:w-auto">
                                     <button
                                         type="button"
-                                        onClick={() => { const num = riderDetails?.phone || riderDetails?.phoneNumber || riderDetails?.contact; if (num) window.location.href = `tel:${num}`; }}
+                                        onClick={() => {
+                                            const num = riderDetails?.phone || riderDetails?.phoneNumber || riderDetails?.contact || deliveryData?.rider?.phone || deliveryData?.rider?.phoneNumber || deliveryData?.assignedRider?.phone || deliveryData?.driver?.phone;
+                                            if (num) {
+                                                window.location.href = `tel:${num}`;
+                                            } else {
+                                                alert('Rider phone number not available');
+                                            }
+                                        }}
                                         className="w-full md:w-auto flex items-center justify-center gap-2 px-6 py-3 bg-[#00B75A] text-white rounded-full hover:bg-[#00A050] transition-colors shadow-sm"
                                     >
                                         <Phone className="w-5 h-5" />
-                                        <span className="font-semibold">{riderDetails?.phone || riderDetails?.phoneNumber || riderDetails?.contact ? 'Call' : 'No Phone'}</span>
+                                        <span className="font-semibold">
+                                            {riderDetails?.phone || riderDetails?.phoneNumber || riderDetails?.contact || deliveryData?.rider?.phone || deliveryData?.rider?.phoneNumber || deliveryData?.assignedRider?.phone || deliveryData?.driver?.phone ? 'Call' : 'No Phone'}
+                                        </span>
                                     </button>
                                     <button
                                         type="button"
@@ -2996,41 +3117,99 @@ export default function SmartRideBooking({ embedMode = false, initialData = {}, 
                                 </div>
                             </div>
 
+                            {/* Verification Documents */}
+                            {(riderDetails?.verificationStatus === 'approved' || riderDetails?.verification?.verificationStatus === 'approved') && (
+                                <div className="border-t border-gray-200 pt-6 mt-6">
+                                    <h3 className="text-lg font-semibold text-gray-900 mb-4">Verification Documents</h3>
+                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                        {(riderDetails?.idDocumentUrl || riderDetails?.verification?.idDocumentUrl) && (
+                                            <div className="border border-gray-200 rounded-xl p-4">
+                                                <p className="text-sm text-gray-500 mb-2">ID Document</p>
+                                                <p className="text-xs text-gray-600 mb-3">
+                                                    {riderDetails?.verification?.identity?.idType || riderDetails?.idType || 'ID'}: {riderDetails?.verification?.identity?.idNumber || riderDetails?.idNumber || '-'}
+                                                </p>
+                                                <button
+                                                    onClick={() => window.open(riderDetails?.idDocumentUrl || riderDetails?.verification?.idDocumentUrl, '_blank')}
+                                                    className="w-full px-4 py-2 bg-[#00B75A] text-white rounded-lg hover:bg-[#00A04A] transition-colors text-sm font-medium"
+                                                >
+                                                    View ID Document
+                                                </button>
+                                            </div>
+                                        )}
+                                        {(riderDetails?.driversLicenseUrl || riderDetails?.verification?.vehicle?.driversLicenseUrl) && (
+                                            <div className="border border-gray-200 rounded-xl p-4">
+                                                <p className="text-sm text-gray-500 mb-2">Driver's License</p>
+                                                <p className="text-xs text-gray-600 mb-3">
+                                                    Verified license document
+                                                </p>
+                                                <button
+                                                    onClick={() => window.open(riderDetails?.driversLicenseUrl || riderDetails?.verification?.vehicle?.driversLicenseUrl, '_blank')}
+                                                    className="w-full px-4 py-2 bg-[#00B75A] text-white rounded-lg hover:bg-[#00A04A] transition-colors text-sm font-medium"
+                                                >
+                                                    View Driver's License
+                                                </button>
+                                            </div>
+                                        )}
+                                    </div>
+                                    <div className="mt-4 flex items-center gap-2 text-sm">
+                                        <div className="w-5 h-5 bg-green-100 rounded-full flex items-center justify-center">
+                                            <svg className="w-3 h-3 text-green-600" fill="currentColor" viewBox="0 0 20 20">
+                                                <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+                                            </svg>
+                                        </div>
+                                        <span className="text-green-700 font-medium">Verified Rider</span>
+                                        {riderDetails?.verification?.verifiedAt && (
+                                            <span className="text-gray-500">• Verified on {new Date(riderDetails.verification.verifiedAt).toLocaleDateString()}</span>
+                                        )}
+                                    </div>
+                                </div>
+                            )}
+
                             {/* Tracking Steps */}
                             <div className="border-t border-gray-200 pt-10">
                                 <h3 className="text-xl font-semibold text-gray-900 mb-8">Tracking</h3>
 
-                                <div className="flex items-center justify-between max-w-3xl mx-auto">
-                                    {/* Dispatch */}
-                                    <div className="flex flex-col items-center">
-                                        <div className="w-20 h-20 bg-[#00B75A] rounded-full flex items-center justify-center mb-3 shadow-sm">
-                                            <Bike className="w-10 h-10 text-white" />
+                                {(() => {
+                                    // Derive status flags like Track.jsx for dynamic highlighting
+                                    const statusLower = deliveryData?.status?.toLowerCase() || '';
+                                    const pickedUpReached = statusLower === 'picked-up' || statusLower === 'picked up' || statusLower === 'in-transit' || statusLower === 'in transit' || statusLower === 'delivered' || statusLower === 'completed';
+                                    const inTransitReached = statusLower === 'in-transit' || statusLower === 'in transit' || statusLower === 'delivered' || statusLower === 'completed';
+                                    const deliveredReached = statusLower === 'delivered' || statusLower === 'completed';
+
+                                    return (
+                                        <div className="flex items-center justify-between max-w-3xl mx-auto">
+                                            {/* Dispatch */}
+                                            <div className="flex flex-col items-center">
+                                                <div className="w-12 h-12 md:w-20 md:h-20 bg-[#00B75A] rounded-full flex items-center justify-center mb-3 shadow-sm">
+                                                    <Bike className="w-6 h-6 md:w-10 md:h-10 text-white" />
+                                                </div>
+                                                <p className="text-xs md:text-sm font-semibold text-[#00B75A]">Dispatch</p>
+                                            </div>
+
+                                            {/* Connecting line */}
+                                            <div className={`flex-1 h-1 ${pickedUpReached ? 'bg-[#00B75A]' : 'bg-gray-200'} mx-2 md:mx-6`}></div>
+
+                                            {/* Pick Up */}
+                                            <div className="flex flex-col items-center">
+                                                <div className={`w-12 h-12 md:w-20 md:h-20 ${pickedUpReached ? 'bg-[#00B75A]' : 'bg-gray-100'} rounded-full flex items-center justify-center mb-3`}>
+                                                    <Package className={`w-6 h-6 md:w-10 md:h-10 ${pickedUpReached ? 'text-white' : 'text-gray-400'}`} />
+                                                </div>
+                                                <p className={`text-xs md:text-sm font-semibold ${pickedUpReached ? 'text-[#00B75A]' : 'text-gray-400'}`}>Pick Up</p>
+                                            </div>
+
+                                            {/* Connecting line */}
+                                            <div className={`flex-1 h-1 ${inTransitReached ? 'bg-[#00B75A]' : 'bg-gray-200'} mx-2 md:mx-6`}></div>
+
+                                            {/* Delivery */}
+                                            <div className="flex flex-col items-center">
+                                                <div className={`w-12 h-12 md:w-20 md:h-20 ${deliveredReached ? 'bg-[#00B75A]' : 'bg-gray-100'} rounded-full flex items-center justify-center mb-3`}>
+                                                    <CheckCircle className={`w-6 h-6 md:w-10 md:h-10 ${deliveredReached ? 'text-white' : 'text-gray-400'}`} />
+                                                </div>
+                                                <p className={`text-xs md:text-sm font-semibold ${deliveredReached ? 'text-[#00B75A]' : 'text-gray-400'}`}>Delivery</p>
+                                            </div>
                                         </div>
-                                        <p className="text-sm font-semibold text-[#00B75A]">Dispatch</p>
-                                    </div>
-
-                                    {/* Connecting line */}
-                                    <div className="flex-1 h-1 bg-gray-200 mx-6"></div>
-
-                                    {/* Pick Up */}
-                                    <div className="flex flex-col items-center">
-                                        <div className="w-20 h-20 bg-gray-100 rounded-full flex items-center justify-center mb-3">
-                                            <Package className="w-10 h-10 text-gray-400" />
-                                        </div>
-                                        <p className="text-sm font-semibold text-gray-400">Pick Up</p>
-                                    </div>
-
-                                    {/* Connecting line */}
-                                    <div className="flex-1 h-1 bg-gray-200 mx-6"></div>
-
-                                    {/* Delivery */}
-                                    <div className="flex flex-col items-center">
-                                        <div className="w-20 h-20 bg-gray-100 rounded-full flex items-center justify-center mb-3">
-                                            <CheckCircle className="w-10 h-10 text-gray-400" />
-                                        </div>
-                                        <p className="text-sm font-semibold text-gray-400">Delivery</p>
-                                    </div>
-                                </div>
+                                    );
+                                })()}
                             </div>
                         </div>
                     </div>

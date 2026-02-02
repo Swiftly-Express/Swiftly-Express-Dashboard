@@ -10,10 +10,10 @@ import { sendDeliveryMessage, getDeliveryMessages } from '../../utils/authApi';
  * DeliveryChat Component
  * Real-time chat between customer and rider for a specific delivery
  * 
- * @param {string} deliveryId - The delivery ID
- * @param {string} currentUserRole - Either "customer" or "driver"
- * @param {string} className - Additional CSS classes
- * @param {string} maxHeight - Max height (e.g., "220px", "300px")
+ * @param {string} deliveryId 
+ * @param {string} currentUserRole 
+ * @param {string} className 
+ * @param {string} maxHeight 
  */
 const DeliveryChat = ({
   deliveryId,
@@ -59,9 +59,8 @@ const DeliveryChat = ({
     }
   };
 
-  // Load messages from localStorage on mount
+  
   useEffect(() => {
-    // Persist SmartRide progress into cookies so returning from chat restores Rider Details
     try {
       if (deliveryId) {
         try { setCookie('smartride_delivery_id', String(deliveryId)); } catch (e) { }

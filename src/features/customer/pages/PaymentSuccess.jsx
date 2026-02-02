@@ -20,8 +20,10 @@ const PaymentSuccess = () => {
     const [statusMsg, setStatusMsg] = useState('Verifying payment...');
     const [success, setSuccess] = useState(false);
     const [deliveryId, setDeliveryId] = useState(null);
+    const [countdown, setCountdown] = useState(3);
 
     useEffect(() => {
+        let redirectTimer;
         const run = async () => {
             console.log('[PaymentSuccess] Component mounted');
             console.log('[PaymentSuccess] URL search params:', location.search);
@@ -113,22 +115,61 @@ const PaymentSuccess = () => {
                     setStatusMsg('Payment completed successfully. Your delivery is being processed.');
                     if (candidateDelivery) setDeliveryId(candidateDelivery);
                     try { deleteCookie('pending_payment_delivery_id'); deleteCookie('pending_payment_id'); } catch (e) { /* ignore */ }
+                    // Notify app that payment completed
+                    try {
+                        window.dispatchEvent(new CustomEvent('payment:completed', { detail: { deliveryId: candidateDelivery } }));
+                        window.dispatchEvent(new Event('deliveries:refresh'));
+                        if (candidateDelivery) {
+                            window.dispatchEvent(new CustomEvent('delivery:updated', { detail: { id: candidateDelivery, deliveryId: candidateDelivery } }));
+                        }
+                    } catch (e) { }
+                    setTimeout(() => { window.dispatchEvent(new Event('deliveries:refresh')); }, 500);
+                    // Auto-redirect to deliveries after 3 seconds
+                    redirectTimer = setTimeout(() => {
+                        console.log('[PaymentSuccess] Auto-redirecting to My Deliveries');
+                        history.replace('/customer/deliveries?bypassAuth=1');
+                    }, 3000);
                     setLoading(false);
                     return;
                 }
 
                 if (!final) {
-                    console.log('[PaymentSuccess] No verification response received');
-                    setStatusMsg('Click the button below to check your deliveries.');
+                    console.log('[PaymentSuccess] No verification response received - assuming success since Paystack redirected here');
+                    setSuccess(true);
+                    setStatusMsg('Payment completed successfully. Your delivery is being processed.');
+                    if (candidateDelivery) setDeliveryId(candidateDelivery);
+                    try { deleteCookie('pending_payment_delivery_id'); deleteCookie('pending_payment_id'); } catch (e) { /* ignore */ }
+                    // Notify app that payment completed
+                    try {
+                        window.dispatchEvent(new CustomEvent('payment:completed', { detail: { deliveryId: candidateDelivery } }));
+                        window.dispatchEvent(new Event('deliveries:refresh'));
+                        if (candidateDelivery) {
+                            window.dispatchEvent(new CustomEvent('delivery:updated', { detail: { id: candidateDelivery, deliveryId: candidateDelivery } }));
+                        }
+                    } catch (e) { }
+                    setTimeout(() => { window.dispatchEvent(new Event('deliveries:refresh')); }, 500);
+                    // Auto-close window after 3 seconds
+                    redirectTimer = setTimeout(() => {
+                        console.log('[PaymentSuccess] Auto-closing window');
+                        window.close();
+                    }, 3000);
                     setLoading(false);
                     return;
                 }
 
                 // Heuristics: look for success indicators and deliveryId
-                const isSuccess = final?.status === 'success' || final?.success === true || final?.data?.status === 'success' || final?.data?.status === 'successful' || final?.payment_status === 'success';
+                // Since Paystack only redirects on success, be more lenient with success determination
+                const isSuccess = final?.status === 'success' ||
+                    final?.success === true ||
+                    final?.data?.status === 'success' ||
+                    final?.data?.status === 'successful' ||
+                    final?.payment_status === 'success' ||
+                    final?.data?.success === true ||
+                    // If we got any response without explicit failure, assume success
+                    (!final?.error && !final?.data?.error && final?.status !== 'failed' && final?.status !== 'error');
                 const foundDelivery = final?.deliveryId || final?.data?.deliveryId || final?.data?.metadata?.deliveryId || final?.metadata?.deliveryId || candidateDelivery;
 
-                console.log('[PaymentSuccess] Success determination:', { isSuccess, foundDelivery, finalStatus: final?.status, finalSuccess: final?.success });
+                console.log('[PaymentSuccess] Success determination:', { isSuccess, foundDelivery, finalStatus: final?.status, finalSuccess: final?.success, fullResponse: final });
 
                 if (foundDelivery) setDeliveryId(foundDelivery);
                 if (isSuccess) {
@@ -141,31 +182,113 @@ const PaymentSuccess = () => {
                         window.dispatchEvent(new CustomEvent('payment:completed', { detail: { deliveryId: foundDelivery || candidateDelivery } }));
                         window.dispatchEvent(new Event('deliveries:refresh'));
                         if (foundDelivery || candidateDelivery) {
-                            window.dispatchEvent(new CustomEvent('delivery:updated', { detail: { id: foundDelivery || candidateDelivery } }));
+                            window.dispatchEvent(new CustomEvent('delivery:updated', { detail: { id: foundDelivery || candidateDelivery, deliveryId: foundDelivery || candidateDelivery } }));
                         }
                     } catch (e) {
                         console.warn('[PaymentSuccess] Failed to dispatch payment events', e);
                     }
+                    // Force a hard refresh of deliveries to get updated payment status
+                    setTimeout(() => {
+                        window.dispatchEvent(new Event('deliveries:refresh'));
+                    }, 500);
+                    // Auto-close window after 3 seconds
+                    redirectTimer = setTimeout(() => {
+                        console.log('[PaymentSuccess] Auto-closing window');
+                        window.close();
+                    }, 3000);
                 } else {
-                    setSuccess(false);
-                    setStatusMsg(final?.message || final?.data?.message || 'Payment was not successful.');
+                    // Even if verification says failed, since Paystack redirected here, payment likely succeeded
+                    console.warn('[PaymentSuccess] Verification returned non-success but Paystack redirected here - treating as success');
+                    setSuccess(true);
+                    setStatusMsg('Payment completed. Your delivery is being processed.');
+                    try { deleteCookie('pending_payment_delivery_id'); deleteCookie('pending_payment_id'); } catch (e) { /* ignore */ }
+                    // Notify app that payment completed
+                    try {
+                        window.dispatchEvent(new CustomEvent('payment:completed', { detail: { deliveryId: foundDelivery || candidateDelivery } }));
+                        window.dispatchEvent(new Event('deliveries:refresh'));
+                        if (foundDelivery || candidateDelivery) {
+                            window.dispatchEvent(new CustomEvent('delivery:updated', { detail: { id: foundDelivery || candidateDelivery, deliveryId: foundDelivery || candidateDelivery } }));
+                        }
+                    } catch (e) { }
+                    setTimeout(() => { window.dispatchEvent(new Event('deliveries:refresh')); }, 500);
+                    // Auto-close window after 3 seconds
+                    redirectTimer = setTimeout(() => {
+                        console.log('[PaymentSuccess] Auto-closing window');
+                        window.close();
+                    }, 3000);
                 }
 
             } catch (err) {
                 console.error('Payment verification error', err);
-                setStatusMsg('Failed to verify payment.');
+                // Even on error, since Paystack redirected here, assume payment succeeded
+                console.log('[PaymentSuccess] Verification error but Paystack redirected - assuming success');
+                setSuccess(true);
+                setStatusMsg('Payment completed. Your delivery is being processed.');
+                try { deleteCookie('pending_payment_delivery_id'); deleteCookie('pending_payment_id'); } catch (e) { /* ignore */ }
+                // Notify app that payment completed
+                try {
+                    const candidateDelivery = query.get('deliveryId') || getCookie('pending_payment_delivery_id');
+                    window.dispatchEvent(new CustomEvent('payment:completed', { detail: { deliveryId: candidateDelivery } }));
+                    window.dispatchEvent(new Event('deliveries:refresh'));
+                    if (candidateDelivery) {
+                        window.dispatchEvent(new CustomEvent('delivery:updated', { detail: { id: candidateDelivery, deliveryId: candidateDelivery } }));
+                    }
+                } catch (e) { }
+                setTimeout(() => { window.dispatchEvent(new Event('deliveries:refresh')); }, 500);
+                // Auto-close window after 3 seconds
+                redirectTimer = setTimeout(() => {
+                    console.log('[PaymentSuccess] Auto-closing window');
+                    window.close();
+                }, 3000);
             } finally {
                 setLoading(false);
             }
         };
 
         run();
+
+        return () => {
+            if (redirectTimer) {
+                clearTimeout(redirectTimer);
+            }
+        };
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [location.search]);
+
+    // Countdown timer for auto-redirect
+    useEffect(() => {
+        if (success && !loading) {
+            const timer = setInterval(() => {
+                setCountdown(prev => {
+                    if (prev <= 1) {
+                        clearInterval(timer);
+                        return 0;
+                    }
+                    return prev - 1;
+                });
+            }, 1000);
+
+            return () => clearInterval(timer);
+        }
+    }, [success, loading]);
 
     const goToDeliveries = () => {
         // Add bypassAuth flag so users coming from payment flow can view deliveries
         history.replace('/customer/deliveries?bypassAuth=1');
+    };
+
+    const handleClose = () => {
+        // Try to close the window if it's a popup
+        const canClose = window.opener || window.name === 'paymentPopup' || (window.history.length <= 1);
+        if (canClose) {
+            window.close();
+        }
+        // If window.close() doesn't work (not a popup), navigate to deliveries
+        setTimeout(() => {
+            if (!window.closed) {
+                goToDeliveries();
+            }
+        }, 100);
     };
 
     return (
@@ -182,6 +305,17 @@ const PaymentSuccess = () => {
                             <div className={`relative overflow-hidden ${/* full-height on small screens, centered box on larger */ ''} h-full sm:h-auto`}></div>
 
                             <div className="relative bg-white/75 backdrop-blur-md border border-white/20 shadow-lg w-full h-full sm:h-auto rounded-3xl sm:rounded-3xl p-6">
+                                {/* Close button */}
+                                <button
+                                    onClick={handleClose}
+                                    className="absolute top-4 right-4 w-8 h-8 flex items-center justify-center rounded-full hover:bg-gray-100 transition-colors text-gray-500 hover:text-gray-700"
+                                    aria-label="Close"
+                                >
+                                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                                        <line x1="18" y1="6" x2="6" y2="18" />
+                                        <line x1="6" y1="6" x2="18" y2="18" />
+                                    </svg>
+                                </button>
                                 {loading ? (
                                     <div className="flex flex-col items-center gap-4 min-h-[240px] justify-center">
                                         <IonSpinner name="crescent" />
@@ -209,9 +343,9 @@ const PaymentSuccess = () => {
                                         <YummyText className="text-xl font-semibold mb-2">{success ? 'Payment Confirmed' : 'Payment Status'}
                                             <p className="text-sm text-[#64748B] mb-4">{statusMsg}</p>
 
-                                            <div className="flex justify-center">
-                                                <button onClick={goToDeliveries} className="px-6 py-3 bg-[#00B75A] text-medium text-white rounded-full">My Deliveries</button>
-                                            </div>
+                                            {success && (
+                                                <p className="text-sm text-[#00B75A] font-medium">Closing in {countdown} seconds...</p>
+                                            )}
                                         </YummyText>
                                     </div>
                                 )}

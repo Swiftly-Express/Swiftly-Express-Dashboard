@@ -55,60 +55,17 @@ const PaymentCallback = () => {
         console.log('[PaymentCallback] Target URL (full):', fullUrl);
         setStatus('Payment received! Verifying...');
 
-        // If this page was opened as a popup by the app, navigate the opener to the success page and close this popup.
-        // Otherwise, navigate within the SPA.
-        try {
-          const opener = window.opener;
-          console.log('[PaymentCallback] Checking opener:', { hasOpener: !!opener, closed: opener?.closed });
-
-          if (opener && !opener.closed) {
-            console.log('[PaymentCallback] Opener found, attempting navigation');
-            try {
-              opener.location.href = fullUrl;
-              console.log('[PaymentCallback] Opener navigation triggered, closing popup in 300ms');
-              // Give the opener a moment to navigate then close this window
-              setTimeout(() => {
-                try {
-                  console.log('[PaymentCallback] Closing popup window');
-                  window.close();
-                } catch (e) {
-                  console.warn('[PaymentCallback] Could not close window:', e);
-                }
-              }, 300);
-              return;
-            } catch (e) {
-              console.warn('[PaymentCallback] Direct opener navigation failed:', e);
-              // Fallback to postMessage if direct navigation is blocked
-              try {
-                console.log('[PaymentCallback] Trying postMessage fallback');
-                opener.postMessage({ type: 'PAYMENT_REDIRECT', url: relativeUrl, fullUrl: fullUrl }, '*');
-                console.log('[PaymentCallback] postMessage sent, closing popup in 300ms');
-                setTimeout(() => {
-                  try {
-                    console.log('[PaymentCallback] Closing popup after postMessage');
-                    window.close();
-                  } catch (err) {
-                    -
-                      console.warn('[PaymentCallback] Could not close after postMessage:', err);
-                  }
-                }, 300);
-                return;
-              } catch (postErr) {
-                console.warn('[PaymentCallback] postMessage failed:', postErr);
-              }
-            }
-          } else {
-            console.log('[PaymentCallback] No opener found or opener closed, navigating in current window');
-          }
-        } catch (e) {
-          console.warn('[PaymentCallback] opener check failed', e);
-        }
-
-        // Small delay to show the message, then navigate in this window
-        console.log('[PaymentCallback] Navigating in current window to:', relativeUrl);
+        // Navigate this window (the popup) to the success page
+        // The success page will show confirmation and auto-close after 3 seconds
+        console.log('[PaymentCallback] Navigating popup to success page');
         setTimeout(() => {
-          console.log('[PaymentCallback] Executing history.replace');
-          history.replace(relativeUrl);
+          console.log('[PaymentCallback] Executing navigation');
+          try {
+            history.replace(relativeUrl);
+          } catch (e) {
+            console.warn('[PaymentCallback] history.replace failed, using window.location:', e);
+            window.location.href = relativeUrl;
+          }
         }, 500);
 
       } catch (err) {
