@@ -18,6 +18,28 @@ const sideBottomShadow = {
   boxShadow: '2px 2px 4px rgba(0,0,0,0.06), -2px 2px 4px rgba(0,0,0,0.06), 0 4px 8px rgba(0,0,0,0.08)'
 };
 
+// Format Nigerian phone for display; normalize for tel: link (0xxx → +234xxx)
+const formatNigerianPhone = (phone) =>
+{
+  if (!phone || typeof phone !== 'string') return '';
+  const cleaned = phone.replace(/[\s\-()]/g, '').replace(/[^0-9+]/g, '');
+  if (cleaned.length < 7) return phone;
+  if (cleaned.startsWith('0')) return `${cleaned.slice(0, 4)} ${cleaned.slice(4, 7)} ${cleaned.slice(7)}`;
+  if (cleaned.startsWith('+234')) return `+234 ${cleaned.slice(4, 7)} ${cleaned.slice(7, 10)} ${cleaned.slice(10)}`;
+  if (cleaned.startsWith('234')) return `+234 ${cleaned.slice(3, 6)} ${cleaned.slice(6, 9)} ${cleaned.slice(9)}`;
+  return cleaned.length >= 10 ? `${cleaned.slice(0, 4)} ${cleaned.slice(4, 7)} ${cleaned.slice(7)}` : phone;
+};
+const normalizePhoneForTel = (phone) =>
+{
+  if (!phone || typeof phone !== 'string') return '';
+  let cleaned = phone.replace(/[\s\-()]/g, '').replace(/[^0-9+]/g, '');
+  if (cleaned.startsWith('+234')) return cleaned;
+  if (cleaned.startsWith('234')) return `+${cleaned}`;
+  if (cleaned.startsWith('0') && cleaned.length >= 10) return `+234${cleaned.slice(1)}`;
+  if (cleaned.length >= 10 && !cleaned.startsWith('0')) return `+234${cleaned}`;
+  return cleaned ? `+234${cleaned}` : '';
+};
+
 const Track = () =>
 {
   const [trackingId, setTrackingId] = useState('');
@@ -284,11 +306,23 @@ const Track = () =>
   const inTransitReached = statusLower === 'in-transit' || statusLower === 'in transit' || statusLower === 'delivered';
   const deliveredReached = statusLower === 'delivered';
 
-  // Robust recipient fallbacks (handle different backend shapes)
-  const recipientName = deliveryData?.recipient?.name || deliveryData?.recipientName || deliveryData?.deliveryName || deliveryData?.receiverName || deliveryData?.recipient_full_name || deliveryData?.toName || deliveryData?.to?.name || 'N/A';
-  const recipientPhone = deliveryData?.recipient?.phone || deliveryData?.recipientPhone || deliveryData?.receiverPhone || deliveryData?.toPhone || deliveryData?.to?.phone || 'N/A';
-  const recipientEmail = deliveryData?.recipient?.email || deliveryData?.recipientEmail || deliveryData?.toEmail || deliveryData?.to?.email || 'N/A';
+  // Prefer recipientInfo (canonical); fallback to legacy flat fields
+  const ri = deliveryData?.recipientInfo;
+  const recipientName = (ri?.name && String(ri.name).trim()) || deliveryData?.recipient?.name || deliveryData?.recipientName || deliveryData?.deliveryName || deliveryData?.receiverName || deliveryData?.recipient_full_name || deliveryData?.toName || deliveryData?.to?.name || 'N/A';
+  const recipientPhoneRaw = ri?.phone || deliveryData?.recipient?.phone || deliveryData?.recipientPhone || deliveryData?.deliveryContactPhone || deliveryData?.receiverPhone || deliveryData?.toPhone || deliveryData?.to?.phone;
+  const recipientPhone = recipientPhoneRaw && String(recipientPhoneRaw).trim() ? String(recipientPhoneRaw).trim() : 'N/A';
+  const recipientEmailRaw = ri?.email || deliveryData?.recipient?.email || deliveryData?.recipientEmail || deliveryData?.toEmail || deliveryData?.to?.email;
+  const recipientEmail = recipientEmailRaw && String(recipientEmailRaw).trim() ? String(recipientEmailRaw).trim() : 'N/A';
   const recipientAddressLine = deliveryData?.deliveryAddress?.street || deliveryData?.deliveryAddress?.address || deliveryData?.deliveryAddress || deliveryData?.deliveryAddressString || '';
+  // Weight: avoid appending " kg" if value already contains "kg" (fixes "0-5 kg kg")
+  const weightDisplay = (() =>
+  {
+    const w = deliveryData?.packageDetails?.weight;
+    if (!w) return 'N/A';
+    const s = String(w).trim();
+    if (/kg$/i.test(s)) return s;
+    return s ? `${s} kg` : 'N/A';
+  })();
 
   // Handle rating submission
   const handleSubmitRating = async (ratingData) =>
@@ -495,7 +529,7 @@ const Track = () =>
                       <div className="flex justify-between items-center">
                         <span className="text-sm text-[#64748B]">Weight</span>
                         <span className="text-sm font-medium text-[#0F172A]">
-                          {deliveryData.packageDetails?.weight || 'N/A'} kg
+                          {weightDisplay}
                         </span>
                       </div>
 
@@ -530,7 +564,13 @@ const Track = () =>
                       <div className="flex justify-between items-center">
                         <span className="text-sm text-[#64748B]">Phone</span>
                         <span className="text-sm font-medium text-[#0F172A]">
-                          {recipientPhone}
+                          {recipientPhone !== 'N/A' && normalizePhoneForTel(recipientPhone) ? (
+                            <a href={`tel:${normalizePhoneForTel(recipientPhone)}`} className="text-[#00B75A] hover:underline no-underline">
+                              {formatNigerianPhone(recipientPhone)}
+                            </a>
+                          ) : (
+                            recipientPhone
+                          )}
                         </span>
                       </div>
 
