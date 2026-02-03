@@ -666,6 +666,18 @@ const Book = () => {
         detail: response?.data || response
       }));
 
+      // Clear form data from localStorage after successful delivery creation
+      try {
+        // Clear any persisted form data (if it exists)
+        const keys = Object.keys(localStorage).filter(key =>
+          key.includes('delivery_form') || key.includes('express_form')
+        );
+        keys.forEach(key => localStorage.removeItem(key));
+        console.log('[Book] Cleared form data from localStorage after successful delivery creation');
+      } catch (e) {
+        console.warn('[Book] Failed to clear form data:', e);
+      }
+
       setToastMsg('Delivery booked successfully!');
       setShowToast(true);
       setTimeout(() => {

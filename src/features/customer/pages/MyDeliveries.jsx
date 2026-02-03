@@ -281,25 +281,6 @@ const DeliveryCard = ({ delivery }) => {
                 {delivery.deliveryAddress?.street}, {delivery.deliveryAddress?.city}, {delivery.deliveryAddress?.state}
               </div>
             </div>
-            {delivery.earningsBreakdown && (
-              <div className="md:col-span-2 mt-2 p-3 bg-gray-50 rounded-xl">
-                <div className="text-xs font-medium text-[#64748B] mb-2">Earnings breakdown</div>
-                <div className="grid grid-cols-2 md:grid-cols-4 gap-2 text-sm">
-                  <div>
-                    <span className="text-[#64748B]">Total</span>
-                    <p className="font-medium text-[#0F172A]">₦{Number(delivery.earningsBreakdown.deliveryTotal || 0).toLocaleString()}</p>
-                  </div>
-                  <div>
-                    <span className="text-[#64748B]">Rider</span>
-                    <p className="font-medium text-[#0F172A]">₦{Number(delivery.earningsBreakdown.driverEarnings || 0).toLocaleString()}</p>
-                  </div>
-                  <div>
-                    <span className="text-[#64748B]">Platform ({delivery.earningsBreakdown.companyPercentage ?? 0}%)</span>
-                    <p className="font-medium text-[#0F172A]">₦{Number(delivery.earningsBreakdown.companyEarnings || 0).toLocaleString()}</p>
-                  </div>
-                </div>
-              </div>
-            )}
             <div className="md:col-span-2 mt-3">
               <div className="text-xs font-medium text-[#64748B] mb-2">Chat with rider</div>
               <DeliveryChat

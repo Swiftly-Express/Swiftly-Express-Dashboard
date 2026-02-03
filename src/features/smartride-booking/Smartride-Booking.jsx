@@ -1281,6 +1281,15 @@ export default function SmartRideBooking({ embedMode = false, initialData = {}, 
                 setCookie('smartride_delivery_id', String(dId));
             } catch (e) { }
 
+            // Clear form data from localStorage after successful delivery creation
+            try {
+                const formKey = currentUserId ? `smartride_form_data_${currentUserId}` : 'smartride_form_data';
+                localStorage.removeItem(formKey);
+                console.log('[SmartRide] Cleared form data from localStorage after successful delivery creation');
+            } catch (e) {
+                console.warn('[SmartRide] Failed to clear form data:', e);
+            }
+
             try {
                 const room = `delivery:${dId}`;
                 socketService.connect();
