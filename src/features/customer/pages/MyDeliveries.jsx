@@ -143,14 +143,9 @@ const DeliveryCard = ({ delivery }) => {
         )}
       {/* Mobile & Desktop Layout */}
       <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
-        <div className="flex items-start gap-3 md:gap-4 flex-1">
-          {/* Package Icon */}
-          <div className="w-10 h-10 md:w-12 md:h-12 bg-blue-50 rounded-xl flex items-center justify-center flex-shrink-0">
-            <img src="/blockicon.svg" alt="Package" className="w-5 h-5 md:w-6 md:h-6" />
-          </div>
-
+        <div className="flex-1">
           {/* Package Details */}
-          <div className="flex-1 min-w-0">
+          <div className="flex-1 min-w-0 pr-24 md:pr-0">
             <div className="flex flex-col md:flex-row md:items-center gap-2 md:gap-3 mb-2">
               <YummyText className="text-base md:text-lg font-medium text-[#0F172A] truncate">
                 {delivery.packageDetails?.description || 'Package'}
@@ -191,15 +186,11 @@ const DeliveryCard = ({ delivery }) => {
               </div>
             </div>
 
-            <div className="text-sm text-[#4A5565] mb-1 flex items-center gap-1 flex-wrap">
-              <span className="truncate max-w-[120px] md:max-w-none">{delivery.pickupAddress?.city || 'Pickup'}</span>
-              <IonIcon icon={arrowForward} className="text-sm flex-shrink-0" />
-              <span className="truncate max-w-[120px] md:max-w-none">{delivery.deliveryAddress?.city || 'Delivery'}</span>
-            </div>
-
-            <div className="text-xs text-[#4A5565] mb-3">
-              Booked: {formatDate(delivery.createdAt || delivery.bookedDate)}
-            </div>
+            <YummyText>
+              <div className="text-xs text-[#4A5565] mb-3">
+                Booked: {formatDate(delivery.createdAt || delivery.bookedDate)}
+              </div>
+            </YummyText>
 
             {/* Progress Bar */}
             <div className="w-full md:max-w-[300px]">

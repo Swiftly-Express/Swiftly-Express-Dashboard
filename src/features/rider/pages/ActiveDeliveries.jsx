@@ -657,31 +657,39 @@ const ActiveDeliveries = () => {
             <div className="flex items-center gap-2 bg-gray-100 p-1 rounded-full w-full">
               <button
                 onClick={() => setActiveTab('yet-to-start')}
-                className={`flex-1 px-4 py-2.5 whitespace-nowrap rounded-full text-sm font-normal transition-colors ${activeTab === 'yet-to-start'
+                className={`flex-1 px-2 md:px-4 py-2.5 whitespace-nowrap rounded-full text-xs md:text-sm font-normal transition-colors ${activeTab === 'yet-to-start'
                   ? 'text-[#0F172A] bg-white shadow-sm'
                   : 'text-[#64748B]'
                   }`}
               >
-                Yet to Start ({deliveries.filter(d => {
+                <span className="hidden md:inline">Yet to Start ({deliveries.filter(d => {
                   const status = (d.status || '').toLowerCase();
                   return status.includes('assigned') || status.includes('pending');
-                }).length})
+                }).length})</span>
+                <span className="md:hidden">To Start ({deliveries.filter(d => {
+                  const status = (d.status || '').toLowerCase();
+                  return status.includes('assigned') || status.includes('pending');
+                }).length})</span>
               </button>
               <button
                 onClick={() => setActiveTab('in-progress')}
-                className={`flex-1 px-4 py-2.5 whitespace-nowrap rounded-full text-sm font-normal transition-colors ${activeTab === 'in-progress'
+                className={`flex-1 px-2 md:px-4 py-2.5 whitespace-nowrap rounded-full text-xs md:text-sm font-normal transition-colors ${activeTab === 'in-progress'
                   ? 'text-[#0F172A] bg-white shadow-sm'
                   : 'text-[#64748B]'
                   }`}
               >
-                In Progress ({deliveries.filter(d => {
+                <span className="hidden md:inline">In Progress ({deliveries.filter(d => {
                   const status = (d.status || '').toLowerCase();
                   return status.includes('picked') || status.includes('transit');
-                }).length})
+                }).length})</span>
+                <span className="md:hidden">Active ({deliveries.filter(d => {
+                  const status = (d.status || '').toLowerCase();
+                  return status.includes('picked') || status.includes('transit');
+                }).length})</span>
               </button>
               <button
                 onClick={() => setActiveTab('completed')}
-                className={`flex-1 px-4 py-2.5 whitespace-nowrap rounded-full text-sm font-normal transition-colors ${activeTab === 'completed'
+                className={`flex-1 px-2 md:px-4 py-2.5 whitespace-nowrap rounded-full text-xs md:text-sm font-normal transition-colors ${activeTab === 'completed'
                   ? 'text-[#0F172A] bg-white shadow-sm'
                   : 'text-[#64748B]'
                   }`}
