@@ -908,12 +908,12 @@ const AvailableOrders = () => {
 
           {/* Details drawer (simple bottom sheet) */}
           {selectedOrder && (
-            <div className="fixed inset-0 z-50 flex items-end">
+            <div className="fixed inset-0 z-50 flex items-end" style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0 }}>
               {/* Backdrop */}
-              <div onClick={() => setSelectedOrder(null)} className="absolute inset-0 bg-black/40" />
-              <div className="relative w-full">
+              <div onClick={() => setSelectedOrder(null)} className="absolute inset-0 bg-black/40" style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0 }} />
+              <div className="relative w-full" style={{ maxHeight: '75vh' }}>
                 <YummyText>
-                  <div className="max-h-[75vh] overflow-y-auto bg-white rounded-t-2xl p-4 shadow-lg" style={sideBottomShadow}>
+                  <div className="max-h-[75vh] overflow-y-auto bg-white rounded-t-2xl p-4 shadow-lg" style={{ ...sideBottomShadow, maxHeight: '75vh' }}>
                     <div className="flex items-center justify-between mb-3">
                       <div>
                         <div className="text-lg font-medium text-[#0F172A]">{selectedOrder.trackingNumber || selectedOrder.id || 'Order'}</div>
@@ -932,9 +932,16 @@ const AvailableOrders = () => {
                       />
                     </div>
 
-                    <div className="text-sm text-[#0F172A] mb-2 font-semibold">Pickup: {selectedOrder.pickupAddress?.street || selectedOrder.pickupAddress || selectedOrder.pickupName}</div>
-                    <div className="text-sm text-[#0F172A] mb-2 font-semibold">Delivery: {selectedOrder.deliveryAddress?.street || selectedOrder.deliveryAddress || selectedOrder.deliveryName}</div>
-                    <div className="text-sm text-[#64748B] mb-2 font-semibold">Distance: {selectedOrder.distance ? `${selectedOrder.distance} km` : 'N/A'}</div>
+                    <div className="mb-2">
+                      <span className="text-sm text-[#0F172A] font-semibold">Pickup:</span>
+                      <div className="text-sm text-[#64748B] font-sm">{selectedOrder.pickupAddress?.street || selectedOrder.pickupAddress || selectedOrder.pickupName}</div>
+                    </div>
+                    <div className="mb-2">
+                      <span className="text-sm text-[#0F172A] font-semibold">Delivery:</span>
+                      <div className="text-sm text-[#64748B] font-sm">{selectedOrder.deliveryAddress?.street || selectedOrder.deliveryAddress || selectedOrder.deliveryName}</div>
+                    </div>
+                    <span className="text-sm text-[#64748B] mb-2 font-semibold">Distance: </span>
+                    <div className="text-sm text-[#64748B] mb-4">{selectedOrder.distance ? `${selectedOrder.distance} km` : 'N/A'}</div>
 
                     {/* Package Image Preview */}
                     {(() => {
