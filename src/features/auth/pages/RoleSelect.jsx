@@ -5,7 +5,7 @@ import { YummyText } from '../../../components/YummyText';
 
 const RoleSelect = () => {
   console.log('[RoleSelect] Component mounting...');
-  
+
   const router = useIonRouter();
   const [selectedRole, setSelectedRole] = useState('customer'); // 'customer' or 'rider'
 
@@ -46,93 +46,97 @@ const RoleSelect = () => {
 
   return (
     <IonPage>
-      <IonContent className="ion-no-padding">
-        <div className="min-h-screen bg-[#F5F5F5] flex flex-col p-4">
-          <div className="flex-1 grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-8">
+      <IonContent className="ion-no-padding" scrollY={false}>
+        <div className="h-screen bg-[#F5F5F5] flex flex-col p-3 md:p-4 overflow-hidden">
+          <div className="flex-1 grid grid-cols-1 md:grid-cols-2 gap-3 md:gap-4 overflow-hidden">
             {/* Rider Card */}
-            <div className={`relative bg-[#1E1E1E] rounded-[32px] p-6 md:p-12 flex flex-col overflow-hidden ${selectedRole === 'rider' ? 'block' : 'hidden md:flex'}`}>
-              <div className="relative w-full flex justify-center mb-4 md:mb-8">
-                <img 
-                  src="/despatch-man.svg" 
+            <div className={`relative bg-[#1E1E1E] rounded-3xl md:rounded-[32px] p-5 md:p-8 flex flex-col justify-between overflow-hidden ${selectedRole === 'rider' ? 'flex' : 'hidden md:flex'}`}>
+              <div className="relative w-full flex justify-center flex-shrink-0">
+                <img
+                  src="/despatch-man.svg"
                   alt="Delivery Rider on Motorcycle"
-                  className="w-[78%] md:w-[80%] h-auto object-cover"
+                  className="w-[85%] md:w-[95%] h-auto object-contain max-h-[60vh] md:max-h-[45vh]"
                 />
               </div>
 
-              <div className="relative z-10 mt-auto">
-                <YummyText className="text-[32px] md:text-[45px] font-[300] text-white leading-none mb-3 md:mb-0">
-                  Become a<br />Swiftly <span className="text-[#00D68F] font-semibold">Rider</span>
-                </YummyText>
-                <YummyText className="text-[#FFFFFF] font-[400] text-[13px] md:text-lg flex leading-snug mt-2 mb-4 md:mb-5 md:max-w-md opacity-90">
-                  Earn more while delivering faster. Join Swiftly's <br className="hidden md:inline" /> growing network of professional riders and start <br className="hidden md:inline" /> receiving delivery requests instantly.
-                </YummyText>
-                <Button
-                  variant="primary"
-                  onClick={handleRiderSignup}
-                  className="!bg-[#00D68F] hover:!bg-[#00B876] mb-3 md:mb-3 !text-white text-sm md:text-xs font-[500] mx-auto md:mx-0 w-auto md:w-auto !px-6 !py-2.5 rounded-full transition-all duration-300"
-                >
-                  <YummyText>Create Account</YummyText>
-                </Button>
-                <YummyText className="hidden md:block text-white text-[13px] md:text-sm">
-                  Already have an account? <span onClick={handleRiderSignin} className="text-[#00D68F] font-medium cursor-pointer hover:underline"> Sign in</span>
+              <div className="relative z-10 flex-shrink-0">
+                <YummyText>
+                  <div className="text-[35px] md:text-[38px] font-[300] text-white leading-tight mb-2">
+                    Become a<br />Swiftly <span className="text-[#00D68F]  font-semibold">Rider</span>
+                  </div>
+                  <div className="text-[#FFFFFF] font-[400] text-[14px] md:text-[15px] leading-tight mt-1.5 mb-3 md:mb-4 md:max-w-md opacity-90">
+                    Earn more while delivering faster. Join Swiftly's growing network of professional riders and start receiving delivery requests instantly.
+                  </div>
+                  <Button
+                    variant="primary"
+                    onClick={handleRiderSignup}
+                    className="!bg-[#00D68F] hover:!bg-[#00B876] mb-2 !text-white text-xs md:text-sm font-[500] mx-auto md:mx-0 w-auto !px-5 md:!px-6 !py-2 md:!py-2.5 rounded-full transition-all duration-300"
+                  >
+                    <div>Create Account</div>
+                  </Button>
+                  <div className="hidden md:block text-white text-[11px] md:text-[13px]">
+                    Already have an account? <span onClick={handleRiderSignin} className="text-[#00D68F] font-medium cursor-pointer hover:underline"> Sign in</span>
+                  </div>
                 </YummyText>
               </div>
             </div>
 
             {/* Customer Card */}
-            <div className={`relative bg-[#00B75A] rounded-[32px] p-8 md:p-12 flex flex-col md:justify-between overflow-hidden ${selectedRole === 'customer' ? 'block' : 'hidden md:flex'}`}>
-              <div className="relative z-10 md:mt-8">
-                <YummyText className="text-normal md:text-lg text-white mb-8 md:mb-4 opacity-90 leading-[1.4] md:leading-[1.3] font-[400]">
-                  Need fast delivery? Sign up on <br /> Swiftly to send parcels safely, <br /> reliably, and in minutes.
-                </YummyText>
-                <YummyText className="text-[36px] md:text-[45px] font-[300] leading-none text-white mb-8 md:mb-6">
-                  Send Packages<br />with <span className="text-[#1E1E1E] font-semibold">Ease</span>
-                </YummyText>
-                <Button
-                  variant="light"
-                  onClick={handleCustomerSignup}
-                  className="!bg-white hover:!bg-gray-50 text-sm md:text-xs mb-4 md:mb-3 font-[500] !text-[#1E1E1E] mx-auto md:mx-0 w-auto md:w-auto !px-6 !py-2.5 rounded-full transition-all duration-300"
-                >
-                  <YummyText>Create Account</YummyText>
-                </Button>
-                <YummyText className="hidden md:block text-white text-sm md:!mt-4">
-                  Already have an account? <span onClick={handleCustomerSignin} className="text-[#1E1E1E] font-medium cursor-pointer hover:underline"> Sign in</span>
+            <div className={`relative bg-[#00B75A] rounded-3xl md:rounded-[32px] p-5 md:p-8 flex flex-col justify-between overflow-hidden ${selectedRole === 'customer' ? 'flex' : 'hidden md:flex'}`}>
+              <div className="relative z-10 flex-shrink-0">
+                <YummyText>
+                  <div className="text-[15px] md:text-[15px] text-white mb-4 md:mb-1 opacity-90 leading-tight font-[400]">
+                    Need fast delivery? Sign up on Swiftly to send <br className="hidden md:inline" />parcels safely, reliably, and in minutes.
+                  </div>
+                  <div className="text-[32px] md:text-[38px] font-[300] leading-tight text-white mb-4 md:mb-2">
+                    Send Packages<br />with <span className="text-[#1E1E1E] font-semibold">Ease</span>
+                  </div>
+                  <Button
+                    variant="light"
+                    onClick={handleCustomerSignup}
+                    className="!bg-white hover:!bg-gray-50 text-sm md:text-sm mb-2 font-[500] !text-[#1E1E1E] mx-auto md:mx-0 w-auto !px-8 md:!px-6 !py-3 md:!py-2.5 rounded-full transition-all duration-300"
+                  >
+                    <div>Create Account</div>
+                  </Button>
+                  <div className="hidden md:block text-white text-[11px] md:text-[13px]">
+                    Already have an account? <span onClick={handleCustomerSignin} className="text-[#1E1E1E] font-medium cursor-pointer hover:underline"> Sign in</span>
+                  </div>
                 </YummyText>
               </div>
 
-              <div className="absolute right-0 -bottom-6 md:bottom-0 w-[75%] md:w-[80%]">
-                <img 
-                  src="/lady-package.svg" 
+              <div className="absolute right-0 bottom-0 w-[82%] md:w-[49%] flex-shrink-0">
+                <img
+                  src="/lady-package.svg"
                   alt="Customer with Packages"
-                  className="w-full h-auto object-contain"
+                  className="w-full h-auto object-contain max-h-[57vh] md:max-h-[65vh]"
                 />
               </div>
             </div>
           </div>
 
           {/* Role Toggle Buttons - Mobile Only */}
-          <div className="flex md:hidden gap-3 mt-4 px-2">
-            <button
-              onClick={() => setSelectedRole('customer')}
-              className={`flex-1 py-3 rounded-full text-sm font-medium transition-all duration-300 ${
-                selectedRole === 'customer'
+          <YummyText>
+            <div className="flex md:hidden gap-2 mt-2 px-1 flex-shrink-0">
+              <button
+                onClick={() => setSelectedRole('customer')}
+                className={`flex-1 py-2 rounded-full text-xs font-medium transition-all duration-300 ${selectedRole === 'customer'
                   ? 'bg-[#00B75A] text-white'
                   : 'bg-white text-[#1E1E1E] border border-gray-300'
-              }`}
-            >
-              Customer
-            </button>
-            <button
-              onClick={() => setSelectedRole('rider')}
-              className={`flex-1 py-3 rounded-full text-sm font-medium transition-all duration-300 ${
-                selectedRole === 'rider'
+                  }`}
+              >
+                Customer
+              </button>
+              <button
+                onClick={() => setSelectedRole('rider')}
+                className={`flex-1 py-2 rounded-full text-xs font-medium transition-all duration-300 ${selectedRole === 'rider'
                   ? 'bg-[#00B75A] text-white'
                   : 'bg-white text-[#1E1E1E] border border-gray-300'
-              }`}
-            >
-              Rider
-            </button>
-          </div>
+                  }`}
+              >
+                Rider
+              </button>
+            </div>
+          </YummyText>
         </div>
       </IonContent>
     </IonPage>
