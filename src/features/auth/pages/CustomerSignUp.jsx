@@ -184,18 +184,31 @@ const CustomerSignUp = () => {
 
     setGoogleLoading(true);
 
-    // Include returnUrl in Google OAuth if it exists
+    // Include returnUrl in Google OAuth ONLY if it exists in sessionStorage
+    // (sessionStorage is cleared on tab close, preventing stale SmartRide returnUrls)
     const returnUrl = sessionStorage.getItem('auth_return_url');
-    // Also persist returnUrl as a cookie and localStorage so the backend can echo it back if needed
+
     if (returnUrl) {
+      // Persist for the OAuth callback
       try { setCookie('auth_return_url', returnUrl, 1); } catch (e) { /* ignore */ }
-      try { localStorage.setItem('auth_return_url', returnUrl); } catch (e) { /* ignore */ }
+      try {
+        localStorage.setItem('swiftly_auth_return_url', returnUrl);
+        localStorage.setItem('swiftly_auth_return_timestamp', Date.now().toString());
+      } catch (e) { /* ignore */ }
+    } else {
+      // IMPORTANT: Clear any old returnUrl from previous sessions to prevent unwanted redirects
+      try {
+        localStorage.removeItem('swiftly_auth_return_url');
+        localStorage.removeItem('swiftly_auth_return_timestamp');
+        localStorage.removeItem('auth_return_url');
+      } catch (e) { /* ignore */ }
     }
+
     const googleAuthUrl = returnUrl
       ? `${apiBase}/api/auth/google?role=customer&returnUrl=${encodeURIComponent(returnUrl)}`
       : `${apiBase}/api/auth/google?role=customer`;
 
-    console.log('[CustomerSignUp] Redirecting to:', googleAuthUrl);
+    console.log('[CustomerSignUp] Redirecting to Google OAuth:', { hasReturnUrl: !!returnUrl, url: googleAuthUrl });
 
     // let the gradient ring be visible briefly before leaving
     setTimeout(() => {
