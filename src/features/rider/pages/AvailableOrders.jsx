@@ -10,6 +10,7 @@ import TrackingMap from '../../../components/TrackingMap';
 import { getAvailableJobs, acceptDeliveryJob, rejectDeliveryJob, getRiderProfile, getRiderDeliveries, updateDriverLocation, getRiderEarnings } from '../../../utils/authApi';
 import socketService from '../../../services/socket.service';
 import { getCookie, getJSONCookie, isRiderVerified, setCookie, setJSONCookie } from '../../../utils/cookies';
+import { playNotificationSound } from '../../../utils/notificationSound';
 
 
 const sideBottomShadow = {
@@ -385,8 +386,10 @@ const AvailableOrders = () => {
   useEffect(() => {
     const handleDeliveryCreated = (event) => {
       console.log('[AvailableOrders] New delivery created, refreshing jobs:', event.detail);
-      setToastMsg('New delivery available!');
+      setToastMsg('🔔 New delivery available!');
       setShowToast(true);
+      // Play notification sound for new delivery
+      playNotificationSound();
       fetchAvailableJobs();
     };
 

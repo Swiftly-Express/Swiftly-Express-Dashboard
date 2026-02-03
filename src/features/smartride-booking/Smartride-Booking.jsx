@@ -13,6 +13,7 @@ import axios from 'axios';
 import { getCookie, setCookie, deleteCookie, setJSONCookie, getJSONCookie } from '../../utils/cookies';
 import { createDelivery, cancelDelivery, isAuthenticated, getDeliveryEstimate, getDeliveryById, getNearbyRiders } from '../../utils/authApi';
 import socketService from '../../services/socket.service';
+import { playNotificationSound } from '../../utils/notificationSound';
 import DeliveryChat from './DeliveryChat';
 import { calculateDistance } from '../../utils/pricing';
 
@@ -373,6 +374,8 @@ export default function SmartRideBooking({ embedMode = false, initialData = {}, 
             const directMatch = storedId && candidateIds.some(id => String(id) === String(storedId));
             if (directMatch) {
                 console.log('[SmartRide] ✅ Direct ID match found — moving to rider-found');
+                // Play notification sound for rider acceptance
+                playNotificationSound();
                 try {
                     const storedStepNow = localStorage.getItem('smartride_step');
                     // If user already proceeded to rider-details, preserve that choice

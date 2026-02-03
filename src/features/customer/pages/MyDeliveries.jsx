@@ -9,6 +9,7 @@ import Loader from '../../../components/Loader';
 import DeliveryChat from '../../../components/DeliveryChat';
 import { getCustomerDeliveries, rateDriver, cancelDelivery, initializePayment } from '../../../utils/authApi';
 import { getCookie, deleteCookie, setCookie, getJSONCookie } from '../../../utils/cookies';
+import { playNotificationSound } from '../../../utils/notificationSound';
 
 const sideBottomShadow = {
   boxShadow: '2px 4px 4px rgba(0,0,0,0.06), -2px 4px 4px rgba(0,0,0,0.06), 0 4px 8px rgba(0,0,0,0.08)'
@@ -671,6 +672,17 @@ const MyDeliveries = () => {
 
     const handleDeliveryUpdated = (event) => {
       console.log('[MyDeliveries] Delivery updated:', event.detail);
+
+      // Check if delivery status changed to completed/delivered
+      const updatedDelivery = event.detail;
+      const status = (updatedDelivery?.status || updatedDelivery?.delivery?.status || '').toLowerCase();
+
+      if (status === 'delivered' || status === 'completed') {
+        console.log('[MyDeliveries] 🔔 Delivery completed! Playing notification sound');
+        // Play notification sound for delivery completion
+        playNotificationSound();
+      }
+
       fetchDeliveries();
     };
 
