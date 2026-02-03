@@ -330,10 +330,32 @@ const RiderProfile = () => {
       }
     };
 
+    const handleProfileUpdated = (event) => {
+      console.log('[Profile] Profile updated event received:', event.detail);
+
+      // Update profile image if provided
+      if (event.detail?.profileImage) {
+        console.log('[Profile] Updating profile image from event:', event.detail.profileImage);
+        setProfileImage(event.detail.profileImage);
+      }
+
+      // Update other profile fields if provided
+      if (event.detail?.profilePhoto) {
+        console.log('[Profile] Updating profile photo from event:', event.detail.profilePhoto);
+        setProfileImage(event.detail.profilePhoto);
+      }
+
+      if (event.detail?.fullName) {
+        setUserName(event.detail.fullName);
+      }
+    };
+
     window.addEventListener('verification:completed', handleVerificationComplete);
+    window.addEventListener('profile:updated', handleProfileUpdated);
 
     return () => {
       window.removeEventListener('verification:completed', handleVerificationComplete);
+      window.removeEventListener('profile:updated', handleProfileUpdated);
     };
   }, []);
 

@@ -29,8 +29,7 @@ const apiClient = axios.create({
 
 // Add request interceptor to attach auth token
 apiClient.interceptors.request.use(
-  (config) =>
-  {
+  (config) => {
     const riderToken = getCookie("rider_token");
     const customerToken = getCookie("customer_token");
     const adminToken = getCookie("admin_token");
@@ -51,8 +50,7 @@ const sideBottomShadow = {
   boxShadow: '2px 4px 4px rgba(0,0,0,0.06), -2px 4px 4px rgba(0,0,0,0.06), 0 4px 8px rgba(0,0,0,0.08)'
 };
 
-const Book = () =>
-{
+const Book = () => {
   const [formData, setFormData] = useState({
     deliveryType: '',
     senderName: '',
@@ -120,8 +118,7 @@ const Book = () =>
 
   const selectedDeliveryType = deliveryTypes.find(t => t.value === formData.deliveryType);
 
-  const handleDeliveryTypeSelect = (value) =>
-  {
+  const handleDeliveryTypeSelect = (value) => {
     // If user selected Smart Ride, open Smart Ride inline on this page
     if (value === 'smart_ride') {
       setFormData({ ...formData, deliveryType: value });
@@ -142,27 +139,23 @@ const Book = () =>
   };
 
   // Ensure delivery type fee applied immediately when user selects a type
-  useEffect(() =>
-  {
+  useEffect(() => {
     const dt = (formData.deliveryType || '').toString().toLowerCase();
     const fee = dt === 'express' ? 400 : (dt === 'smart_ride' ? 600 : 0);
     setAppliedDeliveryTypeFee(fee);
   }, [formData.deliveryType]);
 
-  useEffect(() =>
-  {
+  useEffect(() => {
     if (!isAuthenticated()) {
       setToastMsg('Please log in to book a delivery');
       setShowToast(true);
-      setTimeout(() =>
-      {
+      setTimeout(() => {
         router.push('/auth/customer/login', 'root', 'replace');
       }, 2000);
     }
 
     // Listen for postMessage from payment callback popup
-    const handlePaymentMessage = (event) =>
-    {
+    const handlePaymentMessage = (event) => {
       console.log('[Book] Received postMessage:', event.data);
       if (event.data?.type === 'PAYMENT_REDIRECT') {
         const targetUrl = event.data.url || event.data.fullUrl;
@@ -183,13 +176,11 @@ const Book = () =>
   // Inline SmartRide state: open if ?delivery=smart_ride present
   const [showSmartRide, setShowSmartRide] = useState(false);
 
-  useEffect(() =>
-  {
+  useEffect(() => {
     const sp = new URLSearchParams(window.location.search);
     if (sp.get('delivery') === 'smart_ride') setShowSmartRide(true);
 
-    const onPop = () =>
-    {
+    const onPop = () => {
       const p = new URLSearchParams(window.location.search);
       setShowSmartRide(p.get('delivery') === 'smart_ride');
     };
@@ -198,8 +189,7 @@ const Book = () =>
     return () => window.removeEventListener('popstate', onPop);
   }, []);
 
-  useEffect(() =>
-  {
+  useEffect(() => {
     const check = () => setIsMobile(window.innerWidth <= 768);
     check();
     window.addEventListener('resize', check);
@@ -207,8 +197,7 @@ const Book = () =>
   }, []);
 
   // Initialize dimensions and weightCategory based on defaults
-  useEffect(() =>
-  {
+  useEffect(() => {
     const weightMap = { small: 'light', big: 'heavy', very_big: 'very_heavy' };
     const dimsMap = { small: [30, 30, 30], big: [50, 40, 30], very_big: [80, 60, 50] };
     const base = dimsMap[formData.sizeCategory] || dimsMap.small;
@@ -218,16 +207,14 @@ const Book = () =>
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  const handleChange = (e) =>
-  {
+  const handleChange = (e) => {
     setFormData({
       ...formData,
       [e.target.name]: e.target.value
     });
   };
 
-  const handleSubmit = async () =>
-  {
+  const handleSubmit = async () => {
     console.log('[Book] handleSubmit called', { paymentMethod: formData.paymentMethod });
     setIsSubmitting(true);
     try {
@@ -249,11 +236,9 @@ const Book = () =>
           if (res.results && res.results.length > 0) {
             const result = res.results.find(r => r.types && r.types.some(t => ['street_address', 'premise', 'establishment', 'route', 'postal_town', 'locality'].includes(t))) || res.results[0];
             const components = result.address_components || [];
-            const extract = (componentsList) =>
-            {
+            const extract = (componentsList) => {
               const out = { streetNumber: '', route: '', premise: '', subpremise: '', name: '', city: '', state: '', postal_code: '', country: '' };
-              componentsList.forEach(component =>
-              {
+              componentsList.forEach(component => {
                 const types = component.types || [];
                 if (types.includes('street_number')) out.streetNumber = component.long_name;
                 if (types.includes('route')) out.route = component.long_name;
@@ -307,11 +292,9 @@ const Book = () =>
           if (res.results && res.results.length > 0) {
             const result = res.results.find(r => r.types && r.types.some(t => ['street_address', 'premise', 'establishment', 'route', 'postal_town', 'locality'].includes(t))) || res.results[0];
             const components = result.address_components || [];
-            const extract = (componentsList) =>
-            {
+            const extract = (componentsList) => {
               const out = { streetNumber: '', route: '', premise: '', subpremise: '', name: '', city: '', state: '', postal_code: '', country: '' };
-              componentsList.forEach(component =>
-              {
+              componentsList.forEach(component => {
                 const types = component.types || [];
                 if (types.includes('street_number')) out.streetNumber = component.long_name;
                 if (types.includes('route')) out.route = component.long_name;
@@ -405,9 +388,9 @@ const Book = () =>
         zipCode: deliveryAddrRaw.zipCode || '00000'
       };
 
-      // Normalize payment method: cash_on_delivery → cash, ensure lowercase
-      let normalizedPaymentMethod = ((formData.paymentMethod || '') + '').toString().toLowerCase().trim();
-      if (normalizedPaymentMethod === 'cash_on_delivery' || normalizedPaymentMethod === 'cod') {
+      // Normalize payment method: cash_on_delivery → cash, ensure lowercase, default to cash
+      let normalizedPaymentMethod = ((formData.paymentMethod || 'cash') + '').toString().toLowerCase().trim();
+      if (normalizedPaymentMethod === 'cash_on_delivery' || normalizedPaymentMethod === 'cod' || !normalizedPaymentMethod) {
         normalizedPaymentMethod = 'cash';
       }
 
@@ -457,8 +440,7 @@ const Book = () =>
       if (formData.image) {
         const fd = new FormData();
         fd.append('images', formData.image);
-        Object.entries(payload).forEach(([k, v]) =>
-        {
+        Object.entries(payload).forEach(([k, v]) => {
           if (v === undefined || v === null) {
             fd.append(k, '');
           } else if (typeof v === 'object') {
@@ -543,8 +525,7 @@ const Book = () =>
           } catch (e) { /* ignore */ }
 
           // helper: cancel delivery if payment not completed
-          const cleanupOnPaymentCancel = async (did) =>
-          {
+          const cleanupOnPaymentCancel = async (did) => {
             try {
               console.log('[Book] Payment window closed without completion for delivery:', did);
               // Don't cancel the booking - user can try paying again
@@ -605,8 +586,7 @@ const Book = () =>
                     }
                   ]
                 },
-                onSuccess: async (transaction) =>
-                {
+                onSuccess: async (transaction) => {
                   console.log('Payment successful (inline):', transaction);
                   setToastMsg('Payment successful! Redirecting...');
                   setShowToast(true);
@@ -632,8 +612,7 @@ const Book = () =>
                     const didPart = deliveryId ? `&deliveryId=${encodeURIComponent(deliveryId)}` : '';
                     const target = `/customer/payment/success?paymentId=${pidEnc}${didPart}`;
 
-                    setTimeout(() =>
-                    {
+                    setTimeout(() => {
                       router.push(target, 'root', 'replace');
                     }, 350);
                   } catch (err) {
@@ -642,8 +621,7 @@ const Book = () =>
                     setIsSubmitting(false);
                   }
                 },
-                onCancel: async () =>
-                {
+                onCancel: async () => {
                   console.log('Payment cancelled by user');
                   // rollback delivery on cancel
                   try { await cleanupOnPaymentCancel(deliveryId); } catch (e) { console.warn(e); }
@@ -690,8 +668,7 @@ const Book = () =>
 
       setToastMsg('Delivery booked successfully!');
       setShowToast(true);
-      setTimeout(() =>
-      {
+      setTimeout(() => {
         router.push('/customer/deliveries', 'root', 'replace');
       }, 1500);
     } catch (err) {
@@ -707,8 +684,7 @@ const Book = () =>
     }
   };
 
-  const saveDraft = async () =>
-  {
+  const saveDraft = async () => {
     setIsSubmitting(true);
     try {
       const draftsRaw = getJSONCookie('delivery_drafts');
@@ -732,10 +708,8 @@ const Book = () =>
   };
 
   // Fetch price estimation when relevant fields change
-  useEffect(() =>
-  {
-    const fetchEstimate = async () =>
-    {
+  useEffect(() => {
+    const fetchEstimate = async () => {
       if (!pickupCoordinates?.lat || !deliveryCoordinates?.lat) {
         setEstimatedPrice(null);
         return;
@@ -771,8 +745,7 @@ const Book = () =>
   }, [pickupCoordinates, deliveryCoordinates, formData.deliveryType, isSpecialErrand]);
 
   // Fetch nearby riders only for Smart Ride when pickup location is set
-  useEffect(() =>
-  {
+  useEffect(() => {
     if (formData.deliveryType !== 'smart_ride') {
       setNearbyRiders([]);
       setNearbyPricing(null);
@@ -789,22 +762,19 @@ const Book = () =>
     let cancelled = false;
     setNearbyRidersLoading(true);
     getNearbyRiders({ lat, lng, radiusKm: 25, limit: 10 })
-      .then((res) =>
-      {
+      .then((res) => {
         if (cancelled) return;
         const data = res?.data?.data || res?.data;
         setNearbyRiders(Array.isArray(data?.riders) ? data.riders : []);
         setNearbyPricing(data?.pricing || null);
       })
-      .catch(() =>
-      {
+      .catch(() => {
         if (!cancelled) {
           setNearbyRiders([]);
           setNearbyPricing(null);
         }
       })
-      .finally(() =>
-      {
+      .finally(() => {
         if (!cancelled) setNearbyRidersLoading(false);
       });
     return () => { cancelled = true; };
@@ -812,8 +782,7 @@ const Book = () =>
 
   // Calculate distance whenever addresses change - KEEPING THIS FOR NOW BUT IS REDUNDANT WITH BACKEND RESPONSE potentially
   // If backend returns distance, we can use that.
-  useEffect(() =>
-  {
+  useEffect(() => {
     if (pickupCoordinates && deliveryCoordinates &&
       pickupCoordinates.lat !== 0 && deliveryCoordinates.lat !== 0) {
       const dist = calculateDistance(pickupCoordinates, deliveryCoordinates);
@@ -823,8 +792,7 @@ const Book = () =>
     }
   }, [pickupCoordinates, deliveryCoordinates]);
 
-  const getPricingBreakdown = () =>
-  {
+  const getPricingBreakdown = () => {
     if (estimatedPrice) {
       // Use the applied delivery type fee which updates immediately on selection
       const deliveryTypeFee = appliedDeliveryTypeFee || 0;
@@ -858,8 +826,7 @@ const Book = () =>
     };
   };
 
-  const calculateTotal = () =>
-  {
+  const calculateTotal = () => {
     const pricing = getPricingBreakdown();
     const base = Number(pricing.baseFare || 0);
     const perKmRate = Number(pricing.perKmRate || 200);
@@ -879,8 +846,7 @@ const Book = () =>
     return Math.max(0, base + distanceCharge + dtFee - discount);
   };
 
-  const getBaseRate = () =>
-  {
+  const getBaseRate = () => {
     // Logic for base rate display
     return getPricingBreakdown().deliveryCharge || 0;
   };
@@ -913,8 +879,7 @@ const Book = () =>
                 recipientEmail: formData.recipientEmail,
                 packageDescription: formData.packageDescription,
                 image: formData.image
-              }} onClose={() =>
-              {
+              }} onClose={() => {
                 setShowSmartRide(false);
                 try { window.history.replaceState({}, '', window.location.pathname); } catch (e) { }
               }} />
@@ -949,8 +914,7 @@ const Book = () =>
                   <label className="block text-sm font-medium text-[#0F172A] mb-2">Delivery Type</label>
                   <StyledDropdown
                     value={selectedDeliveryType?.label || 'Select delivery type'}
-                    onChange={(label) =>
-                    {
+                    onChange={(label) => {
                       const selected = deliveryTypes.find(t => t.label === label);
                       if (selected) handleDeliveryTypeSelect(selected.value);
                     }}
@@ -1008,8 +972,7 @@ const Book = () =>
                           value={formData.pickupStreet}
                           onChange={(value) => setFormData({ ...formData, pickupStreet: value })}
                           placeholder="Enter pickup address"
-                          onPlaceSelect={(place) =>
-                          {
+                          onPlaceSelect={(place) => {
                             setFormData(prev => ({ ...prev, pickupStreet: place.street || place.formatted_address || '' }));
                             setPickupCoordinates(place.coordinates || { lat: 0, lng: 0 });
                             setPickupAddressObj(place);
@@ -1078,8 +1041,7 @@ const Book = () =>
                           value={formData.deliveryStreet}
                           onChange={(value) => setFormData({ ...formData, deliveryStreet: value })}
                           placeholder="Enter delivery address"
-                          onPlaceSelect={(place) =>
-                          {
+                          onPlaceSelect={(place) => {
                             setFormData(prev => ({ ...prev, deliveryStreet: place.street || place.formatted_address || '' }));
                             setDeliveryCoordinates(place.coordinates || { lat: 0, lng: 0 });
                             setDeliveryAddressObj(place);
@@ -1129,8 +1091,7 @@ const Book = () =>
                                 formData.sizeCategory === 'very_big' ? 'Very Big' :
                                   'Size Category'
                           }
-                          onChange={(label) =>
-                          {
+                          onChange={(label) => {
                             const valueMap = { 'Small': 'small', 'Medium': 'big', 'Very Big': 'very_big' };
                             const defaultScaleMap = { small: 85, big: 100, very_big: 120 };
                             const cat = valueMap[label];
@@ -1185,8 +1146,7 @@ const Book = () =>
                             max="130"
                             name="sizeScale"
                             value={formData.sizeScale}
-                            onChange={(e) =>
-                            {
+                            onChange={(e) => {
                               const scale = parseInt(e.target.value, 10);
                               const dimsMap = { small: [30, 30, 30], big: [50, 40, 30], very_big: [80, 60, 50] };
                               // Determine category from scale thresholds
@@ -1211,16 +1171,14 @@ const Book = () =>
                                 // ignore
                               }
                             }}
-                            onMouseMove={(e) =>
-                            {
+                            onMouseMove={(e) => {
                               if (!sliderRef.current) return;
                               const val = parseInt(sliderRef.current.value, 10);
                               const min = 70; const max = 130;
                               const percent = (val - min) / (max - min);
                               setSliderBubble({ percent, value: val });
                             }}
-                            onMouseLeave={() =>
-                            {
+                            onMouseLeave={() => {
                               if (hideBubbleTimeout.current) clearTimeout(hideBubbleTimeout.current);
                               hideBubbleTimeout.current = setTimeout(() => setSliderBubble(null), 800);
                             }}
@@ -1322,8 +1280,7 @@ const Book = () =>
                                 formData.weightCategory === 'very_heavy' ? 'Very Heavy' :
                                   'Weight Category'
                           }
-                          onChange={(label) =>
-                          {
+                          onChange={(label) => {
                             const valueMap = { 'Light': 'light', 'Heavy': 'heavy', 'Very Heavy': 'very_heavy' };
                             setFormData({ ...formData, weightCategory: valueMap[label] });
                           }}
@@ -1450,6 +1407,23 @@ const Book = () =>
                   {/* Package Image Upload - Redesigned */}
                   <div className="mb-6">
                     <label className="block text-sm font-medium text-[#0F172A] mb-3">Package Image (optional)</label>
+
+                    {/* Image Preview */}
+                    {formData.image && formData.image instanceof File && (
+                      <div className="mb-3">
+                        <img
+                          src={URL.createObjectURL(formData.image)}
+                          alt="Package preview"
+                          className="w-full h-48 object-cover rounded-xl border-2 border-[#00B75A]"
+                          onLoad={(e) => URL.revokeObjectURL(e.target.src)}
+                          onError={(e) => {
+                            e.target.style.display = 'none';
+                            console.error('Failed to load image preview');
+                          }}
+                        />
+                      </div>
+                    )}
+
                     <div className="border-2 border-dashed border-gray-300 rounded-xl p-6 hover:border-[#00B75A] transition-colors cursor-pointer bg-[#F8F9FA]">
                       <input
                         type="file"
@@ -1470,9 +1444,9 @@ const Book = () =>
                               </div>
                               <button
                                 type="button"
-                                onClick={(e) =>
-                                {
+                                onClick={(e) => {
                                   e.preventDefault();
+                                  e.stopPropagation();
                                   setFormData({ ...formData, image: null });
                                 }}
                                 className="text-red-500 hover:text-red-700"
@@ -1590,8 +1564,7 @@ const Book = () =>
                 <div className="bg-[#F0FDF4] rounded-xl p-4 md:p-6 mb-6">
                   <h3 className="text-base font-semibold text-[#0F172A] mb-4">Cost Breakdown</h3>
                   <div className="space-y-2.5">
-                    {(() =>
-                    {
+                    {(() => {
                       const pricing = getPricingBreakdown();
                       return (
                         <>
@@ -1637,6 +1610,19 @@ const Book = () =>
                   </div>
                 </div>
 
+                {/* Payment Method Warning */}
+                {!formData.paymentMethod && (
+                  <div className="mb-4 p-4 bg-amber-50 border border-amber-200 rounded-xl flex items-start gap-3">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" className="flex-shrink-0 mt-0.5">
+                      <path d="M12 2L1 21h22L12 2zm0 3.99L19.53 19H4.47L12 5.99zM11 16v2h2v-2h-2zm0-6v4h2v-4h-2z" fill="#F59E0B" />
+                    </svg>
+                    <div className="flex-1">
+                      <p className="text-sm font-medium text-amber-900 mb-1">No payment method selected</p>
+                      <p className="text-xs text-amber-700">If you proceed without selecting a payment method, <strong>Cash</strong> will be used as the default payment option.</p>
+                    </div>
+                  </div>
+                )}
+
                 {/* Submit Buttons */}
                 <div className="flex flex-col md:flex-row gap-3 md:gap-4">
                   <button
@@ -1680,8 +1666,7 @@ const Book = () =>
 
                 <div className="p-6 overflow-y-auto h-[calc(100%-88px)]">
                   <button
-                    onClick={() =>
-                    {
+                    onClick={() => {
                       setFormData({ ...formData, paymentMethod: 'cash' });
                       setTimeout(() => setShowPaymentDrawer(false), 150);
                     }}
@@ -1715,8 +1700,7 @@ const Book = () =>
                   </button>
 
                   <button
-                    onClick={() =>
-                    {
+                    onClick={() => {
                       setFormData({ ...formData, paymentMethod: 'card' });
                       setTimeout(() => setShowPaymentDrawer(false), 150);
                     }}
@@ -1757,8 +1741,7 @@ const Book = () =>
                   </button>
 
                   <button
-                    onClick={() =>
-                    {
+                    onClick={() => {
                       setFormData({ ...formData, paymentMethod: 'transfer' });
                       setTimeout(() => setShowPaymentDrawer(false), 150);
                     }}
@@ -1820,8 +1803,7 @@ const Book = () =>
 
                   <div className="p-6 overflow-y-auto max-h-[70vh]">
                     <button
-                      onClick={() =>
-                      {
+                      onClick={() => {
                         setFormData({ ...formData, paymentMethod: 'cash' });
                         setTimeout(() => setShowPaymentDrawer(false), 150);
                       }}
@@ -1855,8 +1837,7 @@ const Book = () =>
                     </button>
 
                     <button
-                      onClick={() =>
-                      {
+                      onClick={() => {
                         setFormData({ ...formData, paymentMethod: 'card' });
                         setTimeout(() => setShowPaymentDrawer(false), 150);
                       }}
@@ -1897,8 +1878,7 @@ const Book = () =>
                     </button>
 
                     <button
-                      onClick={() =>
-                      {
+                      onClick={() => {
                         setFormData({ ...formData, paymentMethod: 'transfer' });
                         setTimeout(() => setShowPaymentDrawer(false), 150);
                       }}

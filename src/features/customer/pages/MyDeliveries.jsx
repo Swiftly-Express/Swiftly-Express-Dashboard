@@ -255,6 +255,20 @@ const DeliveryCard = ({ delivery }) => {
                 Dimensions: {delivery.packageDetails?.dimensions || 'N/A'}
               </div>
             </div>
+            {/* Package Image Display */}
+            {(delivery.image || delivery.images || delivery.packageImage || delivery.packageDetails?.image) && (
+              <div>
+                <div className="text-xs font-medium text-[#64748B] mb-1">Package Image</div>
+                <div className="w-full h-32 rounded-lg overflow-hidden bg-gray-100 border border-gray-200">
+                  <img
+                    src={delivery.image || (Array.isArray(delivery.images) ? delivery.images[0] : delivery.images) || delivery.packageImage || delivery.packageDetails?.image}
+                    alt="Package"
+                    className="w-full h-full object-cover"
+                    onError={(e) => { e.target.style.display = 'none'; e.target.parentElement.innerHTML = '<p class="text-xs text-gray-400 flex items-center justify-center h-full">Image unavailable</p>'; }}
+                  />
+                </div>
+              </div>
+            )}
             <div>
               <div className="text-xs font-medium text-[#64748B] mb-1">Pickup Address</div>
               <div className="text-sm text-[#0F172A] break-words">
