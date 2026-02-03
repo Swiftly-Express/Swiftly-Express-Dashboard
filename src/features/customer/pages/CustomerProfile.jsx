@@ -56,7 +56,12 @@ const loadGoogleProfileData = () => {
 
 const CustomerProfile = () => {
   const [activeTab, setActiveTab] = useState('personal');
-  const [profileImage, setProfileImage] = useState('/profileimage.svg');
+  // Load profile image from localStorage immediately
+  const [profileImage, setProfileImage] = useState(() => {
+    const cached = localStorage.getItem('profile_image');
+    console.log('[CustomerProfile] Initial profile image from localStorage:', cached);
+    return cached || '/profileimage.svg';
+  });
   const [loading, setLoading] = useState(false);
   const [uploading, setUploading] = useState(false);
   const [toastMsg, setToastMsg] = useState('');
@@ -96,6 +101,22 @@ const CustomerProfile = () => {
   // Fetch profile on component mount
   useEffect(() => {
     fetchProfile();
+
+    // Listen for profile updates from other components
+    const handleProfileUpdated = (event) => {
+      console.log('[CustomerProfile] Received profile:updated event:', event.detail);
+      if (event.detail?.profileImage || event.detail?.profilePhoto) {
+        const newImage = event.detail.profileImage || event.detail.profilePhoto;
+        setProfileImage(newImage);
+        console.log('[CustomerProfile] Updated profile image from event:', newImage);
+      }
+    };
+
+    window.addEventListener('profile:updated', handleProfileUpdated);
+
+    return () => {
+      window.removeEventListener('profile:updated', handleProfileUpdated);
+    };
   }, []);
 
   const fetchProfile = async () => {
@@ -176,11 +197,14 @@ const CustomerProfile = () => {
         country: data?.address?.country || prev.country || 'Nigeria'
       }));
 
-      // Set profile image if available from server, otherwise keep cached
+      // Set profile image if available from server, otherwise keep cached/current
       const serverImage = data?.profileImage || data?.profile_image || data?.avatar;
-      if (serverImage) {
+      if (serverImage && serverImage !== '/profileimage.svg') {
         setProfileImage(serverImage);
         localStorage.setItem('profile_image', serverImage);
+        console.log('[CustomerProfile] Updated profile image from server:', serverImage);
+      } else {
+        console.log('[CustomerProfile] No valid server image, keeping current profile image');
       }
 
       // Set notification preferences if available

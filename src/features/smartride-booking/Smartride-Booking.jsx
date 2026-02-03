@@ -2350,7 +2350,7 @@ export default function SmartRideBooking({ embedMode = false, initialData = {}, 
                                 </div>
 
                                 {/* Payment Method Warning */}
-                                {!formData.paymentMethod && (
+                                {(!formData.paymentMethod || formData.paymentMethod === '') && (
                                     <div className="mb-4 p-4 bg-amber-50 border border-amber-200 rounded-xl flex items-start gap-3">
                                         <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" className="flex-shrink-0 mt-0.5">
                                             <path d="M12 2L1 21h22L12 2zm0 3.99L19.53 19H4.47L12 5.99zM11 16v2h2v-2h-2zm0-6v4h2v-4h-2z" fill="#F59E0B" />
