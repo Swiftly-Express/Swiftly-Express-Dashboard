@@ -64,13 +64,13 @@ const RoleSelect = () => {
                   <div className="text-[35px] md:text-[38px] font-[300] text-white leading-tight mb-2">
                     Become a<br />Swiftly <span className="text-[#00D68F]  font-semibold">Rider</span>
                   </div>
-                  <div className="text-[#FFFFFF] font-[400] text-[14px] md:text-[15px] leading-tight mt-1.5 mb-3 md:mb-4 md:max-w-md opacity-90">
+                  <div className="text-[#FFFFFF] font-[400] text-[14px] md:text-[15px] leading-tight mt-1.5 mb-3 md:mb-3 md:max-w-md opacity-90">
                     Earn more while delivering faster. Join Swiftly's growing network of professional riders and start receiving delivery requests instantly.
                   </div>
                   <Button
                     variant="primary"
                     onClick={handleRiderSignup}
-                    className="!bg-[#00D68F] hover:!bg-[#00B876] mb-2 !text-white text-xs md:text-sm font-[500] mx-auto md:mx-0 w-auto !px-5 md:!px-6 !py-2 md:!py-2.5 rounded-full transition-all duration-300"
+                    className="!bg-[#00D68F] hover:!bg-[#00B876] mb-1 !text-white text-xs md:text-sm font-[500] mx-auto md:mx-0 w-auto !px-5 md:!px-4 !py-2 md:!py-2 rounded-full transition-all duration-300"
                   >
                     <div>Create Account</div>
                   </Button>
@@ -88,13 +88,13 @@ const RoleSelect = () => {
                   <div className="text-[15px] md:text-[15px] text-white mb-4 md:mb-1 opacity-90 leading-tight font-[400]">
                     Need fast delivery? Sign up on Swiftly to send <br className="hidden md:inline" />parcels safely, reliably, and in minutes.
                   </div>
-                  <div className="text-[32px] md:text-[38px] font-[300] leading-tight text-white mb-4 md:mb-2">
+                  <div className="text-[32px] md:text-[38px] font-[300] leading-none text-white mb-4 md:mb-1">
                     Send Packages<br />with <span className="text-[#1E1E1E] font-semibold">Ease</span>
                   </div>
                   <Button
                     variant="light"
                     onClick={handleCustomerSignup}
-                    className="!bg-white hover:!bg-gray-50 text-sm md:text-sm mb-2 font-[500] !text-[#1E1E1E] mx-auto md:mx-0 w-auto !px-8 md:!px-6 !py-3 md:!py-2.5 rounded-full transition-all duration-300"
+                    className="!bg-white hover:!bg-gray-50 text-sm md:text-sm mb-2 font-[500] !text-[#1E1E1E] mx-auto md:mx-0 w-auto !px-8 md:!px-4 !py-3 md:!py-2 rounded-full transition-all duration-300"
                   >
                     <div>Create Account</div>
                   </Button>
