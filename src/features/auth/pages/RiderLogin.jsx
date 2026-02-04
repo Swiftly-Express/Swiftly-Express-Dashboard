@@ -238,7 +238,7 @@ const RiderSignIn = () => {
                     value={formData.email}
                     onChange={(e) => handleChange('email', e.target.value)}
                     placeholder="Enter your email"
-                    className="w-full px-3 py-2 bg-[#F3F4F6] text-xs rounded-full focus:outline-none focus:ring-2 focus:ring-green-500 placeholder-[#9CA3AF]"
+                    className="w-full px-3 py-2 bg-white border border-gray-200 text-xs rounded-full focus:outline-none focus:border-[#00D68F] focus:ring-0 placeholder-[#9CA3AF]"
                     style={{ fontFamily: 'inherit' }}
                   />
                 </div>
@@ -254,13 +254,13 @@ const RiderSignIn = () => {
                     value={formData.password}
                     onChange={(e) => handleChange('password', e.target.value)}
                     placeholder="***********"
-                    className="w-full px-3 py-2 bg-[#F3F4F6] rounded-full focus:outline-none focus:ring focus:ring-green-500 placeholder-[#9CA3AF]"
+                    className="w-full px-3 py-2 bg-white border border-gray-200 rounded-full focus:outline-none focus:border-[#00D68F] focus:ring-0 placeholder-[#9CA3AF]"
                     style={{ fontFamily: 'inherit' }}
                   />
                   <button
                     type="button"
                     onClick={() => setShowPassword(!showPassword)}
-                    className="absolute right-3 top-8 text-gray-500"
+                    className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-500"
                     aria-label={showPassword ? 'Hide password' : 'Show password'}
                   >
                     <IonIcon icon={showPassword ? eyeOffOutline : eyeOutline} className="w-5 h-5 text-[#1E1E1E]" />
@@ -360,10 +360,10 @@ const RiderSignIn = () => {
           </div>
 
           {/* Right Side - Image */}
-          <div className="hidden lg:flex bg-[#1E1E1E] rounded-[50px] relative ml-2 mr-6 overflow-hidden items-end justify-center p-8 max-h-full">
-            <div className="relative w-full h-full flex flex-col justify-end">
+          <div className="hidden lg:flex bg-[#1E1E1E] rounded-[50px] relative ml-2 mr-6 overflow-hidden p-8 max-h-full">
+            <div className="relative w-full h-full flex flex-col justify-end pb-4">
               {/* Delivery Illustration */}
-              <div className="absolute top-1 left-1/2 transform -translate-x-1/2 w-[80%] md:w-[80%] max-h-[60vh] md:max-h-[50vh]">
+              <div className="absolute top-0 left-80 transform -translate-x-1/2 w-[80%] md:w-[60%] max-h-[50vh]">
                 <img
                   src="/login-despatch.svg"
                   alt="Hero on Wheels"
@@ -372,8 +372,8 @@ const RiderSignIn = () => {
               </div>
 
               {/* Text Content at Bottom */}
-              <div className="relative z-10 text-white mb-6">
-                <YummyText className="text-4xl font-[300]">
+              <div className="relative z-10 text-white">
+                <YummyText className="text-4xl font-[300] leading-tight mb-3">
                   Welcome Back,<br />Hero on <span className="text-[#00D68F] font-semibold">Wheels</span>
                 </YummyText>
               </div>
