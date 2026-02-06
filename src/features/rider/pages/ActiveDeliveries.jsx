@@ -285,16 +285,16 @@ const ActiveDeliveries = () => {
     const handleDeliveryCancelled = (event) => {
       const detail = event?.detail || {};
       const deliveryId = detail.deliveryId;
-      
+
       console.log('[ActiveDeliveries] 🚫 Delivery cancelled by customer:', deliveryId);
-      
+
       // Remove from active deliveries immediately
       setDeliveries(prev => prev.filter(d => (d._id !== deliveryId && d.id !== deliveryId)));
-      
+
       // Show notification to rider
       setToastMsg('A customer has cancelled their order');
       setShowToast(true);
-      
+
       // Refresh from backend
       fetchActiveDeliveries();
     };

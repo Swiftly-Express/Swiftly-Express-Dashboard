@@ -229,7 +229,7 @@ const DeliveryCard = ({ delivery, onCancelDelivery }) => {
               <YummyText>Cancel</YummyText>
             </button>
           )}
-          
+
           {/* Track Button */}
           <button
             onClick={handleTrack}
@@ -891,29 +891,29 @@ const MyDeliveries = () => {
   // Confirm and execute cancellation
   async function confirmCancelDelivery() {
     if (!deliveryToCancel) return;
-    
+
     const deliveryId = deliveryToCancel._id || deliveryToCancel.id;
-    
+
     try {
       console.log('[MyDeliveries] Cancelling delivery:', deliveryId);
-      
+
       // Close modal first
       setShowCancelModal(false);
-      
+
       // Optimistically update UI
-      setActiveDeliveries(prev => 
-        prev.map(d => (d._id === deliveryId || d.id === deliveryId) 
-          ? { ...d, status: 'cancelled' } 
+      setActiveDeliveries(prev =>
+        prev.map(d => (d._id === deliveryId || d.id === deliveryId)
+          ? { ...d, status: 'cancelled' }
           : d
         )
       );
-      
+
       // Call cancel API
       await cancelDelivery(deliveryId, {
         reason: 'customer_request',
         cancelledBy: 'customer'
       });
-      
+
       // Dispatch event to notify rider immediately
       window.dispatchEvent(new CustomEvent('delivery:cancelled', {
         detail: {
@@ -923,20 +923,20 @@ const MyDeliveries = () => {
           timestamp: new Date().toISOString()
         }
       }));
-      
+
       // Show success message
       setToastMessage('✅ Order cancelled successfully');
       setShowToast(true);
-      
+
       // Refresh deliveries from backend
       await fetchDeliveries();
-      
+
       console.log('[MyDeliveries] ✅ Delivery cancelled and rider notified');
     } catch (err) {
       console.error('[MyDeliveries] Failed to cancel delivery:', err);
       setToastMessage(err?.message || 'Failed to cancel delivery');
       setShowToast(true);
-      
+
       // Revert optimistic update on error
       await fetchDeliveries();
     } finally {
@@ -1005,8 +1005,8 @@ const MyDeliveries = () => {
                 </div>
               ) : (
                 activeDeliveries.map((delivery, index) => (
-                  <DeliveryCard 
-                    key={delivery._id || delivery.id || index} 
+                  <DeliveryCard
+                    key={delivery._id || delivery.id || index}
                     delivery={delivery}
                     onCancelDelivery={handleCancelDelivery}
                   />
@@ -1100,7 +1100,7 @@ const MyDeliveries = () => {
               '--backdrop-filter': 'blur(8px)'
             }}
           >
-            <div 
+            <div
               className="rounded-2xl p-6 max-w-md mx-auto my-auto border"
               style={{
                 background: 'rgba(255, 255, 255, 0.9)',
@@ -1112,7 +1112,7 @@ const MyDeliveries = () => {
             >
               {/* Icon */}
               <div className="flex justify-center mb-4">
-                <div 
+                <div
                   className="w-16 h-16 rounded-full flex items-center justify-center"
                   style={{
                     background: 'rgba(254, 226, 226, 0.8)',
