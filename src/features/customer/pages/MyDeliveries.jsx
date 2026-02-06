@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { IonContent, IonPage, IonIcon, IonToast } from '@ionic/react';
+import { IonContent, IonPage, IonIcon, IonToast, IonModal } from '@ionic/react';
 import { eye, eyeOff, arrowForward, copy } from 'ionicons/icons';
 import { useHistory } from 'react-router-dom';
 import CustomerLayout from '../components/CustomerLayout';
@@ -70,7 +70,7 @@ const formatDate = (dateString) => {
   }
 };
 
-const DeliveryCard = ({ delivery }) => {
+const DeliveryCard = ({ delivery, onCancelDelivery }) => {
   const history = useHistory();
   const [isOpen, setIsOpen] = useState(false);
   const [showCopyToast, setShowCopyToast] = useState(false);
@@ -209,18 +209,40 @@ const DeliveryCard = ({ delivery }) => {
           </div>
         </div>
 
-        {/* Track Button */}
-        <button
-          onClick={handleTrack}
-          className="flex items-center justify-center gap-2 text-sm text-[#64748B] shadow-sm px-4 py-2 rounded-xl hover:text-[#0F172A] hover:border-gray-800 transition-colors w-full md:w-auto"
-          style={{ border: '1.5px solid #0000001A' }}
-        >
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-            <circle cx="12" cy="12" r="10" />
-            <polyline points="12 6 12 12 16 14" />
-          </svg>
-          <YummyText>Track</YummyText>
-        </button>
+        {/* Action Buttons */}
+        <div className="flex items-center gap-2 w-full md:w-auto">
+          {/* Cancel Button - Show for pending, assigned, or in-transit orders */}
+          {(delivery.status === 'pending' || delivery.status === 'assigned' || delivery.status === 'in-transit' || delivery.status === 'picked-up') && (
+            <button
+              onClick={(e) => {
+                e.stopPropagation();
+                onCancelDelivery(delivery);
+              }}
+              className="flex items-center justify-center gap-2 text-sm text-red-600 shadow-sm px-4 py-2 rounded-xl hover:text-red-700 hover:border-red-700 transition-colors w-full md:w-auto"
+              style={{ border: '1.5px solid #EF444480' }}
+            >
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <circle cx="12" cy="12" r="10" />
+                <line x1="15" y1="9" x2="9" y2="15" />
+                <line x1="9" y1="9" x2="15" y2="15" />
+              </svg>
+              <YummyText>Cancel</YummyText>
+            </button>
+          )}
+          
+          {/* Track Button */}
+          <button
+            onClick={handleTrack}
+            className="flex items-center justify-center gap-2 text-sm text-[#64748B] shadow-sm px-4 py-2 rounded-xl hover:text-[#0F172A] hover:border-gray-800 transition-colors w-full md:w-auto"
+            style={{ border: '1.5px solid #0000001A' }}
+          >
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <circle cx="12" cy="12" r="10" />
+              <polyline points="12 6 12 12 16 14" />
+            </svg>
+            <YummyText>Track</YummyText>
+          </button>
+        </div>
       </div>
 
       {/* Expanded Details */}
@@ -605,6 +627,8 @@ const MyDeliveries = () => {
   const [showToast, setShowToast] = useState(false);
   const [showPaymentFailedModal, setShowPaymentFailedModal] = useState(false);
   const [cancelledOrder, setCancelledOrder] = useState(null);
+  const [showCancelModal, setShowCancelModal] = useState(false);
+  const [deliveryToCancel, setDeliveryToCancel] = useState(null);
 
   useEffect(() => {
     fetchDeliveries();
@@ -858,6 +882,68 @@ const MyDeliveries = () => {
     }
   }
 
+  // Show cancel confirmation modal
+  function handleCancelDelivery(delivery) {
+    setDeliveryToCancel(delivery);
+    setShowCancelModal(true);
+  }
+
+  // Confirm and execute cancellation
+  async function confirmCancelDelivery() {
+    if (!deliveryToCancel) return;
+    
+    const deliveryId = deliveryToCancel._id || deliveryToCancel.id;
+    
+    try {
+      console.log('[MyDeliveries] Cancelling delivery:', deliveryId);
+      
+      // Close modal first
+      setShowCancelModal(false);
+      
+      // Optimistically update UI
+      setActiveDeliveries(prev => 
+        prev.map(d => (d._id === deliveryId || d.id === deliveryId) 
+          ? { ...d, status: 'cancelled' } 
+          : d
+        )
+      );
+      
+      // Call cancel API
+      await cancelDelivery(deliveryId, {
+        reason: 'customer_request',
+        cancelledBy: 'customer'
+      });
+      
+      // Dispatch event to notify rider immediately
+      window.dispatchEvent(new CustomEvent('delivery:cancelled', {
+        detail: {
+          deliveryId,
+          status: 'cancelled',
+          cancelledBy: 'customer',
+          timestamp: new Date().toISOString()
+        }
+      }));
+      
+      // Show success message
+      setToastMessage('✅ Order cancelled successfully');
+      setShowToast(true);
+      
+      // Refresh deliveries from backend
+      await fetchDeliveries();
+      
+      console.log('[MyDeliveries] ✅ Delivery cancelled and rider notified');
+    } catch (err) {
+      console.error('[MyDeliveries] Failed to cancel delivery:', err);
+      setToastMessage(err?.message || 'Failed to cancel delivery');
+      setShowToast(true);
+      
+      // Revert optimistic update on error
+      await fetchDeliveries();
+    } finally {
+      setDeliveryToCancel(null);
+    }
+  }
+
   return (
     <IonPage>
       <CustomerLayout>
@@ -919,7 +1005,11 @@ const MyDeliveries = () => {
                 </div>
               ) : (
                 activeDeliveries.map((delivery, index) => (
-                  <DeliveryCard key={delivery._id || delivery.id || index} delivery={delivery} />
+                  <DeliveryCard 
+                    key={delivery._id || delivery.id || index} 
+                    delivery={delivery}
+                    onCancelDelivery={handleCancelDelivery}
+                  />
                 ))
               )}
             </div>
@@ -996,6 +1086,107 @@ const MyDeliveries = () => {
             onClose={() => setShowPaymentFailedModal(false)}
             orderDetails={cancelledOrder}
           />
+
+          {/* Cancel Confirmation Modal */}
+          <IonModal
+            isOpen={showCancelModal}
+            onDidDismiss={() => {
+              setShowCancelModal(false);
+              setDeliveryToCancel(null);
+            }}
+            className="cancel-confirmation-modal"
+            style={{
+              '--background': 'rgba(0, 0, 0, 0.4)',
+              '--backdrop-filter': 'blur(8px)'
+            }}
+          >
+            <div 
+              className="rounded-2xl p-6 max-w-md mx-auto my-auto border"
+              style={{
+                background: 'rgba(255, 255, 255, 0.9)',
+                backdropFilter: 'blur(20px)',
+                WebkitBackdropFilter: 'blur(20px)',
+                border: '1px solid rgba(255, 255, 255, 0.3)',
+                boxShadow: '0 8px 32px 0 rgba(31, 38, 135, 0.15), 0 0 0 1px rgba(255, 255, 255, 0.1) inset'
+              }}
+            >
+              {/* Icon */}
+              <div className="flex justify-center mb-4">
+                <div 
+                  className="w-16 h-16 rounded-full flex items-center justify-center"
+                  style={{
+                    background: 'rgba(254, 226, 226, 0.8)',
+                    backdropFilter: 'blur(10px)',
+                    WebkitBackdropFilter: 'blur(10px)',
+                    border: '1px solid rgba(239, 68, 68, 0.2)'
+                  }}
+                >
+                  <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="#DC2626" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    <circle cx="12" cy="12" r="10" />
+                    <line x1="15" y1="9" x2="9" y2="15" />
+                    <line x1="9" y1="9" x2="15" y2="15" />
+                  </svg>
+                </div>
+              </div>
+
+              {/* Title */}
+              <YummyText className="text-xl font-semibold text-[#0F172A] text-center mb-2">
+                Cancel Order?
+              </YummyText>
+
+              {/* Description */}
+              <YummyText className="text-sm text-[#64748B] text-center mb-6">
+                Are you sure you want to cancel this delivery?
+                {deliveryToCancel?.packageDetails?.description && (
+                  <span className="block mt-2 font-medium text-[#0F172A]">
+                    {deliveryToCancel.packageDetails.description}
+                  </span>
+                )}
+                <span className="block mt-2 text-xs">
+                  {deliveryToCancel?.status === 'assigned' || deliveryToCancel?.status === 'picked-up' || deliveryToCancel?.status === 'in-transit'
+                    ? 'Your rider will be notified immediately.'
+                    : 'This action cannot be undone.'}
+                </span>
+              </YummyText>
+
+              {/* Action Buttons */}
+              <div className="flex gap-3">
+                <button
+                  onClick={() => {
+                    setShowCancelModal(false);
+                    setDeliveryToCancel(null);
+                  }}
+                  className="flex-1 px-4 py-3 rounded-xl font-medium text-[#64748B] transition-all"
+                  style={{
+                    background: 'rgba(255, 255, 255, 0.7)',
+                    backdropFilter: 'blur(10px)',
+                    WebkitBackdropFilter: 'blur(10px)',
+                    border: '1px solid rgba(148, 163, 184, 0.3)',
+                    boxShadow: '0 2px 8px rgba(0, 0, 0, 0.05)'
+                  }}
+                  onMouseEnter={(e) => e.currentTarget.style.background = 'rgba(255, 255, 255, 0.85)'}
+                  onMouseLeave={(e) => e.currentTarget.style.background = 'rgba(255, 255, 255, 0.7)'}
+                >
+                  <YummyText>Keep Order</YummyText>
+                </button>
+                <button
+                  onClick={confirmCancelDelivery}
+                  className="flex-1 px-4 py-3 rounded-xl font-medium text-white transition-all"
+                  style={{
+                    background: 'rgba(220, 38, 38, 0.9)',
+                    backdropFilter: 'blur(10px)',
+                    WebkitBackdropFilter: 'blur(10px)',
+                    border: '1px solid rgba(239, 68, 68, 0.5)',
+                    boxShadow: '0 4px 12px rgba(220, 38, 38, 0.3)'
+                  }}
+                  onMouseEnter={(e) => e.currentTarget.style.background = 'rgba(220, 38, 38, 1)'}
+                  onMouseLeave={(e) => e.currentTarget.style.background = 'rgba(220, 38, 38, 0.9)'}
+                >
+                  <YummyText>Yes, Cancel</YummyText>
+                </button>
+              </div>
+            </div>
+          </IonModal>
         </IonContent>
       </CustomerLayout>
     </IonPage>

@@ -281,8 +281,27 @@ const ActiveDeliveries = () => {
       fetchActiveDeliveries();
     };
 
+    // Listen for delivery cancellations
+    const handleDeliveryCancelled = (event) => {
+      const detail = event?.detail || {};
+      const deliveryId = detail.deliveryId;
+      
+      console.log('[ActiveDeliveries] 🚫 Delivery cancelled by customer:', deliveryId);
+      
+      // Remove from active deliveries immediately
+      setDeliveries(prev => prev.filter(d => (d._id !== deliveryId && d.id !== deliveryId)));
+      
+      // Show notification to rider
+      setToastMsg('A customer has cancelled their order');
+      setShowToast(true);
+      
+      // Refresh from backend
+      fetchActiveDeliveries();
+    };
+
     window.addEventListener('delivery:accepted', handleDeliveryAccepted);
     window.addEventListener('delivery:statusChanged', handleDeliveryStatusChanged);
+    window.addEventListener('delivery:cancelled', handleDeliveryCancelled);
     // Refresh on payment completion
     const handlePaymentCompleted = () => fetchActiveDeliveries();
     window.addEventListener('payment:completed', handlePaymentCompleted);
@@ -290,6 +309,7 @@ const ActiveDeliveries = () => {
     return () => {
       window.removeEventListener('delivery:accepted', handleDeliveryAccepted);
       window.removeEventListener('delivery:statusChanged', handleDeliveryStatusChanged);
+      window.removeEventListener('delivery:cancelled', handleDeliveryCancelled);
       window.removeEventListener('payment:completed', handlePaymentCompleted);
     };
   }, []);
