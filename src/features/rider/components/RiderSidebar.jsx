@@ -67,6 +67,9 @@ const RiderSidebar = () => {
   const handleLogout = () => {
     (async () => {
       try {
+        // Dispatch logout event first so RiderLayout can set offline status
+        window.dispatchEvent(new CustomEvent('user:logout'));
+
         const refreshToken = getCookie('refresh_token') || '';
         if (refreshToken) await apiLogout({ refreshToken });
       } catch (err) {
@@ -82,6 +85,7 @@ const RiderSidebar = () => {
         deleteCookie('user_type');
         deleteCookie('user_data');
         deleteCookie('userRole');
+        deleteCookie('rider_is_online');
         if (document && document.activeElement) document.activeElement.blur();
         router.push('/auth/rider/login', 'back', 'pop');
       }

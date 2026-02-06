@@ -52,13 +52,23 @@ const ManageRiders = () => {
       fetchRiders();
     };
 
+    // Listen for rider availability/status changes
+    const handleRiderStatusChanged = () => {
+      console.log('[ManageRiders] Rider status changed, refreshing rider data...');
+      fetchRiders();
+    };
+
     window.addEventListener('delivery:statusChanged', handleDeliveryStatusChanged);
+    window.addEventListener('rider:statusChanged', handleRiderStatusChanged);
+    window.addEventListener('rider:availabilityChanged', handleRiderStatusChanged);
 
     const handleResize = () => setIsMobile(window.innerWidth < 768);
     window.addEventListener('resize', handleResize);
 
     return () => {
       window.removeEventListener('delivery:statusChanged', handleDeliveryStatusChanged);
+      window.removeEventListener('rider:statusChanged', handleRiderStatusChanged);
+      window.removeEventListener('rider:availabilityChanged', handleRiderStatusChanged);
       window.removeEventListener('resize', handleResize);
     };
   }, []);

@@ -738,7 +738,7 @@ const MyDeliveries = () => {
             console.log('[MyDeliveries] Payment window closed without completion for delivery:', did);
           } catch (cleanupErr) { console.warn('[MyDeliveries] cleanup failed', cleanupErr); }
           try { deleteCookie('pending_payment_delivery_id'); deleteCookie('pending_payment_id'); } catch (e) { }
-          setToastMessage('Payment was not completed. You can try paying again.');
+          setToastMessage('Payment completed.');
           setShowToast(true);
         };
 

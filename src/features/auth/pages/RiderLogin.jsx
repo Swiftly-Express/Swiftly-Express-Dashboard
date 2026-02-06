@@ -92,6 +92,9 @@ const RiderSignIn = () => {
       // Clear verified email cookie after successful login
       deleteCookie('verifiedEmail');
 
+      // Dispatch login event to trigger active status
+      window.dispatchEvent(new CustomEvent('user:login'));
+
       // Redirect to dashboard
       history.push('/rider/dashboard');
 
@@ -230,44 +233,44 @@ const RiderSignIn = () => {
               <div className="space-y-2">
                 {/* Email */}
                 <YummyText>
-                <div>
-                  <YummyText className="block text-sm font-medium text-gray-700 mb-1">
-                    Email
-                  </YummyText>
-                  
-                  <input
-                    type="email"
-                    value={formData.email}
-                    onChange={(e) => handleChange('email', e.target.value)}
-                    placeholder="Enter your email"
-                    className="w-full px-3 py-2 bg-white mb-3 border border-[#00D68F] text-xs rounded-full focus:outline-none focus:border-[#00D68F] focus:ring-0 placeholder-[#9CA3AF]"
-                    style={{ fontFamily: 'inherit' }}
-                  />
-                </div>
+                  <div>
+                    <YummyText className="block text-sm font-medium text-gray-700 mb-1">
+                      Email
+                    </YummyText>
 
-                {/* Password */}
-                <div className="relative">
-                  <YummyText className="block text-xs font-medium text-gray-700 mb-1">
-                    Password
-                  </YummyText>
-                  <input
-                    name="password"
-                    type={showPassword ? 'text' : 'password'}
-                    value={formData.password}
-                    onChange={(e) => handleChange('password', e.target.value)}
-                    placeholder="***********"
-                    className="w-full px-3 py-1 bg-white border border-[#00D68F] rounded-full focus:outline-none focus:border-[#00D68F] focus:ring-0 placeholder-[#9CA3AF]"
-                    style={{ fontFamily: 'inherit' }}
-                  />
-                  <button
-                    type="button"
-                    onClick={() => setShowPassword(!showPassword)}
-                    className="absolute right-3 top-10 transform -translate-y-1/2 text-gray-500"
-                    aria-label={showPassword ? 'Hide password' : 'Show password'}
-                  >
-                    <IonIcon icon={showPassword ? eyeOffOutline : eyeOutline} className="w-5 h-5 text-[#1E1E1E]" />
-                  </button>
-                </div>
+                    <input
+                      type="email"
+                      value={formData.email}
+                      onChange={(e) => handleChange('email', e.target.value)}
+                      placeholder="Enter your email"
+                      className="w-full px-3 py-2 bg-white mb-3 border border-[#00D68F] text-xs rounded-full focus:outline-none focus:border-[#00D68F] focus:ring-0 placeholder-[#9CA3AF]"
+                      style={{ fontFamily: 'inherit' }}
+                    />
+                  </div>
+
+                  {/* Password */}
+                  <div className="relative">
+                    <YummyText className="block text-xs font-medium text-gray-700 mb-1">
+                      Password
+                    </YummyText>
+                    <input
+                      name="password"
+                      type={showPassword ? 'text' : 'password'}
+                      value={formData.password}
+                      onChange={(e) => handleChange('password', e.target.value)}
+                      placeholder="***********"
+                      className="w-full px-3 py-1 bg-white border border-[#00D68F] rounded-full focus:outline-none focus:border-[#00D68F] focus:ring-0 placeholder-[#9CA3AF]"
+                      style={{ fontFamily: 'inherit' }}
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setShowPassword(!showPassword)}
+                      className="absolute right-3 top-10 transform -translate-y-1/2 text-gray-500"
+                      aria-label={showPassword ? 'Hide password' : 'Show password'}
+                    >
+                      <IonIcon icon={showPassword ? eyeOffOutline : eyeOutline} className="w-5 h-5 text-[#1E1E1E]" />
+                    </button>
+                  </div>
                 </YummyText>
 
                 {/* Remember Me & Forgot Password */}
@@ -318,14 +321,14 @@ const RiderSignIn = () => {
 
                 {/* Divider */}
                 <YummyText>
-                <div className="relative my-3">
-                  <div className="absolute inset-0 flex items-center">
-                    <div className="w-full border-t border-[#00D68F]"></div>
+                  <div className="relative my-3">
+                    <div className="absolute inset-0 flex items-center">
+                      <div className="w-full border-t border-[#00D68F]"></div>
+                    </div>
+                    <div className="relative flex justify-center text-xs">
+                      <span className="px-3 bg-white text-gray-500">Or Continue with email</span>
+                    </div>
                   </div>
-                  <div className="relative flex justify-center text-xs">
-                    <span className="px-3 bg-white text-gray-500">Or Continue with email</span>
-                  </div>
-                </div>
                 </YummyText>
 
                 {/* Google Button */}

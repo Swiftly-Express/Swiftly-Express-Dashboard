@@ -2,13 +2,13 @@ import React, { useState, useEffect } from 'react';
 import RiderSidebar from './RiderSidebar';
 import { YummyText } from '../../../components/YummyText';
 import {
-getRiderProfile,
-getUnreadNotificationCount,
-getNotifications,
-markNotificationAsRead,
-markAllNotificationsAsRead,
-updateRiderAvailability,
-getAvailableJobs
+  getRiderProfile,
+  getUnreadNotificationCount,
+  getNotifications,
+  markNotificationAsRead,
+  markAllNotificationsAsRead,
+  updateRiderAvailability,
+  getAvailableJobs
 } from '../../../utils/authApi';
 import { getCookie, setCookie, getJSONCookie } from '../../../utils/cookies';
 
@@ -97,18 +97,31 @@ const RiderLayout = ({ children }) => {
         }
       }
       await updateRiderAvailability(payload);
-      // Optionally, fetch jobs and dispatch events as in toggle
-      try {
-        const jobsResp = await getAvailableJobs(1, 20);
-        const jobs = jobsResp?.data?.jobs || jobsResp?.jobs || jobsResp?.data || [];
-        window.dispatchEvent(new CustomEvent('rider:availabilityChanged', { detail: { isActive: !!active, location: payload.currentLocation || null, jobs } }));
-        window.dispatchEvent(new CustomEvent('deliveries:refresh'));
-      } catch (e) {
-        window.dispatchEvent(new CustomEvent('rider:availabilityChanged', { detail: { isActive: !!active, location: payload.currentLocation || null } }));
-        window.dispatchEvent(new CustomEvent('deliveries:refresh'));
+
+      // Dispatch events for admin and other components
+      window.dispatchEvent(new CustomEvent('rider:availabilityChanged', {
+        detail: { isActive: !!active, location: payload.currentLocation || null }
+      }));
+      window.dispatchEvent(new CustomEvent('rider:statusChanged', {
+        detail: { isActive: !!active, isOnline: !!active }
+      }));
+      window.dispatchEvent(new CustomEvent('deliveries:refresh'));
+
+      // Fetch jobs if going online
+      if (active) {
+        try {
+          const jobsResp = await getAvailableJobs(1, 20);
+          const jobs = jobsResp?.data?.jobs || jobsResp?.jobs || jobsResp?.data || [];
+          window.dispatchEvent(new CustomEvent('rider:jobsAvailable', { detail: { jobs } }));
+        } catch (e) {
+          console.warn('[RiderLayout] Failed to fetch jobs:', e);
+        }
       }
+
       setCookie('rider_is_online', active ? 'true' : 'false', 1);
+      console.log(`[RiderLayout] Rider status synced: ${active ? 'ONLINE' : 'OFFLINE'}`);
     } catch (err) {
+      console.error('[RiderLayout] Failed to sync availability:', err);
       // fallback: revert UI
       setIsOnline(!active);
     }
@@ -164,23 +177,23 @@ const RiderLayout = ({ children }) => {
     fetchUserProfile();
     checkNotifications();
 
-    // On mount, restore online state from cookie
-    const cookieVal = getCookie('rider_is_online');
-    if (cookieVal === 'false') {
-      setIsOnline(false);
-    } else {
-      setIsOnline(true);
-    }
+    // On mount, always set online and sync to backend (rider just logged in)
+    setIsOnline(true);
+    syncOnlineStateToBackend(true);
 
-    // On login, always set online and sync to backend
+    // On login event, always set online and sync to backend
     const handleLogin = () => {
+      console.log('[RiderLayout] Login event received, setting rider online');
       setIsOnline(true);
       syncOnlineStateToBackend(true);
     };
-    // On logout, set offline and sync to backend
-    const handleLogout = () => {
+
+    // On logout event, set offline and sync to backend
+    const handleLogout = async () => {
+      console.log('[RiderLayout] Logout event received, setting rider offline');
       setIsOnline(false);
-      syncOnlineStateToBackend(false);
+      await syncOnlineStateToBackend(false);
+      deleteCookie('rider_is_online');
     };
 
     window.addEventListener('user:login', handleLogin);
@@ -337,39 +350,30 @@ const RiderLayout = ({ children }) => {
     const newState = !showNotifications;
     setShowNotifications(newState);
 
-    if (newState) {
-      // Opening notifications - fetch them
+    if (newState && unreadCount > 0) {
+      // Opening notification dropdown - fetch and mark as read
       await fetchNotifications(1, false);
 
-      // Optimistically mark everything read locally and on the server
-      setNotifications(prev => prev.map(n => ({ ...n, isRead: true, read: true })));
-      setUnreadCount(0);
-      // Persist read IDs for current notifications (fetch fresh list to be safe)
+      // Mark all as read on server
       try {
-        const resp = await getNotifications(1, 100);
-        const list = resp?.data?.notifications || resp?.notifications || resp?.data || [];
-        const ids = list.map(n => n._id || n.id).filter(Boolean);
-        setReadNotifIds(ids);
-        setReadNotifIdsState(ids);
-      } catch (e) {
-        // fallback: preserve existing
-      }
+        await markAllNotificationsAsRead();
 
-      (async () => {
-        try {
-          await markAllNotificationsAsRead();
-        } catch (err) {
-          console.warn('[RiderLayout] markAllNotificationsAsRead failed', err);
-        }
-        setTimeout(async () => {
-          try {
-            await fetchNotifications(1, false);
-            await checkNotifications();
-          } catch (e) {
-            console.warn('[RiderLayout] Refresh after toggle mark-all failed', e);
-          }
-        }, 300);
-      })();
+        // Update local state
+        setNotifications(prev => prev.map(n => ({ ...n, isRead: true, read: true })));
+        setUnreadCount(0);
+
+        // Persist read IDs
+        const allIds = notifications.map(n => n._id || n.id).filter(Boolean);
+        setReadNotifIds(allIds);
+        setReadNotifIdsState(allIds);
+
+        console.log('[RiderLayout] Notifications marked as read');
+      } catch (err) {
+        console.warn('[RiderLayout] Failed to mark notifications as read:', err);
+      }
+    } else if (newState) {
+      // Just fetch notifications if already read
+      await fetchNotifications(1, false);
     }
   };
 
@@ -381,41 +385,21 @@ const RiderLayout = ({ children }) => {
 
     try {
       console.log('[RiderLayout] Marking all notifications as read...');
-      const response = await markAllNotificationsAsRead();
-      console.log('[RiderLayout] Mark all as read response:', response);
+      await markAllNotificationsAsRead();
 
-      // Optimistically update UI
+      // Update UI
       setNotifications(prev => prev.map(n => ({ ...n, isRead: true, read: true })));
       setUnreadCount(0);
+
       // Persist read IDs in cookie/state
-      try {
-        const allIds = notifications.map(n => n._id || n.id).filter(Boolean);
-        setReadNotifIds(allIds);
-        setReadNotifIdsState(allIds);
-      } catch (e) { }
+      const allIds = notifications.map(n => n._id || n.id).filter(Boolean);
+      setReadNotifIds(allIds);
+      setReadNotifIdsState(allIds);
 
-      // Refresh from server in background (delayed to avoid race conditions)
-      setTimeout(async () => {
-        try {
-          await fetchNotifications(1, false);
-          await checkNotifications();
-        } catch (err) {
-          console.warn('[RiderLayout] Refresh after mark-all failed', err);
-        }
-      }, 200);
-
-      try { if (document && document.activeElement) document.activeElement.blur(); } catch (err) { /* ignore */ }
       console.log('[RiderLayout] All notifications marked as read successfully');
     } catch (error) {
       console.error('[RiderLayout] Failed to mark all as read:', error);
       console.error('[RiderLayout] Error details:', error.response?.data || error.message);
-      // Revert optimistic update on error
-      try {
-        await fetchNotifications(1, false);
-        await checkNotifications();
-      } catch (e) {
-        console.warn('[RiderLayout] Failed to revert after mark-all error', e);
-      }
     }
   };
 
