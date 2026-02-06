@@ -2,13 +2,13 @@ import React, { useState, useEffect } from 'react';
 import RiderSidebar from './RiderSidebar';
 import { YummyText } from '../../../components/YummyText';
 import {
-  getRiderProfile,
-  getUnreadNotificationCount,
-  getNotifications,
-  markNotificationAsRead,
-  markAllNotificationsAsRead,
-  updateRiderAvailability,
-  getAvailableJobs
+getRiderProfile,
+getUnreadNotificationCount,
+getNotifications,
+markNotificationAsRead,
+markAllNotificationsAsRead,
+updateRiderAvailability,
+getAvailableJobs
 } from '../../../utils/authApi';
 import { getCookie, setCookie, getJSONCookie } from '../../../utils/cookies';
 
@@ -97,31 +97,18 @@ const RiderLayout = ({ children }) => {
         }
       }
       await updateRiderAvailability(payload);
-
-      // Dispatch events for admin and other components
-      window.dispatchEvent(new CustomEvent('rider:availabilityChanged', {
-        detail: { isActive: !!active, location: payload.currentLocation || null }
-      }));
-      window.dispatchEvent(new CustomEvent('rider:statusChanged', {
-        detail: { isActive: !!active, isOnline: !!active }
-      }));
-      window.dispatchEvent(new CustomEvent('deliveries:refresh'));
-
-      // Fetch jobs if going online
-      if (active) {
-        try {
-          const jobsResp = await getAvailableJobs(1, 20);
-          const jobs = jobsResp?.data?.jobs || jobsResp?.jobs || jobsResp?.data || [];
-          window.dispatchEvent(new CustomEvent('rider:jobsAvailable', { detail: { jobs } }));
-        } catch (e) {
-          console.warn('[RiderLayout] Failed to fetch jobs:', e);
-        }
+      // Optionally, fetch jobs and dispatch events as in toggle
+      try {
+        const jobsResp = await getAvailableJobs(1, 20);
+        const jobs = jobsResp?.data?.jobs || jobsResp?.jobs || jobsResp?.data || [];
+        window.dispatchEvent(new CustomEvent('rider:availabilityChanged', { detail: { isActive: !!active, location: payload.currentLocation || null, jobs } }));
+        window.dispatchEvent(new CustomEvent('deliveries:refresh'));
+      } catch (e) {
+        window.dispatchEvent(new CustomEvent('rider:availabilityChanged', { detail: { isActive: !!active, location: payload.currentLocation || null } }));
+        window.dispatchEvent(new CustomEvent('deliveries:refresh'));
       }
-
       setCookie('rider_is_online', active ? 'true' : 'false', 1);
-      console.log(`[RiderLayout] Rider status synced: ${active ? 'ONLINE' : 'OFFLINE'}`);
     } catch (err) {
-      console.error('[RiderLayout] Failed to sync availability:', err);
       // fallback: revert UI
       setIsOnline(!active);
     }
@@ -177,23 +164,23 @@ const RiderLayout = ({ children }) => {
     fetchUserProfile();
     checkNotifications();
 
-    // On mount, always set online and sync to backend (rider just logged in)
-    setIsOnline(true);
-    syncOnlineStateToBackend(true);
+    // On mount, restore online state from cookie
+    const cookieVal = getCookie('rider_is_online');
+    if (cookieVal === 'false') {
+      setIsOnline(false);
+    } else {
+      setIsOnline(true);
+    }
 
-    // On login event, always set online and sync to backend
+    // On login, always set online and sync to backend
     const handleLogin = () => {
-      console.log('[RiderLayout] Login event received, setting rider online');
       setIsOnline(true);
       syncOnlineStateToBackend(true);
     };
-
-    // On logout event, set offline and sync to backend
-    const handleLogout = async () => {
-      console.log('[RiderLayout] Logout event received, setting rider offline');
+    // On logout, set offline and sync to backend
+    const handleLogout = () => {
       setIsOnline(false);
-      await syncOnlineStateToBackend(false);
-      deleteCookie('rider_is_online');
+      syncOnlineStateToBackend(false);
     };
 
     window.addEventListener('user:login', handleLogin);
@@ -349,24 +336,24 @@ const RiderLayout = ({ children }) => {
   const toggleNotifications = async () => {
     const newState = !showNotifications;
     setShowNotifications(newState);
-
+    
     if (newState && unreadCount > 0) {
       // Opening notification dropdown - fetch and mark as read
       await fetchNotifications(1, false);
-
+      
       // Mark all as read on server
       try {
         await markAllNotificationsAsRead();
-
+        
         // Update local state
         setNotifications(prev => prev.map(n => ({ ...n, isRead: true, read: true })));
         setUnreadCount(0);
-
+        
         // Persist read IDs
         const allIds = notifications.map(n => n._id || n.id).filter(Boolean);
         setReadNotifIds(allIds);
         setReadNotifIdsState(allIds);
-
+        
         console.log('[RiderLayout] Notifications marked as read');
       } catch (err) {
         console.warn('[RiderLayout] Failed to mark notifications as read:', err);

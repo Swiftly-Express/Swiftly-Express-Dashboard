@@ -133,31 +133,41 @@ const CustomerLayout = ({ children }) => {
   const toggleNotifications = async () => {
     const newState = !showNotifications;
     setShowNotifications(newState);
-
-    if (newState && unreadCount > 0) {
-      // Opening notification dropdown - fetch and mark as read
+    if (newState) {
+      // Fetch notifications to populate dropdown
       await fetchNotifications(1, false);
 
-      // Mark all as read on server
+      // Optimistically mark everything read locally and on the server
+      setNotifications(prev => prev.map(n => ({ ...n, isRead: true, read: true })));
+      setUnreadCount(0);
+
+      // Persist read IDs for current notifications (fetch fresh list to be safe)
       try {
-        await markAllNotificationsAsRead();
-
-        // Update local state
-        setNotifications(prev => prev.map(n => ({ ...n, isRead: true, read: true })));
-        setUnreadCount(0);
-
-        // Persist read IDs
-        const allIds = notifications.map(n => n._id || n.id).filter(Boolean);
-        setReadNotifIds(allIds);
-        setReadNotifIdsState(allIds);
-
-        console.log('[CustomerLayout] Notifications marked as read');
-      } catch (err) {
-        console.warn('[CustomerLayout] Failed to mark notifications as read:', err);
+        const resp = await getNotifications(1, 100);
+        const list = resp?.data?.notifications || resp?.notifications || resp?.data || [];
+        const ids = list.map(n => n._id || n.id).filter(Boolean);
+        setReadNotifIds(ids);
+        setReadNotifIdsState(ids);
+      } catch (e) {
+        // ignore
       }
-    } else if (newState) {
-      // Just fetch notifications if already read
-      await fetchNotifications(1, false);
+
+      // Fire server-side mark-all in background and refresh shortly after
+      (async () => {
+        try {
+          await markAllNotificationsAsRead();
+        } catch (err) {
+          console.warn('[CustomerLayout] markAllNotificationsAsRead failed', err);
+        }
+        setTimeout(async () => {
+          try {
+            await fetchNotifications(1, false);
+            await checkNotifications();
+          } catch (e) {
+            console.warn('[CustomerLayout] Refresh after toggle mark-all failed', e);
+          }
+        }, 300);
+      })();
     }
   };
 
@@ -169,21 +179,45 @@ const CustomerLayout = ({ children }) => {
 
     try {
       console.log('[CustomerLayout] Marking all notifications as read...');
-      await markAllNotificationsAsRead();
+      const response = await markAllNotificationsAsRead();
+      console.log('[CustomerLayout] Mark all as read response:', response);
 
-      // Update UI
+      // Optimistically update UI
       setNotifications(prev => prev.map(n => ({ ...n, isRead: true, read: true })));
       setUnreadCount(0);
 
       // Persist read IDs in cookie/state
-      const allIds = notifications.map(n => n._id || n.id).filter(Boolean);
-      setReadNotifIds(allIds);
-      setReadNotifIdsState(allIds);
+      try {
+        const allIds = notifications.map(n => n._id || n.id).filter(Boolean);
+        setReadNotifIds(allIds);
+        setReadNotifIdsState(allIds);
+      } catch (e) { }
+
+      // Refresh from server in background (delayed to avoid race conditions)
+      setTimeout(async () => {
+        try {
+          await fetchNotifications(1, false);
+          await checkNotifications();
+        } catch (err) {
+          console.warn('[CustomerLayout] Refresh after mark-all failed', err);
+        }
+      }, 200);
+
+      // Remove focus from button
+      try { if (document && document.activeElement) document.activeElement.blur(); } catch (err) { /* ignore */ }
 
       console.log('[CustomerLayout] All notifications marked as read successfully');
     } catch (error) {
       console.error('[CustomerLayout] Failed to mark all as read:', error);
       console.error('[CustomerLayout] Error details:', error.response?.data || error.message);
+
+      // Revert optimistic update on error
+      try {
+        await fetchNotifications(1, false);
+        await checkNotifications();
+      } catch (e) {
+        console.warn('[CustomerLayout] Failed to revert after mark-all error', e);
+      }
     }
   };
 
