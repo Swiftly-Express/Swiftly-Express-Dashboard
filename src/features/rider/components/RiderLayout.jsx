@@ -2,13 +2,13 @@ import React, { useState, useEffect } from 'react';
 import RiderSidebar from './RiderSidebar';
 import { YummyText } from '../../../components/YummyText';
 import {
-getRiderProfile,
-getUnreadNotificationCount,
-getNotifications,
-markNotificationAsRead,
-markAllNotificationsAsRead,
-updateRiderAvailability,
-getAvailableJobs
+  getRiderProfile,
+  getUnreadNotificationCount,
+  getNotifications,
+  markNotificationAsRead,
+  markAllNotificationsAsRead,
+  updateRiderAvailability,
+  getAvailableJobs
 } from '../../../utils/authApi';
 import { getCookie, setCookie, getJSONCookie } from '../../../utils/cookies';
 
@@ -336,33 +336,46 @@ const RiderLayout = ({ children }) => {
   const toggleNotifications = async () => {
     const newState = !showNotifications;
     setShowNotifications(newState);
-    
-    if (newState && unreadCount > 0) {
-      // Opening notification dropdown - fetch and mark as read
+
+    if (newState) {
+      // Opening notification - fetch them
       await fetchNotifications(1, false);
-      
-      // Mark all as read on server
+
+      // Update state
+      setNotifications(prev => prev.map(n => ({ ...n, isRead: true, read: true })));
+      setUnreadCount(0);
+
+      // Persist read IDs for current notifications (fetch fresh list to be safe)
       try {
-        await markAllNotificationsAsRead();
-        
-        // Update local state
-        setNotifications(prev => prev.map(n => ({ ...n, isRead: true, read: true })));
-        setUnreadCount(0);
-        
-        // Persist read IDs
-        const allIds = notifications.map(n => n._id || n.id).filter(Boolean);
-        setReadNotifIds(allIds);
-        setReadNotifIdsState(allIds);
-        
-        console.log('[RiderLayout] Notifications marked as read');
-      } catch (err) {
-        console.warn('[RiderLayout] Failed to mark notifications as read:', err);
+        const resp = await getNotifications(1, 100);
+        const list = resp?.data?.notifications || resp?.notifications || resp?.data || [];
+        const ids = list.map(n => n._id || n.id).filter(Boolean);
+        setReadNotifIds(ids);
+        setReadNotifIdsState(ids);
+      } catch (e) {
+        // fallback: preserve existing
       }
-    } else if (newState) {
-      // Just fetch notifications if already read
-      await fetchNotifications(1, false);
+
+      (async () => {
+        try {
+          await markAllNotificationsAsRead();
+
+        } catch (err) {
+          console.warn('[RiderLayout] Failed to mark notifications as read:', err);
+        }
+
+        setTimeout(async () => {
+          try {
+            await fetchNotifications(1, false);
+            await checkNotifications();
+          } catch (e) {
+            console.warn('[RiderLayout] Refresh after toggle mark-all failed:', e);
+          }
+        }, 300);
+      })();
     }
   };
+
 
   const handleMarkAllAsRead = async (e) => {
     if (e) {
