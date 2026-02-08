@@ -47,8 +47,8 @@ const RoleSelect = () => {
   return (
     <IonPage>
       <IonContent className="ion-no-padding" scrollY={false}>
-        <div className="h-screen bg-[#F5F5F5] flex flex-col p-3 md:p-4 overflow-hidden">
-          <div className="flex-1 grid grid-cols-1 md:grid-cols-2 gap-3 md:gap-4 overflow-hidden">
+        <div className="h-screen bg-[#F5F5F5] flex flex-col p-3 md:p-4">
+          <div className="flex-1 grid grid-cols-1 md:grid-cols-2 gap-3 md:gap-4 overflow-hidden min-h-0">
             {/* Rider Card */}
             <div className={`relative bg-[#1E1E1E] rounded-3xl md:rounded-[32px] p-5 md:p-8 flex flex-col justify-between overflow-hidden ${selectedRole === 'rider' ? 'flex' : 'hidden md:flex'}`}>
               <div className="relative w-full flex justify-center flex-shrink-0">
@@ -116,21 +116,21 @@ const RoleSelect = () => {
 
           {/* Role Toggle Buttons - Mobile Only */}
           <YummyText>
-            <div className="flex md:hidden gap-2 mt-2 px-1 flex-shrink-0">
+            <div className="flex md:hidden gap-2 mt-3 px-1 pb-2 flex-shrink-0 safe-area-bottom">
               <button
                 onClick={() => setSelectedRole('customer')}
-                className={`flex-1 py-2 rounded-full text-xs font-medium transition-all duration-300 ${selectedRole === 'customer'
-                  ? 'bg-[#00B75A] text-white'
-                  : 'bg-white text-[#1E1E1E] border border-gray-300'
+                className={`flex-1 py-3 rounded-full text-sm font-medium transition-all duration-300 ${selectedRole === 'customer'
+                  ? 'bg-[#00B75A] text-white shadow-lg'
+                  : 'bg-white text-[#1E1E1E] border-2 border-gray-300'
                   }`}
               >
                 Customer
               </button>
               <button
                 onClick={() => setSelectedRole('rider')}
-                className={`flex-1 py-2 rounded-full text-xs font-medium transition-all duration-300 ${selectedRole === 'rider'
-                  ? 'bg-[#00B75A] text-white'
-                  : 'bg-white text-[#1E1E1E] border border-gray-300'
+                className={`flex-1 py-3 rounded-full text-sm font-medium transition-all duration-300 ${selectedRole === 'rider'
+                  ? 'bg-[#1E1E1E] text-white shadow-lg'
+                  : 'bg-white text-[#1E1E1E] border-2 border-gray-300'
                   }`}
               >
                 Rider
