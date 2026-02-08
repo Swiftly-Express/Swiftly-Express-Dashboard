@@ -893,7 +893,8 @@ const MyDeliveries = () => {
             const hasRated = completedDelivery.rating || completedDelivery.customerRating || completedDelivery.hasRated;
 
             if (!hasRated) {
-              console.log('[MyDeliveries] ⭐ Showing rating modal for completed delivery');
+              console.log('[MyDeliveries] ⭐ Showing rating modal for completed delivery:', completedDelivery._id || completedDelivery.id);
+              console.log('[MyDeliveries] 🚀 Dispatching rating:show event!', completedDelivery);
               window.dispatchEvent(new CustomEvent('rating:show', {
                 detail: completedDelivery
               }));

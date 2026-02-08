@@ -12,6 +12,7 @@ const RatingModal = ({ isOpen: controlledOpen, onClose: controlledClose, deliver
     const [comment, setComment] = useState('');
     const [submitting, setSubmitting] = useState(false);
     const [showSuccess, setShowSuccess] = useState(false);
+    const [mounted, setMounted] = useState(false);
 
     // Tag options based on design
     const tags = [
@@ -32,27 +33,64 @@ const RatingModal = ({ isOpen: controlledOpen, onClose: controlledClose, deliver
         if (controlledDelivery) setDelivery(controlledDelivery);
     }, [controlledDelivery]);
 
-    // Listen for global show/hide events
+    // Mount check to prevent cleanup during component lifecycle
     useEffect(() => {
+        setMounted(true);
+        console.log('[RatingModal] 🎯 Component mounted');
+        return () => {
+            setMounted(false);
+            console.log('[RatingModal] 🧹 Component unmounted');
+        };
+    }, []);
+
+    // Listen for global show/hide events - STABLE, no dependencies
+    useEffect(() => {
+        console.log('[RatingModal] 📡 Setting up event listeners');
+
         const handleShow = (e) => {
+            console.log('[RatingModal] 🔔 rating:show event received!', e);
             const d = e?.detail || null;
+            console.log('[RatingModal] 📦 Delivery data:', d);
+
+            if (!d) {
+                console.warn('[RatingModal] ⚠️ No delivery data in event detail!');
+                return;
+            }
+
             setDelivery(d);
             setIsOpen(true);
             setShowSuccess(false);
+            setRating(0);
+            setHoverRating(0);
+            setSelectedTags([]);
+            setComment('');
+            console.log('[RatingModal] ✅ Modal state updated - should be visible now');
         };
 
         const handleHide = () => {
+            console.log('[RatingModal] 👋 rating:hide event received');
             setIsOpen(false);
         };
 
-        window.addEventListener('rating:show', handleShow);
-        window.addEventListener('rating:hide', handleHide);
+        // Use capture phase to ensure we catch the event
+        window.addEventListener('rating:show', handleShow, true);
+        window.addEventListener('rating:hide', handleHide, true);
+
+        // Add debug helper to window for testing
+        window.__debugShowRatingModal = (deliveryData) => {
+            console.log('[RatingModal] 🛠️ Manual debug trigger', deliveryData);
+            handleShow({ detail: deliveryData });
+        };
+
+        console.log('[RatingModal] ✅ Event listeners active and ready');
 
         return () => {
-            window.removeEventListener('rating:show', handleShow);
-            window.removeEventListener('rating:hide', handleHide);
+            console.log('[RatingModal] 🧹 Cleaning up event listeners');
+            window.removeEventListener('rating:show', handleShow, true);
+            window.removeEventListener('rating:hide', handleHide, true);
+            delete window.__debugShowRatingModal;
         };
-    }, []);
+    }, []); // Empty deps - this should NEVER re-run
 
     const close = () => {
         setIsOpen(false);
@@ -109,7 +147,12 @@ const RatingModal = ({ isOpen: controlledOpen, onClose: controlledClose, deliver
         }
     };
 
-    if (!isOpen) return null;
+    if (!isOpen) {
+        // Silent - no need to log every render when closed
+        return null;
+    }
+
+    console.log('[RatingModal] Rendering modal, delivery:', delivery);
 
     const driverName = delivery?.driver?.name || delivery?.driver?.fullName || delivery?.driverName || 'Your Rider';
 

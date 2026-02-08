@@ -162,13 +162,6 @@ export function calculateDeliveryPrice({
     hasCustomBid: customBid !== null && customBid >= MIN_BID
   };
 }
-
-/**
- * Async wrapper that attempts to fetch commission rate from backend
- * and then computes delivery price using that commission.
- * If backend call fails or returns unexpected data, falls back to default inside calculateDeliveryPrice.
- * @param {Object} params - same params as calculateDeliveryPrice
- */
 export async function calculateDeliveryPriceWithBackendCommission(params = {}) {
   let commissionRate = params.commissionRate;
   if (commissionRate == null) {

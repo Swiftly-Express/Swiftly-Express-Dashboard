@@ -101,7 +101,9 @@ const Track = () => {
             !hasRated &&
             !deliveryData.rating &&
             !deliveryData.customerRating) {
+            console.log('[Track] ⭐ Triggering rating modal in 1.5s for delivery:', deliveryData._id || deliveryData.id);
             setTimeout(() => {
+              console.log('[Track] 🚀 Dispatching rating:show event now!', deliveryData);
               window.dispatchEvent(new CustomEvent('rating:show', { detail: deliveryData }));
             }, 1500);
           }
@@ -148,7 +150,9 @@ const Track = () => {
               !hasRated &&
               !deliveryData.rating &&
               !deliveryData.customerRating) {
+              console.log('[Track] ⭐ Triggering rating modal in 1.5s for delivery (socket):', deliveryData._id || deliveryData.id);
               setTimeout(() => {
+                console.log('[Track] 🚀 Dispatching rating:show event now (socket)!', deliveryData);
                 window.dispatchEvent(new CustomEvent('rating:show', { detail: deliveryData }));
               }, 1500);
             }
@@ -217,7 +221,9 @@ const Track = () => {
       const alreadyRated = data.rating || data.customerRating || data.hasRated;
 
       if (isCompleted && !alreadyRated && !hasRated) {
+        console.log('[Track] ⭐ Delivery completed and not rated, triggering modal in 2s');
         setTimeout(() => {
+          console.log('[Track] 🚀 Dispatching rating:show event for tracked delivery!', data);
           window.dispatchEvent(new CustomEvent('rating:show', { detail: data }));
         }, 2000);
       }

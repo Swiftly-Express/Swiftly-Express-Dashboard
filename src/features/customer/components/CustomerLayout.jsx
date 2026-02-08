@@ -503,7 +503,8 @@ const CustomerLayout = ({ children }) => {
         )}
 
         {/* Global Rating Modal (glass card) - mounted so it can be shown from anywhere */}
-        <RatingModal />
+        {/* Use a stable key to prevent React from unmounting it */}
+        <RatingModal key="global-rating-modal" />
       </div>
     </div>
   );
