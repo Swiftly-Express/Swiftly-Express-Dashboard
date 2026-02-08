@@ -1818,10 +1818,10 @@ export default function SmartRideBooking({ embedMode = false, initialData = {}, 
                                             }}
                                             options={['Express (Same day)', 'Standard (1-2 days)', 'Economy (3-5 days)', 'Smart Ride']}
                                             tooltips={{
-                                                'Express (Same day)': 'Fast delivery within the same day — starting from ₦1,200',
-                                                'Standard (1-2 days)': 'Regular delivery in 1-2 days — starting from ₦800',
-                                                'Economy (3-5 days)': 'Budget-friendly delivery in 3-5 days — starting from ₦800',
-                                                'Smart Ride': 'Quick motorcycle delivery with instant rider matching — starting from ₦1,400'
+                                                'Express (Same day)': 'Fast delivery within the same day — starting from ₦900',
+                                                'Standard (1-2 days)': 'Regular delivery in 1-2 days — starting from ₦500',
+                                                'Economy (3-5 days)': 'Budget-friendly delivery in 3-5 days — starting from ₦500',
+                                                'Smart Ride': 'Quick motorcycle delivery with instant rider matching — starting from ₦1,100'
                                             }}
                                             className="w-full border-[1.5px] border-gray-200 rounded-full"
                                             width="w-full"

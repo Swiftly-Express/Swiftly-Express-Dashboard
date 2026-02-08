@@ -827,12 +827,12 @@ const Book = () => {
     return {
       total: 0,
       // Ensure base fare is visible even when backend estimate is missing
-      baseFare: 800,
+      baseFare: 500, // Updated base fare
       deliveryTypeFee: appliedDeliveryTypeFee || 0,
-      deliveryCharge: 800 + (appliedDeliveryTypeFee || 0),
+      deliveryCharge: 500 + (appliedDeliveryTypeFee || 0),
       distance: 0,
       distanceCharge: 0,
-      perKmRate: 200,
+      perKmRate: 150, // Updated per km rate
       discountAmount: 0,
       discountPercentage: 0
     };
@@ -841,7 +841,7 @@ const Book = () => {
   const calculateTotal = () => {
     const pricing = getPricingBreakdown();
     const base = Number(pricing.baseFare || 0);
-    const perKmRate = Number(pricing.perKmRate || 200);
+    const perKmRate = Number(pricing.perKmRate || 150);
     const dtFee = Number(pricing.deliveryTypeFee || 0);
     const discount = Number(pricing.discountAmount || 0);
 
