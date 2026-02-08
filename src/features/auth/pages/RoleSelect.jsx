@@ -13,8 +13,24 @@ const RoleSelect = () => {
     console.log('[RoleSelect] Component mounted successfully');
     console.log('[RoleSelect] Router available:', !!router);
     console.log('[RoleSelect] Selected role:', selectedRole);
+    
+    // FIXED: Force viewport height recalculation on iOS Safari
+    const setVH = () => {
+      const vh = window.innerHeight * 0.01;
+      document.documentElement.style.setProperty('--vh', `${vh}px`);
+    };
+    
+    // Set on mount
+    setVH();
+    
+    // Update on resize (Safari address bar show/hide)
+    window.addEventListener('resize', setVH);
+    window.addEventListener('orientationchange', setVH);
+    
     return () => {
       console.log('[RoleSelect] Component unmounting');
+      window.removeEventListener('resize', setVH);
+      window.removeEventListener('orientationchange', setVH);
     };
   }, []);
 
@@ -47,15 +63,16 @@ const RoleSelect = () => {
   return (
     <IonPage>
       <IonContent className="ion-no-padding" scrollY={false}>
-        <div className="h-screen bg-[#F5F5F5] flex flex-col p-3 md:p-4">
+        <div className="role-select-container bg-[#F5F5F5] flex flex-col p-3 md:p-4">
           <div className="flex-1 grid grid-cols-1 md:grid-cols-2 gap-3 md:gap-4 overflow-hidden min-h-0">
             {/* Rider Card */}
             <div className={`relative bg-[#1E1E1E] rounded-3xl md:rounded-[32px] p-5 md:p-8 flex flex-col justify-between overflow-hidden ${selectedRole === 'rider' ? 'flex' : 'hidden md:flex'}`}>
+              {/* FIXED: Reduced image height on mobile to make room for button */}
               <div className="relative w-full flex justify-center flex-shrink-0">
                 <img
                   src="/despatch-man.svg"
                   alt="Delivery Rider on Motorcycle"
-                  className="w-[85%] md:w-[95%] h-auto object-contain max-h-[60vh] md:max-h-[45vh]"
+                  className="w-[85%] md:w-[95%] h-auto object-contain max-h-[48vh] md:max-h-[45vh]"
                 />
               </div>
 
@@ -67,10 +84,11 @@ const RoleSelect = () => {
                   <div className="text-[#FFFFFF] font-[400] text-[14px] md:text-[15px] leading-tight mt-1.5 mb-3 md:mb-3 md:max-w-md opacity-90">
                     Earn more while delivering faster. Join Swiftly's growing network of professional riders and start receiving delivery requests instantly.
                   </div>
+                  {/* FIXED: Made button more visible on mobile */}
                   <Button
                     variant="primary"
                     onClick={handleRiderSignup}
-                    className="!bg-[#00D68F] hover:!bg-[#00B876] mb-1 !text-white text-xs md:text-sm font-[500] mx-auto md:mx-0 w-auto !px-5 md:!px-4 !py-2 md:!py-2 rounded-full transition-all duration-300"
+                    className="!bg-[#00D68F] hover:!bg-[#00B876] mb-2 !text-white text-sm md:text-sm font-[500] mx-auto md:mx-0 w-auto !px-6 md:!px-4 !py-3 md:!py-2 rounded-full transition-all duration-300 shadow-lg"
                   >
                     <div>Create Account</div>
                   </Button>
@@ -91,10 +109,11 @@ const RoleSelect = () => {
                   <div className="text-[32px] md:text-[38px] font-[300] leading-none text-white mb-4 md:mb-1">
                     Send Packages<br />with <span className="text-[#1E1E1E] font-semibold">Ease</span>
                   </div>
+                  {/* FIXED: Made button more visible on mobile */}
                   <Button
                     variant="light"
                     onClick={handleCustomerSignup}
-                    className="!bg-white hover:!bg-gray-50 text-sm md:text-sm mb-2 font-[500] !text-[#1E1E1E] mx-auto md:mx-0 w-auto !px-8 md:!px-4 !py-3 md:!py-2 rounded-full transition-all duration-300"
+                    className="!bg-white hover:!bg-gray-50 text-sm md:text-sm mb-2 font-[500] !text-[#1E1E1E] mx-auto md:mx-0 w-auto !px-8 md:!px-4 !py-3.5 md:!py-2 rounded-full transition-all duration-300 shadow-lg"
                   >
                     <div>Create Account</div>
                   </Button>
@@ -104,11 +123,12 @@ const RoleSelect = () => {
                 </YummyText>
               </div>
 
+              {/* FIXED: Reduced image height on mobile */}
               <div className="absolute right-0 bottom-0 w-[82%] md:w-[49%] flex-shrink-0">
                 <img
                   src="/lady-package.svg"
                   alt="Customer with Packages"
-                  className="w-full h-auto object-contain max-h-[57vh] md:max-h-[65vh]"
+                  className="w-full h-auto object-contain max-h-[48vh] md:max-h-[65vh]"
                 />
               </div>
             </div>
@@ -117,13 +137,7 @@ const RoleSelect = () => {
           {/* Role Toggle Buttons - Mobile Only */}
           <YummyText>
             <div 
-              className="flex md:hidden gap-2 mt-3 px-1 flex-shrink-0"
-              style={{
-                paddingBottom: 'max(0.5rem, env(safe-area-inset-bottom))',
-                position: 'relative',
-                zIndex: 50,
-                minHeight: '60px'
-              }}
+              className="role-select-tabs flex md:hidden gap-2 mt-3 px-1 flex-shrink-0"
             >
               <button
                 onClick={() => setSelectedRole('customer')}
@@ -132,11 +146,6 @@ const RoleSelect = () => {
                     ? 'bg-[#00B75A] text-white shadow-lg'
                     : 'bg-white text-[#1E1E1E] border-2 border-gray-300'
                 }`}
-                style={{ 
-                  minHeight: '48px',
-                  WebkitTapHighlightColor: 'transparent',
-                  touchAction: 'manipulation'
-                }}
               >
                 Customer
               </button>
@@ -147,11 +156,6 @@ const RoleSelect = () => {
                     ? 'bg-[#1E1E1E] text-white shadow-lg'
                     : 'bg-white text-[#1E1E1E] border-2 border-gray-300'
                 }`}
-                style={{ 
-                  minHeight: '48px',
-                  WebkitTapHighlightColor: 'transparent',
-                  touchAction: 'manipulation'
-                }}
               >
                 Rider
               </button>
@@ -159,27 +163,64 @@ const RoleSelect = () => {
           </YummyText>
         </div>
 
-        {/* MOBILE ONLY: CSS fixes for iOS Safari and viewport issues */}
+        {/* MOBILE ONLY: Comprehensive iOS Safari fixes */}
         <style jsx>{`
+          /* Desktop: Keep original behavior */
+          @media (min-width: 768px) {
+            .role-select-container {
+              height: 100vh;
+            }
+          }
+
+          /* Mobile: iOS Safari-specific fixes */
           @media (max-width: 767px) {
-            /* iOS Safari viewport fix */
-            .h-screen {
-              min-height: 100vh;
+            /* Use CSS variable for dynamic viewport height */
+            .role-select-container {
+              height: calc(var(--vh, 1vh) * 100);
               min-height: -webkit-fill-available;
             }
 
-            /* Prevent iOS Safari from hiding bottom tabs */
+            /* Ensure tabs are always visible */
+            .role-select-tabs {
+              position: relative;
+              padding-bottom: max(0.5rem, env(safe-area-inset-bottom));
+              min-height: 60px;
+              z-index: 100;
+            }
+
+            /* Better touch targets for iOS */
+            .role-select-tabs button {
+              min-height: 48px;
+              -webkit-tap-highlight-color: transparent;
+              touch-action: manipulation;
+            }
+
+            /* iOS-specific viewport fixes */
             @supports (-webkit-touch-callout: none) {
-              .h-screen {
-                min-height: 100vh;
-                height: 100vh;
+              .role-select-container {
+                height: calc(var(--vh, 1vh) * 100);
+              }
+              
+              body {
+                position: fixed;
+                width: 100%;
+                height: calc(var(--vh, 1vh) * 100);
               }
             }
 
-            /* Ensure safe area for devices with notch/home indicator */
-            body {
-              padding-bottom: env(safe-area-inset-bottom);
+            /* Prevent Safari address bar from causing issues */
+            html {
+              height: -webkit-fill-available;
             }
+            
+            body {
+              min-height: -webkit-fill-available;
+            }
+          }
+
+          /* Prevent any scrolling on this page */
+          ion-content {
+            --overflow: hidden;
           }
         `}</style>
       </IonContent>
