@@ -116,25 +116,27 @@ const RoleSelect = () => {
 
           {/* Role Toggle Buttons - Mobile Only */}
           <YummyText>
-            <div className="flex md:hidden gap-2 mt-3 px-1 pb-2 flex-shrink-0 safe-area-bottom">
-              <button
-                onClick={() => setSelectedRole('customer')}
-                className={`flex-1 py-3 rounded-full text-sm font-medium transition-all duration-300 ${selectedRole === 'customer'
-                  ? 'bg-[#00B75A] text-white shadow-lg'
-                  : 'bg-white text-[#1E1E1E] border-2 border-gray-300'
-                  }`}
-              >
-                Customer
-              </button>
-              <button
-                onClick={() => setSelectedRole('rider')}
-                className={`flex-1 py-3 rounded-full text-sm font-medium transition-all duration-300 ${selectedRole === 'rider'
-                  ? 'bg-[#1E1E1E] text-white shadow-lg'
-                  : 'bg-white text-[#1E1E1E] border-2 border-gray-300'
-                  }`}
-              >
-                Rider
-              </button>
+            <div className="md:hidden fixed bottom-0 left-0 right-0 z-20 px-3 pb-[env(safe-area-inset-bottom)]">
+              <div className="flex gap-2 mb-3 p-2 rounded-2xl bg-white/90 backdrop-blur border border-gray-200 shadow-lg">
+                <button
+                  onClick={() => setSelectedRole('customer')}
+                  className={`flex-1 py-3 rounded-full text-sm font-medium transition-all duration-300 ${selectedRole === 'customer'
+                    ? 'bg-[#00B75A] text-white shadow-md'
+                    : 'bg-white text-[#1E1E1E] border-2 border-gray-300'
+                    }`}
+                >
+                  Customer
+                </button>
+                <button
+                  onClick={() => setSelectedRole('rider')}
+                  className={`flex-1 py-3 rounded-full text-sm font-medium transition-all duration-300 ${selectedRole === 'rider'
+                    ? 'bg-[#1E1E1E] text-white shadow-md'
+                    : 'bg-white text-[#1E1E1E] border-2 border-gray-300'
+                    }`}
+                >
+                  Rider
+                </button>
+              </div>
             </div>
           </YummyText>
         </div>
