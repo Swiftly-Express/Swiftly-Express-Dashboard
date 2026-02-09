@@ -13,20 +13,20 @@ const RoleSelect = () => {
     console.log('[RoleSelect] Component mounted successfully');
     console.log('[RoleSelect] Router available:', !!router);
     console.log('[RoleSelect] Selected role:', selectedRole);
-    
+
     // FIXED: Force viewport height recalculation on iOS Safari
     const setVH = () => {
       const vh = window.innerHeight * 0.01;
       document.documentElement.style.setProperty('--vh', `${vh}px`);
     };
-    
+
     // Set on mount
     setVH();
-    
+
     // Update on resize (Safari address bar show/hide)
     window.addEventListener('resize', setVH);
     window.addEventListener('orientationchange', setVH);
-    
+
     return () => {
       console.log('[RoleSelect] Component unmounting');
       window.removeEventListener('resize', setVH);
@@ -144,26 +144,24 @@ const RoleSelect = () => {
 
           {/* Role Toggle Buttons - Mobile Only */}
           <YummyText>
-            <div 
+            <div
               className="role-select-tabs flex md:hidden gap-2 mt-3 px-1 flex-shrink-0"
             >
               <button
                 onClick={() => setSelectedRole('customer')}
-                className={`flex-1 py-3.5 rounded-full text-sm font-medium transition-all duration-300 ${
-                  selectedRole === 'customer'
+                className={`flex-1 py-3.5 rounded-full text-sm font-medium transition-all duration-300 ${selectedRole === 'customer'
                     ? 'bg-[#00B75A] text-white shadow-lg'
                     : 'bg-white text-[#1E1E1E] border-2 border-gray-300'
-                }`}
+                  }`}
               >
                 Customer
               </button>
               <button
                 onClick={() => setSelectedRole('rider')}
-                className={`flex-1 py-3.5 rounded-full text-sm font-medium transition-all duration-300 ${
-                  selectedRole === 'rider'
+                className={`flex-1 py-3.5 rounded-full text-sm font-medium transition-all duration-300 ${selectedRole === 'rider'
                     ? 'bg-[#1E1E1E] text-white shadow-lg'
                     : 'bg-white text-[#1E1E1E] border-2 border-gray-300'
-                }`}
+                  }`}
               >
                 Rider
               </button>

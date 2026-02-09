@@ -233,7 +233,7 @@ const CustomerSignUp = () => {
         <div className="bg-white h-screen justify-between grid grid-cols-1 lg:grid-cols-2 mx-auto py-6 lg:py-8 px-4 gap-4 overflow-hidden">
           {/* Top Right - Join as Rider Button */}
           <YummyText>
-              <div className="absolute top-4 right-4 z-10">
+            <div className="absolute top-4 right-4 z-10">
               <button
                 onClick={handleSwitchToRider}
                 className="px-4 py-2 text-xs font-medium text-[#00D68F] hover:text-white border-solid hover:bg-[#00D68F] rounded-full transition-all duration-300"
