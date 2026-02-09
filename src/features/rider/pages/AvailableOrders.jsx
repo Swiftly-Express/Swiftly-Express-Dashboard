@@ -410,7 +410,7 @@ const AvailableOrders = () => {
   // Socket: real-time invitation when a customer requests this rider
   useEffect(() => {
     socketService.connect();
-    
+
     const handleInvitation = (data) => {
       console.log('[AvailableOrders] delivery:invitation received:', data);
       setToastMsg('A customer requested you for a delivery');
@@ -432,9 +432,9 @@ const AvailableOrders = () => {
     socketService.on('delivery:invitation', handleInvitation);
     socketService.on('delivery:new', handleNewJob);
     socketService.on('job:available', handleNewJob);
-    
+
     return () => {
-      try { 
+      try {
         socketService.off('delivery:invitation', handleInvitation);
         socketService.off('delivery:new', handleNewJob);
         socketService.off('job:available', handleNewJob);

@@ -20,6 +20,10 @@ const RiderSignup = () => {
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
 
+  const handleSwitchToCustomer = () => {
+    router.push('/auth/customer/signup', 'forward', 'push');
+  };
+
   // Ensure API base is absolute. If VITE_API_BASE_URL is set to a relative path
   // (e.g. '/') in dev, convert it to an absolute URL so window.location.href
   // doesn't navigate to the dev server's /api path (causing 404).
@@ -146,6 +150,17 @@ const RiderSignup = () => {
     <IonPage>
       <IonContent className="ion-no-padding" scrollY={false}>
         <div className="bg-white grid grid-cols-1 lg:grid-cols-2 h-screen justify-between mx-auto py-6 lg:py-8 px-4 gap-4 overflow-hidden">
+          {/* Top Right - Join as Customer Button */}
+          <div className="absolute top-4 right-4 z-10">
+            <button
+              onClick={handleSwitchToCustomer}
+              className="px-4 py-2 text-xs font-medium text-[#00D68F] hover:text-white border-solid hover:bg-[#00D68F] rounded-full transition-all duration-300"
+              style={{ borderWidth: '1.5px', borderColor: '#00D68F', borderStyle: 'solid', boxSizing: 'border-box' }}
+            >
+              Join as Customer
+            </button>
+          </div>
+
           {/* Left Side - Form */}
           <div className="flex items-center justify-center lg:pr-2 lg:pl-6">
             <div className="w-full max-w-xl">

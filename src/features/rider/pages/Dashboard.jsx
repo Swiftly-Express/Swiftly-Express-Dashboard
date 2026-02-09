@@ -440,7 +440,7 @@ const Dashboard = () => {
 
     // Socket: listen for new jobs and customer requests
     socketService.connect();
-    
+
     const handleNewJob = (data) => {
       console.log('[Dashboard] 🔔 New job available (socket):', data);
       // Play notification sound for new job
@@ -468,7 +468,7 @@ const Dashboard = () => {
       window.removeEventListener('delivery:statusChanged', handleDeliveryEvent);
       window.removeEventListener('delivery:updated', handleDeliveryEvent);
       window.removeEventListener('delivery:completed', handleDeliveryEvent);
-      
+
       try {
         socketService.off('delivery:new', handleNewJob);
         socketService.off('job:available', handleNewJob);

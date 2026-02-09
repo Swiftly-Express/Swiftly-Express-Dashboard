@@ -70,9 +70,9 @@ class NotificationSound {
             if (!this.audioContext) {
                 this.audioContext = new (window.AudioContext || window.webkitAudioContext)();
             }
-            
+
             const audioContext = this.audioContext;
-            
+
             // Resume context if suspended (required on some mobile browsers and after page idle)
             if (audioContext.state === 'suspended') {
                 console.log('[NotificationSound] Resuming suspended audio context...');
@@ -127,12 +127,12 @@ class NotificationSound {
     playFallbackBeep() {
         try {
             console.log('[NotificationSound] Using HTML5 Audio fallback...');
-            
+
             // Try to use the notification.mp3 file from public folder first
             if (!this.audio) {
                 this.audio = new Audio('/notification.mp3');
                 this.audio.volume = 0.6;
-                
+
                 // If file fails to load, use data URI beep as last resort
                 this.audio.onerror = () => {
                     console.warn('[NotificationSound] Audio file not found, using data URI beep');
@@ -140,11 +140,11 @@ class NotificationSound {
                     this.audio.volume = 0.5;
                 };
             }
-            
+
             // Play the audio
             this.audio.currentTime = 0;
             const playPromise = this.audio.play();
-            
+
             if (playPromise !== undefined) {
                 playPromise
                     .then(() => {
@@ -183,7 +183,7 @@ if (typeof window !== 'undefined') {
         document.removeEventListener('touchstart', initAudio);
         document.removeEventListener('keydown', initAudio);
     };
-    
+
     // Listen for any user interaction
     document.addEventListener('click', initAudio, { once: true });
     document.addEventListener('touchstart', initAudio, { once: true });

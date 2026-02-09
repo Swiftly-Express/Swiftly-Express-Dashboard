@@ -76,7 +76,7 @@ const RoleSelect = () => {
                 />
               </div>
 
-              <div className="relative z-10 flex-shrink-0">
+              <div className="relative z-10 flex-shrink-0 -mt-5">
                 <YummyText>
                   <div className="text-[35px] md:text-[38px] font-[300] text-white leading-tight mb-2">
                     Become a<br />Swiftly <span className="text-[#00D68F]  font-semibold">Rider</span>
@@ -92,6 +92,10 @@ const RoleSelect = () => {
                   >
                     <div>Create Account</div>
                   </Button>
+                  {/* Mobile login link */}
+                  <div className="md:hidden text-left text-white text-sm mb-2">
+                    Already have an account? <span onClick={handleRiderSignin} className="text-[#00D68F] font-medium cursor-pointer hover:underline"> Sign in</span>
+                  </div>
                   <div className="hidden md:block text-white text-[11px] md:text-[13px]">
                     Already have an account? <span onClick={handleRiderSignin} className="text-[#00D68F] font-medium cursor-pointer hover:underline"> Sign in</span>
                   </div>
@@ -113,10 +117,14 @@ const RoleSelect = () => {
                   <Button
                     variant="light"
                     onClick={handleCustomerSignup}
-                    className="!bg-white hover:!bg-gray-50 text-sm md:text-sm mb-2 font-[500] !text-[#1E1E1E] mx-auto md:mx-0 w-auto !px-8 md:!px-4 !py-3.5 md:!py-2 rounded-full transition-all duration-300 shadow-lg"
+                    className="!bg-white hover:!bg-gray-50 text-sm md:text-sm mb-2 font-[500] !text-[#1E1E1E] mx-auto md:mx-0 w-auto !px-6 md:!px-4 !py-3.5 md:!py-2 rounded-full transition-all duration-300 shadow-lg"
                   >
                     <div>Create Account</div>
                   </Button>
+                  {/* Mobile login link */}
+                  <div className="md:hidden text-left text-white text-sm mb-2">
+                    Already have an account? <span onClick={handleCustomerSignin} className="text-[#1E1E1E] font-medium cursor-pointer hover:underline">Sign in</span>
+                  </div>
                   <div className="hidden md:block text-white text-[11px] md:text-[13px]">
                     Already have an account? <span onClick={handleCustomerSignin} className="text-[#1E1E1E] font-medium cursor-pointer hover:underline"> Sign in</span>
                   </div>
