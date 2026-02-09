@@ -96,6 +96,12 @@ const Track = () => {
           setToastMsg(`✅ Status updated to: ${newStatus}`);
           setShowToast(true);
 
+          // Play notification sound if delivery is completed
+          if ((newStatus?.toLowerCase() === 'delivered' || newStatus?.toLowerCase() === 'completed')) {
+            console.log('[Track] 🔔 Delivery completed! Playing notification sound');
+            playNotificationSound();
+          }
+
           // Show rating modal if delivery is completed and not yet rated
           if ((newStatus?.toLowerCase() === 'delivered' || newStatus?.toLowerCase() === 'completed') &&
             !hasRated &&
@@ -144,6 +150,12 @@ const Track = () => {
             // Show toast notification
             setToastMsg(`✅ Status updated to: ${newStatus}`);
             setShowToast(true);
+
+            // Play notification sound if delivery is completed
+            if ((newStatus?.toLowerCase() === 'delivered' || newStatus?.toLowerCase() === 'completed')) {
+              console.log('[Track] 🔔 Delivery completed (socket)! Playing notification sound');
+              playNotificationSound();
+            }
 
             // Show rating modal if delivery is completed and not yet rated
             if ((newStatus?.toLowerCase() === 'delivered' || newStatus?.toLowerCase() === 'completed') &&
@@ -222,6 +234,8 @@ const Track = () => {
 
       if (isCompleted && !alreadyRated && !hasRated) {
         console.log('[Track] ⭐ Delivery completed and not rated, triggering modal in 2s');
+        // Play notification sound for completed delivery
+        playNotificationSound();
         setTimeout(() => {
           console.log('[Track] 🚀 Dispatching rating:show event for tracked delivery!', data);
           window.dispatchEvent(new CustomEvent('rating:show', { detail: data }));

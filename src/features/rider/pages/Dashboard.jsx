@@ -11,6 +11,7 @@ import { getRiderProfile, getRiderDeliveries, getAvailableJobs, getRiderEarnings
 import socketService from '../../../services/socket.service';
 import CheckCircleIcon from '../../../icons/Circlecheck';
 import { getCookie, setCookie, getJSONCookie } from '../../../utils/cookies';
+import { playNotificationSound } from '../../../utils/notificationSound';
 
 // Shadow only on left, right and bottom - no top shadow for seamless blend
 const sideBottomShadow = {
@@ -437,6 +438,29 @@ const Dashboard = () => {
     window.addEventListener('delivery:updated', handleDeliveryEvent);
     window.addEventListener('delivery:completed', handleDeliveryEvent);
 
+    // Socket: listen for new jobs and customer requests
+    socketService.connect();
+    
+    const handleNewJob = (data) => {
+      console.log('[Dashboard] 🔔 New job available (socket):', data);
+      // Play notification sound for new job
+      playNotificationSound();
+      // Refresh dashboard to show new available job
+      fetchDashboardData();
+    };
+
+    const handleInvitation = (data) => {
+      console.log('[Dashboard] 🔔 Customer requested you (socket):', data);
+      // Play notification sound for customer request
+      playNotificationSound();
+      // Refresh dashboard to show invitation
+      fetchDashboardData();
+    };
+
+    socketService.on('delivery:new', handleNewJob);
+    socketService.on('job:available', handleNewJob);
+    socketService.on('delivery:invitation', handleInvitation);
+
     return () => {
       window.removeEventListener('verification:completed', handleVerificationComplete);
       window.removeEventListener('kyc:updated', handleKYCUpdate);
@@ -444,6 +468,12 @@ const Dashboard = () => {
       window.removeEventListener('delivery:statusChanged', handleDeliveryEvent);
       window.removeEventListener('delivery:updated', handleDeliveryEvent);
       window.removeEventListener('delivery:completed', handleDeliveryEvent);
+      
+      try {
+        socketService.off('delivery:new', handleNewJob);
+        socketService.off('job:available', handleNewJob);
+        socketService.off('delivery:invitation', handleInvitation);
+      } catch (e) { }
     };
   }, []);
 

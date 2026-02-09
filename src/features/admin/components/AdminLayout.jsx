@@ -66,14 +66,12 @@ const AdminLayout = ({ children }) => {
         try {
           await markAllNotificationsAsRead();
         } catch (err) {
-          console.warn('[AdminLayout] markAllNotificationsAsRead failed', err);
         }
         setTimeout(async () => {
           try {
             await fetchNotifications(1, false);
             await checkNotifications();
           } catch (e) {
-            console.warn('[AdminLayout] Refresh after toggle mark-all failed', e);
           }
         }, 300);
       })();
@@ -108,8 +106,7 @@ const AdminLayout = ({ children }) => {
       try { if (document && document.activeElement) document.activeElement.blur(); } catch (err) { /* ignore */ }
       console.log('[AdminLayout] All notifications marked as read successfully');
     } catch (error) {
-      console.error('[AdminLayout] Failed to mark all as read:', error);
-      console.error('[AdminLayout] Error details:', error.response?.data || error.message);
+   
       // Revert optimistic update on error
       try {
         await fetchNotifications(1, false);
@@ -127,15 +124,13 @@ const AdminLayout = ({ children }) => {
     try {
       console.log('[AdminLayout] Marking notification as read:', notificationId);
       const response = await markNotificationAsRead(notificationId);
-      console.log('[AdminLayout] Mark as read response:', response);
+     
       setNotifications(prev =>
         prev.map(n => n._id === notificationId || n.id === notificationId ? { ...n, isRead: true, read: true } : n)
       );
       await checkNotifications();
       console.log('[AdminLayout] Notification marked as read successfully');
     } catch (error) {
-      console.error('[AdminLayout] Failed to mark as read:', error);
-      console.error('[AdminLayout] Error details:', error.response?.data || error.message);
     }
   };
 
@@ -153,25 +148,25 @@ const AdminLayout = ({ children }) => {
     }, 30000);
 
     const handleKycUpdate = () => {
-      console.log('[AdminLayout] kyc:updated event received');
+      
       checkNotifications();
     };
     const handleUserCreated = () => {
-      console.log('[AdminLayout] user:created event received');
+      
       checkNotifications();
     };
     const handleKycSubmitted = () => {
-      console.log('[AdminLayout] kyc:submitted event received');
+      
       checkNotifications();
     };
 
     const handleVerificationCompleted = () => {
-      console.log('[AdminLayout] verification:completed event received');
+      
       checkNotifications();
     };
 
     const handleDebtUpdated = (evt) => {
-      console.log('[AdminLayout] debt:updated event received', evt?.detail);
+      
       checkNotifications();
       // Optionally refresh visible notifications
       fetchNotifications(1, false).catch(() => { });
@@ -268,10 +263,7 @@ const AdminLayout = ({ children }) => {
           </div>
         </div>
 
-        {/* Main Content (header has fixed position).
-            Allow page scrolling but hide the visible scrollbar using a utility class.
-            Inner sections (with their own overflow-y-auto) will still show scrollbars.
-        */}
+      
         <div className="flex-1 md:p-8 p-0 pt-16 md:pt-24 overflow-y-auto no-scrollbar">
           {children}
         </div>

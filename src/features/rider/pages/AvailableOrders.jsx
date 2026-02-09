@@ -410,15 +410,35 @@ const AvailableOrders = () => {
   // Socket: real-time invitation when a customer requests this rider
   useEffect(() => {
     socketService.connect();
+    
     const handleInvitation = (data) => {
       console.log('[AvailableOrders] delivery:invitation received:', data);
       setToastMsg('A customer requested you for a delivery');
       setShowToast(true);
+      // Play notification sound for customer request
+      playNotificationSound();
       fetchAvailableJobs();
     };
+
+    const handleNewJob = (data) => {
+      console.log('[AvailableOrders] 🔔 New job available (socket):', data);
+      setToastMsg('🔔 New delivery available!');
+      setShowToast(true);
+      // Play notification sound for new job
+      playNotificationSound();
+      fetchAvailableJobs();
+    };
+
     socketService.on('delivery:invitation', handleInvitation);
+    socketService.on('delivery:new', handleNewJob);
+    socketService.on('job:available', handleNewJob);
+    
     return () => {
-      try { socketService.off('delivery:invitation', handleInvitation); } catch (e) { }
+      try { 
+        socketService.off('delivery:invitation', handleInvitation);
+        socketService.off('delivery:new', handleNewJob);
+        socketService.off('job:available', handleNewJob);
+      } catch (e) { }
     };
   }, []);
 
