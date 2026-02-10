@@ -28,6 +28,12 @@ function toRad(degrees) {
   return degrees * (Math.PI / 180);
 }
 
+// Pricing constants - exported for use across the app
+export const BASE_FARE = 500; // Covers up to 2km
+export const PER_KM_RATE = 150; // After 2km
+export const PLATFORM_COMMISSION_RATE = 0.30; // Company gets 30%, rider gets 70%
+export const MIN_BID = 500; // Minimum bid amount
+
 import { getCommissionRate } from './adminApi';
 
 /**
@@ -54,9 +60,7 @@ export function calculateDeliveryPrice({
   deliveryType = null,
   commissionRate = null // decimal e.g. 0.15 (optional - can be provided by backend)
 }) {
-  // Pricing constants
-  const BASE_FARE = 500; // Covers up to 2km
-  const PER_KM_RATE = 150; // After 2km
+  // Pricing constants (use exported constants for consistency)
   const WAITING_RATE_PER_5MIN = 70; // First 5 mins free
   const PRIORITY_FEE_MIN = 200;
   const PRIORITY_FEE_MAX = 500;
@@ -64,8 +68,6 @@ export function calculateDeliveryPrice({
   const SPECIAL_ERRAND_FEE_MAX = 500;
   const EXPRESS_DELIVERY_FEE = 400; // Added to base for express
   const SMART_RIDE_FEE = 600; // Added to base for smart ride
-  const PLATFORM_COMMISSION_RATE = 0.30; // fallback 30% (rider gets 70%)
-  const MIN_BID = 500; // Updated to match new base fare
 
   // 1. Calculate base delivery charge
   let deliveryCharge = BASE_FARE;
