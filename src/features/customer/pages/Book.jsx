@@ -840,18 +840,18 @@ const Book = () => {
 
   const calculateTotal = () => {
     const pricing = getPricingBreakdown();
-    const base = Number(pricing.baseFare || 0);
-    const perKmRate = Number(pricing.perKmRate || 150);
+    const base = 500; // Base fare
+    const perKmRate = 150; // Per km rate after 2km
     const dtFee = Number(pricing.deliveryTypeFee || 0);
     const discount = Number(pricing.discountAmount || 0);
 
     // Prefer using measured distance from state (set by backend estimate), fallback to pricing.distance
     const dist = (typeof distanceKm === 'number' && distanceKm > 0) ? Number(distanceKm) : Number(pricing.distance || 0);
 
-    // Distance charge: first 2km covered by base fare, charge by whole km after that
+    // Distance charge: first 2km covered by base fare, charge ₦150/km after that
     let distanceCharge = 0;
     if (dist > 2) {
-      const extraKm = Math.ceil(dist - 2);
+      const extraKm = dist - 2; // Use exact distance, not rounded
       distanceCharge = extraKm * perKmRate;
     }
 

@@ -1086,31 +1086,31 @@ export default function SmartRideBooking({ embedMode = false, initialData = {}, 
 
     const calculateTotal = () => {
         if (estimatedPrice) {
-            const pb = estimatedPrice.pricingBreakdown || {};
             const distance = estimatedPrice.distance ?? 0;
 
-            // Use new pricing: base fare 500 (covers first 2km), then 150/km after that
-            const baseFare = BASE_FARE; // 500 covers first 2km
-            // Only charge for distance beyond 2km
-            const distanceCharge = distance > 2 ? (distance - 2) * PER_KM_RATE : 0;
-            const smartRideFee = pb.smartRideFee ?? 0;
-            const errandFee = pb.errandFee ?? 0;
-            const priorityFee = pb.priorityFee ?? 0;
-            const waitingTimeFee = pb.waitingTimeFee ?? 0;
+            // Base fare: ₦500 (covers first 2km)
+            const baseFare = 500;
 
-            const total = baseFare + distanceCharge + smartRideFee + errandFee + priorityFee + waitingTimeFee;
-            const riderEarnings = total * (1 - PLATFORM_COMMISSION_RATE); // rider gets 70%
+            // Distance charge: ₦150 per km after first 2km
+            const distanceCharge = distance > 2 ? (distance - 2) * 150 : 0;
+
+            // Delivery type fee: Express = ₦400, Smart Ride = ₦600
+            const deliveryTypeFee = formData.deliveryType === 'express' ? 400 : 600;
+
+            // Total calculation
+            const total = baseFare + distanceCharge + deliveryTypeFee;
+            const riderEarnings = total * 0.70; // Rider gets 70%
 
             return {
                 total: Number(total),
                 riderEarnings: Number(riderEarnings),
-                priorityFee,
-                baseFare, // Force 500
+                baseFare,
                 distance,
-                distanceCharge: Number(distanceCharge), // Only charge after 2km
-                smartRideFee,
-                errandFee,
-                waitingTimeFee,
+                distanceCharge: Number(distanceCharge),
+                smartRideFee: deliveryTypeFee,
+                priorityFee: 0,
+                errandFee: 0,
+                waitingTimeFee: 0,
                 subtotal: Number(total)
             };
         }
