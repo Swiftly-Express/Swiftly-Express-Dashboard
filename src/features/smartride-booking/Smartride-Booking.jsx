@@ -1089,9 +1089,10 @@ export default function SmartRideBooking({ embedMode = false, initialData = {}, 
             const pb = estimatedPrice.pricingBreakdown || {};
             const distance = estimatedPrice.distance ?? 0;
 
-            // Use new pricing: base fare 500, per km 150, rider gets 70%
-            const baseFare = BASE_FARE; // 500
-            const distanceCharge = distance * PER_KM_RATE; // distance * 150
+            // Use new pricing: base fare 500 (covers first 2km), then 150/km after that
+            const baseFare = BASE_FARE; // 500 covers first 2km
+            // Only charge for distance beyond 2km
+            const distanceCharge = distance > 2 ? (distance - 2) * PER_KM_RATE : 0;
             const smartRideFee = pb.smartRideFee ?? 0;
             const errandFee = pb.errandFee ?? 0;
             const priorityFee = pb.priorityFee ?? 0;
@@ -1106,7 +1107,7 @@ export default function SmartRideBooking({ embedMode = false, initialData = {}, 
                 priorityFee,
                 baseFare, // Force 500
                 distance,
-                distanceCharge: Number(distanceCharge), // Force distance * 150
+                distanceCharge: Number(distanceCharge), // Only charge after 2km
                 smartRideFee,
                 errandFee,
                 waitingTimeFee,
