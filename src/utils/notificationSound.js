@@ -10,6 +10,7 @@ class NotificationSound {
         this.isPlaying = false;
         this.initialized = false;
         this.audioContext = null;
+        this.unlocked = false;
     }
 
     /**
@@ -20,10 +21,53 @@ class NotificationSound {
         try {
             // Create audio context
             this.audioContext = new (window.AudioContext || window.webkitAudioContext)();
+            
+            // Pre-load the audio file
+            this.audio = new Audio('/notification.mp3');
+            this.audio.preload = 'auto';
+            this.audio.volume = 0.7;
+            
+            // Handle loading errors
+            this.audio.addEventListener('error', (e) => {
+                console.error('[NotificationSound] Audio file failed to load:', e);
+                console.log('[NotificationSound] Falling back to beep sound');
+            });
+            
             this.initialized = true;
             console.log('[NotificationSound] 🔊 Audio initialized');
         } catch (e) {
             console.warn('[NotificationSound] Could not initialize audio:', e);
+        }
+    }
+
+    /**
+     * Unlock audio on user interaction (required for mobile browsers)
+     */
+    async unlock() {
+        if (this.unlocked) return;
+        
+        try {
+            // Resume audio context if suspended
+            if (this.audioContext && this.audioContext.state === 'suspended') {
+                await this.audioContext.resume();
+            }
+            
+            // Play a silent sound to unlock
+            if (this.audio) {
+                this.audio.volume = 0;
+                const playPromise = this.audio.play();
+                if (playPromise !== undefined) {
+                    await playPromise;
+                    this.audio.pause();
+                    this.audio.currentTime = 0;
+                    this.audio.volume = 0.7;
+                }
+            }
+            
+            this.unlocked = true;
+            console.log('[NotificationSound] ✅ Audio unlocked');
+        } catch (e) {
+            console.warn('[NotificationSound] Failed to unlock audio:', e);
         }
     }
 
@@ -38,6 +82,11 @@ class NotificationSound {
                 this.initialize();
             }
 
+            // Unlock audio if not unlocked
+            if (!this.unlocked) {
+                await this.unlock();
+            }
+
             // If already playing, don't overlap
             if (this.isPlaying) {
                 console.log('[NotificationSound] Sound already playing, skipping...');
@@ -45,24 +94,53 @@ class NotificationSound {
             }
 
             console.log('[NotificationSound] 🔔 Playing notification sound...');
+            this.isPlaying = true;
 
-            // Try Web Audio API first (works on all modern browsers)
-            if (this.audioContext || window.AudioContext || window.webkitAudioContext) {
-                await this.playWithWebAudio();
-            } else {
-                // Fallback to HTML5 Audio
-                this.playFallbackBeep();
+            // Resume audio context if suspended
+            if (this.audioContext && this.audioContext.state === 'suspended') {
+                await this.audioContext.resume();
             }
+
+            // Try to play the audio file first
+            if (this.audio && !this.audio.error) {
+                try {
+                    this.audio.currentTime = 0;
+                    this.audio.volume = 0.7;
+                    
+                    const playPromise = this.audio.play();
+                    
+                    if (playPromise !== undefined) {
+                        await playPromise;
+                        console.log('[NotificationSound] ✅ Notification sound played (Audio file)');
+                        
+                        // Reset playing state when sound ends
+                        this.audio.onended = () => {
+                            this.isPlaying = false;
+                        };
+                        
+                        // Fallback timeout in case onended doesn't fire
+                        setTimeout(() => {
+                            this.isPlaying = false;
+                        }, 3000);
+                        
+                        return;
+                    }
+                } catch (error) {
+                    console.warn('[NotificationSound] Audio file playback failed:', error);
+                }
+            }
+
+            // Fallback to Web Audio API beep
+            await this.playWithWebAudio();
+            
         } catch (error) {
             console.error('[NotificationSound] Failed to play sound:', error);
             this.isPlaying = false;
-            // Try fallback
-            this.playFallbackBeep();
         }
     }
 
     /**
-     * Play using Web Audio API
+     * Play using Web Audio API (fallback)
      */
     async playWithWebAudio() {
         try {
@@ -73,7 +151,7 @@ class NotificationSound {
 
             const audioContext = this.audioContext;
 
-            // Resume context if suspended (required on some mobile browsers and after page idle)
+            // Resume context if suspended
             if (audioContext.state === 'suspended') {
                 console.log('[NotificationSound] Resuming suspended audio context...');
                 await audioContext.resume();
@@ -106,14 +184,12 @@ class NotificationSound {
             oscillator2.start(audioContext.currentTime + 0.15);
             oscillator2.stop(audioContext.currentTime + 0.5);
 
-            this.isPlaying = true;
-
             // Reset playing state after sound completes
             setTimeout(() => {
                 this.isPlaying = false;
             }, 600);
 
-            console.log('[NotificationSound] ✅ Notification sound played (Web Audio)');
+            console.log('[NotificationSound] ✅ Notification sound played (Web Audio beep)');
         } catch (error) {
             console.error('[NotificationSound] Web Audio failed:', error);
             this.isPlaying = false;
@@ -122,47 +198,11 @@ class NotificationSound {
     }
 
     /**
-     * Fallback method using HTML5 Audio with data URI
-     */
-    playFallbackBeep() {
-        try {
-            console.log('[NotificationSound] Using HTML5 Audio fallback...');
-
-            // Try to use the notification.mp3 file from public folder first
-            if (!this.audio) {
-                this.audio = new Audio('/notification.mp3');
-                this.audio.volume = 0.6;
-
-                // If file fails to load, use data URI beep as last resort
-                this.audio.onerror = () => {
-                    console.warn('[NotificationSound] Audio file not found, using data URI beep');
-                    this.audio = new Audio('data:audio/wav;base64,UklGRnoGAABXQVZFZm10IBAAAAABAAEAQB8AAEAfAAABAAgAZGF0YQoGAACBhYqFbF1fdJivrJBhNjVgodDbq2EcBj+a2/LDciUFLIHO8tiJNwgZaLvt559NEAxQp+PwtmMcBjiR1/LMeSwFJHfH8N2QQAoUXrTp66hVFApGn+DyvmwhBSuBzvLZiTYIGGS56+qdTQwOUKfl8LZiHAU2kdXy0HksBS1+y/LNjz8KElyx6OyrVhQKRp7h8r9sIQYuhM3y2IcxBxhltOzpoVALEFKo5fC2YRwFN5HT8tB5KwYtf8vy0ZBACRResdzmq1UUDUZ+4PK+bSMHLoXN8tiHMQcYZLTr6aFQCxBSqOTwtmEcBTeR0vLPeisFLYDK8tGPQAkUXrHb5qxVFAxGfeDyvmwjBy2FzfLYiDAHGGS06+mhUAsQUqnk8LZhHAU3k9Lyz3otBSx/yvLRj0AJFF6x2+arVRQMRn3g8r5sIwcthc3y2IgwBxhltOvpoVALEFKp5PC2YRwFN5PR8s98LQUsf8ry0Y9ACRRes9vmq1UUDEd94PK+bCMHLYXN8tiIMAcYZbTr6aFQCxBSqeTwtmEcBTeT0fLPfC0FLH/K8tGPQAkUXrPb5qtVFAxGfeDyvmwjBy2FzfLYiDAHGGW06+mhUAsQUqnk8LZhHAU3k9Hyz3wtBSx/yvLRj0AJFF6z2+arVRQMRn3g8r5sIwcthc3y2IgwBxhltOvpoVALEFKp5PC2YRwFN5PR8s98LQUsf8ry0Y9ACRRes9vmq1UUDEd94PK+bCMHLYXN8tiIMAcYZbTr6aFQCxBSqeTwtmEcBTeT0fLPfC0FLH/K8tGPQAkUXrPb5qtVFAxGfeDyvmwjBy2FzfLYiDAHGGW06+mhUAsQUqnk8LZhHAU3k9Hyz3wtBSx/yvLRj0AJFF6z2+arVRQMRn3g8r5sIwcthc3y2IgwBxhltOvpoVALEFKp5PC2YRwFN5PR8s98LQUsf8ry0Y9ACRRes9vmq1UUDEd94PK+bCMHLYXN8tiIMAcYZbTr6aFQCxBSqeTwtmEcBTeT0fLPfC0FLH/K8tGPQAkUXrPb5qtVFAxGfeDyvmwjBy2FzfLYiDAHGGW06+mhUAsQUqnk8LZhHAU3k9Hyz3wtBSx/yvLRj0AJFF6z2+arVRQMRn3g8r5sIwcthc3y2IgwBxhltOvpoVALEFKp5PC2YRwFN5PR8s98LQUsf8ry0Y9ACRRes9vmq1UUDEd94PK+bCMHLYXN8tiIMAcYZbTr6aFQCxBSqeTwtmEcBTeT0fLPfC0FLH/K8tGPQAkUXrPb5qtVFAxGfeDyvmwjBy2FzfLYiDAHGGW06+mhUAsQUqnk8LZhHAU3k9Hyz3wtBSx/yvLRj0AJFF6z2+arVRQMRn3g8r5sIwcthc3y2IgwBxhltOvpoVALEFKp5PC2YRwFN5PR8s98LQUsf8ry0Y9ACRRes9vmq1UUDEd94PK+bCMHLYXN8tiIMAcYZbTr6aFQCxBSqeTwtmEcBTeT0fLPfC0FLH/K8tGPQAkUXrPb5qtVFAxGfeDyvmwjBy2FzfLYiDAHGGW06+mhUAsQUqnk8LZhHAU3k9Hyz3wtBSx/yvLRj0AJFF6z2+arVRQMRn3g8r5sIwcthc3y2IgwBxhltOvpoVALEFKp5PC2YRwFN5PR8s98LQUsf8ry0Y9ACRRes9vmq1UUDEd94PK+bCMHLYXN8tiIMAcYZbTr6aFQCxBSqeTwtmEcBTeT0fLPfC0FLH/K8tGPQAkUXrPb5qtVFAxGfeDyvmwjBy2FzfLYiDAA==');
-                    this.audio.volume = 0.5;
-                };
-            }
-
-            // Play the audio
-            this.audio.currentTime = 0;
-            const playPromise = this.audio.play();
-
-            if (playPromise !== undefined) {
-                playPromise
-                    .then(() => {
-                        console.log('[NotificationSound] ✅ HTML5 Audio played successfully');
-                    })
-                    .catch(e => {
-                        console.warn('[NotificationSound] HTML5 Audio play failed:', e);
-                    });
-            }
-        } catch (e) {
-            console.warn('[NotificationSound] All sound methods failed:', e);
-        }
-    }
-
-    /**
      * Stop currently playing sound
      */
     stop() {
+        console.log('[NotificationSound] 🛑 Stopping sound...');
+        
         if (this.audio) {
             this.audio.pause();
             this.audio.currentTime = 0;
@@ -174,46 +214,23 @@ class NotificationSound {
 // Export singleton instance
 const notificationSound = new NotificationSound();
 
-// Auto-initialize audio on page load and play a silent tone to unlock audio
+// Auto-initialize and unlock audio on page load
 if (typeof window !== 'undefined') {
-    // Initialize immediately on page load
+    // Initialize on page load
     window.addEventListener('load', () => {
         notificationSound.initialize();
-
-        // Play a very brief, nearly silent sound to unlock audio for future plays
-        // This bypasses browser autoplay restrictions
-        try {
-            if (notificationSound.audioContext) {
-                const ctx = notificationSound.audioContext;
-                const oscillator = ctx.createOscillator();
-                const gainNode = ctx.createGain();
-
-                oscillator.connect(gainNode);
-                gainNode.connect(ctx.destination);
-
-                gainNode.gain.setValueAtTime(0.001, ctx.currentTime); // Nearly silent
-                oscillator.frequency.setValueAtTime(1, ctx.currentTime);
-                oscillator.start(ctx.currentTime);
-                oscillator.stop(ctx.currentTime + 0.01); // 10ms
-
-                console.log('[NotificationSound] Audio unlocked on page load');
-            }
-        } catch (e) {
-            console.warn('[NotificationSound] Could not unlock audio:', e);
-        }
     });
 
-    // Also initialize on first user interaction as backup
-    const initAudio = () => {
+    // Unlock audio on first user interaction
+    const unlockAudio = () => {
         notificationSound.initialize();
-        document.removeEventListener('click', initAudio);
-        document.removeEventListener('touchstart', initAudio);
-        document.removeEventListener('keydown', initAudio);
+        notificationSound.unlock();
     };
 
-    document.addEventListener('click', initAudio, { once: true });
-    document.addEventListener('touchstart', initAudio, { once: true });
-    document.addEventListener('keydown', initAudio, { once: true });
+    // Listen for various user interactions
+    ['click', 'touchstart', 'touchend', 'keydown'].forEach(event => {
+        document.addEventListener(event, unlockAudio, { once: true });
+    });
 }
 
 export default notificationSound;
