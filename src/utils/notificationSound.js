@@ -174,17 +174,43 @@ class NotificationSound {
 // Export singleton instance
 const notificationSound = new NotificationSound();
 
-// Initialize audio on first user interaction (required by browsers)
+// Auto-initialize audio on page load and play a silent tone to unlock audio
 if (typeof window !== 'undefined') {
+    // Initialize immediately on page load
+    window.addEventListener('load', () => {
+        notificationSound.initialize();
+        
+        // Play a very brief, nearly silent sound to unlock audio for future plays
+        // This bypasses browser autoplay restrictions
+        try {
+            if (notificationSound.audioContext) {
+                const ctx = notificationSound.audioContext;
+                const oscillator = ctx.createOscillator();
+                const gainNode = ctx.createGain();
+                
+                oscillator.connect(gainNode);
+                gainNode.connect(ctx.destination);
+                
+                gainNode.gain.setValueAtTime(0.001, ctx.currentTime); // Nearly silent
+                oscillator.frequency.setValueAtTime(1, ctx.currentTime);
+                oscillator.start(ctx.currentTime);
+                oscillator.stop(ctx.currentTime + 0.01); // 10ms
+                
+                console.log('[NotificationSound] Audio unlocked on page load');
+            }
+        } catch (e) {
+            console.warn('[NotificationSound] Could not unlock audio:', e);
+        }
+    });
+
+    // Also initialize on first user interaction as backup
     const initAudio = () => {
         notificationSound.initialize();
-        // Remove listeners after first interaction
         document.removeEventListener('click', initAudio);
         document.removeEventListener('touchstart', initAudio);
         document.removeEventListener('keydown', initAudio);
     };
 
-    // Listen for any user interaction
     document.addEventListener('click', initAudio, { once: true });
     document.addEventListener('touchstart', initAudio, { once: true });
     document.addEventListener('keydown', initAudio, { once: true });

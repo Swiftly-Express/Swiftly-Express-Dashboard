@@ -443,16 +443,20 @@ const Dashboard = () => {
 
     const handleNewJob = (data) => {
       console.log('[Dashboard] 🔔 New job available (socket):', data);
-      // Play notification sound for new job
-      playNotificationSound();
+      
+      // Play notification sound IMMEDIATELY
+      playNotificationSound().catch(e => console.warn('Sound play failed:', e));
+      
       // Refresh dashboard to show new available job
       fetchDashboardData();
     };
 
     const handleInvitation = (data) => {
       console.log('[Dashboard] 🔔 Customer requested you (socket):', data);
-      // Play notification sound for customer request
-      playNotificationSound();
+      
+      // Play notification sound IMMEDIATELY
+      playNotificationSound().catch(e => console.warn('Sound play failed:', e));
+      
       // Refresh dashboard to show invitation
       fetchDashboardData();
     };

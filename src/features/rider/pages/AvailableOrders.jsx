@@ -10,7 +10,7 @@ import TrackingMap from '../../../components/TrackingMap';
 import { getAvailableJobs, acceptDeliveryJob, rejectDeliveryJob, getRiderProfile, getRiderDeliveries, updateDriverLocation, getRiderEarnings } from '../../../utils/authApi';
 import socketService from '../../../services/socket.service';
 import { getCookie, getJSONCookie, isRiderVerified, setCookie, setJSONCookie } from '../../../utils/cookies';
-import { playNotificationSound } from '../../../utils/notificationSound';
+import { playNotificationSound, stopNotificationSound } from '../../../utils/notificationSound';
 
 
 const sideBottomShadow = {
@@ -413,19 +413,27 @@ const AvailableOrders = () => {
 
     const handleInvitation = (data) => {
       console.log('[AvailableOrders] delivery:invitation received:', data);
+      
+      // Play notification sound IMMEDIATELY
+      playNotificationSound().catch(e => console.warn('Sound play failed:', e));
+      
       setToastMsg('A customer requested you for a delivery');
       setShowToast(true);
-      // Play notification sound for customer request
-      playNotificationSound();
+      
+      // Refresh jobs list immediately
       fetchAvailableJobs();
     };
 
     const handleNewJob = (data) => {
       console.log('[AvailableOrders] 🔔 New job available (socket):', data);
+      
+      // Play notification sound IMMEDIATELY
+      playNotificationSound().catch(e => console.warn('Sound play failed:', e));
+      
       setToastMsg('🔔 New delivery available!');
       setShowToast(true);
-      // Play notification sound for new job
-      playNotificationSound();
+      
+      // Refresh jobs list immediately
       fetchAvailableJobs();
     };
 
@@ -564,6 +572,9 @@ const AvailableOrders = () => {
       setShowToast(true);
       return;
     }
+
+    // Stop notification sound when rider accepts the order
+    stopNotificationSound();
 
     setAccepting(deliveryId);
     try {
