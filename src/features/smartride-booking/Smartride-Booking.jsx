@@ -2714,12 +2714,12 @@ export default function SmartRideBooking({ embedMode = false, initialData = {}, 
                                     )} */}
 
                                     {/* Distance charge */}
-                                    {/* {pricing.distanceCharge > 0 && (
+                                    {pricing.distanceCharge > 0 && (
                                         <div className="flex justify-between items-center text-[#0F172A]">
                                             <span className="text-[15px]">Distance ({Number(pricing.distance || 0).toFixed(1)} km)</span>
                                             <span className="text-[15px]">₦{Number(pricing.distanceCharge).toLocaleString()}</span>
                                         </div>
-                                    )} */}
+                                    )}
 
                                     {/* Priority / Errand (if ever used) */}
                                     {pricing.priorityFee > 0 && (
