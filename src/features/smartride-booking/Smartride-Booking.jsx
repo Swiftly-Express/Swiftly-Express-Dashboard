@@ -2706,20 +2706,20 @@ export default function SmartRideBooking({ embedMode = false, initialData = {}, 
                                     </div>
 
                                     {/* Smart Ride Fee */}
-                                    {(pricing.smartRideFee > 0 || (formData.deliveryType === 'smart_ride' && (pricing.total || 0) > (pricing.baseFare || 0))) && (
+                                    {/* {(pricing.smartRideFee > 0 || (formData.deliveryType === 'smart_ride' && (pricing.total || 0) > (pricing.baseFare || 0))) && (
                                         <div className="flex justify-between items-center text-[#0F172A]">
                                             <span className="text-[15px]">Smart Ride</span>
                                             <span className="text-[15px]">₦{Number(pricing.smartRideFee || Math.max(0, (pricing.total || 0) - (pricing.baseFare || 0) - (pricing.distanceCharge || 0))).toLocaleString()}</span>
                                         </div>
-                                    )}
+                                    )} */}
 
                                     {/* Distance charge */}
-                                    {pricing.distanceCharge > 0 && (
+                                    {/* {pricing.distanceCharge > 0 && (
                                         <div className="flex justify-between items-center text-[#0F172A]">
                                             <span className="text-[15px]">Distance ({Number(pricing.distance || 0).toFixed(1)} km)</span>
                                             <span className="text-[15px]">₦{Number(pricing.distanceCharge).toLocaleString()}</span>
                                         </div>
-                                    )}
+                                    )} */}
 
                                     {/* Priority / Errand (if ever used) */}
                                     {pricing.priorityFee > 0 && (
