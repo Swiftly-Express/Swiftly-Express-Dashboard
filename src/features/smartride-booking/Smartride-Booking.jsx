@@ -1104,14 +1104,13 @@ export default function SmartRideBooking({ embedMode = false, initialData = {}, 
                 total: Number(total),
                 riderEarnings: Number(riderEarnings),
                 priorityFee,
-                baseFare,
+                baseFare, // Force 500
                 distance,
-                distanceCharge: Number(distanceCharge),
+                distanceCharge: Number(distanceCharge), // Force distance * 150
                 smartRideFee,
                 errandFee,
                 waitingTimeFee,
-                subtotal: Number(total),
-                ...pb
+                subtotal: Number(total)
             };
         }
         return {
