@@ -413,26 +413,26 @@ const AvailableOrders = () => {
 
     const handleInvitation = (data) => {
       console.log('[AvailableOrders] delivery:invitation received:', data);
-      
+
       // Play notification sound IMMEDIATELY
       playNotificationSound().catch(e => console.warn('Sound play failed:', e));
-      
+
       setToastMsg('A customer requested you for a delivery');
       setShowToast(true);
-      
+
       // Refresh jobs list immediately
       fetchAvailableJobs();
     };
 
     const handleNewJob = (data) => {
       console.log('[AvailableOrders] 🔔 New job available (socket):', data);
-      
+
       // Play notification sound IMMEDIATELY
       playNotificationSound().catch(e => console.warn('Sound play failed:', e));
-      
+
       setToastMsg('🔔 New delivery available!');
       setShowToast(true);
-      
+
       // Refresh jobs list immediately
       fetchAvailableJobs();
     };

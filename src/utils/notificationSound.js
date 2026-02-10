@@ -179,7 +179,7 @@ if (typeof window !== 'undefined') {
     // Initialize immediately on page load
     window.addEventListener('load', () => {
         notificationSound.initialize();
-        
+
         // Play a very brief, nearly silent sound to unlock audio for future plays
         // This bypasses browser autoplay restrictions
         try {
@@ -187,15 +187,15 @@ if (typeof window !== 'undefined') {
                 const ctx = notificationSound.audioContext;
                 const oscillator = ctx.createOscillator();
                 const gainNode = ctx.createGain();
-                
+
                 oscillator.connect(gainNode);
                 gainNode.connect(ctx.destination);
-                
+
                 gainNode.gain.setValueAtTime(0.001, ctx.currentTime); // Nearly silent
                 oscillator.frequency.setValueAtTime(1, ctx.currentTime);
                 oscillator.start(ctx.currentTime);
                 oscillator.stop(ctx.currentTime + 0.01); // 10ms
-                
+
                 console.log('[NotificationSound] Audio unlocked on page load');
             }
         } catch (e) {
