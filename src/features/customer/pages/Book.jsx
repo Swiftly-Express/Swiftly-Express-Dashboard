@@ -808,31 +808,33 @@ const Book = () => {
     if (estimatedPrice) {
       // Use the applied delivery type fee which updates immediately on selection
       const deliveryTypeFee = appliedDeliveryTypeFee || 0;
+      const distance = estimatedPrice.distance || 0;
+
+      // Always use correct pricing: ₦500 base (first 2km), ₦150/km after that
+      const baseFare = 500;
+      const distanceCharge = distance > 2 ? (distance - 2) * 150 : 0;
 
       return {
-        // Use backend total as baseline but we'll override displayed total via calculateTotal()
-        total: estimatedPrice.total,
-        deliveryCharge: (estimatedPrice.pricingBreakdown?.baseFare || 0) + (estimatedPrice.pricingBreakdown?.distanceCharge || 0) + deliveryTypeFee,
-        baseFare: estimatedPrice.pricingBreakdown?.baseFare || 0,
+        total: baseFare + distanceCharge + deliveryTypeFee,
+        deliveryCharge: baseFare + distanceCharge + deliveryTypeFee,
+        baseFare: 500, // Force correct base fare
         deliveryTypeFee,
-        distance: estimatedPrice.distance || 0,
-        distanceCharge: estimatedPrice.pricingBreakdown?.distanceCharge || 0,
-        perKmRate: estimatedPrice.pricingBreakdown?.perKmRate || 0,
+        distance,
+        distanceCharge,
+        perKmRate: 150, // Force correct per km rate
         discountAmount: estimatedPrice.pricingBreakdown?.discountAmount || 0,
-        discountPercentage: estimatedPrice.pricingBreakdown?.discountPercentage || 0,
-        ...estimatedPrice.pricingBreakdown
+        discountPercentage: estimatedPrice.pricingBreakdown?.discountPercentage || 0
       }
     }
     // Return safe defaults to prevent UI crashes
     return {
       total: 0,
-      // Ensure base fare is visible even when backend estimate is missing
-      baseFare: 500, // Updated base fare
+      baseFare: 500,
       deliveryTypeFee: appliedDeliveryTypeFee || 0,
       deliveryCharge: 500 + (appliedDeliveryTypeFee || 0),
       distance: 0,
       distanceCharge: 0,
-      perKmRate: 150, // Updated per km rate
+      perKmRate: 150,
       discountAmount: 0,
       discountPercentage: 0
     };
