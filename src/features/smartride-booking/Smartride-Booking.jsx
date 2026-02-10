@@ -8,6 +8,7 @@ import { YummyText } from '../../components/YummyText';
 import Breadcrumb from '../../components/Breadcrumb';
 import GoogleMap from '../../components/TrackingMap';
 import GoogleMapsAutocomplete from '../../components/GoogleMapsAutocomplete';
+import { BASE_FARE, PER_KM_RATE, PLATFORM_COMMISSION_RATE } from '../../utils/pricing';
 import StyledDropdown from '../../components/StyledDropdown';
 import axios from 'axios';
 import { getCookie, setCookie, deleteCookie, setJSONCookie, getJSONCookie } from '../../utils/cookies';
@@ -1086,18 +1087,30 @@ export default function SmartRideBooking({ embedMode = false, initialData = {}, 
     const calculateTotal = () => {
         if (estimatedPrice) {
             const pb = estimatedPrice.pricingBreakdown || {};
-            const total = estimatedPrice.estimatedPrice ?? pb.total ?? 0;
+            const distance = estimatedPrice.distance ?? 0;
+
+            // Use new pricing: base fare 500, per km 150, rider gets 70%
+            const baseFare = BASE_FARE; // 500
+            const distanceCharge = distance * PER_KM_RATE; // distance * 150
+            const smartRideFee = pb.smartRideFee ?? 0;
+            const errandFee = pb.errandFee ?? 0;
+            const priorityFee = pb.priorityFee ?? 0;
+            const waitingTimeFee = pb.waitingTimeFee ?? 0;
+
+            const total = baseFare + distanceCharge + smartRideFee + errandFee + priorityFee + waitingTimeFee;
+            const riderEarnings = total * (1 - PLATFORM_COMMISSION_RATE); // rider gets 70%
+
             return {
                 total: Number(total),
-                riderEarnings: pb.riderEarnings || 0,
-                priorityFee: pb.priorityFee || 0,
-                baseFare: pb.baseFare ?? 0,
-                distance: estimatedPrice.distance ?? 0,
-                distanceCharge: pb.distanceCharge ?? 0,
-                smartRideFee: pb.smartRideFee ?? 0,
-                errandFee: pb.errandFee ?? 0,
-                waitingTimeFee: pb.waitingTimeFee ?? 0,
-                subtotal: pb.subtotal ?? total,
+                riderEarnings: Number(riderEarnings),
+                priorityFee,
+                baseFare,
+                distance,
+                distanceCharge: Number(distanceCharge),
+                smartRideFee,
+                errandFee,
+                waitingTimeFee,
+                subtotal: Number(total),
                 ...pb
             };
         }
