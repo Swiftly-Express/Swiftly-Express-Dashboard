@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useIonRouter } from '@ionic/react';
 import { IonPage, IonContent, IonToast, IonRefresher, IonRefresherContent, IonIcon } from '@ionic/react';
 import { closeOutline } from 'ionicons/icons';
@@ -192,6 +192,10 @@ const AvailableOrders = () => {
   const [locationStatus, setLocationStatus] = useState('idle'); // 'idle' | 'updating' | 'updated' | 'error'
   const [locationError, setLocationError] = useState(null);
   const [locationAccuracyM, setLocationAccuracyM] = useState(null); // accuracy in meters (from coords.accuracy)
+
+  // Track the last seen order count - when user visits this page, they've "seen" all current orders
+  const lastSeenOrderCount = useRef(0);
+
   // lock body scroll when drawer/modal is open
   useEffect(() => {
     if (selectedOrder) {
@@ -386,8 +390,7 @@ const AvailableOrders = () => {
   useEffect(() => {
     const handleDeliveryCreated = (event) => {
       console.log('[AvailableOrders] New delivery created, refreshing jobs:', event.detail);
-      setToastMsg('🔔 New delivery available!');
-      setShowToast(true);
+      showCustomToast('🔔 New delivery available!', 'success');
       // Play notification sound for new delivery
       playNotificationSound();
       fetchAvailableJobs();
@@ -425,16 +428,14 @@ const AvailableOrders = () => {
     const handleInvitation = (data) => {
       console.log('[AvailableOrders] 🚨🚨🚨 delivery:invitation received:', data);
       playNotificationSound();
-      setToastMsg('A customer requested you for a delivery');
-      setShowToast(true);
+      showCustomToast('A customer requested you for a delivery', 'success');
       fetchAvailableJobs();
     };
 
     const handleNewJob = (data) => {
       console.log('[AvailableOrders] 🚨🚨🚨 New job (socket):', data);
       playNotificationSound();
-      setToastMsg('🔔 New delivery available!');
-      setShowToast(true);
+      showCustomToast('🔔 New delivery available!', 'success');
       fetchAvailableJobs();
     };
 
@@ -523,6 +524,18 @@ const AvailableOrders = () => {
     return () => clearInterval(interval);
   }, [sendLocationToBackend]);
 
+  // Stop sound when user visits this page (they've seen the orders) and on unmount
+  useEffect(() => {
+    console.log('[AvailableOrders] 📍 User visited page - stopping notification sound');
+    stopNotificationSound();
+
+    // On unmount, also stop sound
+    return () => {
+      console.log('[AvailableOrders] 🚪 User left page - stopping notification sound');
+      stopNotificationSound();
+    };
+  }, []);
+
   // Auto-poll for new orders every 5 seconds (fallback for when socket events don't fire)
   useEffect(() => {
     console.log('[AvailableOrders] 🔄 Starting auto-polling for new orders (every 5s)');
@@ -556,16 +569,29 @@ const AvailableOrders = () => {
         console.log('[AvailableOrders] Total jobs found:', jobs.length);
       }
 
-      // CHECK FOR NEW ORDERS - play sound if new orders detected
-      const previousCount = orders.length;
+      // CHECK FOR NEW ORDERS - play sound ONLY if new orders detected since user last visited page
       const newCount = jobs.length;
 
-      if (newCount > previousCount && previousCount >= 0) {
-        console.log('[AvailableOrders] 🚨🚨🚨 NEW ORDER DETECTED!', { previousCount, newCount });
+      // If this is the first fetch, initialize lastSeenOrderCount
+      if (lastSeenOrderCount.current === 0) {
+        lastSeenOrderCount.current = newCount;
+        if (!silent) console.log('[AvailableOrders] 📌 Initialized lastSeenOrderCount:', newCount);
+      }
+
+      // Only play sound if there are MORE orders than what user has seen
+      if (newCount > lastSeenOrderCount.current) {
+        const newOrdersCount = newCount - lastSeenOrderCount.current;
+        console.log('[AvailableOrders] 🚨🚨🚨 NEW ORDER DETECTED!', {
+          lastSeen: lastSeenOrderCount.current,
+          current: newCount,
+          newOrders: newOrdersCount
+        });
         console.log('[AvailableOrders] 🔊 PLAYING SOUND NOW!');
         playNotificationSound();
-        setToastMsg(`🔔 ${newCount - previousCount} new delivery available!`);
-        setShowToast(true);
+        showCustomToast(`🔔 ${newOrdersCount} new delivery available!`, 'success');
+
+        // Update last seen count to current
+        lastSeenOrderCount.current = newCount;
       }
 
       setOrders(jobs);
