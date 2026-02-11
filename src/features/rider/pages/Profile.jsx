@@ -12,7 +12,8 @@ const sideBottomShadow = {
   boxShadow: '2px 4px 4px rgba(0,0,0,0.06), -2px 4px 4px rgba(0,0,0,0.06), 0 4px 8px rgba(0,0,0,0.08)'
 };
 
-const loadGoogleProfileData = () => {
+const loadGoogleProfileData = () =>
+{
   console.log('loading google profile data...');
 
   const cachedUserData = getJSONCookie('user_data');
@@ -43,14 +44,16 @@ const loadGoogleProfileData = () => {
   };
 };
 
-const generateMockAvatar = (name) => {
+const generateMockAvatar = (name) =>
+{
   if (!name || name === 'Rider') {
     return 'https://api.dicebear.com/7.x/avataaars/svg?seed=Rider';
   }
   return `https://api.dicebear.com/7.x/avataaars/svg?seed=${encodeURIComponent(name)}`;
 };
 
-const getProfileImageKey = () => {
+const getProfileImageKey = () =>
+{
   try {
     const userData = getJSONCookie('user_data');
     if (userData) {
@@ -65,8 +68,10 @@ const getProfileImageKey = () => {
   return 'profile_image';
 };
 
-const RiderProfile = () => {
-  const [activeTab, setActiveTab] = useState(() => {
+const RiderProfile = () =>
+{
+  const [activeTab, setActiveTab] = useState(() =>
+  {
     return sessionStorage.getItem('riderProfileTab') || 'personal';
   });
 
@@ -93,7 +98,8 @@ const RiderProfile = () => {
     insurancePolicy: ''
   });
 
-  const [userName, setUserName] = useState(() => {
+  const [userName, setUserName] = useState(() =>
+  {
     const cachedUserData = getJSONCookie('user_data');
     if (cachedUserData) {
       try {
@@ -106,7 +112,8 @@ const RiderProfile = () => {
     return 'Rider';
   });
 
-  const [riderId, setRiderId] = useState(() => {
+  const [riderId, setRiderId] = useState(() =>
+  {
     const cachedUserData = getJSONCookie('user_data');
     if (cachedUserData) {
       try {
@@ -118,7 +125,8 @@ const RiderProfile = () => {
     return '';
   });
 
-  const [profileImage, setProfileImage] = useState(() => {
+  const [profileImage, setProfileImage] = useState(() =>
+  {
     const imageKey = getProfileImageKey();
     const cachedImage = getCookie(imageKey);
     if (cachedImage && !cachedImage.includes('dicebear') && !cachedImage.includes('profileimage.svg')) {
@@ -139,7 +147,8 @@ const RiderProfile = () => {
   const [toastMsg, setToastMsg] = useState('');
   const [showToast, setShowToast] = useState(false);
 
-  const [documents, setDocuments] = useState(() => {
+  const [documents, setDocuments] = useState(() =>
+  {
     const savedDocs = getJSONCookie('riderDocuments');
     if (savedDocs) {
       try {
@@ -170,12 +179,14 @@ const RiderProfile = () => {
   const insuranceCertificateInputRef = useRef(null);
   const backgroundCheckInputRef = useRef(null);
 
-  useEffect(() => {
+  useEffect(() =>
+  {
     sessionStorage.setItem('riderProfileTab', activeTab);
   }, [activeTab]);
 
   // Load saved data from cookies on mount
-  useEffect(() => {
+  useEffect(() =>
+  {
     console.log('[Profile] === INITIAL DATA LOAD ===');
 
     // First, try to load Google profile data
@@ -294,10 +305,12 @@ const RiderProfile = () => {
     console.log('[Profile] === INITIAL DATA LOAD COMPLETE ===');
   }, []);
 
-  useEffect(() => {
+  useEffect(() =>
+  {
     fetchProfile();
 
-    const handleVerificationComplete = (event) => {
+    const handleVerificationComplete = (event) =>
+    {
       console.log('[Profile] Verification completed, refreshing profile and data');
       fetchProfile();
 
@@ -332,12 +345,14 @@ const RiderProfile = () => {
 
     window.addEventListener('verification:completed', handleVerificationComplete);
 
-    return () => {
+    return () =>
+    {
       window.removeEventListener('verification:completed', handleVerificationComplete);
     };
   }, []);
 
-  const fetchProfile = async () => {
+  const fetchProfile = async () =>
+  {
     try {
       setLoading(true);
 
@@ -426,7 +441,16 @@ const RiderProfile = () => {
       }
 
       const response = await getRiderProfile();
-      const profile = response?.data?.driver || response?.driver || response?.data;
+      const data = response?.data;
+      let profile;
+      if (data?.user != null) {
+        profile = { ...data.user, verification: data.verification };
+        if (data.verification?.vehicle) {
+          profile.vehicle = profile.vehicle ? { ...profile.vehicle, ...data.verification.vehicle } : data.verification.vehicle;
+        }
+      } else {
+        profile = data?.driver || response?.driver || data;
+      }
       setProfileData(profile);
 
       // Fetch stats
@@ -456,6 +480,9 @@ const RiderProfile = () => {
       if (profile?.profilePhoto && !profile.profilePhoto.includes('dicebear')) {
         setProfileImage(profile.profilePhoto);
         setCookie(imageKey, profile.profilePhoto, 7);
+      } else if (profile?.verification?.identity?.profilePhotoUrl) {
+        setProfileImage(profile.verification.identity.profilePhotoUrl);
+        setCookie(imageKey, profile.verification.identity.profilePhotoUrl, 7);
       } else if (!cachedImage || cachedImage.includes('dicebear') || cachedImage.includes('profileimage.svg')) {
         const name = profile?.fullName || `${profile?.firstName || ''} ${profile?.lastName || ''}`.trim() || userName;
         const mockAvatar = generateMockAvatar(name);
@@ -508,8 +535,34 @@ const RiderProfile = () => {
         }));
       }
 
+      if (profile?.verification) {
+        const v = profile.verification;
+        const id = v.identity || {};
+        const veh = v.vehicle || {};
+        setDocuments(prev => ({
+          ...prev,
+          driversLicense: {
+            ...prev.driversLicense,
+            uploaded: !!veh.driversLicenseUrl,
+            fileName: veh.driversLicenseUrl ? (prev.driversLicense?.fileName || 'Driver\'s License') : prev.driversLicense?.fileName || ''
+          },
+          insuranceCertificate: {
+            ...prev.insuranceCertificate,
+            uploaded: !!veh.insuranceUrl,
+            fileName: veh.insuranceUrl ? (prev.insuranceCertificate?.fileName || 'Insurance') : prev.insuranceCertificate?.fileName || ''
+          },
+          backgroundCheck: {
+            ...prev.backgroundCheck,
+            verified: !!v.backgroundCheckConsent,
+            lastUpdated: v.backgroundCheckConsent ? (prev.backgroundCheck?.lastUpdated || 'Submitted') : prev.backgroundCheck?.lastUpdated || ''
+          }
+        }));
+      }
+
       if (profile?.verificationStatus) {
         setCookie('riderVerificationStatus', profile.verificationStatus, 7);
+      } else if (profile?.verification?.verificationStatus) {
+        setCookie('riderVerificationStatus', profile.verification.verificationStatus, 7);
       }
 
       console.log('[Profile] Profile loaded:', profile);
@@ -532,7 +585,8 @@ const RiderProfile = () => {
     }
   };
 
-  const handleProfileImageUpload = async (e) => {
+  const handleProfileImageUpload = async (e) =>
+  {
     const file = e.target.files[0];
     if (!file) return;
 
@@ -550,7 +604,8 @@ const RiderProfile = () => {
     }
 
     const reader = new FileReader();
-    reader.onloadend = () => {
+    reader.onloadend = () =>
+    {
       const previewUrl = reader.result;
       setProfileImage(previewUrl);
       window.dispatchEvent(new CustomEvent('profile:updated', {
@@ -588,7 +643,8 @@ const RiderProfile = () => {
       } else {
         console.log('[Profile] No URL returned, using local preview');
         const reader = new FileReader();
-        reader.onloadend = () => {
+        reader.onloadend = () =>
+        {
           setProfileImage(reader.result);
           const imageKey = getProfileImageKey();
           setCookie(imageKey, reader.result, 7);
@@ -610,14 +666,16 @@ const RiderProfile = () => {
     }
   };
 
-  const handlePersonalInfoChange = (field, value) => {
+  const handlePersonalInfoChange = (field, value) =>
+  {
     setPersonalInfo(prev => ({
       ...prev,
       [field]: value
     }));
   };
 
-  const handleSavePersonalInfo = async () => {
+  const handleSavePersonalInfo = async () =>
+  {
     try {
       setSaving(true);
 
@@ -702,14 +760,16 @@ const RiderProfile = () => {
     }
   };
 
-  const handleVehicleInfoChange = (field, value) => {
+  const handleVehicleInfoChange = (field, value) =>
+  {
     setVehicleInfo(prev => ({
       ...prev,
       [field]: value
     }));
   };
 
-  const handleSaveVehicleInfo = async () => {
+  const handleSaveVehicleInfo = async () =>
+  {
     try {
       setSaving(true);
 
@@ -748,7 +808,8 @@ const RiderProfile = () => {
     }
   };
 
-  const handleDocumentUpload = (documentType, e) => {
+  const handleDocumentUpload = (documentType, e) =>
+  {
     const file = e.target.files[0];
     if (file) {
       const validTypes = ['application/pdf', 'image/jpeg', 'image/png'];
@@ -786,18 +847,21 @@ const RiderProfile = () => {
     }
   };
 
-  const calculateCompletion = () => {
+  const calculateCompletion = () =>
+  {
     const totalFields = 4;
     let completed = 0;
 
-    Object.values(documents).forEach(doc => {
+    Object.values(documents).forEach(doc =>
+    {
       if (doc.uploaded) completed++;
     });
 
     return Math.round((completed / totalFields) * 100);
   };
 
-  const getCompletionColor = (percentage) => {
+  const getCompletionColor = (percentage) =>
+  {
     if (percentage >= 0 && percentage <= 45) {
       return { bar: 'bg-[#0F172A]', text: 'text-[#0F172A]' };
     } else if (percentage >= 46 && percentage <= 75) {
@@ -807,7 +871,8 @@ const RiderProfile = () => {
     }
   };
 
-  const getMissingDocuments = () => {
+  const getMissingDocuments = () =>
+  {
     const missing = [];
     if (!documents.driversLicense.uploaded) missing.push("Driver's License");
     if (!documents.vehicleRegistration.uploaded) missing.push("Vehicle Registration");
