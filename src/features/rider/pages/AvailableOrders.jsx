@@ -11,6 +11,7 @@ import { getAvailableJobs, acceptDeliveryJob, rejectDeliveryJob, getRiderProfile
 import socketService from '../../../services/socket.service';
 import { getCookie, getJSONCookie, isRiderVerified, setCookie, setJSONCookie } from '../../../utils/cookies';
 import { playNotificationSound, stopNotificationSound } from '../../../utils/notificationSound';
+import pushNotificationService, { notifyNewOrders, notifyInvitation } from '../../../utils/pushNotifications';
 
 
 const sideBottomShadow = {
@@ -195,6 +196,7 @@ const AvailableOrders = () => {
 
   // Track the last seen order count - when user visits this page, they've "seen" all current orders
   const lastSeenOrderCount = useRef(0);
+  const [notificationPermission, setNotificationPermission] = useState('default');
 
   // lock body scroll when drawer/modal is open
   useEffect(() => {
@@ -393,6 +395,8 @@ const AvailableOrders = () => {
       showCustomToast('🔔 New delivery available!', 'success');
       // Play notification sound for new delivery
       playNotificationSound();
+      // Show browser notification
+      notifyNewOrders(1);
       fetchAvailableJobs();
     };
 
@@ -429,13 +433,17 @@ const AvailableOrders = () => {
       console.log('[AvailableOrders] 🚨🚨🚨 delivery:invitation received:', data);
       playNotificationSound();
       showCustomToast('A customer requested you for a delivery', 'success');
+      // Show browser notification for invitation
+      notifyInvitation(data?.customerName);
       fetchAvailableJobs();
     };
 
     const handleNewJob = (data) => {
       console.log('[AvailableOrders] 🚨🚨🚨 New job (socket):', data);
       playNotificationSound();
-      showCustomToast('🔔 New delivery available!', 'success');
+      showCustomToast('New delivery available!', 'success');
+      // Show browser notification
+      notifyNewOrders(1);
       fetchAvailableJobs();
     };
 
@@ -457,7 +465,7 @@ const AvailableOrders = () => {
       });
     });
 
-    console.log('[AvailableOrders] ✅ Listening to:', events);
+    console.log('[AvailableOrders] Listening to:', events);
 
     return () => {
       events.forEach(evt => socketService.off(evt));
@@ -524,6 +532,23 @@ const AvailableOrders = () => {
     return () => clearInterval(interval);
   }, [sendLocationToBackend]);
 
+  // Request notification permission on mount
+  useEffect(() => {
+    const requestPermission = async () => {
+      console.log('[AvailableOrders] Requesting browser notification permission...');
+      const granted = await pushNotificationService.requestPermission();
+      setNotificationPermission(granted ? 'granted' : 'denied');
+
+      if (granted) {
+        console.log('[AvailableOrders] Browser notifications enabled! Riders will be notified even when tab is closed.');
+      } else {
+        console.warn('[AvailableOrders] Browser notifications denied. Sound will only work when tab is active.');
+      }
+    };
+
+    requestPermission();
+  }, []);
+
   // Stop sound when user visits this page (they've seen the orders) and on unmount
   useEffect(() => {
     console.log('[AvailableOrders] 📍 User visited page - stopping notification sound');
@@ -586,9 +611,16 @@ const AvailableOrders = () => {
           current: newCount,
           newOrders: newOrdersCount
         });
-        console.log('[AvailableOrders] 🔊 PLAYING SOUND NOW!');
+        console.log('[AvailableOrders] PLAYING SOUND NOW!');
+
+        // Play sound (only works when tab is active)
         playNotificationSound();
-        showCustomToast(`🔔 ${newOrdersCount} new delivery available!`, 'success');
+
+        // Show in-app toast
+        showCustomToast(` ${newOrdersCount} new delivery available!`, 'success');
+
+        // Show browser notification (works even when tab is closed/minimized)
+        notifyNewOrders(newOrdersCount);
 
         // Update last seen count to current
         lastSeenOrderCount.current = newCount;
@@ -832,6 +864,25 @@ const AvailableOrders = () => {
               <div className="text-[#4A5565] text-[15px] font-[400]">
                 Accept orders in your area and start earning
               </div>
+
+              {/* Notification Status Indicator */}
+              {notificationPermission === 'granted' && (
+                <div className="flex items-center gap-2 mt-3 px-3 py-2 bg-green-50 border border-green-200 rounded-lg">
+                  {/* <span className="text-green-600 text-lg">🔔</span> */}
+                  <span className="text-[13px] text-green-700">
+                    Browser notifications enabled - You'll be notified even when this tab is closed
+                  </span>
+                </div>
+              )}
+              {notificationPermission === 'denied' && (
+                <div className="flex items-center gap-2 mt-3 px-3 py-2 bg-yellow-50 border border-yellow-200 rounded-lg">
+                  {/* <span className="text-yellow-600 text-lg">⚠️</span> */}
+                  <span className="text-[13px] text-yellow-700">
+                    Browser notifications blocked - Enable in browser settings to get notified when tab is closed
+                  </span>
+                </div>
+              )}
+
               <div className="text-[#64748B] text-[13px] mt-2">
                 Your location is shared so customers can find you nearby (within ~20 km of their pickup). Keep this page open in the area you want to receive jobs. We use high-accuracy GPS when available—allow location and wait a few seconds for a better fix.
               </div>
