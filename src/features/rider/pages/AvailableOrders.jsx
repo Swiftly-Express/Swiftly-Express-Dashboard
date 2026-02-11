@@ -758,8 +758,20 @@ const AvailableOrders = () => {
           </IonRefresher>
           <YummyText>
             <div className="mb-8 py-2">
-              <div className="text-3xl font-medium text-[#0F172A] mb-2">
-                Available Orders
+              <div className="flex items-center justify-between mb-2">
+                <div className="text-3xl font-medium text-[#0F172A]">
+                  Available Orders
+                </div>
+                {/* DEBUG: Test sound button */}
+                <button
+                  onClick={() => {
+                    console.log('[AvailableOrders] 🧪 TEST SOUND BUTTON CLICKED');
+                    playNotificationSound();
+                  }}
+                  className="px-4 py-2 bg-red-500 text-white text-xs rounded-full hover:bg-red-600"
+                >
+                  🔊 Test Sound
+                </button>
               </div>
               <div className="text-[#4A5565] text-[15px] font-[400]">
                 Accept orders in your area and start earning
