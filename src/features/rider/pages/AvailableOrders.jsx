@@ -523,12 +523,25 @@ const AvailableOrders = () => {
     return () => clearInterval(interval);
   }, [sendLocationToBackend]);
 
-  const fetchAvailableJobs = async () => {
+  // Auto-poll for new orders every 5 seconds (fallback for when socket events don't fire)
+  useEffect(() => {
+    console.log('[AvailableOrders] 🔄 Starting auto-polling for new orders (every 5s)');
+    const pollInterval = setInterval(() => {
+      fetchAvailableJobs(true); // silent=true to avoid spamming logs
+    }, 5000);
+
+    return () => {
+      console.log('[AvailableOrders] 🛑 Stopping auto-polling');
+      clearInterval(pollInterval);
+    };
+  }, []); // Empty deps - run once on mount
+
+  const fetchAvailableJobs = async (silent = false) => {
     setLoading(true);
     try {
-      console.log('[AvailableOrders] Fetching available jobs from API...');
+      if (!silent) console.log('[AvailableOrders] Fetching available jobs from API...');
       const response = await getAvailableJobs(page, 20);
-      console.log('[AvailableOrders] API Response:', response);
+      if (!silent) console.log('[AvailableOrders] API Response:', response);
 
       // Handle different response structures
       const jobs = response?.data?.jobs ||
@@ -538,13 +551,27 @@ const AvailableOrders = () => {
         response?.data ||
         [];
 
-      console.log('[AvailableOrders] Extracted jobs:', jobs);
-      console.log('[AvailableOrders] Total jobs found:', jobs.length);
+      if (!silent) {
+        console.log('[AvailableOrders] Extracted jobs:', jobs);
+        console.log('[AvailableOrders] Total jobs found:', jobs.length);
+      }
+
+      // CHECK FOR NEW ORDERS - play sound if new orders detected
+      const previousCount = orders.length;
+      const newCount = jobs.length;
+
+      if (newCount > previousCount && previousCount >= 0) {
+        console.log('[AvailableOrders] 🚨🚨🚨 NEW ORDER DETECTED!', { previousCount, newCount });
+        console.log('[AvailableOrders] 🔊 PLAYING SOUND NOW!');
+        playNotificationSound();
+        setToastMsg(`🔔 ${newCount - previousCount} new delivery available!`);
+        setShowToast(true);
+      }
 
       setOrders(jobs);
       setLastRefresh(Date.now());
 
-      if (jobs.length === 0) {
+      if (jobs.length === 0 && !silent) {
         console.warn('[AvailableOrders] No jobs returned from API');
       }
     } catch (error) {
@@ -775,16 +802,6 @@ const AvailableOrders = () => {
                 <div className="text-3xl font-medium text-[#0F172A]">
                   Available Orders
                 </div>
-                {/* DEBUG: Test sound button */}
-                <button
-                  onClick={() => {
-                    console.log('[AvailableOrders] 🧪 TEST SOUND BUTTON CLICKED');
-                    playNotificationSound();
-                  }}
-                  className="px-4 py-2 bg-red-500 text-white text-xs rounded-full hover:bg-red-600"
-                >
-                  🔊 Test Sound
-                </button>
               </div>
               <div className="text-[#4A5565] text-[15px] font-[400]">
                 Accept orders in your area and start earning
