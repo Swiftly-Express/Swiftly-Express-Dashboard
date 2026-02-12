@@ -5,18 +5,19 @@
 export async function getApprovedRiders(page = 1, limit = 20) {
   return adminApiClient.get(`/api/admin/drivers?page=${page}&limit=${limit}`);
 }
-import axios from 'axios';
-import { getCookie } from './cookies';
+import axios from "axios";
+import { getCookie } from "./cookies";
 
-const BASE_URL = import.meta.env.VITE_API_BASE_URL || 'https://api.swiftlyxpress.com';
+const BASE_URL =
+  import.meta.env.VITE_API_BASE_URL || "https://api.swiftlyxpress.com";
 
 const adminApiClient = axios.create({
   baseURL: BASE_URL,
   headers: {
-    'Content-Type': 'application/json',
-    Accept: 'application/json'
+    "Content-Type": "application/json",
+    Accept: "application/json",
   },
-  withCredentials: false
+  withCredentials: false,
 });
 
 // Request interceptor - attach admin token
@@ -32,24 +33,34 @@ adminApiClient.interceptors.request.use(
 
     if (token) {
       // Validate token format before sending
-      if (typeof token === 'string' && token.split('.').length === 3) {
+      if (typeof token === "string" && token.split(".").length === 3) {
         config.headers.Authorization = `Bearer ${token}`;
-        console.log("[adminApi] ✓ Admin token attached →", config.url, "(first 20 chars:", token.substring(0, 20) + "...)");
+        console.log(
+          "[adminApi] ✓ Admin token attached →",
+          config.url,
+          "(first 20 chars:",
+          token.substring(0, 20) + "...)",
+        );
       } else {
         console.error("[adminApi] ❌ Invalid JWT token format:", token);
-        console.error("[adminApi] Token type:", typeof token, "Parts:", token?.split('.')?.length);
+        console.error(
+          "[adminApi] Token type:",
+          typeof token,
+          "Parts:",
+          token?.split(".")?.length,
+        );
       }
     } else {
       console.warn("[adminApi] ⚠ No admin token found for →", config.url);
       console.warn("[adminApi] Available cookies:", {
         admin: !!adminToken,
-        auth: !!authToken
+        auth: !!authToken,
       });
     }
 
     return config;
   },
-  (error) => Promise.reject(error)
+  (error) => Promise.reject(error),
 );
 
 // Response interceptor
@@ -73,7 +84,7 @@ adminApiClient.interceptors.response.use(
     err.status = error.response?.status;
     err.data = error.response?.data;
     throw err;
-  }
+  },
 );
 
 // ==================== USER MANAGEMENT ====================
@@ -95,8 +106,8 @@ export async function getAllUsers(page = 1, limit = 20) {
  * @returns {Promise} Created user
  */
 export async function createUser(userData) {
-  console.log('[adminApi] → Creating user:', userData.email);
-  return adminApiClient.post('/api/admin/users', userData);
+  console.log("[adminApi] → Creating user:", userData.email);
+  return adminApiClient.post("/api/admin/users", userData);
 }
 
 /**
@@ -106,8 +117,8 @@ export async function createUser(userData) {
  * @returns {Promise} Updated user
  */
 export async function updateUser(userId, userData) {
-  if (!userId) throw new Error('userId is required');
-  console.log('[adminApi] → Updating user:', userId);
+  if (!userId) throw new Error("userId is required");
+  console.log("[adminApi] → Updating user:", userId);
   return adminApiClient.put(`/api/admin/users/${userId}`, userData);
 }
 
@@ -117,8 +128,8 @@ export async function updateUser(userId, userData) {
  * @returns {Promise} Deletion confirmation
  */
 export async function deleteUser(userId) {
-  if (!userId) throw new Error('userId is required');
-  console.log('[adminApi] → Deleting user:', userId);
+  if (!userId) throw new Error("userId is required");
+  console.log("[adminApi] → Deleting user:", userId);
   return adminApiClient.delete(`/api/admin/users/${userId}`);
 }
 
@@ -131,8 +142,12 @@ export async function deleteUser(userId) {
  * @returns {Promise} Deliveries list with pagination info
  */
 export async function getAllDeliveries(page = 1, limit = 20) {
-  console.log(`[adminApi] → Getting all deliveries (page ${page}, limit ${limit})`);
-  return adminApiClient.get(`/api/admin/deliveries?page=${page}&limit=${limit}`);
+  console.log(
+    `[adminApi] → Getting all deliveries (page ${page}, limit ${limit})`,
+  );
+  return adminApiClient.get(
+    `/api/admin/deliveries?page=${page}&limit=${limit}`,
+  );
 }
 
 /**
@@ -142,9 +157,12 @@ export async function getAllDeliveries(page = 1, limit = 20) {
  * @returns {Promise} Updated delivery
  */
 export async function assignDriver(deliveryId, assignmentData) {
-  if (!deliveryId) throw new Error('deliveryId is required');
-  console.log('[adminApi] → Assigning driver to delivery:', deliveryId);
-  return adminApiClient.post(`/api/admin/deliveries/${deliveryId}/assign`, assignmentData);
+  if (!deliveryId) throw new Error("deliveryId is required");
+  console.log("[adminApi] → Assigning driver to delivery:", deliveryId);
+  return adminApiClient.post(
+    `/api/admin/deliveries/${deliveryId}/assign`,
+    assignmentData,
+  );
 }
 
 /**
@@ -154,9 +172,12 @@ export async function assignDriver(deliveryId, assignmentData) {
  * @returns {Promise} Updated delivery
  */
 export async function adjustPricing(deliveryId, pricingData) {
-  if (!deliveryId) throw new Error('deliveryId is required');
-  console.log('[adminApi] → Adjusting pricing for delivery:', deliveryId);
-  return adminApiClient.put(`/api/admin/deliveries/${deliveryId}/pricing`, pricingData);
+  if (!deliveryId) throw new Error("deliveryId is required");
+  console.log("[adminApi] → Adjusting pricing for delivery:", deliveryId);
+  return adminApiClient.put(
+    `/api/admin/deliveries/${deliveryId}/pricing`,
+    pricingData,
+  );
 }
 
 // ==================== ANALYTICS ====================
@@ -166,8 +187,8 @@ export async function adjustPricing(deliveryId, pricingData) {
  * @returns {Promise} Analytics overview data
  */
 export async function getAnalyticsOverview() {
-  console.log('[adminApi] → Getting analytics overview');
-  return adminApiClient.get('/api/admin/analytics/overview');
+  console.log("[adminApi] → Getting analytics overview");
+  return adminApiClient.get("/api/admin/analytics/overview");
 }
 
 /**
@@ -175,8 +196,8 @@ export async function getAnalyticsOverview() {
  * @param {string} userId
  */
 export async function getUser(userId) {
-  if (!userId) throw new Error('userId is required');
-  console.log('[adminApi] → Getting user:', userId);
+  if (!userId) throw new Error("userId is required");
+  console.log("[adminApi] → Getting user:", userId);
   return adminApiClient.get(`/api/admin/users/${userId}`);
 }
 
@@ -186,12 +207,12 @@ export async function getUser(userId) {
  */
 export async function searchUsers(params = {}) {
   const { email, phone } = params || {};
-  console.log('[adminApi] → Searching users by', { email, phone });
+  console.log("[adminApi] → Searching users by", { email, phone });
   const qs = new URLSearchParams();
-  if (email) qs.append('email', email);
-  if (phone) qs.append('phone', phone);
+  if (email) qs.append("email", email);
+  if (phone) qs.append("phone", phone);
   const query = qs.toString();
-  return adminApiClient.get(`/api/admin/users${query ? `?${query}` : ''}`);
+  return adminApiClient.get(`/api/admin/users${query ? `?${query}` : ""}`);
 }
 
 /**
@@ -200,9 +221,11 @@ export async function searchUsers(params = {}) {
  * @returns {Promise} Revenue analytics data
  */
 export async function getRevenueAnalytics(params = {}) {
-  console.log('[adminApi] → Getting revenue analytics');
+  console.log("[adminApi] → Getting revenue analytics");
   const queryString = new URLSearchParams(params).toString();
-  return adminApiClient.get(`/api/admin/analytics/revenue${queryString ? '?' + queryString : ''}`);
+  return adminApiClient.get(
+    `/api/admin/analytics/revenue${queryString ? "?" + queryString : ""}`,
+  );
 }
 
 /**
@@ -211,9 +234,11 @@ export async function getRevenueAnalytics(params = {}) {
  * @returns {Promise} Driver analytics data
  */
 export async function getDriverAnalytics(params = {}) {
-  console.log('[adminApi] → Getting driver analytics');
+  console.log("[adminApi] → Getting driver analytics");
   const queryString = new URLSearchParams(params).toString();
-  return adminApiClient.get(`/api/admin/analytics/drivers${queryString ? '?' + queryString : ''}`);
+  return adminApiClient.get(
+    `/api/admin/analytics/drivers${queryString ? "?" + queryString : ""}`,
+  );
 }
 
 /**
@@ -221,8 +246,8 @@ export async function getDriverAnalytics(params = {}) {
  * Expected to return either a number (e.g. 0.15) or an object containing a commissionRate field.
  */
 export async function getCommissionRate() {
-  console.log('[adminApi] → Getting commission rate');
-  return adminApiClient.get('/api/admin/settings/commission');
+  console.log("[adminApi] → Getting commission rate");
+  return adminApiClient.get("/api/admin/settings/commission");
 }
 
 // ==================== KYC/VERIFICATION MANAGEMENT ====================
@@ -234,8 +259,23 @@ export async function getCommissionRate() {
  * @returns {Promise} Pending verifications list
  */
 export async function getPendingVerifications(page = 1, limit = 20) {
-  console.log(`[adminApi] → Getting pending verifications (page ${page}, limit ${limit})`);
-  return adminApiClient.get(`/api/admin/verifications/pending?page=${page}&limit=${limit}`);
+  console.log(
+    `[adminApi] → Getting pending verifications (page ${page}, limit ${limit})`,
+  );
+  return adminApiClient.get(
+    `/api/admin/verifications/pending?page=${page}&limit=${limit}`,
+  );
+}
+
+/**
+ * Get verification for a specific driver (for rider detail / documents)
+ * @param {string} driverId - Driver user ID
+ * @returns {Promise} { verification } or { verification: null }
+ */
+export async function getVerificationByDriver(driverId) {
+  if (!driverId) throw new Error("driverId is required");
+  console.log("[adminApi] → Getting verification for driver:", driverId);
+  return adminApiClient.get(`/api/admin/verifications/driver/${driverId}`);
 }
 
 /**
@@ -245,13 +285,16 @@ export async function getPendingVerifications(page = 1, limit = 20) {
  * @returns {Promise} Verification result
  */
 export async function approveVerification(verificationId, approvalData = {}) {
-  if (!verificationId) throw new Error('verificationId is required');
-  console.log('[adminApi] → Approving verification:', verificationId);
+  if (!verificationId) throw new Error("verificationId is required");
+  console.log("[adminApi] → Approving verification:", verificationId);
   const payload = { ...approvalData };
   // ensure we send verificationStatus (backend expects this) and avoid sending `status`
-  if (!payload.verificationStatus) payload.verificationStatus = 'approved';
-  if ('status' in payload) delete payload.status;
-  return adminApiClient.put(`/api/admin/verifications/${verificationId}`, payload);
+  if (!payload.verificationStatus) payload.verificationStatus = "approved";
+  if ("status" in payload) delete payload.status;
+  return adminApiClient.put(
+    `/api/admin/verifications/${verificationId}`,
+    payload,
+  );
 }
 
 /**
@@ -261,14 +304,16 @@ export async function approveVerification(verificationId, approvalData = {}) {
  * @returns {Promise} Verification result
  */
 export async function rejectVerification(verificationId, rejectionData) {
-  if (!verificationId) throw new Error('verificationId is required');
-  console.log('[adminApi] → Rejecting verification:', verificationId);
-  // Avoid sending fields the backend may validate strictly (e.g. `reason` or `status`)
-  // Only send `verificationStatus` to mark as rejected. Keep `rejectionData.reason`
-  // available to the caller for notifications but don't forward it to the API.
-  const payload = {};
-  payload.verificationStatus = 'rejected';
-  return adminApiClient.put(`/api/admin/verifications/${verificationId}`, payload);
+  if (!verificationId) throw new Error("verificationId is required");
+  console.log("[adminApi] → Rejecting verification:", verificationId);
+  const payload = {
+    verificationStatus: "rejected",
+    adminNotes: rejectionData?.reason || rejectionData?.adminNotes || undefined,
+  };
+  return adminApiClient.put(
+    `/api/admin/verifications/${verificationId}`,
+    payload,
+  );
 }
 
 // Export all functions
@@ -294,6 +339,7 @@ export default {
 
   // Verification management
   getPendingVerifications,
+  getVerificationByDriver,
   approveVerification,
-  rejectVerification
+  rejectVerification,
 };

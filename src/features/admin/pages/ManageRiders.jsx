@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { IonPage, IonContent } from '@ionic/react';
-import { Search, Filter, MoreVertical, Mail, Phone, AlertCircle } from 'lucide-react';
+import { Search, MoreVertical, Mail, Phone, AlertCircle, X, Eye, FileText } from 'lucide-react';
 import AdminLayout from '../components/AdminLayout';
 import { YummyText } from '../../../components/YummyText';
 import ToyBikeIcon from '../../../icons/Toybikeicon';
@@ -8,10 +8,12 @@ import CheckCircleIcon from '../../../icons/Circlecheck';
 import PauseIcon from '../../../icons/Pauseicon';
 import ClockIcon from '../../../icons/Clockicon';
 import BanIcon from '../../../icons/Banicon';
-import { getApprovedRiders } from '../../../utils/adminApi';
+import { getApprovedRiders, getVerificationByDriver, approveVerification, rejectVerification } from '../../../utils/adminApi';
 import StyledDropdown from '../../../components/StyledDropdown';
+import { Check, XCircle } from 'lucide-react';
 
-const ManageRiders = () => {
+const ManageRiders = () =>
+{
   const [searchQuery, setSearchQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState('All Status');
   const [kycFilter, setKycFilter] = useState('All KYC');
@@ -24,48 +26,45 @@ const ManageRiders = () => {
   const statusOptions = ['All Status', 'Active', 'Inactive', 'Suspended'];
   const kycOptions = ['All KYC', 'Approved', 'Pending', 'Rejected'];
 
-  // Fetch riders data
-  useEffect(() => {
-    const fetchRiders = async () => {
-      try {
-        setLoading(true);
-        setError(null);
-        // Fetch only approved riders
-        const response = await getApprovedRiders(1, 100);
-        // Correctly parse drivers from response.data.drivers
-        const drivers = response?.data?.drivers || [];
-        setRidersData(Array.isArray(drivers) ? drivers : []);
-      } catch (err) {
-        console.error('Error fetching riders:', err);
-        setError(err.message || 'Failed to fetch riders data');
-        setRidersData([]);
-      } finally {
-        setLoading(false);
-      }
-    };
+  const [selectedRider, setSelectedRider] = useState(null);
+  const [riderDetail, setRiderDetail] = useState(null);
+  const [detailLoading, setDetailLoading] = useState(false);
+  const [detailTab, setDetailTab] = useState('contact');
+  const [actionLoading, setActionLoading] = useState(false);
+  const [showRejectModal, setShowRejectModal] = useState(false);
+  const [rejectReason, setRejectReason] = useState('');
+  const [actionMessage, setActionMessage] = useState({ type: '', text: '' });
 
+  const fetchRiders = async () =>
+  {
+    try {
+      setLoading(true);
+      setError(null);
+      const response = await getApprovedRiders(1, 100);
+      const drivers = response?.data?.drivers || [];
+      setRidersData(Array.isArray(drivers) ? drivers : []);
+    } catch (err) {
+      console.error('Error fetching riders:', err);
+      setError(err.message || 'Failed to fetch riders data');
+      setRidersData([]);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() =>
+  {
     fetchRiders();
-
-    // Listen for delivery status updates to refresh rider data
-    const handleDeliveryStatusChanged = () => {
+    const handleDeliveryStatusChanged = () =>
+    {
       console.log('[ManageRiders] Delivery status changed, refreshing rider data...');
       fetchRiders();
     };
-
-    // Listen for rider availability/status changes
-    const handleRiderStatusChanged = () => {
-      console.log('[ManageRiders] Rider status changed, refreshing rider data...');
-      fetchRiders();
-    };
-
     window.addEventListener('delivery:statusChanged', handleDeliveryStatusChanged);
-    window.addEventListener('rider:statusChanged', handleRiderStatusChanged);
-    window.addEventListener('rider:availabilityChanged', handleRiderStatusChanged);
-
     const handleResize = () => setIsMobile(window.innerWidth < 768);
     window.addEventListener('resize', handleResize);
-
-    return () => {
+    return () =>
+    {
       window.removeEventListener('delivery:statusChanged', handleDeliveryStatusChanged);
       window.removeEventListener('rider:statusChanged', handleRiderStatusChanged);
       window.removeEventListener('rider:availabilityChanged', handleRiderStatusChanged);
@@ -74,7 +73,8 @@ const ManageRiders = () => {
   }, []);
 
   // Helper function to get KYC status from verificationStatus field
-  const getKycStatus = (rider) => {
+  const getKycStatus = (rider) =>
+  {
     const status = rider.verificationStatus || 'pending';
     if (status === 'approved' || status === 'verified') return 'Approved';
     if (status === 'rejected' || status === 'declined') return 'Rejected';
@@ -83,7 +83,8 @@ const ManageRiders = () => {
 
   // Helper function to get rider status
   // Use backend-provided active/inactive status directly if available
-  const getRiderStatus = (rider) => {
+  const getRiderStatus = (rider) =>
+  {
     if (rider.isSuspended || rider.suspended || rider.status === 'suspended') return 'Suspended';
     // Prefer backend-provided toggle/flag for active state
     if (typeof rider.isActive === 'boolean') return rider.isActive ? 'Active' : 'Inactive';
@@ -93,7 +94,8 @@ const ManageRiders = () => {
   };
 
   // Format date
-  const formatDate = (dateString) => {
+  const formatDate = (dateString) =>
+  {
     if (!dateString) return 'N/A';
     try {
       const date = new Date(dateString);
@@ -104,22 +106,26 @@ const ManageRiders = () => {
   };
 
   // Format currency
-  const formatCurrency = (amount) => {
+  const formatCurrency = (amount) =>
+  {
     if (amount === null || amount === undefined) return '₦0.00';
     const numAmount = typeof amount === 'string' ? parseFloat(amount) : amount;
     return `₦${numAmount.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
   };
 
   // Format number
-  const formatNumber = (num) => {
+  const formatNumber = (num) =>
+  {
     if (num === null || num === undefined) return '0';
     return num.toLocaleString('en-US');
   };
 
   // Transform API data to UI format
-  const transformedRiders = useMemo(() => {
+  const transformedRiders = useMemo(() =>
+  {
     console.log('[ManageRiders] Raw ridersData:', ridersData);
-    return ridersData.map((rider, idx) => {
+    return ridersData.map((rider, idx) =>
+    {
       // Prefer merged/profile data when available (some APIs return nested user/profile objects)
       const profile = rider._merged || rider.user || rider.driver || rider.profile || rider.account || rider;
 
@@ -207,8 +213,10 @@ const ManageRiders = () => {
   }, [ridersData]);
 
   // Filter riders based on search and filters
-  const filteredRiders = useMemo(() => {
-    return transformedRiders.filter(rider => {
+  const filteredRiders = useMemo(() =>
+  {
+    return transformedRiders.filter(rider =>
+    {
       // Search filter
       const searchLower = searchQuery.toLowerCase();
       const matchesSearch = !searchQuery ||
@@ -228,7 +236,8 @@ const ManageRiders = () => {
   }, [transformedRiders, searchQuery, statusFilter, kycFilter]);
 
   // Calculate stats from real data
-  const stats = useMemo(() => {
+  const stats = useMemo(() =>
+  {
     const totalRiders = transformedRiders.length;
     const activeCount = transformedRiders.filter(r => r.status === 'Active').length;
     const inactiveCount = transformedRiders.filter(r => r.status === 'Inactive').length;
@@ -276,7 +285,8 @@ const ManageRiders = () => {
 
   // Pagination
   const totalPages = Math.ceil(filteredRiders.length / itemsPerPage);
-  const paginatedRiders = useMemo(() => {
+  const paginatedRiders = useMemo(() =>
+  {
     const startIndex = (currentPage - 1) * itemsPerPage;
     const endIndex = startIndex + itemsPerPage;
     return filteredRiders.slice(startIndex, endIndex);
@@ -284,10 +294,119 @@ const ManageRiders = () => {
   console.log('Rendering riders:', paginatedRiders)
 
   // Handle page change
-  const handlePageChange = (newPage) => {
+  const handlePageChange = (newPage) =>
+  {
     if (newPage >= 1 && newPage <= totalPages) {
       setCurrentPage(newPage);
     }
+  };
+
+  const openRiderDetail = async (rider) =>
+  {
+    setSelectedRider(rider);
+    setRiderDetail(null);
+    setDetailLoading(true);
+    setDetailTab('contact');
+    try {
+      const verificationRes = await getVerificationByDriver(rider.id).catch(() => ({ data: { verification: null } }));
+      const verification = verificationRes?.data?.verification ?? verificationRes?.verification ?? null;
+      setRiderDetail({ verification });
+    } catch (err) {
+      console.error('[ManageRiders] Error loading rider detail:', err);
+      setRiderDetail({ verification: null });
+    } finally {
+      setDetailLoading(false);
+    }
+  };
+
+  const closeRiderDetail = () =>
+  {
+    setSelectedRider(null);
+    setRiderDetail(null);
+    setDetailTab('contact');
+    setShowRejectModal(false);
+    setRejectReason('');
+    setActionMessage({ type: '', text: '' });
+  };
+
+  const verificationId = riderDetail?.verification?._id || riderDetail?.verification?.id;
+  const isPendingKyc = riderDetail?.verification?.verificationStatus === 'pending';
+
+  const handleApprove = async () =>
+  {
+    if (!verificationId) return;
+    setActionMessage({ type: '', text: '' });
+    setActionLoading(true);
+    try {
+      await approveVerification(verificationId, { verificationStatus: 'approved' });
+      setActionMessage({ type: 'success', text: 'Rider approved successfully.' });
+      window.dispatchEvent(new CustomEvent('kyc:updated', { detail: { action: 'approved', verificationId } }));
+      await fetchRiders();
+      setRiderDetail(prev => prev?.verification ? { verification: { ...prev.verification, verificationStatus: 'approved' } } : null);
+    } catch (err) {
+      setActionMessage({ type: 'error', text: err.message || 'Failed to approve.' });
+    } finally {
+      setActionLoading(false);
+    }
+  };
+
+  const handleRejectConfirm = async () =>
+  {
+    if (!verificationId || !rejectReason.trim()) return;
+    setActionMessage({ type: '', text: '' });
+    setActionLoading(true);
+    try {
+      await rejectVerification(verificationId, { reason: rejectReason.trim() });
+      setActionMessage({ type: 'success', text: 'Rider verification rejected.' });
+      setShowRejectModal(false);
+      setRejectReason('');
+      window.dispatchEvent(new CustomEvent('kyc:updated', { detail: { action: 'rejected', verificationId } }));
+      await fetchRiders();
+      setRiderDetail(prev => prev?.verification ? { verification: { ...prev.verification, verificationStatus: 'rejected' } } : null);
+    } catch (err) {
+      setActionMessage({ type: 'error', text: err.message || 'Failed to reject.' });
+    } finally {
+      setActionLoading(false);
+    }
+  };
+
+  const openDocument = (url) =>
+  {
+    if (url) window.open(url, '_blank');
+  };
+
+  const getDetailFullDetails = () =>
+  {
+    if (!riderDetail || !selectedRider) return null;
+    const { verification } = riderDetail;
+    const contactInfo = verification?.contactInfo || {};
+    const identity = verification?.identity || {};
+    const vehicle = verification?.vehicle || {};
+    return {
+      email: contactInfo?.email || selectedRider?.email || 'Not provided',
+      phone: contactInfo?.phone || selectedRider?.phone || 'Not provided',
+      address: contactInfo?.streetAddress || 'Not provided',
+      city: contactInfo?.city || '',
+      state: contactInfo?.state || '',
+      zipCode: contactInfo?.zipCode || '',
+      emergencyContact: contactInfo?.emergencyContact || 'Not provided',
+      emergencyPhone: contactInfo?.emergencyPhone || '',
+      fullName: identity?.fullName || selectedRider?.name || 'Not provided',
+      idType: identity?.idType || 'Not provided',
+      idNumber: identity?.idNumber || 'Not provided',
+      vehicleType: vehicle?.type || selectedRider?.vehicle || 'Not provided',
+      makeModel: vehicle?.makeModel || 'Not provided',
+      year: vehicle?.year || '',
+      licensePlate: vehicle?.licensePlate || 'Not provided',
+      documentUrls: {
+        idFront: identity?.idDocumentUrl,
+        idBack: null,
+        selfie: identity?.profilePhotoUrl,
+        vehicleRegistration: null,
+        driversLicense: vehicle?.driversLicenseUrl,
+        insurance: vehicle?.insuranceUrl
+      }
+    };
   };
 
   return (
@@ -371,7 +490,8 @@ const ManageRiders = () => {
                           type="text"
                           placeholder="Search riders..."
                           value={searchQuery}
-                          onChange={(e) => {
+                          onChange={(e) =>
+                          {
                             setSearchQuery(e.target.value);
                             setCurrentPage(1);
                           }}
@@ -381,7 +501,8 @@ const ManageRiders = () => {
                       <div className="w-full md:w-auto">
                         <StyledDropdown
                           value={statusFilter}
-                          onChange={(val) => {
+                          onChange={(val) =>
+                          {
                             setStatusFilter(val);
                             setCurrentPage(1);
                           }}
@@ -393,7 +514,8 @@ const ManageRiders = () => {
                       <div className="w-full md:w-auto">
                         <StyledDropdown
                           value={kycFilter}
-                          onChange={(val) => {
+                          onChange={(val) =>
+                          {
                             setKycFilter(val);
                             setCurrentPage(1);
                           }}
@@ -416,7 +538,11 @@ const ManageRiders = () => {
                         </div>
                       ) : (
                         paginatedRiders.map((rider, idx) => (
-                          <div key={rider.id || idx} className="bg-white rounded-lg p-4 border border-gray-100 shadow-sm">
+                          <div
+                            key={rider.id || idx}
+                            onClick={() => openRiderDetail(rider)}
+                            className="bg-white rounded-lg p-4 border border-gray-100 shadow-sm cursor-pointer hover:border-gray-200 transition-colors"
+                          >
                             <div className="flex items-start justify-between">
                               <div className="flex-1 pr-3">
                                 <YummyText className="text-sm font-medium text-gray-900 truncate">{rider.name}</YummyText>
@@ -433,7 +559,11 @@ const ManageRiders = () => {
                               </div>
                             </div>
                             <div className="mt-3 flex items-center justify-end gap-2">
-                              <button className="text-[#0A0A0A] hover:text-gray-600">
+                              <button
+                                type="button"
+                                onClick={(e) => { e.stopPropagation(); openRiderDetail(rider); }}
+                                className="text-[#0A0A0A] hover:text-gray-600"
+                              >
                                 <MoreVertical className="w-5 h-5" />
                               </button>
                             </div>
@@ -493,7 +623,11 @@ const ManageRiders = () => {
                               </tr>
                             ) : (
                               paginatedRiders.map((rider, index) => (
-                                <tr key={index} className="hover:bg-gray-50 transition-colors">
+                                <tr
+                                  key={index}
+                                  onClick={() => openRiderDetail(rider)}
+                                  className="hover:bg-gray-50 transition-colors cursor-pointer"
+                                >
                                   <td className="w-[8%] px-1 py-4 whitespace-nowrap">
                                     <span
                                       className="text-[12px] font-medium text-gray-900"
@@ -566,8 +700,12 @@ const ManageRiders = () => {
                                       {rider.status}
                                     </span>
                                   </td>
-                                  <td className="w-[6%] px-1 py-4 whitespace-nowrap text-center">
-                                    <button className="text-[#0A0A0A] hover:text-gray-600">
+                                  <td className="w-[6%] px-1 py-4 whitespace-nowrap text-center" onClick={(e) => e.stopPropagation()}>
+                                    <button
+                                      type="button"
+                                      onClick={() => openRiderDetail(rider)}
+                                      className="text-[#0A0A0A] hover:text-gray-600"
+                                    >
                                       <MoreVertical className="w-5 h-5" />
                                     </button>
                                   </td>
@@ -598,7 +736,8 @@ const ManageRiders = () => {
 
                       {/* Page numbers */}
                       <div className="flex items-center gap-1">
-                        {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
+                        {Array.from({ length: Math.min(5, totalPages) }, (_, i) =>
+                        {
                           let pageNum;
                           if (totalPages <= 5) {
                             pageNum = i + 1;
@@ -637,6 +776,203 @@ const ManageRiders = () => {
                 )}
               </div>
             </>
+          )}
+
+          {/* Rider Detail Modal */}
+          {selectedRider && (
+            <div className="fixed inset-0 flex items-center justify-center p-4 backdrop-blur-md bg-black/40" style={{ zIndex: 9999 }} onClick={closeRiderDetail}>
+              <div className="bg-white rounded-2xl shadow-2xl max-w-2xl w-full max-h-[90vh] overflow-hidden" style={{ boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.25)' }} onClick={(e) => e.stopPropagation()}>
+                <div className="p-6 border-b border-gray-200">
+                  <div className="flex items-start justify-between">
+                    <div>
+                      <YummyText className="text-xl font-medium text-[#1E1E1E] mb-1">Rider Details</YummyText>
+                      <YummyText className="text-sm text-[#717182]">{selectedRider.name} · {selectedRider.email}</YummyText>
+                    </div>
+                    <button type="button" onClick={closeRiderDetail} className="text-[#717182] hover:text-gray-600 transition-colors">
+                      <X className="w-6 h-6" />
+                    </button>
+                  </div>
+                </div>
+                <div className="overflow-y-auto" style={{ maxHeight: 'calc(90vh - 180px)' }}>
+                  <div className="p-6">
+                    {detailLoading ? (
+                      <div className="flex items-center justify-center py-12">
+                        <div className="inline-block h-8 w-8 animate-spin rounded-full border-4 border-solid border-blue-600 border-r-transparent" />
+                      </div>
+                    ) : (
+                      <>
+                        <div className="flex items-center gap-2 mb-6">
+                          <span className={`px-3 py-1 rounded-full text-xs font-medium ${selectedRider.kycColor}`}>{selectedRider.kyc}</span>
+                          <span className={`px-3 py-1 rounded-full text-xs font-medium ${selectedRider.statusColor}`}>{selectedRider.status}</span>
+                        </div>
+                        <div className="flex gap-2 mb-6 bg-gray-100 p-1 rounded-full">
+                          <button type="button" onClick={() => setDetailTab('contact')} className={`flex-1 px-4 py-2 rounded-full text-sm font-medium transition-colors ${detailTab === 'contact' ? 'bg-white text-[#0A0A0A] shadow-sm' : 'text-[#0A0A0A] hover:text-gray-900'}`}>
+                            Contact
+                          </button>
+                          <button type="button" onClick={() => setDetailTab('identity')} className={`flex-1 px-4 py-2 rounded-full text-sm font-medium transition-colors ${detailTab === 'identity' ? 'bg-white text-[#0A0A0A] shadow-sm' : 'text-[#0A0A0A] hover:text-gray-900'}`}>
+                            Identity & Documents
+                          </button>
+                          <button type="button" onClick={() => setDetailTab('vehicle')} className={`flex-1 px-4 py-2 rounded-full text-sm font-medium transition-colors ${detailTab === 'vehicle' ? 'bg-white text-[#0A0A0A] shadow-sm' : 'text-[#0A0A0A] hover:text-gray-900'}`}>
+                            Vehicle & Documents
+                          </button>
+                        </div>
+                        {(() =>
+                        {
+                          const fd = getDetailFullDetails();
+                          if (!fd) return <YummyText className="text-sm text-gray-500">No additional details available.</YummyText>;
+                          return (
+                            <>
+                              {detailTab === 'contact' && (
+                                <div className="grid grid-cols-2 gap-4">
+                                  <div><YummyText className="text-xs text-gray-500 mb-1">Email</YummyText><YummyText className="text-sm text-[#0A0A0A]">{fd.email}</YummyText></div>
+                                  <div><YummyText className="text-xs text-gray-500 mb-1">Phone</YummyText><YummyText className="text-sm text-[#0A0A0A]">{fd.phone}</YummyText></div>
+                                  <div className="col-span-2"><YummyText className="text-xs text-gray-500 mb-1">Address</YummyText><YummyText className="text-sm text-[#0A0A0A]">{fd.address}</YummyText></div>
+                                  <div><YummyText className="text-xs text-gray-500 mb-1">Emergency Contact</YummyText><YummyText className="text-sm text-[#0A0A0A]">{fd.emergencyContact}</YummyText></div>
+                                  <div><YummyText className="text-xs text-gray-500 mb-1">Emergency Phone</YummyText><YummyText className="text-sm text-[#0A0A0A]">{fd.emergencyPhone || 'Not provided'}</YummyText></div>
+                                </div>
+                              )}
+                              {detailTab === 'identity' && (
+                                <div className="space-y-4">
+                                  <div className="grid grid-cols-2 gap-4">
+                                    <div><YummyText className="text-xs text-gray-500 mb-1">Full Name</YummyText><YummyText className="text-sm text-gray-900">{fd.fullName}</YummyText></div>
+                                    <div><YummyText className="text-xs text-gray-500 mb-1">ID Type</YummyText><YummyText className="text-sm text-gray-900">{fd.idType}</YummyText></div>
+                                    <div><YummyText className="text-xs text-gray-500 mb-1">ID Number</YummyText><YummyText className="text-sm text-gray-900">{fd.idNumber}</YummyText></div>
+                                  </div>
+                                  <div className="mt-6 border-t border-gray-200 pt-4">
+                                    <YummyText className="text-sm font-medium text-gray-900 mb-3">Identity Documents</YummyText>
+                                    <div className="grid grid-cols-2 gap-4">
+                                      {fd.documentUrls?.idFront && (
+                                        <div className="border border-gray-200 rounded-lg p-4 text-center bg-white">
+                                          <div className="relative h-20 rounded overflow-hidden bg-gray-100 mb-2 flex items-center justify-center">
+                                            <img src={fd.documentUrls.idFront} alt="ID Document" className="w-full h-full object-cover" onError={(e) => { e.target.style.display = 'none'; const fb = e.target.nextElementSibling; if (fb) fb.classList.remove('hidden'); }} />
+                                            <div className="hidden absolute inset-0 flex items-center justify-center"><FileText className="w-8 h-8 text-gray-400" /></div>
+                                          </div>
+                                          <div className="text-sm text-gray-900 mb-1">ID Document</div>
+                                          <button type="button" onClick={() => openDocument(fd.documentUrls.idFront)} className="inline-flex items-center gap-1 px-3 py-1 text-xs font-medium text-blue-600 bg-blue-50 border border-blue-100 rounded-md hover:bg-blue-100">
+                                            <Eye className="w-3 h-3" /> View
+                                          </button>
+                                        </div>
+                                      )}
+                                      {fd.documentUrls?.selfie && (
+                                        <div className="border border-gray-200 rounded-lg p-4 text-center bg-white">
+                                          <div className="relative h-20 rounded overflow-hidden bg-gray-100 mb-2 flex items-center justify-center">
+                                            <img src={fd.documentUrls.selfie} alt="Profile Photo" className="w-full h-full object-cover rounded-full" onError={(e) => { e.target.style.display = 'none'; const fb = e.target.nextElementSibling; if (fb) fb.classList.remove('hidden'); }} />
+                                            <div className="hidden absolute inset-0 flex items-center justify-center"><FileText className="w-8 h-8 text-gray-400" /></div>
+                                          </div>
+                                          <div className="text-sm text-gray-900 mb-1">Profile Photo</div>
+                                          <button type="button" onClick={() => openDocument(fd.documentUrls.selfie)} className="inline-flex items-center gap-1 px-3 py-1 text-xs font-medium text-blue-600 bg-blue-50 border border-blue-100 rounded-md hover:bg-blue-100">
+                                            <Eye className="w-3 h-3" /> View
+                                          </button>
+                                        </div>
+                                      )}
+                                      {!fd.documentUrls?.idFront && !fd.documentUrls?.selfie && <YummyText className="text-sm text-gray-500 col-span-2">No identity documents submitted yet.</YummyText>}
+                                    </div>
+                                  </div>
+                                </div>
+                              )}
+                              {detailTab === 'vehicle' && (
+                                <div className="space-y-4">
+                                  <div className="grid grid-cols-2 gap-4">
+                                    <div><YummyText className="text-xs text-gray-500 mb-1">Vehicle Type</YummyText><YummyText className="text-sm text-gray-900">{fd.vehicleType}</YummyText></div>
+                                    <div><YummyText className="text-xs text-gray-500 mb-1">Make & Model</YummyText><YummyText className="text-sm text-gray-900">{fd.makeModel}</YummyText></div>
+                                    <div><YummyText className="text-xs text-gray-500 mb-1">Year</YummyText><YummyText className="text-sm text-gray-900">{fd.year || 'N/A'}</YummyText></div>
+                                    <div><YummyText className="text-xs text-gray-500 mb-1">License Plate</YummyText><YummyText className="text-sm text-gray-900">{fd.licensePlate}</YummyText></div>
+                                  </div>
+                                  <div className="mt-6 border-t border-gray-200 pt-4">
+                                    <YummyText className="text-sm font-medium text-gray-900 mb-3">Vehicle Documents</YummyText>
+                                    <div className="grid grid-cols-2 gap-4">
+                                      {fd.documentUrls?.driversLicense && (
+                                        <div className="border border-gray-200 rounded-lg p-4 text-center bg-white">
+                                          <div className="relative h-20 rounded overflow-hidden bg-gray-100 mb-2 flex items-center justify-center">
+                                            <img src={fd.documentUrls.driversLicense} alt="Driver's License" className="w-full h-full object-cover" onError={(e) => { e.target.style.display = 'none'; const fb = e.target.nextElementSibling; if (fb) fb.classList.remove('hidden'); }} />
+                                            <div className="hidden absolute inset-0 flex items-center justify-center"><FileText className="w-8 h-8 text-gray-400" /></div>
+                                          </div>
+                                          <div className="text-sm text-gray-900 mb-1">Driver&apos;s License</div>
+                                          <button type="button" onClick={() => openDocument(fd.documentUrls.driversLicense)} className="inline-flex items-center gap-1 px-3 py-1 text-xs font-medium text-blue-600 bg-blue-50 border border-blue-100 rounded-md hover:bg-blue-100">
+                                            <Eye className="w-3 h-3" /> View
+                                          </button>
+                                        </div>
+                                      )}
+                                      {fd.documentUrls?.insurance && (
+                                        <div className="border border-gray-200 rounded-lg p-4 text-center bg-white">
+                                          <div className="relative h-20 rounded overflow-hidden bg-gray-100 mb-2 flex items-center justify-center">
+                                            <img src={fd.documentUrls.insurance} alt="Insurance" className="w-full h-full object-cover" onError={(e) => { e.target.style.display = 'none'; const fb = e.target.nextElementSibling; if (fb) fb.classList.remove('hidden'); }} />
+                                            <div className="hidden absolute inset-0 flex items-center justify-center"><FileText className="w-8 h-8 text-gray-400" /></div>
+                                          </div>
+                                          <div className="text-sm text-gray-900 mb-1">Insurance</div>
+                                          <button type="button" onClick={() => openDocument(fd.documentUrls.insurance)} className="inline-flex items-center gap-1 px-3 py-1 text-xs font-medium text-blue-600 bg-blue-50 border border-blue-100 rounded-md hover:bg-blue-100">
+                                            <Eye className="w-3 h-3" /> View
+                                          </button>
+                                        </div>
+                                      )}
+                                      {!fd.documentUrls?.driversLicense && !fd.documentUrls?.insurance && <YummyText className="text-sm text-gray-500 col-span-2">No vehicle documents submitted yet.</YummyText>}
+                                    </div>
+                                  </div>
+                                </div>
+                              )}
+                            </>
+                          );
+                        })()}
+                      </>
+                    )}
+                  </div>
+                </div>
+                {!detailLoading && riderDetail?.verification && isPendingKyc && (
+                  <div className="p-4 border-t border-gray-200 bg-gray-50 flex flex-col gap-3">
+                    {actionMessage.text && (
+                      <p className={`text-sm ${actionMessage.type === 'error' ? 'text-red-600' : 'text-green-600'}`}>{actionMessage.text}</p>
+                    )}
+                    <div className="flex gap-3 justify-end">
+                      <button
+                        type="button"
+                        onClick={handleApprove}
+                        disabled={actionLoading}
+                        className="inline-flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium text-white bg-green-600 hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed"
+                      >
+                        <Check className="w-4 h-4" /> Approve
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setShowRejectModal(true)}
+                        disabled={actionLoading}
+                        className="inline-flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium text-white bg-red-600 hover:bg-red-700 disabled:opacity-50 disabled:cursor-not-allowed"
+                      >
+                        <XCircle className="w-4 h-4" /> Reject
+                      </button>
+                    </div>
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
+
+          {selectedRider && showRejectModal && (
+            <div className="fixed inset-0 flex items-center justify-center p-4 backdrop-blur-sm bg-black/50" style={{ zIndex: 10000 }} onClick={() => setShowRejectModal(false)}>
+              <div className="bg-white rounded-xl shadow-xl max-w-md w-full p-6" onClick={(e) => e.stopPropagation()}>
+                <YummyText className="text-lg font-medium text-gray-900 mb-2">Reject verification</YummyText>
+                <p className="text-sm text-gray-600 mb-4">Please provide a reason for rejection (required):</p>
+                <textarea
+                  placeholder="Reason for rejection"
+                  value={rejectReason}
+                  onChange={(e) => setRejectReason(e.target.value)}
+                  className="w-full border border-gray-200 rounded-lg p-3 text-sm min-h-[80px] focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  autoFocus
+                />
+                <div className="flex gap-3 justify-end mt-4">
+                  <button type="button" onClick={() => { setShowRejectModal(false); setRejectReason(''); }} className="px-4 py-2 rounded-lg text-sm font-medium text-gray-700 bg-gray-100 hover:bg-gray-200">
+                    Cancel
+                  </button>
+                  <button
+                    type="button"
+                    onClick={handleRejectConfirm}
+                    disabled={actionLoading || !rejectReason.trim()}
+                    className="px-4 py-2 rounded-lg text-sm font-medium text-white bg-red-600 hover:bg-red-700 disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    {actionLoading ? 'Rejecting...' : 'Reject'}
+                  </button>
+                </div>
+              </div>
+            </div>
           )}
         </IonContent>
       </AdminLayout>

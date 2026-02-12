@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { IonContent, IonPage, IonToast } from '@ionic/react';
 import RiderLayout from '../components/RiderLayout';
 import { YummyText } from '../../../components/YummyText';
@@ -12,7 +12,8 @@ const sideBottomShadow = {
   boxShadow: '2px 4px 4px rgba(0,0,0,0.06), -2px 4px 4px rgba(0,0,0,0.06), 0 4px 8px rgba(0,0,0,0.08)'
 };
 
-const loadGoogleProfileData = () => {
+const loadGoogleProfileData = () =>
+{
   console.log('loading google profile data...');
 
   const cachedUserData = getJSONCookie('user_data');
@@ -43,14 +44,16 @@ const loadGoogleProfileData = () => {
   };
 };
 
-const generateMockAvatar = (name) => {
+const generateMockAvatar = (name) =>
+{
   if (!name || name === 'Rider') {
     return 'https://api.dicebear.com/7.x/avataaars/svg?seed=Rider';
   }
   return `https://api.dicebear.com/7.x/avataaars/svg?seed=${encodeURIComponent(name)}`;
 };
 
-const getProfileImageKey = () => {
+const getProfileImageKey = () =>
+{
   try {
     const userData = getJSONCookie('user_data');
     if (userData) {
@@ -65,8 +68,10 @@ const getProfileImageKey = () => {
   return 'profile_image';
 };
 
-const RiderProfile = () => {
-  const [activeTab, setActiveTab] = useState(() => {
+const RiderProfile = () =>
+{
+  const [activeTab, setActiveTab] = useState(() =>
+  {
     return sessionStorage.getItem('riderProfileTab') || 'personal';
   });
 
@@ -93,7 +98,8 @@ const RiderProfile = () => {
     insurancePolicy: ''
   });
 
-  const [userName, setUserName] = useState(() => {
+  const [userName, setUserName] = useState(() =>
+  {
     const cachedUserData = getJSONCookie('user_data');
     if (cachedUserData) {
       try {
@@ -106,7 +112,8 @@ const RiderProfile = () => {
     return 'Rider';
   });
 
-  const [riderId, setRiderId] = useState(() => {
+  const [riderId, setRiderId] = useState(() =>
+  {
     const cachedUserData = getJSONCookie('user_data');
     if (cachedUserData) {
       try {
@@ -118,7 +125,8 @@ const RiderProfile = () => {
     return '';
   });
 
-  const [profileImage, setProfileImage] = useState(() => {
+  const [profileImage, setProfileImage] = useState(() =>
+  {
     const imageKey = getProfileImageKey();
     const cachedImage = getCookie(imageKey);
     if (cachedImage && !cachedImage.includes('dicebear') && !cachedImage.includes('profileimage.svg')) {
@@ -139,21 +147,24 @@ const RiderProfile = () => {
   const [toastMsg, setToastMsg] = useState('');
   const [showToast, setShowToast] = useState(false);
 
-  const [documents, setDocuments] = useState(() => {
+  const defaultDocuments = {
+    idDocument: { uploaded: false, verified: false, expires: '', fileName: '' },
+    driversLicense: { uploaded: false, verified: false, expires: '', fileName: '' },
+    vehicleRegistration: { uploaded: false, verified: false, expires: '', fileName: '' },
+    insuranceCertificate: { uploaded: false, verified: false, expires: '', fileName: '' },
+    backgroundCheck: { uploaded: false, verified: false, lastUpdated: '', fileName: '' }
+  };
+  const [documents, setDocuments] = useState(() =>
+  {
     const savedDocs = getJSONCookie('riderDocuments');
     if (savedDocs) {
       try {
-        return savedDocs;
+        return { ...defaultDocuments, ...savedDocs };
       } catch (e) {
         console.error('[Profile] Error parsing saved documents:', e);
       }
     }
-    return {
-      driversLicense: { uploaded: false, verified: false, expires: '', fileName: '' },
-      vehicleRegistration: { uploaded: false, verified: false, expires: '', fileName: '' },
-      insuranceCertificate: { uploaded: false, verified: false, expires: '', fileName: '' },
-      backgroundCheck: { uploaded: false, verified: false, lastUpdated: '', fileName: '' }
-    };
+    return { ...defaultDocuments };
   });
 
   const [stats, setStats] = useState({
@@ -165,17 +176,60 @@ const RiderProfile = () => {
   });
 
   const profileImageInputRef = useRef(null);
+  const idDocumentInputRef = useRef(null);
   const driversLicenseInputRef = useRef(null);
   const vehicleRegistrationInputRef = useRef(null);
   const insuranceCertificateInputRef = useRef(null);
   const backgroundCheckInputRef = useRef(null);
 
-  useEffect(() => {
+  // Derive document state and URLs from profileData.verification so UI always reflects backend
+  const effectiveDocuments = useMemo(() =>
+  {
+    const v = profileData?.verification;
+    if (!v) return { ...documents, idDocument: { ...documents.idDocument, url: null }, driversLicense: { ...documents.driversLicense, url: null }, insuranceCertificate: { ...documents.insuranceCertificate, url: null } };
+    const id = v.identity || {};
+    const veh = v.vehicle || {};
+    const isApproved = v.verificationStatus === 'approved';
+    return {
+      ...documents,
+      idDocument: {
+        ...documents.idDocument,
+        uploaded: !!id.idDocumentUrl || documents.idDocument.uploaded,
+        verified: (!!id.idDocumentUrl && isApproved) || documents.idDocument.verified,
+        fileName: documents.idDocument.fileName || (id.idDocumentUrl ? 'ID Document' : ''),
+        url: id.idDocumentUrl || null
+      },
+      driversLicense: {
+        ...documents.driversLicense,
+        uploaded: !!veh.driversLicenseUrl || documents.driversLicense.uploaded,
+        verified: (!!veh.driversLicenseUrl && isApproved) || documents.driversLicense.verified,
+        fileName: documents.driversLicense.fileName || (veh.driversLicenseUrl ? "Driver's License" : ''),
+        url: veh.driversLicenseUrl || null
+      },
+      insuranceCertificate: {
+        ...documents.insuranceCertificate,
+        uploaded: !!veh.insuranceUrl || documents.insuranceCertificate.uploaded,
+        verified: (!!veh.insuranceUrl && isApproved) || documents.insuranceCertificate.verified,
+        fileName: documents.insuranceCertificate.fileName || (veh.insuranceUrl ? 'Insurance' : ''),
+        url: veh.insuranceUrl || null
+      },
+      backgroundCheck: {
+        ...documents.backgroundCheck,
+        uploaded: !!v.backgroundCheckConsent || documents.backgroundCheck.uploaded,
+        verified: (!!v.backgroundCheckConsent && isApproved) || documents.backgroundCheck.verified,
+        lastUpdated: documents.backgroundCheck.lastUpdated || (v.backgroundCheckConsent ? 'Submitted' : '')
+      }
+    };
+  }, [documents, profileData?.verification]);
+
+  useEffect(() =>
+  {
     sessionStorage.setItem('riderProfileTab', activeTab);
   }, [activeTab]);
 
   // Load saved data from cookies on mount
-  useEffect(() => {
+  useEffect(() =>
+  {
     console.log('[Profile] === INITIAL DATA LOAD ===');
 
     // First, try to load Google profile data
@@ -294,10 +348,12 @@ const RiderProfile = () => {
     console.log('[Profile] === INITIAL DATA LOAD COMPLETE ===');
   }, []);
 
-  useEffect(() => {
+  useEffect(() =>
+  {
     fetchProfile();
 
-    const handleVerificationComplete = (event) => {
+    const handleVerificationComplete = (event) =>
+    {
       console.log('[Profile] Verification completed, refreshing profile and data');
       fetchProfile();
 
@@ -353,13 +409,15 @@ const RiderProfile = () => {
     window.addEventListener('verification:completed', handleVerificationComplete);
     window.addEventListener('profile:updated', handleProfileUpdated);
 
-    return () => {
+    return () =>
+    {
       window.removeEventListener('verification:completed', handleVerificationComplete);
       window.removeEventListener('profile:updated', handleProfileUpdated);
     };
   }, []);
 
-  const fetchProfile = async () => {
+  const fetchProfile = async () =>
+  {
     try {
       setLoading(true);
 
@@ -448,8 +506,21 @@ const RiderProfile = () => {
       }
 
       const response = await getRiderProfile();
-      const profile = response?.data?.driver || response?.driver || response?.data;
+      // Support both shapes: { data: { user, verification } } and { user, verification }
+      const data = response?.data?.data ?? response?.data ?? response;
+      let profile;
+      if (data?.user != null) {
+        profile = { ...data.user, verification: data.verification };
+        if (data.verification?.vehicle) {
+          profile.vehicle = profile.vehicle ? { ...profile.vehicle, ...data.verification.vehicle } : data.verification.vehicle;
+        }
+      } else {
+        profile = data?.driver ?? response?.driver ?? data;
+      }
       setProfileData(profile);
+
+      const imageKey = getProfileImageKey();
+      const cachedImage = getCookie(imageKey);
 
       // Fetch stats
       try {
@@ -478,6 +549,9 @@ const RiderProfile = () => {
       if (profile?.profilePhoto && !profile.profilePhoto.includes('dicebear')) {
         setProfileImage(profile.profilePhoto);
         setCookie(imageKey, profile.profilePhoto, 7);
+      } else if (profile?.verification?.identity?.profilePhotoUrl) {
+        setProfileImage(profile.verification.identity.profilePhotoUrl);
+        setCookie(imageKey, profile.verification.identity.profilePhotoUrl, 7);
       } else if (!cachedImage || cachedImage.includes('dicebear') || cachedImage.includes('profileimage.svg')) {
         const name = profile?.fullName || `${profile?.firstName || ''} ${profile?.lastName || ''}`.trim() || userName;
         const mockAvatar = generateMockAvatar(name);
@@ -530,8 +604,44 @@ const RiderProfile = () => {
         }));
       }
 
+      if (profile?.verification) {
+        const v = profile.verification;
+        const id = v.identity || {};
+        const veh = v.vehicle || {};
+        const isApproved = v.verificationStatus === 'approved';
+        setDocuments(prev => ({
+          ...prev,
+          idDocument: {
+            ...prev.idDocument,
+            uploaded: !!id.idDocumentUrl,
+            verified: !!id.idDocumentUrl && isApproved,
+            fileName: id.idDocumentUrl ? (prev.idDocument?.fileName || 'ID Document') : prev.idDocument?.fileName || ''
+          },
+          driversLicense: {
+            ...prev.driversLicense,
+            uploaded: !!veh.driversLicenseUrl,
+            verified: !!veh.driversLicenseUrl && isApproved,
+            fileName: veh.driversLicenseUrl ? (prev.driversLicense?.fileName || 'Driver\'s License') : prev.driversLicense?.fileName || ''
+          },
+          insuranceCertificate: {
+            ...prev.insuranceCertificate,
+            uploaded: !!veh.insuranceUrl,
+            verified: !!veh.insuranceUrl && isApproved,
+            fileName: veh.insuranceUrl ? (prev.insuranceCertificate?.fileName || 'Insurance') : prev.insuranceCertificate?.fileName || ''
+          },
+          backgroundCheck: {
+            ...prev.backgroundCheck,
+            uploaded: !!v.backgroundCheckConsent,
+            verified: !!v.backgroundCheckConsent && isApproved,
+            lastUpdated: v.backgroundCheckConsent ? (prev.backgroundCheck?.lastUpdated || 'Submitted') : prev.backgroundCheck?.lastUpdated || ''
+          }
+        }));
+      }
+
       if (profile?.verificationStatus) {
         setCookie('riderVerificationStatus', profile.verificationStatus, 7);
+      } else if (profile?.verification?.verificationStatus) {
+        setCookie('riderVerificationStatus', profile.verification.verificationStatus, 7);
       }
 
       console.log('[Profile] Profile loaded:', profile);
@@ -554,7 +664,8 @@ const RiderProfile = () => {
     }
   };
 
-  const handleProfileImageUpload = async (e) => {
+  const handleProfileImageUpload = async (e) =>
+  {
     const file = e.target.files[0];
     if (!file) return;
 
@@ -572,7 +683,8 @@ const RiderProfile = () => {
     }
 
     const reader = new FileReader();
-    reader.onloadend = () => {
+    reader.onloadend = () =>
+    {
       const previewUrl = reader.result;
       setProfileImage(previewUrl);
       window.dispatchEvent(new CustomEvent('profile:updated', {
@@ -610,7 +722,8 @@ const RiderProfile = () => {
       } else {
         console.log('[Profile] No URL returned, using local preview');
         const reader = new FileReader();
-        reader.onloadend = () => {
+        reader.onloadend = () =>
+        {
           setProfileImage(reader.result);
           const imageKey = getProfileImageKey();
           setCookie(imageKey, reader.result, 7);
@@ -632,14 +745,16 @@ const RiderProfile = () => {
     }
   };
 
-  const handlePersonalInfoChange = (field, value) => {
+  const handlePersonalInfoChange = (field, value) =>
+  {
     setPersonalInfo(prev => ({
       ...prev,
       [field]: value
     }));
   };
 
-  const handleSavePersonalInfo = async () => {
+  const handleSavePersonalInfo = async () =>
+  {
     try {
       setSaving(true);
 
@@ -724,14 +839,16 @@ const RiderProfile = () => {
     }
   };
 
-  const handleVehicleInfoChange = (field, value) => {
+  const handleVehicleInfoChange = (field, value) =>
+  {
     setVehicleInfo(prev => ({
       ...prev,
       [field]: value
     }));
   };
 
-  const handleSaveVehicleInfo = async () => {
+  const handleSaveVehicleInfo = async () =>
+  {
     try {
       setSaving(true);
 
@@ -770,7 +887,8 @@ const RiderProfile = () => {
     }
   };
 
-  const handleDocumentUpload = (documentType, e) => {
+  const handleDocumentUpload = (documentType, e) =>
+  {
     const file = e.target.files[0];
     if (file) {
       const validTypes = ['application/pdf', 'image/jpeg', 'image/png'];
@@ -808,18 +926,19 @@ const RiderProfile = () => {
     }
   };
 
-  const calculateCompletion = () => {
-    const totalFields = 4;
+  const calculateCompletion = () =>
+  {
+    const totalFields = 5;
     let completed = 0;
-
-    Object.values(documents).forEach(doc => {
-      if (doc.uploaded) completed++;
+    Object.values(effectiveDocuments).forEach(doc =>
+    {
+      if (doc?.uploaded) completed++;
     });
-
     return Math.round((completed / totalFields) * 100);
   };
 
-  const getCompletionColor = (percentage) => {
+  const getCompletionColor = (percentage) =>
+  {
     if (percentage >= 0 && percentage <= 45) {
       return { bar: 'bg-[#0F172A]', text: 'text-[#0F172A]' };
     } else if (percentage >= 46 && percentage <= 75) {
@@ -829,12 +948,14 @@ const RiderProfile = () => {
     }
   };
 
-  const getMissingDocuments = () => {
+  const getMissingDocuments = () =>
+  {
     const missing = [];
-    if (!documents.driversLicense.uploaded) missing.push("Driver's License");
+    if (!effectiveDocuments.idDocument.uploaded) missing.push("ID Document");
+    if (!effectiveDocuments.driversLicense.uploaded) missing.push("Driver's License");
     if (!documents.vehicleRegistration.uploaded) missing.push("Vehicle Registration");
-    if (!documents.insuranceCertificate.uploaded) missing.push("Insurance Certificate");
-    if (!documents.backgroundCheck.uploaded) missing.push("Background Check");
+    if (!effectiveDocuments.insuranceCertificate.uploaded) missing.push("Insurance Certificate");
+    if (!effectiveDocuments.backgroundCheck.uploaded) missing.push("Background Check");
     return missing;
   };
 
@@ -1207,28 +1328,86 @@ const RiderProfile = () => {
                             <DocumentIcon width={20} height={20} stroke="#00A63E" />
                           </div>
                           <div className="flex-1">
-                            <div className="text-sm font-medium text-[#0F172A] mb-1">Driver's License</div>
-                            <div className="text-xs text-[#64748B]">Expires: {documents.driversLicense.expires}</div>
+                            <div className="text-sm font-medium text-[#0F172A] mb-1">ID Document</div>
+                            <div className="text-xs text-[#64748B]">Expires: {effectiveDocuments.idDocument.expires || '—'}</div>
                           </div>
                         </div>
-                        <input
-                          ref={driversLicenseInputRef}
-                          type="file"
-                          accept=".pdf,image/*"
-                          onChange={(e) => handleDocumentUpload('driversLicense', e)}
-                          className="hidden"
-                        />
-                        <button
-                          onClick={() => driversLicenseInputRef.current?.click()}
-                          className="flex items-center gap-2 text-sm py-1.5 px-4 rounded-lg text-[#0F172A] hover:text-[#00D68F] transition-colors w-fit"
-                          style={{ border: "1px solid #0000001A" }}
-                        >
-                          <UploadIcon size={18} stroke="black" />
-                          Update Document
-                        </button>
+                        <div className="flex items-center gap-2 flex-wrap">
+                          {effectiveDocuments.idDocument.url && (
+                            <a
+                              href={effectiveDocuments.idDocument.url}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="flex items-center gap-2 text-sm py-1.5 px-4 rounded-lg text-[#00A63E] hover:bg-green-50 transition-colors w-fit"
+                              style={{ border: "1px solid #00A63E" }}
+                            >
+                              View Document
+                            </a>
+                          )}
+                          <input
+                            ref={idDocumentInputRef}
+                            type="file"
+                            accept=".pdf,image/*"
+                            onChange={(e) => handleDocumentUpload('idDocument', e)}
+                            className="hidden"
+                          />
+                          <button
+                            onClick={() => idDocumentInputRef.current?.click()}
+                            className="flex items-center gap-2 text-sm py-1.5 px-4 rounded-lg text-[#0F172A] hover:text-[#00D68F] transition-colors w-fit"
+                            style={{ border: "1px solid #0000001A" }}
+                          >
+                            <UploadIcon size={18} stroke="black" />
+                            {effectiveDocuments.idDocument.uploaded ? 'Update Document' : 'Upload Document'}
+                          </button>
+                        </div>
                       </div>
-                      <span className={`px-3 py-1 ${documents.driversLicense.verified ? 'bg-green-100 text-green-700' : 'bg-yellow-100 text-yellow-700'} rounded-full text-xs font-medium`}>
-                        {documents.driversLicense.verified ? 'Verified' : 'Pending'}
+                      <span className={`px-3 py-1 ${effectiveDocuments.idDocument.verified ? 'bg-green-100 text-green-700' : 'bg-yellow-100 text-yellow-700'} rounded-full text-xs font-medium`}>
+                        {effectiveDocuments.idDocument.verified ? 'Verified' : 'Pending'}
+                      </span>
+                    </div>
+
+                    <div className="flex items-start justify-between p-4 border border-gray-200 rounded-xl">
+                      <div className="flex flex-col gap-3 flex-1">
+                        <div className="flex items-start gap-4">
+                          <div className="w-10 h-10 bg-green-50 rounded-lg flex items-center justify-center flex-shrink-0">
+                            <DocumentIcon width={20} height={20} stroke="#00A63E" />
+                          </div>
+                          <div className="flex-1">
+                            <div className="text-sm font-medium text-[#0F172A] mb-1">Driver's License</div>
+                            <div className="text-xs text-[#64748B]">Expires: {effectiveDocuments.driversLicense.expires || '—'}</div>
+                          </div>
+                        </div>
+                        <div className="flex items-center gap-2 flex-wrap">
+                          {effectiveDocuments.driversLicense.url && (
+                            <a
+                              href={effectiveDocuments.driversLicense.url}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="flex items-center gap-2 text-sm py-1.5 px-4 rounded-lg text-[#00A63E] hover:bg-green-50 transition-colors w-fit"
+                              style={{ border: "1px solid #00A63E" }}
+                            >
+                              View Document
+                            </a>
+                          )}
+                          <input
+                            ref={driversLicenseInputRef}
+                            type="file"
+                            accept=".pdf,image/*"
+                            onChange={(e) => handleDocumentUpload('driversLicense', e)}
+                            className="hidden"
+                          />
+                          <button
+                            onClick={() => driversLicenseInputRef.current?.click()}
+                            className="flex items-center gap-2 text-sm py-1.5 px-4 rounded-lg text-[#0F172A] hover:text-[#00D68F] transition-colors w-fit"
+                            style={{ border: "1px solid #0000001A" }}
+                          >
+                            <UploadIcon size={18} stroke="black" />
+                            {effectiveDocuments.driversLicense.uploaded ? 'Update Document' : 'Upload Document'}
+                          </button>
+                        </div>
+                      </div>
+                      <span className={`px-3 py-1 ${effectiveDocuments.driversLicense.verified ? 'bg-green-100 text-green-700' : 'bg-yellow-100 text-yellow-700'} rounded-full text-xs font-medium`}>
+                        {effectiveDocuments.driversLicense.verified ? 'Verified' : 'Pending'}
                       </span>
                     </div>
 
@@ -1240,7 +1419,7 @@ const RiderProfile = () => {
                           </div>
                           <div className="flex-1">
                             <div className="text-sm font-medium text-[#0F172A] mb-1">Vehicle Registration</div>
-                            <div className="text-xs text-[#64748B]">Expires: {documents.vehicleRegistration.expires}</div>
+                            <div className="text-xs text-[#64748B]">Expires: {documents.vehicleRegistration.expires || '—'}</div>
                           </div>
                         </div>
                         <input
@@ -1256,7 +1435,7 @@ const RiderProfile = () => {
                           style={{ border: "1px solid #0000001A" }}
                         >
                           <UploadIcon size={18} stroke="black" />
-                          Update Document
+                          {documents.vehicleRegistration.uploaded ? 'Update Document' : 'Upload Document'}
                         </button>
                       </div>
                       <span className={`px-3 py-1 ${documents.vehicleRegistration.verified ? 'bg-green-100 text-green-700' : 'bg-yellow-100 text-yellow-700'} rounded-full text-xs font-medium`}>
@@ -1272,27 +1451,40 @@ const RiderProfile = () => {
                           </div>
                           <div className="flex-1">
                             <div className="text-sm font-medium text-[#0F172A] mb-1">Insurance Certificate</div>
-                            <div className="text-xs text-[#64748B]">Expires: {documents.insuranceCertificate.expires}</div>
+                            <div className="text-xs text-[#64748B]">Expires: {effectiveDocuments.insuranceCertificate.expires || '—'}</div>
                           </div>
                         </div>
-                        <input
-                          ref={insuranceCertificateInputRef}
-                          type="file"
-                          accept=".pdf,image/*"
-                          onChange={(e) => handleDocumentUpload('insuranceCertificate', e)}
-                          className="hidden"
-                        />
-                        <button
-                          onClick={() => insuranceCertificateInputRef.current?.click()}
-                          className="flex items-center py-1.5 px-4 rounded-lg gap-2 text-sm text-[#0F172A] hover:text-[#00D68F] transition-colors w-fit"
-                          style={{ border: "1px solid #0000001A" }}
-                        >
-                          <UploadIcon size={18} stroke="black" />
-                          Update Document
-                        </button>
+                        <div className="flex items-center gap-2 flex-wrap">
+                          {effectiveDocuments.insuranceCertificate.url && (
+                            <a
+                              href={effectiveDocuments.insuranceCertificate.url}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="flex items-center gap-2 text-sm py-1.5 px-4 rounded-lg text-[#00A63E] hover:bg-green-50 transition-colors w-fit"
+                              style={{ border: "1px solid #00A63E" }}
+                            >
+                              View Document
+                            </a>
+                          )}
+                          <input
+                            ref={insuranceCertificateInputRef}
+                            type="file"
+                            accept=".pdf,image/*"
+                            onChange={(e) => handleDocumentUpload('insuranceCertificate', e)}
+                            className="hidden"
+                          />
+                          <button
+                            onClick={() => insuranceCertificateInputRef.current?.click()}
+                            className="flex items-center py-1.5 px-4 rounded-lg gap-2 text-sm text-[#0F172A] hover:text-[#00D68F] transition-colors w-fit"
+                            style={{ border: "1px solid #0000001A" }}
+                          >
+                            <UploadIcon size={18} stroke="black" />
+                            {effectiveDocuments.insuranceCertificate.uploaded ? 'Update Document' : 'Upload Document'}
+                          </button>
+                        </div>
                       </div>
-                      <span className={`px-3 py-1 ${documents.insuranceCertificate.verified ? 'bg-green-100 text-green-700' : 'bg-yellow-100 text-yellow-700'} rounded-full text-xs font-medium`}>
-                        {documents.insuranceCertificate.verified ? 'Verified' : 'Pending'}
+                      <span className={`px-3 py-1 ${effectiveDocuments.insuranceCertificate.verified ? 'bg-green-100 text-green-700' : 'bg-yellow-100 text-yellow-700'} rounded-full text-xs font-medium`}>
+                        {effectiveDocuments.insuranceCertificate.verified ? 'Verified' : 'Pending'}
                       </span>
                     </div>
 
@@ -1304,7 +1496,7 @@ const RiderProfile = () => {
                           </div>
                           <div className="flex-1">
                             <div className="text-sm font-medium text-[#0F172A] mb-1">Background Check</div>
-                            <div className="text-xs text-[#64748B]">Last updated: {documents.backgroundCheck.lastUpdated}</div>
+                            <div className="text-xs text-[#64748B]">Last updated: {effectiveDocuments.backgroundCheck.lastUpdated || '—'}</div>
                           </div>
                         </div>
                         <input
@@ -1320,11 +1512,11 @@ const RiderProfile = () => {
                           style={{ border: "1px solid #D08700" }}
                         >
                           <UploadIcon size={18} stroke="#D08700" />
-                          Renew Now
+                          {effectiveDocuments.backgroundCheck.uploaded ? 'Renew Now' : 'Submit'}
                         </button>
                       </div>
-                      <span className="px-3 py-1 bg-orange-100 text-orange-700 rounded-full text-xs font-medium">
-                        Renewal Due
+                      <span className={`px-3 py-1 ${effectiveDocuments.backgroundCheck.verified ? 'bg-green-100 text-green-700' : 'bg-orange-100 text-orange-700'} rounded-full text-xs font-medium`}>
+                        {effectiveDocuments.backgroundCheck.verified ? 'Verified' : effectiveDocuments.backgroundCheck.uploaded ? 'Pending' : 'Renewal Due'}
                       </span>
                     </div>
                   </div>

@@ -11,7 +11,8 @@ import { getPendingVerifications, approveVerification, rejectVerification, getUs
 import { getApprovedRiders } from '../../../utils/adminApi';
 import { onVerificationApproved, onVerificationRejected } from '../../../utils/verificationNotifications';
 
-const KYCApprovals = () => {
+const KYCApprovals = () =>
+{
   // Approved KYC history state
   const [approvedKYC, setApprovedKYC] = useState([]);
   const [approvedKYCLoading, setApprovedKYCLoading] = useState(true);
@@ -19,7 +20,8 @@ const KYCApprovals = () => {
 
 
   // Fetch recently approved KYC applications
-  const fetchApprovedKYC = async () => {
+  const fetchApprovedKYC = async () =>
+  {
     setApprovedKYCLoading(true);
     setApprovedKYCError(null);
     try {
@@ -35,7 +37,8 @@ const KYCApprovals = () => {
   };
 
   // Fetch KYC stats from analytics overview
-  const fetchKYCStats = async () => {
+  const fetchKYCStats = async () =>
+  {
     try {
       const resp = await getAnalyticsOverview();
       const data = resp.data || resp;
@@ -54,7 +57,8 @@ const KYCApprovals = () => {
   };
 
   // Fetch on mount
-  useEffect(() => {
+  useEffect(() =>
+  {
     fetchApprovedKYC();
     fetchKYCStats();
   }, []);
@@ -80,19 +84,22 @@ const KYCApprovals = () => {
 
   const [isMobile, setIsMobile] = useState(typeof window !== 'undefined' ? window.innerWidth < 768 : false);
 
-  React.useEffect(() => {
+  React.useEffect(() =>
+  {
     const handleResize = () => setIsMobile(window.innerWidth < 768);
     window.addEventListener('resize', handleResize);
     return () => window.removeEventListener('resize', handleResize);
   }, []);
 
   // Fetch verifications on mount and when page changes
-  useEffect(() => {
+  useEffect(() =>
+  {
     fetchVerifications();
   }, [currentPage]);
 
   // Refetch KYC stats after approval/rejection
-  const refetchAll = async () => {
+  const refetchAll = async () =>
+  {
     await Promise.all([
       fetchVerifications(),
       fetchApprovedKYC(),
@@ -101,20 +108,24 @@ const KYCApprovals = () => {
   };
 
   // Listen for verification events from the rider app and refresh list
-  useEffect(() => {
-    const onVerificationCompleted = (e) => {
+  useEffect(() =>
+  {
+    const onVerificationCompleted = (e) =>
+    {
       console.log('[KYCApprovals] verification:completed event received', e?.detail);
       setCurrentPage(1);
       fetchVerifications();
     };
 
     window.addEventListener('verification:completed', onVerificationCompleted);
-    return () => {
+    return () =>
+    {
       window.removeEventListener('verification:completed', onVerificationCompleted);
     };
   }, []);
 
-  const fetchVerifications = async () => {
+  const fetchVerifications = async () =>
+  {
     try {
       setLoading(true);
       setError(null);
@@ -187,10 +198,12 @@ const KYCApprovals = () => {
   };
 
   // Enrich applications list by fetching rider profiles where possible so pending list shows up-to-date name/email
-  const enrichApplicationsWithProfiles = async (apps = []) => {
+  const enrichApplicationsWithProfiles = async (apps = []) =>
+  {
     if (!apps || apps.length === 0) return apps;
 
-    const enriched = await Promise.all(apps.map(async (app) => {
+    const enriched = await Promise.all(apps.map(async (app) =>
+    {
       try {
         const normalized = getApplicationData(app);
 
@@ -254,13 +267,15 @@ const KYCApprovals = () => {
   };
 
   // Pull-to-refresh handler
-  const handleRefresh = async (event) => {
+  const handleRefresh = async (event) =>
+  {
     console.log('[KYCApprovals] Pull-to-refresh triggered');
     await fetchVerifications();
     event?.detail?.complete();
   };
 
-  const calculateStats = (verificationsData) => {
+  const calculateStats = (verificationsData) =>
+  {
     const today = new Date();
     today.setHours(0, 0, 0, 0);
 
@@ -268,7 +283,8 @@ const KYCApprovals = () => {
       v.status === 'pending' || v.verificationStatus === 'pending'
     ).length;
 
-    const approvedToday = verificationsData.filter(v => {
+    const approvedToday = verificationsData.filter(v =>
+    {
       const status = v.status || v.verificationStatus;
       const updatedAt = new Date(v.updatedAt || v.updated_at || v.approvedAt || v.createdAt);
       const isApproved = status === 'approved' || status === 'verified';
@@ -277,7 +293,8 @@ const KYCApprovals = () => {
       return isApproved && isToday;
     }).length;
 
-    const rejectedToday = verificationsData.filter(v => {
+    const rejectedToday = verificationsData.filter(v =>
+    {
       const status = v.status || v.verificationStatus;
       const updatedAt = new Date(v.updatedAt || v.updated_at || v.rejectedAt || v.createdAt);
       return (status === 'rejected' || status === 'denied') && updatedAt >= today;
@@ -304,14 +321,17 @@ const KYCApprovals = () => {
   // Only pending applications should appear in the Pending Applications list to avoid duplicates
   const pendingApps = applications.filter(a => ((a.status || a.verificationStatus) || '').toString().toLowerCase() === 'pending');
 
-  const showToast = (message, type = 'success') => {
+  const showToast = (message, type = 'success') =>
+  {
     setToast({ show: true, message, type });
-    setTimeout(() => {
+    setTimeout(() =>
+    {
       setToast({ show: false, message: '', type: '' });
     }, 3000);
   };
 
-  const formatDate = (dateString) => {
+  const formatDate = (dateString) =>
+  {
     if (!dateString) return 'N/A';
     const date = new Date(dateString);
     return date.toLocaleDateString('en-US', {
@@ -323,11 +343,13 @@ const KYCApprovals = () => {
     });
   };
 
-  const getApplicationStatus = (app) => {
+  const getApplicationStatus = (app) =>
+  {
     return app.status || app.verificationStatus || 'pending';
   };
 
-  const getApplicationData = (app) => {
+  const getApplicationData = (app) =>
+  {
     console.log('[KYCApprovals] Mapping application data:', app);
 
     // If a merged profile was attached earlier, prefer those values
@@ -384,7 +406,7 @@ const KYCApprovals = () => {
         app.makeModel ||
         `${vehicle.type || ''} ${vehicle.year || ''}`.trim() ||
         '',
-      documents: app.documents?.length > 0 ? 'All Submitted' : 'Pending',
+      documents: (app.documents?.length > 0 || identity.idDocumentUrl || identity.profilePhotoUrl || vehicle.driversLicenseUrl || vehicle.insuranceUrl) ? 'All Submitted' : 'Pending',
       status: getApplicationStatus(app),
       fullDetails: {
         // Contact Information
@@ -408,15 +430,15 @@ const KYCApprovals = () => {
         year: vehicle.year || app.vehicleYear || app.year || '',
         licensePlate: vehicle.licensePlate || app.licensePlate || app.vehiclePlate || '',
 
-        // Documents
+        // Documents (backend stores URLs in identity.* and vehicle.*)
         documents: app.documents || [],
         documentUrls: {
-          idFront: app.idFrontUrl || app.documents?.find(d => d.type === 'id_front' || d.type === 'idDocument')?.url,
+          idFront: identity.idDocumentUrl || app.idDocumentUrl || app.idFrontUrl || app.documents?.find(d => d.type === 'id_front' || d.type === 'idDocument')?.url,
           idBack: app.idBackUrl || app.documents?.find(d => d.type === 'id_back')?.url,
-          selfie: app.selfieUrl || app.documents?.find(d => d.type === 'selfie' || d.type === 'profilePhoto')?.url,
+          selfie: identity.profilePhotoUrl || app.profilePhotoUrl || app.selfieUrl || app.documents?.find(d => d.type === 'selfie' || d.type === 'profilePhoto')?.url,
           vehicleRegistration: app.vehicleRegUrl || app.documents?.find(d => d.type === 'vehicle_registration')?.url,
-          driversLicense: app.driversLicenseUrl || app.documents?.find(d => d.type === 'driversLicense' || d.type === 'drivers_license')?.url,
-          insurance: app.insuranceUrl || app.documents?.find(d => d.type === 'insurance')?.url,
+          driversLicense: vehicle.driversLicenseUrl || app.driversLicenseUrl || app.documents?.find(d => d.type === 'driversLicense' || d.type === 'drivers_license')?.url,
+          insurance: vehicle.insuranceUrl || app.insuranceUrl || app.documents?.find(d => d.type === 'insurance')?.url,
         }
       }
     };
@@ -429,7 +451,8 @@ const KYCApprovals = () => {
   };
 
   // Get status icon and styling
-  const getStatusDisplay = (status) => {
+  const getStatusDisplay = (status) =>
+  {
     switch (status) {
       case 'pending':
       case 'Pending':
@@ -465,7 +488,8 @@ const KYCApprovals = () => {
     }
   };
 
-  const openModal = (application) => {
+  const openModal = (application) =>
+  {
     const normalizedApp = getApplicationData(application);
     setSelectedApplication(normalizedApp);
     setActiveTab('contact');
@@ -474,7 +498,8 @@ const KYCApprovals = () => {
   };
 
   // When opening modal, fetch latest rider/user info if possible to ensure name/email are up-to-date
-  const openModalWithProfile = async (application) => {
+  const openModalWithProfile = async (application) =>
+  {
     const normalizedApp = getApplicationData(application);
     setSelectedApplication(normalizedApp);
     setActiveTab('contact');
@@ -531,7 +556,8 @@ const KYCApprovals = () => {
     }
   };
 
-  const closeModal = () => {
+  const closeModal = () =>
+  {
     setSelectedApplication(null);
     setApprovalNotes('');
     setRejectReason('');
@@ -539,16 +565,19 @@ const KYCApprovals = () => {
     setShowApproveModal(false);
   };
 
-  const handleApproveClick = () => {
+  const handleApproveClick = () =>
+  {
     // Directly approve without forcing notes modal
     handleApprove();
   };
 
-  const handleRejectClick = () => {
+  const handleRejectClick = () =>
+  {
     setShowRejectModal(true);
   };
 
-  const handleApprove = async () => {
+  const handleApprove = async () =>
+  {
     if (!selectedApplication) return;
 
     try {
@@ -595,7 +624,8 @@ const KYCApprovals = () => {
     }
   };
 
-  const handleReject = async () => {
+  const handleReject = async () =>
+  {
     if (!selectedApplication) return;
     if (!rejectReason.trim()) {
       showToast('Please provide a reason for rejection', 'error');
@@ -651,7 +681,8 @@ const KYCApprovals = () => {
     }
   };
 
-  const handleDownloadDocument = (url, filename) => {
+  const handleDownloadDocument = (url, filename) =>
+  {
     if (!url) {
       showToast('Document URL not available', 'error');
       return;
@@ -765,7 +796,8 @@ const KYCApprovals = () => {
                       </tr>
                     </thead>
                     <tbody className="bg-white divide-y divide-gray-100">
-                      {(approvedKYC.length > 0 ? approvedKYC : applications.filter(a => (a.status || a.verificationStatus) === 'approved').slice(0, 10)).map((rider, idx) => {
+                      {(approvedKYC.length > 0 ? approvedKYC : applications.filter(a => (a.status || a.verificationStatus) === 'approved').slice(0, 10)).map((rider, idx) =>
+                      {
                         const name = rider.fullName || rider.name || rider.profile?.fullName || rider.profile?.name || getApplicationData(rider).name || '';
                         const email = rider.email || rider.profile?.email || getApplicationData(rider).email || '';
                         const phone = rider.phone || rider.profile?.phone || getApplicationData(rider).phone || '';
@@ -828,7 +860,8 @@ const KYCApprovals = () => {
               ) : (
                 <>
                   <div className="space-y-4">
-                    {pendingApps.map((app, index) => {
+                    {pendingApps.map((app, index) =>
+                    {
                       const normalizedApp = getApplicationData(app);
                       if (isMobile) {
                         return (

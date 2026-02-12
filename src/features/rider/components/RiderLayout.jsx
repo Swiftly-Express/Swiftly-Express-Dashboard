@@ -84,27 +84,17 @@ const RiderLayout = ({ children }) => {
   // Helper to sync online state to backend and admin
   const syncOnlineStateToBackend = async (active) => {
     try {
-      let payload = { isActive: !!active };
-      // If going online, try to get location
-      if (active && navigator.geolocation) {
-        try {
-          const position = await new Promise((resolve, reject) => {
-            navigator.geolocation.getCurrentPosition(resolve, reject, { enableHighAccuracy: true, timeout: 15000, maximumAge: 0 });
-          });
-          payload.currentLocation = { lat: position.coords.latitude, lng: position.coords.longitude };
-        } catch (e) {
-          // ignore location error
-        }
-      }
+      // Backend expects { availability: boolean } for PUT /api/driver/availability
+      const payload = { availability: !!active };
       await updateRiderAvailability(payload);
       // Optionally, fetch jobs and dispatch events as in toggle
       try {
         const jobsResp = await getAvailableJobs(1, 20);
         const jobs = jobsResp?.data?.jobs || jobsResp?.jobs || jobsResp?.data || [];
-        window.dispatchEvent(new CustomEvent('rider:availabilityChanged', { detail: { isActive: !!active, location: payload.currentLocation || null, jobs } }));
+        window.dispatchEvent(new CustomEvent('rider:availabilityChanged', { detail: { isActive: !!active, availability: !!active, jobs } }));
         window.dispatchEvent(new CustomEvent('deliveries:refresh'));
       } catch (e) {
-        window.dispatchEvent(new CustomEvent('rider:availabilityChanged', { detail: { isActive: !!active, location: payload.currentLocation || null } }));
+        window.dispatchEvent(new CustomEvent('rider:availabilityChanged', { detail: { isActive: !!active, availability: !!active } }));
         window.dispatchEvent(new CustomEvent('deliveries:refresh'));
       }
       setCookie('rider_is_online', active ? 'true' : 'false', 1);
@@ -262,30 +252,36 @@ const RiderLayout = ({ children }) => {
       }
 
       const response = await getRiderProfile();
-      const profile = response?.data?.driver || response?.driver || response?.data;
+      const data = response?.data;
+      const profile = data?.user != null
+        ? { ...data.user, verification: data.verification }
+        : (data?.driver || response?.driver || data);
 
       if (profile) {
-        // Update profile image from API
-        if (profile.profilePhoto && !profile.profilePhoto.includes('dicebear')) {
-          // User has a custom uploaded image
-          setProfileImage(profile.profilePhoto);
-          setCookie(imageKey, profile.profilePhoto, 7);
+        const photoUrl = profile.profilePhoto || profile.profileImage || profile.picture || profile.avatar;
+        const verificationPhoto = profile.verification?.identity?.profilePhotoUrl;
+        if (photoUrl && !photoUrl.includes('dicebear') && !photoUrl.includes('profileimage.svg')) {
+          setProfileImage(photoUrl);
+          setCookie(imageKey, photoUrl, 7);
+        } else if (verificationPhoto) {
+          setProfileImage(verificationPhoto);
+          setCookie(imageKey, verificationPhoto, 7);
         } else if (!cachedImage || cachedImage.includes('dicebear') || cachedImage.includes('profileimage.svg')) {
-          // No custom image, generate mock avatar based on name
           const name = profile.fullName || `${profile.firstName || ''} ${profile.lastName || ''}`.trim();
           if (name) {
-            const mockAvatar = generateMockAvatar(name);
-            setProfileImage(mockAvatar);
+            setProfileImage(generateMockAvatar(name));
           }
         }
 
-        // Update user name
         const name = profile.fullName || `${profile.firstName || ''} ${profile.lastName || ''}`.trim();
-        if (name) {
-          setUserName(name);
+        if (name) setUserName(name);
+
+        if (typeof profile.availability === 'boolean') {
+          setIsOnline(profile.availability);
+          setCookie('rider_is_online', profile.availability ? 'true' : 'false', 1);
         }
 
-        console.log('[RiderLayout] Profile loaded:', { name, hasPhoto: !!profile.profilePhoto });
+        console.log('[RiderLayout] Profile loaded:', { name, hasPhoto: !!(photoUrl || verificationPhoto), availability: profile.availability });
       }
     } catch (error) {
       console.error('[RiderLayout] Failed to fetch profile:', error);
@@ -535,6 +531,19 @@ const RiderLayout = ({ children }) => {
                     src={profileImage}
                     alt={userName}
                     className="w-full h-full object-cover"
+                    onError={() =>
+                    {
+                      try {
+                        console.warn('[RiderLayout] Failed to load profile image, falling back to generated avatar');
+                        const name = userName || 'Rider';
+                        const fallback = generateMockAvatar(name);
+                        setProfileImage(fallback);
+                        const imageKey = getProfileImageKey();
+                        setCookie(imageKey, fallback, 7);
+                      } catch (e) {
+                        // ignore
+                      }
+                    }}
                   />
                 </button>
               </div>
