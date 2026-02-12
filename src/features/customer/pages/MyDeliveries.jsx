@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { IonContent, IonPage, IonIcon, IonToast } from '@ionic/react';
+import { IonContent, IonPage, IonIcon, IonToast, IonModal } from '@ionic/react';
 import { eye, eyeOff, arrowForward, copy } from 'ionicons/icons';
 import { useHistory } from 'react-router-dom';
 import CustomerLayout from '../components/CustomerLayout';
@@ -9,6 +9,7 @@ import Loader from '../../../components/Loader';
 import DeliveryChat from '../../../components/DeliveryChat';
 import { getCustomerDeliveries, rateDriver, cancelDelivery, initializePayment } from '../../../utils/authApi';
 import { getCookie, deleteCookie, setCookie, getJSONCookie } from '../../../utils/cookies';
+import { playNotificationSound } from '../../../utils/notificationSound';
 
 const sideBottomShadow = {
   boxShadow: '2px 4px 4px rgba(0,0,0,0.06), -2px 4px 4px rgba(0,0,0,0.06), 0 4px 8px rgba(0,0,0,0.08)'
@@ -53,23 +54,29 @@ const getProgress = (status) => {
   return progressMap[statusLower] || 0;
 };
 
-// Helper function to format date
+// Helper function to format date with time
 const formatDate = (dateString) => {
   if (!dateString) return 'N/A';
 
   try {
     const date = new Date(dateString);
-    return date.toLocaleDateString('en-US', {
+    const dateStr = date.toLocaleDateString('en-US', {
       year: 'numeric',
       month: 'short',
       day: 'numeric'
     });
+    const timeStr = date.toLocaleTimeString('en-US', {
+      hour: '2-digit',
+      minute: '2-digit',
+      hour12: true
+    });
+    return `${dateStr}, ${timeStr}`;
   } catch (e) {
     return dateString;
   }
 };
 
-const DeliveryCard = ({ delivery }) => {
+const DeliveryCard = ({ delivery, onCancelDelivery }) => {
   const history = useHistory();
   const [isOpen, setIsOpen] = useState(false);
   const [showCopyToast, setShowCopyToast] = useState(false);
@@ -143,14 +150,9 @@ const DeliveryCard = ({ delivery }) => {
         )}
       {/* Mobile & Desktop Layout */}
       <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
-        <div className="flex items-start gap-3 md:gap-4 flex-1">
-          {/* Package Icon */}
-          <div className="w-10 h-10 md:w-12 md:h-12 bg-blue-50 rounded-xl flex items-center justify-center flex-shrink-0">
-            <img src="/blockicon.svg" alt="Package" className="w-5 h-5 md:w-6 md:h-6" />
-          </div>
-
+        <div className="flex-1">
           {/* Package Details */}
-          <div className="flex-1 min-w-0">
+          <div className="flex-1 min-w-0 pr-24 md:pr-0">
             <div className="flex flex-col md:flex-row md:items-center gap-2 md:gap-3 mb-2">
               <YummyText className="text-base md:text-lg font-medium text-[#0F172A] truncate">
                 {delivery.packageDetails?.description || 'Package'}
@@ -191,15 +193,11 @@ const DeliveryCard = ({ delivery }) => {
               </div>
             </div>
 
-            <div className="text-sm text-[#4A5565] mb-1 flex items-center gap-1 flex-wrap">
-              <span className="truncate max-w-[120px] md:max-w-none">{delivery.pickupAddress?.city || 'Pickup'}</span>
-              <IonIcon icon={arrowForward} className="text-sm flex-shrink-0" />
-              <span className="truncate max-w-[120px] md:max-w-none">{delivery.deliveryAddress?.city || 'Delivery'}</span>
-            </div>
-
-            <div className="text-xs text-[#4A5565] mb-3">
-              Booked: {formatDate(delivery.createdAt || delivery.bookedDate)}
-            </div>
+            <YummyText>
+              <div className="text-xs text-[#4A5565] mb-3">
+                Booked: {formatDate(delivery.createdAt || delivery.bookedDate)}
+              </div>
+            </YummyText>
 
             {/* Progress Bar */}
             <div className="w-full md:max-w-[300px]">
@@ -217,18 +215,40 @@ const DeliveryCard = ({ delivery }) => {
           </div>
         </div>
 
-        {/* Track Button */}
-        <button
-          onClick={handleTrack}
-          className="flex items-center justify-center gap-2 text-sm text-[#64748B] shadow-sm px-4 py-2 rounded-xl hover:text-[#0F172A] hover:border-gray-800 transition-colors w-full md:w-auto"
-          style={{ border: '1.5px solid #0000001A' }}
-        >
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-            <circle cx="12" cy="12" r="10" />
-            <polyline points="12 6 12 12 16 14" />
-          </svg>
-          <YummyText>Track</YummyText>
-        </button>
+        {/* Action Buttons */}
+        <div className="flex items-center gap-2 w-full md:w-auto">
+          {/* Cancel Button - Show for pending, assigned, or in-transit orders */}
+          {(delivery.status === 'pending' || delivery.status === 'assigned' || delivery.status === 'in-transit' || delivery.status === 'picked-up') && (
+            <button
+              onClick={(e) => {
+                e.stopPropagation();
+                onCancelDelivery(delivery);
+              }}
+              className="flex items-center justify-center gap-2 text-sm text-red-600 shadow-sm px-4 py-2 rounded-xl hover:text-red-700 hover:border-red-700 transition-colors w-full md:w-auto"
+              style={{ border: '1.5px solid #EF444480' }}
+            >
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <circle cx="12" cy="12" r="10" />
+                <line x1="15" y1="9" x2="9" y2="15" />
+                <line x1="9" y1="9" x2="15" y2="15" />
+              </svg>
+              <YummyText>Cancel</YummyText>
+            </button>
+          )}
+
+          {/* Track Button */}
+          <button
+            onClick={handleTrack}
+            className="flex items-center justify-center gap-2 text-sm text-[#64748B] shadow-sm px-4 py-2 rounded-xl hover:text-[#0F172A] hover:border-gray-800 transition-colors w-full md:w-auto"
+            style={{ border: '1.5px solid #0000001A' }}
+          >
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <circle cx="12" cy="12" r="10" />
+              <polyline points="12 6 12 12 16 14" />
+            </svg>
+            <YummyText>Track</YummyText>
+          </button>
+        </div>
       </div>
 
       {/* Expanded Details */}
@@ -255,6 +275,20 @@ const DeliveryCard = ({ delivery }) => {
                 Dimensions: {delivery.packageDetails?.dimensions || 'N/A'}
               </div>
             </div>
+            {/* Package Image Display */}
+            {(delivery.image || delivery.images || delivery.packageImage || delivery.packageDetails?.image) && (
+              <div>
+                <div className="text-xs font-medium text-[#64748B] mb-1">Package Image</div>
+                <div className="w-full h-32 rounded-lg overflow-hidden bg-gray-100 border border-gray-200">
+                  <img
+                    src={delivery.image || (Array.isArray(delivery.images) ? delivery.images[0] : delivery.images) || delivery.packageImage || delivery.packageDetails?.image}
+                    alt="Package"
+                    className="w-full h-full object-cover"
+                    onError={(e) => { e.target.style.display = 'none'; e.target.parentElement.innerHTML = '<p class="text-xs text-gray-400 flex items-center justify-center h-full">Image unavailable</p>'; }}
+                  />
+                </div>
+              </div>
+            )}
             <div>
               <div className="text-xs font-medium text-[#64748B] mb-1">Pickup Address</div>
               <div className="text-sm text-[#0F172A] break-words">
@@ -267,25 +301,6 @@ const DeliveryCard = ({ delivery }) => {
                 {delivery.deliveryAddress?.street}, {delivery.deliveryAddress?.city}, {delivery.deliveryAddress?.state}
               </div>
             </div>
-            {delivery.earningsBreakdown && (
-              <div className="md:col-span-2 mt-2 p-3 bg-gray-50 rounded-xl">
-                <div className="text-xs font-medium text-[#64748B] mb-2">Earnings breakdown</div>
-                <div className="grid grid-cols-2 md:grid-cols-4 gap-2 text-sm">
-                  <div>
-                    <span className="text-[#64748B]">Total</span>
-                    <p className="font-medium text-[#0F172A]">₦{Number(delivery.earningsBreakdown.deliveryTotal || 0).toLocaleString()}</p>
-                  </div>
-                  <div>
-                    <span className="text-[#64748B]">Rider</span>
-                    <p className="font-medium text-[#0F172A]">₦{Number(delivery.earningsBreakdown.driverEarnings || 0).toLocaleString()}</p>
-                  </div>
-                  <div>
-                    <span className="text-[#64748B]">Platform ({delivery.earningsBreakdown.companyPercentage ?? 0}%)</span>
-                    <p className="font-medium text-[#0F172A]">₦{Number(delivery.earningsBreakdown.companyEarnings || 0).toLocaleString()}</p>
-                  </div>
-                </div>
-              </div>
-            )}
             <div className="md:col-span-2 mt-3">
               <div className="text-xs font-medium text-[#64748B] mb-2">Chat with rider</div>
               <DeliveryChat
@@ -314,6 +329,7 @@ const MobileCompletedCard = ({ delivery }) => {
   const history = useHistory();
   const [isOpen, setIsOpen] = useState(false);
   const [showCopyToast, setShowCopyToast] = useState(false);
+  const [showActionsMenu, setShowActionsMenu] = useState(false);
   const paymentStatus = (delivery.paymentStatus || delivery.payment?.status || '').toLowerCase();
 
   const handleToggleDetails = () => {
@@ -340,6 +356,49 @@ const MobileCompletedCard = ({ delivery }) => {
     if (packageId) {
       history.push(`/customer/track/${packageId}`);
     }
+  };
+
+  const handleDownload = (e) => {
+    e.stopPropagation();
+
+    // Create receipt/invoice content
+    const receiptContent = `
+=======================================
+       SWIFTLY EXPRESS RECEIPT
+=======================================
+
+Tracking ID: ${delivery.trackingNumber || delivery.id || 'N/A'}
+Package: ${delivery.packageDetails?.description || 'Package'}
+
+Pickup Address:
+${delivery.pickupAddress?.street || ''}
+${delivery.pickupAddress?.city || ''}, ${delivery.pickupAddress?.state || ''}
+
+Delivery Address:
+${delivery.deliveryAddress?.street || ''}
+${delivery.deliveryAddress?.city || ''}, ${delivery.deliveryAddress?.state || ''}
+
+Booked Date: ${formatDate(delivery.createdAt || delivery.bookedDate)}
+Delivered Date: ${formatDate(delivery.deliveredAt || delivery.deliveredDate)}
+
+Status: ${delivery.status || 'Delivered'}
+Amount: ₦${delivery.amount || delivery.price || delivery.total || '0.00'}
+
+=======================================
+    Thank you for using Swiftly!
+=======================================
+    `;
+
+    // Create blob and download
+    const blob = new Blob([receiptContent], { type: 'text/plain' });
+    const url = window.URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = `swiftly-receipt-${delivery.trackingNumber || delivery.id || 'delivery'}.txt`;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    window.URL.revokeObjectURL(url);
   };
 
   const handleCardClick = () => {
@@ -397,20 +456,62 @@ const MobileCompletedCard = ({ delivery }) => {
             {delivery.status || 'Delivered'}
           </span>
         </div>
-        <div className="flex items-center gap-3 ml-2">
+        <div className="relative flex items-center ml-2">
           <button
-            onClick={handleTrack}
-            className="px-3 py-1.5 text-[#64748B] rounded-lg hover:text-[#0F172A] transition-colors text-xs font-medium border"
-            style={{ border: '1.5px solid #0000001A' }}
+            onClick={(e) => {
+              e.stopPropagation();
+              setShowActionsMenu(!showActionsMenu);
+            }}
+            className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
+            title="Actions"
           >
-            <YummyText>Track</YummyText>
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+              <circle cx="12" cy="5" r="2" fill="#64748B" />
+              <circle cx="12" cy="12" r="2" fill="#64748B" />
+              <circle cx="12" cy="19" r="2" fill="#64748B" />
+            </svg>
           </button>
-          <button
-            onClick={(e) => { e.stopPropagation(); }}
-            className="text-[#64748B] hover:text-[#0F172A] transition-colors"
-          >
-            <img src="/downloadicon.svg" alt="Download" className="w-5 h-5" />
-          </button>
+
+          {showActionsMenu && (
+            <>
+              <div
+                className="fixed inset-0 z-10"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setShowActionsMenu(false);
+                }}
+              />
+              <div className="absolute right-0 top-full mt-2 w-48 bg-white rounded-lg shadow-lg border border-gray-200 py-1 z-20">
+                <button
+                  onClick={(e) => {
+                    handleTrack(e);
+                    setShowActionsMenu(false);
+                  }}
+                  className="w-full px-4 py-2 text-left text-sm text-[#0F172A] hover:bg-gray-50 flex items-center gap-3"
+                >
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    <circle cx="12" cy="12" r="10" />
+                    <polyline points="12 6 12 12 16 14" />
+                  </svg>
+                  Track Package
+                </button>
+                <button
+                  onClick={(e) => {
+                    handleDownload(e);
+                    setShowActionsMenu(false);
+                  }}
+                  className="w-full px-4 py-2 text-left text-sm text-[#0F172A] hover:bg-gray-50 flex items-center gap-3"
+                >
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+                    <polyline points="7 10 12 15 17 10" />
+                    <line x1="12" y1="15" x2="12" y2="3" />
+                  </svg>
+                  Download Receipt
+                </button>
+              </div>
+            </>
+          )}
         </div>
       </div>
 
@@ -468,6 +569,7 @@ const CompletedDeliveryRow = ({ delivery }) => {
   const history = useHistory();
   const [isOpen, setIsOpen] = useState(false);
   const [showCopyToast, setShowCopyToast] = useState(false);
+  const [showActionsMenu, setShowActionsMenu] = useState(false);
 
   const hasRated = delivery.rating || delivery.customerRating || delivery.hasRated;
 
@@ -477,6 +579,49 @@ const CompletedDeliveryRow = ({ delivery }) => {
     if (packageId) {
       history.push(`/customer/track/${packageId}`);
     }
+  };
+
+  const handleDownload = (e) => {
+    e.stopPropagation();
+
+    // Create receipt/invoice content
+    const receiptContent = `
+=======================================
+       SWIFTLY EXPRESS RECEIPT
+=======================================
+
+Tracking ID: ${delivery.trackingNumber || delivery.id || 'N/A'}
+Package: ${delivery.packageDetails?.description || 'Package'}
+
+Pickup Address:
+${delivery.pickupAddress?.street || ''}
+${delivery.pickupAddress?.city || ''}, ${delivery.pickupAddress?.state || ''}
+
+Delivery Address:
+${delivery.deliveryAddress?.street || ''}
+${delivery.deliveryAddress?.city || ''}, ${delivery.deliveryAddress?.state || ''}
+
+Booked Date: ${formatDate(delivery.createdAt || delivery.bookedDate)}
+Delivered Date: ${formatDate(delivery.deliveredAt || delivery.deliveredDate)}
+
+Status: ${delivery.status || 'Delivered'}
+Amount: ₦${delivery.amount || delivery.price || delivery.total || '0.00'}
+
+=======================================
+    Thank you for using Swiftly!
+=======================================
+    `;
+
+    // Create blob and download
+    const blob = new Blob([receiptContent], { type: 'text/plain' });
+    const url = window.URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = `swiftly-receipt-${delivery.trackingNumber || delivery.id || 'delivery'}.txt`;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    window.URL.revokeObjectURL(url);
   };
 
   const handleToggleDetails = () => {
@@ -514,13 +659,6 @@ const CompletedDeliveryRow = ({ delivery }) => {
           {delivery.packageDetails?.description || 'Package'}
         </td>
         <td className="py-4 px-4 text-sm text-[#0A0A0A]">
-          <div className="flex items-center gap-1">
-            <span>{delivery.pickupAddress?.city || 'Pickup'}</span>
-            <IonIcon icon={arrowForward} className="text-sm" />
-            <span>{delivery.deliveryAddress?.city || 'Delivery'}</span>
-          </div>
-        </td>
-        <td className="py-4 px-4 text-sm text-[#0A0A0A]">
           {formatDate(delivery.createdAt || delivery.bookedDate)}
         </td>
         <td className="py-4 px-4 text-sm text-[#0A0A0A]">
@@ -533,30 +671,74 @@ const CompletedDeliveryRow = ({ delivery }) => {
         </td>
         <td className="py-4 px-4">
           <div className="flex items-center justify-center gap-3">
-            <button
-              onClick={handleTrack}
-              className="px-3 py-1.5 text-[#64748B] rounded-lg hover:text-[#0F172A] transition-colors text-xs font-medium border"
-              style={{ border: '1.5px solid #0000001A' }}
-            >
-              <YummyText>Track</YummyText>
-            </button>
             {hasRated && (
               <span className="text-xs text-green-600 flex items-center gap-1">
                 ⭐ {delivery.rating || delivery.customerRating}
               </span>
             )}
-            <button
-              onClick={(e) => { e.stopPropagation(); }}
-              className="text-[#0A0A0A] hover:text-[#0F172A] transition-colors"
-            >
-              <img src="/downloadicon.svg" alt="Download" className="w-5 h-5" />
-            </button>
+            <div className="relative">
+              <button
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setShowActionsMenu(!showActionsMenu);
+                }}
+                className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
+                title="Actions"
+              >
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                  <circle cx="12" cy="5" r="2" fill="#64748B" />
+                  <circle cx="12" cy="12" r="2" fill="#64748B" />
+                  <circle cx="12" cy="19" r="2" fill="#64748B" />
+                </svg>
+              </button>
+
+              {showActionsMenu && (
+                <>
+                  <div
+                    className="fixed inset-0 z-10"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setShowActionsMenu(false);
+                    }}
+                  />
+                  <div className="absolute right-0 mt-2 w-48 bg-white rounded-lg shadow-lg border border-gray-200 py-1 z-20">
+                    <button
+                      onClick={(e) => {
+                        handleTrack(e);
+                        setShowActionsMenu(false);
+                      }}
+                      className="w-full px-4 py-2 text-left text-sm text-[#0F172A] hover:bg-gray-50 flex items-center gap-3"
+                    >
+                      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                        <circle cx="12" cy="12" r="10" />
+                        <polyline points="12 6 12 12 16 14" />
+                      </svg>
+                      Track Package
+                    </button>
+                    <button
+                      onClick={(e) => {
+                        handleDownload(e);
+                        setShowActionsMenu(false);
+                      }}
+                      className="w-full px-4 py-2 text-left text-sm text-[#0F172A] hover:bg-gray-50 flex items-center gap-3"
+                    >
+                      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                        <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+                        <polyline points="7 10 12 15 17 10" />
+                        <line x1="12" y1="15" x2="12" y2="3" />
+                      </svg>
+                      Download Receipt
+                    </button>
+                  </div>
+                </>
+              )}
+            </div>
           </div>
         </td>
       </tr>
       {isOpen && (
         <tr className="bg-gray-50">
-          <td colSpan="6" className="py-4 px-4">
+          <td colSpan="5" className="py-4 px-4">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
                 <div className="text-xs font-medium text-[#64748B] mb-1">Package ID</div>
@@ -618,6 +800,8 @@ const MyDeliveries = () => {
   const [showToast, setShowToast] = useState(false);
   const [showPaymentFailedModal, setShowPaymentFailedModal] = useState(false);
   const [cancelledOrder, setCancelledOrder] = useState(null);
+  const [showCancelModal, setShowCancelModal] = useState(false);
+  const [deliveryToCancel, setDeliveryToCancel] = useState(null);
 
   useEffect(() => {
     fetchDeliveries();
@@ -683,9 +867,46 @@ const MyDeliveries = () => {
       fetchDeliveries();
     };
 
-    const handleDeliveryUpdated = (event) => {
+    const handleDeliveryUpdated = async (event) => {
       console.log('[MyDeliveries] Delivery updated:', event.detail);
-      fetchDeliveries();
+
+      // Extract status from event detail
+      const eventDetail = event.detail || {};
+      const status = (eventDetail.status || eventDetail.newStatus || '').toLowerCase();
+      const deliveryId = eventDetail.deliveryId || eventDetail.id;
+
+      if (status === 'delivered' || status === 'completed') {
+        console.log('[MyDeliveries] 🔔 Delivery completed! Playing notification sound');
+        // Play notification sound for delivery completion
+        playNotificationSound();
+
+        // Refresh deliveries first to get latest data
+        const allDeliveries = await fetchDeliveries();
+
+        // Find the delivery object to check if already rated and show modal
+        setTimeout(() => {
+          const completedDelivery = allDeliveries.find(d =>
+            (d._id === deliveryId || d.id === deliveryId)
+          );
+
+          if (completedDelivery) {
+            const hasRated = completedDelivery.rating || completedDelivery.customerRating || completedDelivery.hasRated;
+
+            if (!hasRated) {
+              console.log('[MyDeliveries] ⭐ Showing rating modal for completed delivery:', completedDelivery._id || completedDelivery.id);
+              console.log('[MyDeliveries] 🚀 Dispatching rating:show event!', completedDelivery);
+              window.dispatchEvent(new CustomEvent('rating:show', {
+                detail: completedDelivery
+              }));
+            } else {
+              console.log('[MyDeliveries] Delivery already rated, skipping modal');
+            }
+          }
+        }, 1500); // 1.5 second delay to let the user see the completion notification
+      } else {
+        // For non-completed status updates, just refresh
+        fetchDeliveries();
+      }
     };
 
     const handlePaymentCompleted = (event) => {
@@ -740,7 +961,7 @@ const MyDeliveries = () => {
             console.log('[MyDeliveries] Payment window closed without completion for delivery:', did);
           } catch (cleanupErr) { console.warn('[MyDeliveries] cleanup failed', cleanupErr); }
           try { deleteCookie('pending_payment_delivery_id'); deleteCookie('pending_payment_id'); } catch (e) { }
-          setToastMessage('Payment was not completed. You can try paying again.');
+          setToastMessage('Payment completed.');
           setShowToast(true);
         };
 
@@ -852,11 +1073,76 @@ const MyDeliveries = () => {
 
       setActiveDeliveries(active);
       setCompletedDeliveries(completed);
+
+      return validDeliveries; // Return all deliveries
     } catch (err) {
       console.error('[MyDeliveries] Failed to load deliveries:', err);
       setError(err?.message || 'Failed to load deliveries');
+      return []; // Return empty array on error
     } finally {
       setLoading(false);
+    }
+  }
+
+  // Show cancel confirmation modal
+  function handleCancelDelivery(delivery) {
+    setDeliveryToCancel(delivery);
+    setShowCancelModal(true);
+  }
+
+  // Confirm and execute cancellation
+  async function confirmCancelDelivery() {
+    if (!deliveryToCancel) return;
+
+    const deliveryId = deliveryToCancel._id || deliveryToCancel.id;
+
+    try {
+      console.log('[MyDeliveries] Cancelling delivery:', deliveryId);
+
+      // Close modal first
+      setShowCancelModal(false);
+
+      // Optimistically update UI
+      setActiveDeliveries(prev =>
+        prev.map(d => (d._id === deliveryId || d.id === deliveryId)
+          ? { ...d, status: 'cancelled' }
+          : d
+        )
+      );
+
+      // Call cancel API
+      await cancelDelivery(deliveryId, {
+        reason: 'customer_request',
+        cancelledBy: 'customer'
+      });
+
+      // Dispatch event to notify rider immediately
+      window.dispatchEvent(new CustomEvent('delivery:cancelled', {
+        detail: {
+          deliveryId,
+          status: 'cancelled',
+          cancelledBy: 'customer',
+          timestamp: new Date().toISOString()
+        }
+      }));
+
+      // Show success message
+      setToastMessage('✅ Order cancelled successfully');
+      setShowToast(true);
+
+      // Refresh deliveries from backend
+      await fetchDeliveries();
+
+      console.log('[MyDeliveries] ✅ Delivery cancelled and rider notified');
+    } catch (err) {
+      console.error('[MyDeliveries] Failed to cancel delivery:', err);
+      setToastMessage(err?.message || 'Failed to cancel delivery');
+      setShowToast(true);
+
+      // Revert optimistic update on error
+      await fetchDeliveries();
+    } finally {
+      setDeliveryToCancel(null);
     }
   }
 
@@ -921,7 +1207,11 @@ const MyDeliveries = () => {
                 </div>
               ) : (
                 activeDeliveries.map((delivery, index) => (
-                  <DeliveryCard key={delivery._id || delivery.id || index} delivery={delivery} />
+                  <DeliveryCard
+                    key={delivery._id || delivery.id || index}
+                    delivery={delivery}
+                    onCancelDelivery={handleCancelDelivery}
+                  />
                 ))
               )}
             </div>
@@ -946,38 +1236,39 @@ const MyDeliveries = () => {
               </div>
 
               {/* Desktop Table */}
-              <div className="hidden md:block bg-white rounded-2xl p-6" style={sideBottomShadow}>
-                {completedDeliveries.length === 0 ? (
-                  <div className="text-center py-12">
-                    <img src="/checkicon.svg" alt="No completed" className="w-16 h-16 mx-auto mb-4 opacity-50" />
-                    <p className="text-[#64748B] text-lg mb-2">No completed deliveries</p>
-                    <p className="text-[#94A3B8] text-sm">Your completed shipments will appear here</p>
-                  </div>
-                ) : (
-                  <div className="overflow-x-auto">
-                    <table className="w-full">
-                      <thead>
-                        <tr className="border-b border-gray-200">
-                          <th className="text-left py-4 px-4 text-sm font-medium text-[#0F172A]">Tracking ID</th>
-                          <th className="text-left py-4 px-4 text-sm font-medium text-[#0F172A]">Route</th>
-                          <th className="text-left py-4 px-4 text-sm font-medium text-[#0F172A]">Booked Date</th>
-                          <th className="text-left py-4 px-4 text-sm font-medium text-[#0F172A]">Delivered Date</th>
-                          <th className="text-left py-4 px-4 text-sm font-medium text-[#0F172A]">Status</th>
-                          <th className="text-center py-4 px-4 text-sm font-medium text-[#0F172A]">Actions</th>
-                        </tr>
-                      </thead>
-                      <tbody>
-                        {completedDeliveries.map((delivery, index) => (
-                          <CompletedDeliveryRow
-                            key={delivery._id || delivery.id || index}
-                            delivery={delivery}
-                          />
-                        ))}
-                      </tbody>
-                    </table>
-                  </div>
-                )}
-              </div>
+              <YummyText>
+                <div className="hidden md:block bg-white rounded-2xl p-6" style={sideBottomShadow}>
+                  {completedDeliveries.length === 0 ? (
+                    <div className="text-center py-12">
+                      <img src="/checkicon.svg" alt="No completed" className="w-16 h-16 mx-auto mb-4 opacity-50" />
+                      <p className="text-[#64748B] text-lg mb-2">No completed deliveries</p>
+                      <p className="text-[#94A3B8] text-sm">Your completed shipments will appear here</p>
+                    </div>
+                  ) : (
+                    <div className="overflow-x-auto">
+                      <table className="w-full">
+                        <thead>
+                          <tr className="border-b border-gray-200">
+                            <th className="text-left py-4 px-4 text-sm font-medium text-[#0F172A]">Tracking ID</th>
+                            <th className="text-left py-4 px-4 text-sm font-medium text-[#0F172A]">Booked Date</th>
+                            <th className="text-left py-4 px-4 text-sm font-medium text-[#0F172A]">Delivered Date</th>
+                            <th className="text-left py-4 px-4 text-sm font-medium text-[#0F172A]">Status</th>
+                            <th className="text-center py-4 px-4 text-sm font-medium text-[#0F172A]">Actions</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {completedDeliveries.map((delivery, index) => (
+                            <CompletedDeliveryRow
+                              key={delivery._id || delivery.id || index}
+                              delivery={delivery}
+                            />
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  )}
+                </div>
+              </YummyText>
             </>
           )}
 
@@ -998,6 +1289,107 @@ const MyDeliveries = () => {
             onClose={() => setShowPaymentFailedModal(false)}
             orderDetails={cancelledOrder}
           />
+
+          {/* Cancel Confirmation Modal */}
+          <IonModal
+            isOpen={showCancelModal}
+            onDidDismiss={() => {
+              setShowCancelModal(false);
+              setDeliveryToCancel(null);
+            }}
+            className="cancel-confirmation-modal"
+            style={{
+              '--background': 'rgba(0, 0, 0, 0.4)',
+              '--backdrop-filter': 'blur(8px)'
+            }}
+          >
+            <div
+              className="rounded-2xl p-6 max-w-md mx-auto my-auto border"
+              style={{
+                background: 'rgba(255, 255, 255, 0.9)',
+                backdropFilter: 'blur(20px)',
+                WebkitBackdropFilter: 'blur(20px)',
+                border: '1px solid rgba(255, 255, 255, 0.3)',
+                boxShadow: '0 8px 32px 0 rgba(31, 38, 135, 0.15), 0 0 0 1px rgba(255, 255, 255, 0.1) inset'
+              }}
+            >
+              {/* Icon */}
+              <div className="flex justify-center mb-4">
+                <div
+                  className="w-16 h-16 rounded-full flex items-center justify-center"
+                  style={{
+                    background: 'rgba(254, 226, 226, 0.8)',
+                    backdropFilter: 'blur(10px)',
+                    WebkitBackdropFilter: 'blur(10px)',
+                    border: '1px solid rgba(239, 68, 68, 0.2)'
+                  }}
+                >
+                  <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="#DC2626" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    <circle cx="12" cy="12" r="10" />
+                    <line x1="15" y1="9" x2="9" y2="15" />
+                    <line x1="9" y1="9" x2="15" y2="15" />
+                  </svg>
+                </div>
+              </div>
+
+              {/* Title */}
+              <YummyText className="text-xl font-semibold text-[#0F172A] text-center mb-2">
+                Cancel Order?
+              </YummyText>
+
+              {/* Description */}
+              <YummyText className="text-sm text-[#64748B] text-center mb-6">
+                Are you sure you want to cancel this delivery?
+                {deliveryToCancel?.packageDetails?.description && (
+                  <span className="block mt-2 font-medium text-[#0F172A]">
+                    {deliveryToCancel.packageDetails.description}
+                  </span>
+                )}
+                <span className="block mt-2 text-xs">
+                  {deliveryToCancel?.status === 'assigned' || deliveryToCancel?.status === 'picked-up' || deliveryToCancel?.status === 'in-transit'
+                    ? 'Your rider will be notified immediately.'
+                    : 'This action cannot be undone.'}
+                </span>
+              </YummyText>
+
+              {/* Action Buttons */}
+              <div className="flex gap-3">
+                <button
+                  onClick={() => {
+                    setShowCancelModal(false);
+                    setDeliveryToCancel(null);
+                  }}
+                  className="flex-1 px-4 py-3 rounded-xl font-medium text-[#64748B] transition-all"
+                  style={{
+                    background: 'rgba(255, 255, 255, 0.7)',
+                    backdropFilter: 'blur(10px)',
+                    WebkitBackdropFilter: 'blur(10px)',
+                    border: '1px solid rgba(148, 163, 184, 0.3)',
+                    boxShadow: '0 2px 8px rgba(0, 0, 0, 0.05)'
+                  }}
+                  onMouseEnter={(e) => e.currentTarget.style.background = 'rgba(255, 255, 255, 0.85)'}
+                  onMouseLeave={(e) => e.currentTarget.style.background = 'rgba(255, 255, 255, 0.7)'}
+                >
+                  <YummyText>Keep Order</YummyText>
+                </button>
+                <button
+                  onClick={confirmCancelDelivery}
+                  className="flex-1 px-4 py-3 rounded-xl font-medium text-white transition-all"
+                  style={{
+                    background: 'rgba(220, 38, 38, 0.9)',
+                    backdropFilter: 'blur(10px)',
+                    WebkitBackdropFilter: 'blur(10px)',
+                    border: '1px solid rgba(239, 68, 68, 0.5)',
+                    boxShadow: '0 4px 12px rgba(220, 38, 38, 0.3)'
+                  }}
+                  onMouseEnter={(e) => e.currentTarget.style.background = 'rgba(220, 38, 38, 1)'}
+                  onMouseLeave={(e) => e.currentTarget.style.background = 'rgba(220, 38, 38, 0.9)'}
+                >
+                  <YummyText>Yes, Cancel</YummyText>
+                </button>
+              </div>
+            </div>
+          </IonModal>
         </IonContent>
       </CustomerLayout>
     </IonPage>

@@ -1,14 +1,17 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useIonRouter } from '@ionic/react';
 import { IonPage, IonContent, IonToast, IonRefresher, IonRefresherContent, IonIcon } from '@ionic/react';
 import { closeOutline } from 'ionicons/icons';
 import RiderLayout from '../components/RiderLayout';
 import { YummyText } from '../../../components/YummyText';
+import Toast, { useToast } from '../../../components/Toast';
 import BanIcon from '../../../icons/Banicon';
 import TrackingMap from '../../../components/TrackingMap';
 import { getAvailableJobs, acceptDeliveryJob, rejectDeliveryJob, getRiderProfile, getRiderDeliveries, updateDriverLocation, getRiderEarnings } from '../../../utils/authApi';
 import socketService from '../../../services/socket.service';
 import { getCookie, getJSONCookie, isRiderVerified, setCookie, setJSONCookie } from '../../../utils/cookies';
+import { playNotificationSound, stopNotificationSound } from '../../../utils/notificationSound';
+import pushNotificationService, { notifyNewOrders, notifyInvitation } from '../../../utils/pushNotifications';
 
 
 const sideBottomShadow = {
@@ -155,6 +158,8 @@ const OrderCard = ({
 );
 
 const AvailableOrders = () => {
+  const { toast, showToast: showCustomToast, hideToast, ToastComponent } = useToast();
+  const [shownReminders, setShownReminders] = useState(new Set());
   const [activeTab, setActiveTab] = useState('all');
   const [orders, setOrders] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -188,6 +193,11 @@ const AvailableOrders = () => {
   const [locationStatus, setLocationStatus] = useState('idle'); // 'idle' | 'updating' | 'updated' | 'error'
   const [locationError, setLocationError] = useState(null);
   const [locationAccuracyM, setLocationAccuracyM] = useState(null); // accuracy in meters (from coords.accuracy)
+
+  // Track the last seen order count - when user visits this page, they've "seen" all current orders
+  const lastSeenOrderCount = useRef(0);
+  const [notificationPermission, setNotificationPermission] = useState('default');
+
   // lock body scroll when drawer/modal is open
   useEffect(() => {
     if (selectedOrder) {
@@ -382,8 +392,11 @@ const AvailableOrders = () => {
   useEffect(() => {
     const handleDeliveryCreated = (event) => {
       console.log('[AvailableOrders] New delivery created, refreshing jobs:', event.detail);
-      setToastMsg('New delivery available!');
-      setShowToast(true);
+      showCustomToast('🔔 New delivery available!', 'success');
+      // Play notification sound for new delivery
+      playNotificationSound();
+      // Show browser notification
+      notifyNewOrders(1);
       fetchAvailableJobs();
     };
 
@@ -403,16 +416,59 @@ const AvailableOrders = () => {
 
   // Socket: real-time invitation when a customer requests this rider
   useEffect(() => {
+    console.log('[AvailableOrders] 🔌 Setting up socket listeners...');
     socketService.connect();
+
+    // Debug: Listen to ALL socket events
+    if (socketService.socket) {
+      socketService.socket.onAny((eventName, ...args) => {
+        console.log(`[AvailableOrders] 📡 ANY SOCKET EVENT: "${eventName}"`, args);
+      });
+
+      console.log('[AvailableOrders] 🔌 Socket connected:', socketService.socket.connected);
+      console.log('[AvailableOrders] 🔌 Socket ID:', socketService.socket.id);
+    }
+
     const handleInvitation = (data) => {
-      console.log('[AvailableOrders] delivery:invitation received:', data);
-      setToastMsg('A customer requested you for a delivery');
-      setShowToast(true);
+      console.log('[AvailableOrders] 🚨🚨🚨 delivery:invitation received:', data);
+      playNotificationSound();
+      showCustomToast('A customer requested you for a delivery', 'success');
+      // Show browser notification for invitation
+      notifyInvitation(data?.customerName);
       fetchAvailableJobs();
     };
-    socketService.on('delivery:invitation', handleInvitation);
+
+    const handleNewJob = (data) => {
+      console.log('[AvailableOrders] 🚨🚨🚨 New job (socket):', data);
+      playNotificationSound();
+      showCustomToast('New delivery available!', 'success');
+      // Show browser notification
+      notifyNewOrders(1);
+      fetchAvailableJobs();
+    };
+
+    // Listen to all possible event names
+    const events = [
+      'delivery:invitation', 'delivery:new', 'job:available',
+      'newOrder', 'new_order', 'orderCreated', 'order_created',
+      'delivery_created', 'deliveryCreated', 'new-delivery', 'newDelivery'
+    ];
+
+    events.forEach(evt => {
+      socketService.on(evt, (data) => {
+        console.log(`[AvailableOrders] 🎯 CAUGHT: "${evt}"`, data);
+        if (evt === 'delivery:invitation') {
+          handleInvitation(data);
+        } else {
+          handleNewJob(data);
+        }
+      });
+    });
+
+    console.log('[AvailableOrders] Listening to:', events);
+
     return () => {
-      try { socketService.off('delivery:invitation', handleInvitation); } catch (e) { }
+      events.forEach(evt => socketService.off(evt));
     };
   }, []);
 
@@ -476,12 +532,54 @@ const AvailableOrders = () => {
     return () => clearInterval(interval);
   }, [sendLocationToBackend]);
 
-  const fetchAvailableJobs = async () => {
+  // Request notification permission on mount
+  useEffect(() => {
+    const requestPermission = async () => {
+      console.log('[AvailableOrders] Requesting browser notification permission...');
+      const granted = await pushNotificationService.requestPermission();
+      setNotificationPermission(granted ? 'granted' : 'denied');
+
+      if (granted) {
+        console.log('[AvailableOrders] Browser notifications enabled! Riders will be notified even when tab is closed.');
+      } else {
+        console.warn('[AvailableOrders] Browser notifications denied. Sound will only work when tab is active.');
+      }
+    };
+
+    requestPermission();
+  }, []);
+
+  // Stop sound when user visits this page (they've seen the orders) and on unmount
+  useEffect(() => {
+    console.log('[AvailableOrders] 📍 User visited page - stopping notification sound');
+    stopNotificationSound();
+
+    // On unmount, also stop sound
+    return () => {
+      console.log('[AvailableOrders] 🚪 User left page - stopping notification sound');
+      stopNotificationSound();
+    };
+  }, []);
+
+  // Auto-poll for new orders every 5 seconds (fallback for when socket events don't fire)
+  useEffect(() => {
+    console.log('[AvailableOrders] 🔄 Starting auto-polling for new orders (every 5s)');
+    const pollInterval = setInterval(() => {
+      fetchAvailableJobs(true); // silent=true to avoid spamming logs
+    }, 5000);
+
+    return () => {
+      console.log('[AvailableOrders] 🛑 Stopping auto-polling');
+      clearInterval(pollInterval);
+    };
+  }, []); // Empty deps - run once on mount
+
+  const fetchAvailableJobs = async (silent = false) => {
     setLoading(true);
     try {
-      console.log('[AvailableOrders] Fetching available jobs from API...');
+      if (!silent) console.log('[AvailableOrders] Fetching available jobs from API...');
       const response = await getAvailableJobs(page, 20);
-      console.log('[AvailableOrders] API Response:', response);
+      if (!silent) console.log('[AvailableOrders] API Response:', response);
 
       // Handle different response structures
       const jobs = response?.data?.jobs ||
@@ -491,13 +589,47 @@ const AvailableOrders = () => {
         response?.data ||
         [];
 
-      console.log('[AvailableOrders] Extracted jobs:', jobs);
-      console.log('[AvailableOrders] Total jobs found:', jobs.length);
+      if (!silent) {
+        console.log('[AvailableOrders] Extracted jobs:', jobs);
+        console.log('[AvailableOrders] Total jobs found:', jobs.length);
+      }
+
+      // CHECK FOR NEW ORDERS - play sound ONLY if new orders detected since user last visited page
+      const newCount = jobs.length;
+
+      // If this is the first fetch, initialize lastSeenOrderCount
+      if (lastSeenOrderCount.current === 0) {
+        lastSeenOrderCount.current = newCount;
+        if (!silent) console.log('[AvailableOrders] 📌 Initialized lastSeenOrderCount:', newCount);
+      }
+
+      // Only play sound if there are MORE orders than what user has seen
+      if (newCount > lastSeenOrderCount.current) {
+        const newOrdersCount = newCount - lastSeenOrderCount.current;
+        console.log('[AvailableOrders] 🚨🚨🚨 NEW ORDER DETECTED!', {
+          lastSeen: lastSeenOrderCount.current,
+          current: newCount,
+          newOrders: newOrdersCount
+        });
+        console.log('[AvailableOrders] PLAYING SOUND NOW!');
+
+        // Play sound (only works when tab is active)
+        playNotificationSound();
+
+        // Show in-app toast
+        showCustomToast(` ${newOrdersCount} new delivery available!`, 'success');
+
+        // Show browser notification (works even when tab is closed/minimized)
+        notifyNewOrders(newOrdersCount);
+
+        // Update last seen count to current
+        lastSeenOrderCount.current = newCount;
+      }
 
       setOrders(jobs);
       setLastRefresh(Date.now());
 
-      if (jobs.length === 0) {
+      if (jobs.length === 0 && !silent) {
         console.warn('[AvailableOrders] No jobs returned from API');
       }
     } catch (error) {
@@ -538,6 +670,10 @@ const AvailableOrders = () => {
       setShowToast(true);
       return;
     }
+
+    // Stop notification sound when rider accepts the order
+    stopNotificationSound();
+
     setAccepting(deliveryId);
     try {
       const acceptedOrder = orders.find(o => (o._id || o.id) === deliveryId || o.id === deliveryId || o._id === deliveryId);
@@ -559,6 +695,31 @@ const AvailableOrders = () => {
       }
       setToastMsg(msg);
       setShowToast(true);
+
+      // Show payment reminder after accepting
+      setTimeout(() => {
+        const reminderKey = `accepted_${acceptedId}`;
+        if (!shownReminders.has(reminderKey)) {
+          const paymentMethod = acceptedOrder?.paymentMethod || acceptedOrder?.payment?.method;
+          const reminderMsg = (
+            <div>
+              <div className="font-semibold mb-2">Reminder!</div>
+              <div className="text-xs leading-relaxed">
+                Before starting this delivery, make sure you contact the customer to:
+                <br />• Verify package details
+                <br />• Confirm the locations
+                {paymentMethod?.toLowerCase() === 'cash' && (
+                  <>
+                    <br />• <strong>Kindly request payment before starting</strong>
+                  </>
+                )}
+              </div>
+            </div>
+          );
+          showCustomToast(reminderMsg, 'reminder', 8000, 'top');
+          setShownReminders(prev => new Set([...prev, reminderKey]));
+        }
+      }, 3500);
 
       // Remove order from local list by matching on canonical id or the original id
       setOrders(prev => prev.filter(order => {
@@ -695,12 +856,33 @@ const AvailableOrders = () => {
           </IonRefresher>
           <YummyText>
             <div className="mb-8 py-2">
-              <div className="text-3xl font-medium text-[#0F172A] mb-2">
-                Available Orders
+              <div className="flex items-center justify-between mb-2">
+                <div className="text-3xl font-medium text-[#0F172A]">
+                  Available Orders
+                </div>
               </div>
               <div className="text-[#4A5565] text-[15px] font-[400]">
                 Accept orders in your area and start earning
               </div>
+
+              {/* Notification Status Indicator */}
+              {notificationPermission === 'granted' && (
+                <div className="flex items-center gap-2 mt-3 px-3 py-2 bg-green-50 border border-green-200 rounded-lg">
+                  {/* <span className="text-green-600 text-lg">🔔</span> */}
+                  <span className="text-[13px] text-green-700">
+                    Browser notifications enabled - You'll be notified even when this tab is closed
+                  </span>
+                </div>
+              )}
+              {notificationPermission === 'denied' && (
+                <div className="flex items-center gap-2 mt-3 px-3 py-2 bg-yellow-50 border border-yellow-200 rounded-lg">
+                  {/* <span className="text-yellow-600 text-lg">⚠️</span> */}
+                  <span className="text-[13px] text-yellow-700">
+                    Browser notifications blocked - Enable in browser settings to get notified when tab is closed
+                  </span>
+                </div>
+              )}
+
               <div className="text-[#64748B] text-[13px] mt-2">
                 Your location is shared so customers can find you nearby (within ~20 km of their pickup). Keep this page open in the area you want to receive jobs. We use high-accuracy GPS when available—allow location and wait a few seconds for a better fix.
               </div>
@@ -879,156 +1061,217 @@ const AvailableOrders = () => {
 
           {/* Details drawer (simple bottom sheet) */}
           {selectedOrder && (
-            <div className="fixed inset-0 z-50 flex items-end">
+            <div className="fixed inset-0 z-50 flex items-end" style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0 }}>
               {/* Backdrop */}
-              <div onClick={() => setSelectedOrder(null)} className="absolute inset-0 bg-black/40" />
-              <div className="relative w-full">
-                <div className="max-h-[75vh] overflow-y-auto bg-white rounded-t-2xl p-4 shadow-lg" style={sideBottomShadow}>
-                  <div className="flex items-center justify-between mb-3">
-                    <div>
-                      <div className="text-lg font-medium text-[#0F172A]">{selectedOrder.trackingNumber || selectedOrder.id || 'Order'}</div>
-                      <div className="text-sm text-[#64748B]">{selectedOrder.status || selectedOrder.state || ''}</div>
+              <div onClick={() => setSelectedOrder(null)} className="absolute inset-0 bg-black/40" style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0 }} />
+              <div className="relative w-full" style={{ maxHeight: '75vh' }}>
+                <YummyText>
+                  <div className="max-h-[75vh] overflow-y-auto bg-white rounded-t-2xl p-4 shadow-lg" style={{ ...sideBottomShadow, maxHeight: '75vh' }}>
+                    <div className="flex items-center justify-between mb-3">
+                      <div>
+                        <div className="text-lg font-medium text-[#0F172A]">{selectedOrder.trackingNumber || selectedOrder.id || 'Order'}</div>
+                        <div className="text-sm text-[#64748B]">{selectedOrder.status || selectedOrder.state || ''}</div>
+                      </div>
+                      <button onClick={() => setSelectedOrder(null)} className="text-[#64748B] p-2 rounded-full hover:bg-gray-100">
+                        <IonIcon icon={closeOutline} />
+                      </button>
                     </div>
-                    <button onClick={() => setSelectedOrder(null)} className="text-[#64748B] p-2 rounded-full hover:bg-gray-100">
-                      <IonIcon icon={closeOutline} />
-                    </button>
-                  </div>
 
-                  {/* Map preview */}
-                  <div className="mb-3 h-40 rounded-lg overflow-hidden">
-                    <TrackingMap
-                      pickupLocation={extractCoords(selectedOrder, 'pickup') || [3.3792, 6.5244]}
-                      dropoffLocation={extractCoords(selectedOrder, 'delivery') || [3.45, 6.52]}
-                    />
-                  </div>
+                    {/* Map preview */}
+                    <div className="mb-3 h-40 rounded-lg overflow-hidden">
+                      <TrackingMap
+                        pickupLocation={extractCoords(selectedOrder, 'pickup') || [3.3792, 6.5244]}
+                        dropoffLocation={extractCoords(selectedOrder, 'delivery') || [3.45, 6.52]}
+                      />
+                    </div>
 
-                  <div className="text-sm text-[#0F172A] mb-2">Pickup: {selectedOrder.pickupAddress?.street || selectedOrder.pickupAddress || selectedOrder.pickupName}</div>
-                  <div className="text-sm text-[#0F172A] mb-2">Delivery: {selectedOrder.deliveryAddress?.street || selectedOrder.deliveryAddress || selectedOrder.deliveryName}</div>
-                  <div className="text-sm text-[#64748B] mb-2">Distance: {selectedOrder.distance || 'N/A'}</div>
+                    <div className="mb-2">
+                      <span className="text-sm text-[#0F172A] font-semibold">Pickup:</span>
+                      <div className="text-sm text-[#64748B] font-sm">{selectedOrder.pickupAddress?.street || selectedOrder.pickupAddress || selectedOrder.pickupName}</div>
+                    </div>
+                    <div className="mb-2">
+                      <span className="text-sm text-[#0F172A] font-semibold">Delivery:</span>
+                      <div className="text-sm text-[#64748B] font-sm">{selectedOrder.deliveryAddress?.street || selectedOrder.deliveryAddress || selectedOrder.deliveryName}</div>
+                    </div>
+                    <span className="text-sm text-[#64748B] mb-2 font-semibold">Distance: </span>
+                    <div className="text-sm text-[#64748B] mb-4">{selectedOrder.distance ? `${selectedOrder.distance} km` : 'N/A'}</div>
 
-                  {/* Show uploaded image (if any) instead of earnings/route breakdown */}
-                  {(() => {
-                    const findImage = (o) => {
-                      if (!o) return null;
-                      const candidates = [
-                        'image', 'images', 'packageImage', 'package?.image', 'package_image', 'payload.image', 'data.image', 'imageUrl', 'image_url'
+                    {/* Package Image Preview */}
+                    {(() => {
+                      console.log('[AvailableOrders] Full order object:', JSON.stringify(selectedOrder, null, 2));
+
+                      // Function to extract image URL from various possible formats
+                      const extractImageUrl = (value) => {
+                        if (!value) return null;
+
+                        // If it's already a string URL
+                        if (typeof value === 'string') {
+                          const trimmed = value.trim();
+                          // Check if it looks like a URL
+                          if (trimmed.startsWith('http') || trimmed.startsWith('/') || trimmed.includes('uploads') || /\.(jpg|jpeg|png|gif|webp|svg)/i.test(trimmed)) {
+                            console.log('[AvailableOrders] Found string URL:', trimmed);
+                            return trimmed;
+                          }
+                        }
+
+                        // If it's an object with url/path/src properties
+                        if (typeof value === 'object' && value !== null) {
+                          const url = value.url || value.path || value.src || value.href || value.location || value.uri;
+                          if (url) {
+                            console.log('[AvailableOrders] Found URL in object:', url);
+                            return extractImageUrl(url);
+                          }
+                        }
+
+                        // If it's an array, get the first item
+                        if (Array.isArray(value) && value.length > 0) {
+                          console.log('[AvailableOrders] Found array, extracting first item');
+                          return extractImageUrl(value[0]);
+                        }
+
+                        return null;
+                      };
+
+                      // List of all possible field names to check
+                      const fieldCandidates = [
+                        // Direct fields
+                        'image', 'images', 'img', 'photo', 'picture',
+                        'packageImage', 'package_image', 'packageImg',
+                        'imageUrl', 'image_url', 'imgUrl', 'img_url',
+                        // Nested in packageDetails
+                        'packageDetails', 'package_details',
+                        // Nested in package
+                        'package', 'pkg',
+                        // Nested in payload/data
+                        'payload', 'data',
+                        // Media fields
+                        'media', 'file', 'attachment'
                       ];
-                      for (const k of candidates) {
-                        try {
-                          if (k.includes('?')) {
-                            // support optional chaining like 'package?.image'
-                            const parts = k.replace('?.', '.').split('.');
-                            let cur = o;
-                            for (const p of parts) {
-                              if (!cur) { cur = null; break; }
-                              cur = cur[p];
-                            }
-                            if (cur) return cur;
-                          } else if (k === 'images' && Array.isArray(o.images) && o.images.length > 0) {
-                            return o.images[0];
-                          } else if (o[k]) return o[k];
-                        } catch (e) { /* ignore */ }
-                      }
-                      // fallback: try nested package or payload objects
-                      if (o.package && (o.package.image || o.package.images)) return o.package.image || (Array.isArray(o.package.images) ? o.package.images[0] : null);
-                      if (o.payload && (o.payload.image || o.payload.images)) return o.payload.image || (Array.isArray(o.payload.images) ? o.payload.images[0] : null);
-                      return null;
-                    };
 
-                    const img = findImage(selectedOrder);
-                    if (img) {
-                      const src = typeof img === 'string' ? img : (img.url || img.path || img.src || null);
-                      if (src) {
+                      let imageUrl = null;
+
+                      // First pass: Check direct fields
+                      for (const field of fieldCandidates) {
+                        if (selectedOrder[field]) {
+                          console.log(`[AvailableOrders] Checking field '${field}':`, selectedOrder[field]);
+                          imageUrl = extractImageUrl(selectedOrder[field]);
+                          if (imageUrl) break;
+
+                          // If field is an object, check its nested image properties
+                          if (typeof selectedOrder[field] === 'object' && selectedOrder[field] !== null) {
+                            const nested = selectedOrder[field];
+                            for (const nestedField of ['image', 'images', 'img', 'photo', 'picture', 'imageUrl', 'image_url']) {
+                              if (nested[nestedField]) {
+                                console.log(`[AvailableOrders] Checking nested '${field}.${nestedField}':`, nested[nestedField]);
+                                imageUrl = extractImageUrl(nested[nestedField]);
+                                if (imageUrl) break;
+                              }
+                            }
+                            if (imageUrl) break;
+                          }
+                        }
+                      }
+
+                      // Second pass: Deep scan all properties for URLs
+                      if (!imageUrl) {
+                        console.log('[AvailableOrders] No direct image found, deep scanning...');
+                        const urlPattern = /^(https?:\/\/|\/|\.\.\/|uploads\/|images\/).*\.(jpg|jpeg|png|gif|webp|svg)/i;
+                        const partialPattern = /(uploads|images|media|cdn|s3|cloudinary|imgbb|imgur).*\.(jpg|jpeg|png|gif|webp|svg)/i;
+
+                        const deepScan = (obj, path = '') => {
+                          if (!obj || typeof obj !== 'object') return null;
+
+                          for (const [key, value] of Object.entries(obj)) {
+                            const currentPath = path ? `${path}.${key}` : key;
+
+                            if (typeof value === 'string') {
+                              const trimmed = value.trim();
+                              if (urlPattern.test(trimmed) || partialPattern.test(trimmed)) {
+                                console.log(`[AvailableOrders] Found URL in deep scan at '${currentPath}':`, trimmed);
+                                return trimmed;
+                              }
+                            } else if (Array.isArray(value)) {
+                              for (let i = 0; i < value.length; i++) {
+                                const found = deepScan(value[i], `${currentPath}[${i}]`);
+                                if (found) return found;
+                              }
+                            } else if (typeof value === 'object' && value !== null) {
+                              const found = deepScan(value, currentPath);
+                              if (found) return found;
+                            }
+                          }
+                          return null;
+                        };
+
+                        imageUrl = deepScan(selectedOrder);
+                      }
+
+                      if (imageUrl) {
+                        console.log('[AvailableOrders] ✅ Final image URL:', imageUrl);
                         return (
-                          <div className="mb-2">
-                            <div className="text-xs text-[#64748B] mb-2">Uploaded package image</div>
-                            <div className="w-full h-48 rounded-lg overflow-hidden bg-gray-100 flex items-center justify-center">
-                              <img src={src} alt="Package" className="w-full h-full object-cover" />
+                          <div className="mb-4">
+                            <div className="text-xs font-medium text-[#0F172A] mb-2">Package Image</div>
+                            <div className="w-full h-56 rounded-xl overflow-hidden bg-gray-100 border-2 border-[#00B75A]">
+                              <img
+                                src={imageUrl}
+                                alt="Package"
+                                className="w-full h-full object-cover"
+                                onError={(e) => {
+                                  console.error('[AvailableOrders] Image failed to load:', imageUrl);
+                                  e.target.parentElement.innerHTML = '<div class="flex items-center justify-center h-full text-xs text-red-500">Failed to load image</div>';
+                                }}
+                              />
                             </div>
                           </div>
                         );
                       }
-                    }
 
-                    // Deep-scan for any URL-like image string anywhere in the object
-                    const urlHint = /https?:\/\/.+\.(jpe?g|png|webp|gif|svg)(\?.*)?$/i;
-                    const shallowHint = /(uploads|images|cdn|s3)\/.+\.(jpe?g|png|webp|gif|svg)/i;
-                    const seen = new Set();
-                    const findUrl = (obj) => {
-                      if (!obj || typeof obj !== 'object' || seen.has(obj)) return null;
-                      seen.add(obj);
-                      for (const k of Object.keys(obj)) {
-                        try {
-                          const v = obj[k];
-                          if (!v) continue;
-                          if (typeof v === 'string') {
-                            const s = v.trim();
-                            if (urlHint.test(s) || shallowHint.test(s)) return s;
-                          } else if (typeof v === 'object') {
-                            const nested = findUrl(v);
-                            if (nested) return nested;
-                          }
-                        } catch (e) { }
-                      }
-                      return null;
-                    };
-
-                    const deepUrl = findUrl(selectedOrder);
-                    if (deepUrl) {
+                      console.log('[AvailableOrders] ❌ No image found in order');
                       return (
-                        <div className="mb-2">
-                          <div className="text-xs text-[#64748B] mb-2">Uploaded package image</div>
-                          <div className="w-full h-48 rounded-lg overflow-hidden bg-gray-100 flex items-center justify-center">
-                            <img src={deepUrl} alt="Package" className="w-full h-full object-cover" />
+                        <div className="mb-4">
+                          <div className="text-xs font-medium text-[#0F172A] mb-2">Package Image</div>
+                          <div className="w-full h-56 rounded-xl overflow-hidden bg-gray-100 border-2 border-gray-200 flex items-center justify-center">
+                            <div className="text-center px-4">
+                              <svg width="48" height="48" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" className="mx-auto mb-2">
+                                <path d="M21 19V5c0-1.1-.9-2-2-2H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2zM8.5 13.5l2.5 3.01L14.5 12l4.5 6H5l3.5-4.5z" fill="#CBD5E1" />
+                              </svg>
+                              <p className="text-xs text-[#94A3B8]">No package image uploaded</p>
+                            </div>
                           </div>
                         </div>
                       );
-                    }
+                    })()}
 
-                    // If no image found, fall back to showing the old breakdown info
-                    const pickupCoords = extractCoords(selectedOrder, 'pickup');
-                    const deliveryCoords = extractCoords(selectedOrder, 'delivery');
-                    const calculatedKm = calculateHaversineKm(pickupCoords, deliveryCoords);
+                    {/* Package Description */}
+                    {(() => {
+                      const description = selectedOrder.packageDescription ||
+                        selectedOrder.description ||
+                        selectedOrder.notes ||
+                        selectedOrder.specialInstructions ||
+                        selectedOrder.packageDetails?.description ||
+                        selectedOrder.package?.description;
 
-                    const base = parseFloat(selectedOrder.price || selectedOrder.amount || 0) || 0;
-                    const tips = parseFloat(selectedOrder.tips || selectedOrder.tip || 0) || 0;
-                    const total = base + tips;
+                      if (description && description.trim()) {
+                        return (
+                          <div className="mb-4 p-3 bg-blue-50 rounded-lg border border-blue-100">
+                            <div className="text-xs font-medium text-[#0F172A] mb-1">Package Description</div>
+                            <div className="text-sm text-[#64748B] leading-relaxed">{description}</div>
+                          </div>
+                        );
+                      }
+                      return null;
+                    })()}
 
-                    return (
-                      <div className="mb-2">
-                        {calculatedKm ? (
-                          <div className="text-sm text-[#64748B] mb-1">Calculated route distance: {calculatedKm.toFixed(1)} km</div>
-                        ) : null}
-
-                        <div className="text-xs text-[#64748B]">Potential earnings</div>
-                        {completedDeliveriesCount === 0 ? (
-                          <>
-                            <div className="text-lg font-medium text-[#00D68F]">₦{total.toFixed(2)}</div>
-                            <div className="text-xs text-[#94A3B8]">Breakdown: ₦{base.toFixed(2)} base {tips > 0 ? `+ ₦${tips.toFixed(2)} tips` : ''}</div>
-                            <div className="text-xs text-[#64748B] mt-1">Note: Potential Earnings remains 0 until you complete your delivery.</div>
-                          </>
-                        ) : (
-                          <>
-                            <div className="text-lg font-medium text-[#00D68F]">{formatCurrency(avgPerDeliveryRaw)}</div>
-                            <div className="text-xs text-[#94A3B8]">Using your avg earnings per delivery</div>
-                          </>
-                        )}
-                      </div>
-                    );
-                  })()}
-
-                  <div className="text-sm text-[#64748B] mb-2">Price: {selectedOrder.price || selectedOrder.amount || 'N/A'}</div>
-                  <div className="mt-3 text-xs text-[#64748B]">{selectedOrder.specialInstructions || selectedOrder.notes || selectedOrder.packageDescription || ''}</div>
-
-                  <div className="mt-4 flex gap-3">
-                    <button onClick={() => { handleAcceptOrder(selectedOrder._id || selectedOrder.id); setSelectedOrder(null); }} className="flex-1 bg-[#00B75A] hover:bg-[#00B876] text-white py-2 rounded-lg transition-colors font-[400]">
-                      Accept Order
-                    </button>
-                    <button onClick={() => setSelectedOrder(null)} className="flex-1 bg-white border border-gray-200 hover:bg-gray-50 rounded-lg transition-colors text-[#0F172A] font-[400] py-2">
-                      Close
-                    </button>
+                    <div className="mt-4 flex gap-3">
+                      <button onClick={() => { handleAcceptOrder(selectedOrder._id || selectedOrder.id); setSelectedOrder(null); }} className="flex-1 bg-[#00B75A] hover:bg-[#00B876] text-white py-2 rounded-full transition-colors font-[400]">
+                        Accept Order
+                      </button>
+                      <button onClick={() => setSelectedOrder(null)} className="flex-1 bg-white border border-gray-200 hover:bg-gray-50 rounded-full !border-2 !border-[#0F172A] transition-colors text-[#0F172A] font-[400] py-2">
+                        Close
+                      </button>
+                    </div>
                   </div>
-                </div>
+                </YummyText>
               </div>
             </div>
           )}
@@ -1041,6 +1284,7 @@ const AvailableOrders = () => {
             position="top"
             color={toastMsg.includes('✅') ? 'success' : toastMsg.includes('Failed') ? 'danger' : 'primary'}
           />
+          <ToastComponent />
         </IonContent>
       </RiderLayout>
     </IonPage>

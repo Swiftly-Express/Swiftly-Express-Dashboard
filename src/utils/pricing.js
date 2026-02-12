@@ -28,6 +28,12 @@ function toRad(degrees) {
   return degrees * (Math.PI / 180);
 }
 
+// Pricing constants - exported for use across the app
+export const BASE_FARE = 500; // Covers up to 2km
+export const PER_KM_RATE = 150; // After 2km
+export const PLATFORM_COMMISSION_RATE = 0.30; // Company gets 30%, rider gets 70%
+export const MIN_BID = 500; // Minimum bid amount
+
 import { getCommissionRate } from './adminApi';
 
 /**
@@ -39,7 +45,7 @@ import { getCommissionRate } from './adminApi';
  * @param {boolean} params.isSpecialErrand - Whether special errand fee applies (default false)
  * @param {number} params.batchDiscount - Batch delivery discount percentage 0-10 (default 0)
  * @param {number} params.declaredValue - Declared value for insurance (default 0)
- * @param {number} params.customBid - Custom bid amount (must be >= 800, optional)
+ * @param {number} params.customBid - Custom bid amount (must be >= 500, optional)
  * @param {string} params.deliveryType - Delivery type: 'express' or 'smart_ride' (optional)
  * @returns {Object} Pricing breakdown
  * @deprecated Use getDeliveryEstimate from authApi.js instead. This function is no longer used and uses outdated pricing logic.
@@ -54,9 +60,7 @@ export function calculateDeliveryPrice({
   deliveryType = null,
   commissionRate = null // decimal e.g. 0.15 (optional - can be provided by backend)
 }) {
-  // Pricing constants
-  const BASE_FARE = 800; // Covers up to 2km
-  const PER_KM_RATE = 200; // After 2km
+  // Pricing constants (use exported constants for consistency)
   const WAITING_RATE_PER_5MIN = 70; // First 5 mins free
   const PRIORITY_FEE_MIN = 200;
   const PRIORITY_FEE_MAX = 500;
@@ -64,8 +68,6 @@ export function calculateDeliveryPrice({
   const SPECIAL_ERRAND_FEE_MAX = 500;
   const EXPRESS_DELIVERY_FEE = 400; // Added to base for express
   const SMART_RIDE_FEE = 600; // Added to base for smart ride
-  const PLATFORM_COMMISSION_RATE = 0.15; // fallback 15%
-  const MIN_BID = 800;
 
   // 1. Calculate base delivery charge
   let deliveryCharge = BASE_FARE;
@@ -113,7 +115,7 @@ export function calculateDeliveryPrice({
   // 7. Calculate total before custom bid (insurance removed)
   let total = subtotal - discountAmount;
 
-  // 9. Handle custom bid (must be >= 800)
+  // 9. Handle custom bid (must be >= 500)
   let finalTotal = total;
   let bidAdjustment = 0;
   if (customBid !== null && customBid >= MIN_BID) {
@@ -162,13 +164,6 @@ export function calculateDeliveryPrice({
     hasCustomBid: customBid !== null && customBid >= MIN_BID
   };
 }
-
-/**
- * Async wrapper that attempts to fetch commission rate from backend
- * and then computes delivery price using that commission.
- * If backend call fails or returns unexpected data, falls back to default inside calculateDeliveryPrice.
- * @param {Object} params - same params as calculateDeliveryPrice
- */
 export async function calculateDeliveryPriceWithBackendCommission(params = {}) {
   let commissionRate = params.commissionRate;
   if (commissionRate == null) {

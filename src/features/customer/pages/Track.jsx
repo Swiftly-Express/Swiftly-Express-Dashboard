@@ -19,8 +19,7 @@ const sideBottomShadow = {
 };
 
 // Format Nigerian phone for display; normalize for tel: link (0xxx → +234xxx)
-const formatNigerianPhone = (phone) =>
-{
+const formatNigerianPhone = (phone) => {
   if (!phone || typeof phone !== 'string') return '';
   const cleaned = phone.replace(/[\s\-()]/g, '').replace(/[^0-9+]/g, '');
   if (cleaned.length < 7) return phone;
@@ -29,8 +28,7 @@ const formatNigerianPhone = (phone) =>
   if (cleaned.startsWith('234')) return `+234 ${cleaned.slice(3, 6)} ${cleaned.slice(6, 9)} ${cleaned.slice(9)}`;
   return cleaned.length >= 10 ? `${cleaned.slice(0, 4)} ${cleaned.slice(4, 7)} ${cleaned.slice(7)}` : phone;
 };
-const normalizePhoneForTel = (phone) =>
-{
+const normalizePhoneForTel = (phone) => {
   if (!phone || typeof phone !== 'string') return '';
   let cleaned = phone.replace(/[\s\-()]/g, '').replace(/[^0-9+]/g, '');
   if (cleaned.startsWith('+234')) return cleaned;
@@ -40,8 +38,7 @@ const normalizePhoneForTel = (phone) =>
   return cleaned ? `+234${cleaned}` : '';
 };
 
-const Track = () =>
-{
+const Track = () => {
   const [trackingId, setTrackingId] = useState('');
   const [deliveryData, setDeliveryData] = useState(null);
   const [loading, setLoading] = useState(false);
@@ -52,13 +49,11 @@ const Track = () =>
   const params = useParams();
 
   // Auto-fetch when a trackingId is present in the URL (e.g. /customer/track/SX-... or /track/SX-...)
-  useEffect(() =>
-  {
+  useEffect(() => {
     const paramId = params?.trackingId;
     if (!paramId) return;
 
-    const fetchByParam = async () =>
-    {
+    const fetchByParam = async () => {
       setTrackingId(paramId);
       setLoading(true);
       try {
@@ -80,10 +75,8 @@ const Track = () =>
   }, [params?.trackingId]);
 
   // Listen for delivery updates and refresh if the current delivery changes
-  useEffect(() =>
-  {
-    const handleDeliveryUpdated = (event) =>
-    {
+  useEffect(() => {
+    const handleDeliveryUpdated = (event) => {
       if (deliveryData && event.detail) {
         const updatedDeliveryId = event.detail.deliveryId || event.detail.id;
         const currentDeliveryId = deliveryData._id || deliveryData.id;
@@ -103,13 +96,20 @@ const Track = () =>
           setToastMsg(`✅ Status updated to: ${newStatus}`);
           setShowToast(true);
 
+          // Play notification sound if delivery is completed
+          if ((newStatus?.toLowerCase() === 'delivered' || newStatus?.toLowerCase() === 'completed')) {
+            console.log('[Track] 🔔 Delivery completed! Playing notification sound');
+            playNotificationSound();
+          }
+
           // Show rating modal if delivery is completed and not yet rated
           if ((newStatus?.toLowerCase() === 'delivered' || newStatus?.toLowerCase() === 'completed') &&
             !hasRated &&
             !deliveryData.rating &&
             !deliveryData.customerRating) {
-            setTimeout(() =>
-            {
+            console.log('[Track] ⭐ Triggering rating modal in 1.5s for delivery:', deliveryData._id || deliveryData.id);
+            setTimeout(() => {
+              console.log('[Track] 🚀 Dispatching rating:show event now!', deliveryData);
               window.dispatchEvent(new CustomEvent('rating:show', { detail: deliveryData }));
             }, 1500);
           }
@@ -128,16 +128,14 @@ const Track = () =>
       socketService.connect();
       socketService.joinRoom(deliveryId);
 
-      const handleLocationUpdate = (data) =>
-      {
+      const handleLocationUpdate = (data) => {
         if (data && data.location) {
           console.log('[Track] Driver location updated:', data.location);
           setDriverLocation(data.location);
         }
       };
 
-      const handleStatusUpdate = (data) =>
-      {
+      const handleStatusUpdate = (data) => {
         console.log('[Track] Socket status update received:', data);
         if (data) {
           const newStatus = data.status || data.newStatus;
@@ -153,13 +151,20 @@ const Track = () =>
             setToastMsg(`✅ Status updated to: ${newStatus}`);
             setShowToast(true);
 
+            // Play notification sound if delivery is completed
+            if ((newStatus?.toLowerCase() === 'delivered' || newStatus?.toLowerCase() === 'completed')) {
+              console.log('[Track] 🔔 Delivery completed (socket)! Playing notification sound');
+              playNotificationSound();
+            }
+
             // Show rating modal if delivery is completed and not yet rated
             if ((newStatus?.toLowerCase() === 'delivered' || newStatus?.toLowerCase() === 'completed') &&
               !hasRated &&
               !deliveryData.rating &&
               !deliveryData.customerRating) {
-              setTimeout(() =>
-              {
+              console.log('[Track] ⭐ Triggering rating modal in 1.5s for delivery (socket):', deliveryData._id || deliveryData.id);
+              setTimeout(() => {
+                console.log('[Track] 🚀 Dispatching rating:show event now (socket)!', deliveryData);
                 window.dispatchEvent(new CustomEvent('rating:show', { detail: deliveryData }));
               }, 1500);
             }
@@ -188,8 +193,7 @@ const Track = () =>
         }
       }
 
-      socketCleanup = () =>
-      {
+      socketCleanup = () => {
         socketService.leaveRoom(deliveryId);
         socketService.off('delivery:location:updated', handleLocationUpdate);
         socketService.off('delivery:statusChanged', handleStatusUpdate);
@@ -197,15 +201,13 @@ const Track = () =>
       };
     }
 
-    return () =>
-    {
+    return () => {
       window.removeEventListener('delivery:updated', handleDeliveryUpdated);
       socketCleanup();
     };
   }, [deliveryData]);
 
-  const handleTrack = async (e) =>
-  {
+  const handleTrack = async (e) => {
     e.preventDefault();
 
     if (!trackingId.trim()) {
@@ -231,8 +233,11 @@ const Track = () =>
       const alreadyRated = data.rating || data.customerRating || data.hasRated;
 
       if (isCompleted && !alreadyRated && !hasRated) {
-        setTimeout(() =>
-        {
+        console.log('[Track] ⭐ Delivery completed and not rated, triggering modal in 2s');
+        // Play notification sound for completed delivery
+        playNotificationSound();
+        setTimeout(() => {
+          console.log('[Track] 🚀 Dispatching rating:show event for tracked delivery!', data);
           window.dispatchEvent(new CustomEvent('rating:show', { detail: data }));
         }, 2000);
       }
@@ -247,8 +252,7 @@ const Track = () =>
     }
   };
 
-  const getStatusColor = (status) =>
-  {
+  const getStatusColor = (status) => {
     const statusLower = status?.toLowerCase() || '';
     if (statusLower === 'delivered') return 'bg-green-500';
     if (statusLower === 'in-transit' || statusLower === 'in transit') return 'bg-blue-500';
@@ -257,8 +261,7 @@ const Track = () =>
     return 'bg-gray-400';
   };
 
-  const getStatusBadge = (status) =>
-  {
+  const getStatusBadge = (status) => {
     const statusLower = status?.toLowerCase() || '';
     if (statusLower === 'delivered') return 'bg-green-100 text-green-700';
     if (statusLower === 'in-transit' || statusLower === 'in transit') return 'bg-[#00B75A] text-[#FFFFFF]';
@@ -267,8 +270,7 @@ const Track = () =>
     return 'bg-gray-100 text-gray-700';
   };
 
-  const formatDate = (dateString) =>
-  {
+  const formatDate = (dateString) => {
     if (!dateString) return 'N/A';
     try {
       const date = new Date(dateString);
@@ -282,8 +284,7 @@ const Track = () =>
     }
   };
 
-  const formatTime = (dateString) =>
-  {
+  const formatTime = (dateString) => {
     if (!dateString) return '';
     try {
       const date = new Date(dateString);
@@ -312,8 +313,7 @@ const Track = () =>
   const recipientEmail = recipientEmailRaw && String(recipientEmailRaw).trim() ? String(recipientEmailRaw).trim() : 'N/A';
   const recipientAddressLine = deliveryData?.deliveryAddress?.street || deliveryData?.deliveryAddress?.address || deliveryData?.deliveryAddress || deliveryData?.deliveryAddressString || '';
   // Weight: avoid appending " kg" if value already contains "kg" (fixes "0-5 kg kg")
-  const weightDisplay = (() =>
-  {
+  const weightDisplay = (() => {
     const w = deliveryData?.packageDetails?.weight;
     if (!w) return 'N/A';
     const s = String(w).trim();
@@ -322,8 +322,7 @@ const Track = () =>
   })();
 
   // Handle rating submission
-  const handleSubmitRating = async (ratingData) =>
-  {
+  const handleSubmitRating = async (ratingData) => {
     try {
       console.log('[Track] Submitting rating:', ratingData);
       // Only send rating field - backend doesn't accept comment or driverId

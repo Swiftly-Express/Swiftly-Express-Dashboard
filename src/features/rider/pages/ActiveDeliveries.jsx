@@ -2,6 +2,7 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { IonContent, IonPage, IonToast, IonIcon } from '@ionic/react';
 import RiderLayout from '../components/RiderLayout';
 import { YummyText } from '../../../components/YummyText';
+import Toast, { useToast } from '../../../components/Toast';
 import TelephoneIcon from "../../../icons/Telephoneicon";
 import ChatIcon from "../../../icons/Chaticon";
 import TrackingMap from '../../../components/TrackingMap';
@@ -20,8 +21,7 @@ const sideBottomShadow = {
 };
 
 // Format Nigerian phone for display (e.g. 0807 655 1108 or +234 807 655 1108)
-const formatNigerianPhoneForDisplay = (phone) =>
-{
+const formatNigerianPhoneForDisplay = (phone) => {
   if (!phone || typeof phone !== 'string') return '';
   const cleaned = phone.replace(/[\s\-()]/g, '').replace(/[^0-9+]/g, '');
   if (cleaned.length < 7) return phone;
@@ -38,8 +38,7 @@ const formatNigerianPhoneForDisplay = (phone) =>
 };
 
 // Normalize phone for tel: link (Nigerian: 0xxx → +234xxx)
-const normalizePhoneForTel = (phone) =>
-{
+const normalizePhoneForTel = (phone) => {
   if (!phone || typeof phone !== 'string') return '';
   let cleaned = phone.replace(/[\s\-()]/g, '').replace(/[^0-9+]/g, '');
   if (cleaned.startsWith('+234')) return cleaned;
@@ -51,8 +50,7 @@ const normalizePhoneForTel = (phone) =>
 
 // Helper: robustly extract a phone number from various delivery shapes,
 // prioritizing booking form fields but falling back to scanning nested objects.
-const extractPhone = (delivery, role = 'pickup') =>
-{
+const extractPhone = (delivery, role = 'pickup') => {
   if (!delivery) {
     console.warn('[extractPhone] No delivery object provided');
     return null;
@@ -61,8 +59,7 @@ const extractPhone = (delivery, role = 'pickup') =>
   console.log('[extractPhone] Extracting phone for role:', role);
 
   // Helper to resolve dotted paths safely
-  const getNestedValue = (obj, path) =>
-  {
+  const getNestedValue = (obj, path) => {
     try {
       const parts = path.split('.');
       let cur = obj;
@@ -99,8 +96,7 @@ const extractPhone = (delivery, role = 'pickup') =>
     'recipient.phone', 'recipient.phoneNumber', 'dropoff.phone', 'dropoff.phoneNumber', 'deliveryPhone'
   ];
 
-  const tryPaths = (paths) =>
-  {
+  const tryPaths = (paths) => {
     for (const p of paths) {
       const v = getNestedValue(delivery, p);
       if (v) {
@@ -149,8 +145,7 @@ const extractPhone = (delivery, role = 'pickup') =>
   const phoneRegex = /[0-9]/;
   const keyHint = /(phone|contact)/i;
 
-  const search = (obj) =>
-  {
+  const search = (obj) => {
     if (!obj || typeof obj !== 'object' || seen.has(obj)) return null;
     seen.add(obj);
     for (const k of Object.keys(obj)) {
@@ -202,8 +197,9 @@ const extractPhone = (delivery, role = 'pickup') =>
 };
 
 
-const ActiveDeliveries = () =>
-{
+const ActiveDeliveries = () => {
+  const { toast, showToast: showCustomToast, hideToast, ToastComponent } = useToast();
+  const [deliveryReminders, setDeliveryReminders] = useState(new Set());
   const { activeDeliveries, updateDeliveryStatus: contextUpdateStatus } = useDelivery();
   const [deliveries, setDeliveries] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -218,10 +214,8 @@ const ActiveDeliveries = () =>
   const [unreadCounts, setUnreadCounts] = useState({}); // { [deliveryId]: count }
 
   // Listen for new chat messages and update unread counts
-  useEffect(() =>
-  {
-    const handleNewMessage = (data) =>
-    {
+  useEffect(() => {
+    const handleNewMessage = (data) => {
       console.log('[ActiveDeliveries] Received chat message:', data);
 
       // Extract delivery ID and message data
@@ -254,8 +248,7 @@ const ActiveDeliveries = () =>
       console.warn('[ActiveDeliveries] Failed to set up message listener:', e);
     }
 
-    return () =>
-    {
+    return () => {
       try {
         socketService.off('delivery:chat:message', handleNewMessage);
       } catch (e) { }
@@ -263,21 +256,18 @@ const ActiveDeliveries = () =>
   }, [showChatModal, selectedDeliveryForChat]);
 
   // Fetch rider's active deliveries on mount
-  useEffect(() =>
-  {
+  useEffect(() => {
     fetchActiveDeliveries();
 
     // Listen for delivery acceptance events and scroll to the accepted delivery
-    const handleDeliveryAccepted = async (event) =>
-    {
+    const handleDeliveryAccepted = async (event) => {
       const detail = event && event.detail ? event.detail : {};
       const deliveryId = detail.deliveryId || detail.id || null;
       await fetchActiveDeliveries();
 
       // Try to scroll the accepted delivery into view
       if (deliveryId) {
-        setTimeout(() =>
-        {
+        setTimeout(() => {
           const el = document.getElementById(`delivery-${deliveryId}`);
           if (el && el.scrollIntoView) {
             try { el.scrollIntoView({ behavior: 'smooth', block: 'center' }); } catch (e) { el.scrollIntoView(); }
@@ -287,35 +277,51 @@ const ActiveDeliveries = () =>
     };
 
     // Listen for delivery status updates
-    const handleDeliveryStatusChanged = () =>
-    {
+    const handleDeliveryStatusChanged = () => {
+      fetchActiveDeliveries();
+    };
+
+    // Listen for delivery cancellations
+    const handleDeliveryCancelled = (event) => {
+      const detail = event?.detail || {};
+      const deliveryId = detail.deliveryId;
+
+      console.log('[ActiveDeliveries] 🚫 Delivery cancelled by customer:', deliveryId);
+
+      // Remove from active deliveries immediately
+      setDeliveries(prev => prev.filter(d => (d._id !== deliveryId && d.id !== deliveryId)));
+
+      // Show notification to rider
+      setToastMsg('A customer has cancelled their order');
+      setShowToast(true);
+
+      // Refresh from backend
       fetchActiveDeliveries();
     };
 
     window.addEventListener('delivery:accepted', handleDeliveryAccepted);
     window.addEventListener('delivery:statusChanged', handleDeliveryStatusChanged);
+    window.addEventListener('delivery:cancelled', handleDeliveryCancelled);
     // Refresh on payment completion
     const handlePaymentCompleted = () => fetchActiveDeliveries();
     window.addEventListener('payment:completed', handlePaymentCompleted);
 
-    return () =>
-    {
+    return () => {
       window.removeEventListener('delivery:accepted', handleDeliveryAccepted);
       window.removeEventListener('delivery:statusChanged', handleDeliveryStatusChanged);
+      window.removeEventListener('delivery:cancelled', handleDeliveryCancelled);
       window.removeEventListener('payment:completed', handlePaymentCompleted);
     };
   }, []);
 
   // If navigated with a hash like #delivery-<id>, scroll that delivery into view after deliveries load
-  useEffect(() =>
-  {
+  useEffect(() => {
     if (!loading && deliveries && deliveries.length > 0) {
       try {
         const hash = window.location.hash;
         if (hash && hash.startsWith('#delivery-')) {
           const id = hash.replace('#', '');
-          setTimeout(() =>
-          {
+          setTimeout(() => {
             const el = document.getElementById(id);
             if (el && el.scrollIntoView) {
               try { el.scrollIntoView({ behavior: 'smooth', block: 'center' }); } catch (e) { el.scrollIntoView(); }
@@ -327,8 +333,7 @@ const ActiveDeliveries = () =>
   }, [loading, deliveries]);
 
   // Live Location Tracking
-  useEffect(() =>
-  {
+  useEffect(() => {
     // Only track if there are deliveries 'in-transit'
     const inTransitDeliveries = deliveries.filter(d =>
       (d.status?.toLowerCase() === 'in-transit' || d.status?.toLowerCase() === 'in transit')
@@ -343,13 +348,11 @@ const ActiveDeliveries = () =>
 
       if (navigator.geolocation) {
         watchId = navigator.geolocation.watchPosition(
-          (position) =>
-          {
+          (position) => {
             const { latitude, longitude } = position.coords;
             const location = { lat: latitude, lng: longitude };
 
-            inTransitDeliveries.forEach(delivery =>
-            {
+            inTransitDeliveries.forEach(delivery => {
               const deliveryId = delivery._id || delivery.id;
               socketService.emit('driver:location:update', {
                 deliveryId,
@@ -367,23 +370,20 @@ const ActiveDeliveries = () =>
       }
     }
 
-    return () =>
-    {
+    return () => {
       if (watchId) navigator.geolocation.clearWatch(watchId);
     };
   }, [deliveries]);
 
   // detect mobile view (small screens) to render mobile-optimized layout
-  useEffect(() =>
-  {
+  useEffect(() => {
     const check = () => setIsMobile(window.innerWidth <= 768);
     check();
     window.addEventListener('resize', check);
     return () => window.removeEventListener('resize', check);
   }, []);
 
-  const fetchActiveDeliveries = async () =>
-  {
+  const fetchActiveDeliveries = async () => {
     setLoading(true);
     try {
       const response = await getRiderDeliveries(1, 10);
@@ -403,8 +403,7 @@ const ActiveDeliveries = () =>
     }
   };
 
-  const handleStatusUpdate = async (deliveryId, newStatus) =>
-  {
+  const handleStatusUpdate = async (deliveryId, newStatus) => {
     setUpdatingStatus(deliveryId);
     try {
       // Backend requires: status and currentLocation (lat/lng)
@@ -424,8 +423,7 @@ const ActiveDeliveries = () =>
         // Attempt 1: High accuracy (GPS when available) for better position
         try {
           console.log('[ActiveDeliveries] Attempt 1: High-accuracy request...');
-          position = await new Promise((resolve, reject) =>
-          {
+          position = await new Promise((resolve, reject) => {
             navigator.geolocation.getCurrentPosition(
               resolve,
               reject,
@@ -446,8 +444,7 @@ const ActiveDeliveries = () =>
         if (!position) {
           try {
             console.log('[ActiveDeliveries] Attempt 2: Longer timeout...');
-            position = await new Promise((resolve, reject) =>
-            {
+            position = await new Promise((resolve, reject) => {
               navigator.geolocation.getCurrentPosition(
                 resolve,
                 reject,
@@ -469,8 +466,7 @@ const ActiveDeliveries = () =>
         if (!position) {
           try {
             console.log('[ActiveDeliveries] Attempt 3: Minimal options...');
-            position = await new Promise((resolve, reject) =>
-            {
+            position = await new Promise((resolve, reject) => {
               navigator.geolocation.getCurrentPosition(resolve, reject);
             });
             console.log('[ActiveDeliveries] ✅ Attempt 3 succeeded');
@@ -517,6 +513,25 @@ const ActiveDeliveries = () =>
       setToastMsg('Status updated successfully!');
       setShowToast(true);
 
+      // Show cash payment reminder for in-transit deliveries  
+      if (newStatus.toLowerCase() === 'in-transit' || newStatus.toLowerCase() === 'in transit') {
+        setTimeout(() => {
+          const delivery = deliveries.find(d => (d._id || d.id) === deliveryId);
+          const paymentMethod = delivery?.paymentMethod || delivery?.payment?.method;
+          const reminderKey = `transit_${deliveryId}`;
+
+          if (paymentMethod?.toLowerCase() === 'cash' && !deliveryReminders.has(reminderKey)) {
+            showCustomToast(
+              'Reminder: Remember to collect the complete cash payment before completing this delivery.',
+              'reminder',
+              6000,
+              'top'
+            );
+            setDeliveryReminders(prev => new Set([...prev, reminderKey]));
+          }
+        }, 2000);
+      }
+
       // Dispatch event for admin/rider components
       window.dispatchEvent(new CustomEvent('delivery:statusChanged', {
         detail: { deliveryId, newStatus }
@@ -558,8 +573,7 @@ const ActiveDeliveries = () =>
     }
   };
 
-  const handleActionClick = (delivery) =>
-  {
+  const handleActionClick = (delivery) => {
     const status = (delivery.status || '').toLowerCase();
     let newStatus = 'picked-up';
 
@@ -577,8 +591,7 @@ const ActiveDeliveries = () =>
     handleStatusUpdate(delivery._id || delivery.id, newStatus);
   };
 
-  const handleProofUpload = async (deliveryId, file) =>
-  {
+  const handleProofUpload = async (deliveryId, file) => {
     try {
       const formData = new FormData();
       formData.append('proof', file);
@@ -599,10 +612,8 @@ const ActiveDeliveries = () =>
   };
 
 
-  const handleRouteStats = useCallback((deliveryId, { distance, duration }) =>
-  {
-    setStats(prev =>
-    {
+  const handleRouteStats = useCallback((deliveryId, { distance, duration }) => {
+    setStats(prev => {
       // Prevent update if values haven't changed
       if (prev[deliveryId]?.distance === distance && prev[deliveryId]?.duration === duration) {
         return prev;
@@ -615,26 +626,22 @@ const ActiveDeliveries = () =>
   }, []);
 
   // Filter deliveries by tab
-  const filterDeliveriesByTab = () =>
-  {
+  const filterDeliveriesByTab = () => {
     if (activeTab === 'yet-to-start') {
       // Deliveries that are assigned but not yet picked up
-      return deliveries.filter(d =>
-      {
+      return deliveries.filter(d => {
         const status = (d.status || '').toLowerCase();
         return status.includes('assigned') || status.includes('pending');
       });
     } else if (activeTab === 'in-progress') {
       // Deliveries that are picked up or in transit
-      return deliveries.filter(d =>
-      {
+      return deliveries.filter(d => {
         const status = (d.status || '').toLowerCase();
         return status.includes('picked') || status.includes('transit');
       });
     } else if (activeTab === 'completed') {
       // Completed/delivered deliveries
-      return deliveries.filter(d =>
-      {
+      return deliveries.filter(d => {
         const status = (d.status || '').toLowerCase();
         return status.includes('delivered') || status.includes('completed');
       });
@@ -670,39 +677,44 @@ const ActiveDeliveries = () =>
             <div className="flex items-center gap-2 bg-gray-100 p-1 rounded-full w-full">
               <button
                 onClick={() => setActiveTab('yet-to-start')}
-                className={`flex-1 px-4 py-2.5 whitespace-nowrap rounded-full text-sm font-normal transition-colors ${activeTab === 'yet-to-start'
+                className={`flex-1 px-2 md:px-4 py-2.5 whitespace-nowrap rounded-full text-xs md:text-sm font-normal transition-colors ${activeTab === 'yet-to-start'
                   ? 'text-[#0F172A] bg-white shadow-sm'
                   : 'text-[#64748B]'
                   }`}
               >
-                Yet to Start ({deliveries.filter(d =>
-                {
+                <span className="hidden md:inline">Yet to Start ({deliveries.filter(d => {
                   const status = (d.status || '').toLowerCase();
                   return status.includes('assigned') || status.includes('pending');
-                }).length})
+                }).length})</span>
+                <span className="md:hidden">To Start ({deliveries.filter(d => {
+                  const status = (d.status || '').toLowerCase();
+                  return status.includes('assigned') || status.includes('pending');
+                }).length})</span>
               </button>
               <button
                 onClick={() => setActiveTab('in-progress')}
-                className={`flex-1 px-4 py-2.5 whitespace-nowrap rounded-full text-sm font-normal transition-colors ${activeTab === 'in-progress'
+                className={`flex-1 px-2 md:px-4 py-2.5 whitespace-nowrap rounded-full text-xs md:text-sm font-normal transition-colors ${activeTab === 'in-progress'
                   ? 'text-[#0F172A] bg-white shadow-sm'
                   : 'text-[#64748B]'
                   }`}
               >
-                In Progress ({deliveries.filter(d =>
-                {
+                <span className="hidden md:inline">In Progress ({deliveries.filter(d => {
                   const status = (d.status || '').toLowerCase();
                   return status.includes('picked') || status.includes('transit');
-                }).length})
+                }).length})</span>
+                <span className="md:hidden">Active ({deliveries.filter(d => {
+                  const status = (d.status || '').toLowerCase();
+                  return status.includes('picked') || status.includes('transit');
+                }).length})</span>
               </button>
               <button
                 onClick={() => setActiveTab('completed')}
-                className={`flex-1 px-4 py-2.5 whitespace-nowrap rounded-full text-sm font-normal transition-colors ${activeTab === 'completed'
+                className={`flex-1 px-2 md:px-4 py-2.5 whitespace-nowrap rounded-full text-xs md:text-sm font-normal transition-colors ${activeTab === 'completed'
                   ? 'text-[#0F172A] bg-white shadow-sm'
                   : 'text-[#64748B]'
                   }`}
               >
-                Completed ({deliveries.filter(d =>
-                {
+                Completed ({deliveries.filter(d => {
                   const status = (d.status || '').toLowerCase();
                   return status.includes('delivered') || status.includes('completed');
                 }).length})
@@ -720,11 +732,9 @@ const ActiveDeliveries = () =>
                 </div>
               </div>
             ) : filteredDeliveries.length > 0 ? (
-              filteredDeliveries.map((delivery) =>
-              {
+              filteredDeliveries.map((delivery) => {
                 // Map status to color
-                const getStatusColor = (status) =>
-                {
+                const getStatusColor = (status) => {
                   const statusLower = status?.toLowerCase() || '';
                   if (statusLower.includes('picked') || statusLower.includes('transit')) return 'bg-blue-100 text-blue-600';
                   if (statusLower.includes('delivered') || statusLower.includes('completed')) return 'bg-green-100 text-green-600';
@@ -734,8 +744,7 @@ const ActiveDeliveries = () =>
                 };
 
                 // Format status text
-                const formatStatus = (status) =>
-                {
+                const formatStatus = (status) => {
                   if (!status) return 'Unknown';
                   return status.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
                 };
@@ -751,8 +760,7 @@ const ActiveDeliveries = () =>
                   (delivery.lastKnownLocation && [delivery.lastKnownLocation.lng, delivery.lastKnownLocation.lat]) || null;
 
                 // Get action button text based on status
-                const getActionButtonText = (status) =>
-                {
+                const getActionButtonText = (status) => {
                   const statusLower = status?.toLowerCase() || '';
                   if (statusLower.includes('assigned') || statusLower.includes('pending')) return 'Start Pickup';
                   if (statusLower.includes('route') && statusLower.includes('pickup')) return 'Arrived at Pickup';
@@ -767,8 +775,7 @@ const ActiveDeliveries = () =>
                 const pickupPhone = extractPhone(delivery, 'pickup');
                 const deliveryPhone = extractPhone(delivery, 'delivery');
 
-                const formatAddr = (addr) =>
-                {
+                const formatAddr = (addr) => {
                   if (!addr) return 'Address not available';
                   if (typeof addr === 'string') return addr;
                   // addr is likely an object with street, city, state, zipCode
@@ -854,12 +861,12 @@ const ActiveDeliveries = () =>
             duration={3000}
             position="top"
           />
+          <ToastComponent />
         </IonContent>
       </RiderLayout>
 
       {/* Chat Modal */}
-      {showChatModal && selectedDeliveryForChat && (() =>
-      {
+      {showChatModal && selectedDeliveryForChat && (() => {
         // Find the delivery to check service type
         const delivery = deliveries.find(d => (d._id || d.id) === selectedDeliveryForChat);
         const isSmartRide = delivery?.serviceType === 'smartride' || delivery?.service === 'smartride' || delivery?.type === 'smartride';
@@ -880,8 +887,7 @@ const ActiveDeliveries = () =>
               justifyContent: 'center',
               padding: '20px'
             }}
-            onClick={() =>
-            {
+            onClick={() => {
               setShowChatModal(false);
               setSelectedDeliveryForChat(null);
               setUnreadCounts(prev => ({
@@ -907,8 +913,7 @@ const ActiveDeliveries = () =>
             >
               {/* Close button */}
               <button
-                onClick={() =>
-                {
+                onClick={() => {
                   setShowChatModal(false);
                   setSelectedDeliveryForChat(null);
                   setUnreadCounts(prev => ({
@@ -937,8 +942,7 @@ const ActiveDeliveries = () =>
                 deliveryId={selectedDeliveryForChat}
                 currentUserRole="driver"
                 userRole="rider"
-                onClose={() =>
-                {
+                onClose={() => {
                   setShowChatModal(false);
                   setSelectedDeliveryForChat(null);
                   setUnreadCounts(prev => ({
@@ -988,8 +992,7 @@ const DeliveryCard = ({
   setShowChatModal,
   setSelectedDeliveryForChat,
   setUnreadCounts
-}) =>
-{
+}) => {
   const [showMapFull, setShowMapFull] = useState(false);
 
   const openMap = () => setShowMapFull(true);
@@ -1009,8 +1012,7 @@ const DeliveryCard = ({
                 {isMobile ? packageId.substring(0, 12) + '...' : packageId}
               </div>
               <button
-                onClick={() =>
-                {
+                onClick={() => {
                   try {
                     navigator.clipboard.writeText(packageId);
                     alert('Package ID copied to clipboard');
@@ -1036,8 +1038,7 @@ const DeliveryCard = ({
                 {paymentStatus === 'paid' && (
                   <span className="px-2 py-0.5 rounded-full text-xs font-normal bg-green-100 text-green-700">Paid</span>
                 )}
-                {paymentStatus !== 'paid' && (() =>
-                {
+                {paymentStatus !== 'paid' && (() => {
                   const method = (deliveryRaw.payment?.method || deliveryRaw.paymentMethod || deliveryRaw.payment?.paymentMethod || deliveryRaw.method || '').toString().toLowerCase().trim();
                   if (method === 'cash' || method === 'cash_on_delivery' || method === 'cod') {
                     return <span className="px-2 py-0.5 rounded-full text-xs font-normal bg-white text-green-600 border border-green-300">Cash</span>;
@@ -1166,8 +1167,7 @@ const DeliveryCard = ({
                   </button>
                 )}
                 <button
-                  onClick={() =>
-                  {
+                  onClick={() => {
                     if (setShowChatModal && setSelectedDeliveryForChat && setUnreadCounts) {
                       setSelectedDeliveryForChat(deliveryId);
                       setShowChatModal(true);
@@ -1222,8 +1222,7 @@ const DeliveryCard = ({
         {/* Chat with customer */}
         <div className="mb-4">
           <div className="text-xs font-medium text-[#64748B] mb-2">Chat with customer</div>
-          {(() =>
-          {
+          {(() => {
             const isSmartRide = deliveryRaw?.serviceType === 'smartride' || deliveryRaw?.service === 'smartride' || deliveryRaw?.type === 'smartride';
             const ChatComponent = isSmartRide ? SmartRideDeliveryChat : ExpressDeliveryChat;
             return (

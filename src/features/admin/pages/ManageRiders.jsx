@@ -66,6 +66,8 @@ const ManageRiders = () =>
     return () =>
     {
       window.removeEventListener('delivery:statusChanged', handleDeliveryStatusChanged);
+      window.removeEventListener('rider:statusChanged', handleRiderStatusChanged);
+      window.removeEventListener('rider:availabilityChanged', handleRiderStatusChanged);
       window.removeEventListener('resize', handleResize);
     };
   }, []);
