@@ -571,7 +571,7 @@ Amount: ₦${delivery.amount || delivery.price || delivery.total || '0.00'}
 };
 
 // Desktop Table Row
-const CompletedDeliveryRow = ({ delivery }) => {
+const CompletedDeliveryRow = ({ delivery, isCancelled = false }) => {
   const history = useHistory();
   const [isOpen, setIsOpen] = useState(false);
   const [showCopyToast, setShowCopyToast] = useState(false);
@@ -608,9 +608,9 @@ ${delivery.deliveryAddress?.street || ''}
 ${delivery.deliveryAddress?.city || ''}, ${delivery.deliveryAddress?.state || ''}
 
 Booked Date: ${formatDate(delivery.createdAt || delivery.bookedDate)}
-Delivered Date: ${formatDate(delivery.deliveredAt || delivery.deliveredDate)}
+${isCancelled ? `Cancelled Date: ${formatDate(delivery.cancelledAt || delivery.updatedAt)}` : `Delivered Date: ${formatDate(delivery.deliveredAt || delivery.deliveredDate)}`}
 
-Status: ${delivery.status || 'Delivered'}
+Status: ${delivery.status || (isCancelled ? 'Cancelled' : 'Delivered')}
 Amount: ₦${delivery.amount || delivery.price || delivery.total || '0.00'}
 
 =======================================
@@ -668,11 +668,14 @@ Amount: ₦${delivery.amount || delivery.price || delivery.total || '0.00'}
           {formatDate(delivery.createdAt || delivery.bookedDate)}
         </td>
         <td className="py-4 px-4 text-sm text-[#0A0A0A]">
-          {formatDate(delivery.deliveredAt || delivery.deliveredDate)}
+          {isCancelled 
+            ? formatDate(delivery.cancelledAt || delivery.updatedAt)
+            : formatDate(delivery.deliveredAt || delivery.deliveredDate)
+          }
         </td>
         <td className="py-4 px-4">
-          <span className="px-3 py-1 bg-green-100 text-green-700 rounded-full text-xs font-medium">
-            {delivery.status || 'Delivered'}
+          <span className={`px-3 py-1 ${isCancelled ? 'bg-red-100 text-red-700' : 'bg-green-100 text-green-700'} rounded-full text-xs font-medium`}>
+            {delivery.status || (isCancelled ? 'Cancelled' : 'Delivered')}
           </span>
         </td>
         <td className="py-4 px-4">
@@ -708,33 +711,55 @@ Amount: ₦${delivery.amount || delivery.price || delivery.total || '0.00'}
                     }}
                   />
                   <div className="absolute right-0 mt-2 w-48 bg-white rounded-lg shadow-lg border border-gray-200 py-1 z-20">
-                    <button
-                      onClick={(e) => {
-                        handleTrack(e);
-                        setShowActionsMenu(false);
-                      }}
-                      className="w-full px-4 py-2 text-left text-sm text-[#0F172A] hover:bg-gray-50 flex items-center gap-3"
-                    >
-                      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                        <circle cx="12" cy="12" r="10" />
-                        <polyline points="12 6 12 12 16 14" />
-                      </svg>
-                      Track Package
-                    </button>
-                    <button
-                      onClick={(e) => {
-                        handleDownload(e);
-                        setShowActionsMenu(false);
-                      }}
-                      className="w-full px-4 py-2 text-left text-sm text-[#0F172A] hover:bg-gray-50 flex items-center gap-3"
-                    >
-                      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                        <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
-                        <polyline points="7 10 12 15 17 10" />
-                        <line x1="12" y1="15" x2="12" y2="3" />
-                      </svg>
-                      Download Receipt
-                    </button>
+                    {isCancelled ? (
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          // Handle delete action
+                          console.log('Delete cancelled order:', delivery._id || delivery.id);
+                          setShowActionsMenu(false);
+                        }}
+                        className="w-full px-4 py-2 text-left text-sm text-red-600 hover:bg-red-50 flex items-center gap-3"
+                      >
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                          <polyline points="3 6 5 6 21 6" />
+                          <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" />
+                          <line x1="10" y1="11" x2="10" y2="17" />
+                          <line x1="14" y1="11" x2="14" y2="17" />
+                        </svg>
+                        Delete
+                      </button>
+                    ) : (
+                      <>
+                        <button
+                          onClick={(e) => {
+                            handleTrack(e);
+                            setShowActionsMenu(false);
+                          }}
+                          className="w-full px-4 py-2 text-left text-sm text-[#0F172A] hover:bg-gray-50 flex items-center gap-3"
+                        >
+                          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                            <circle cx="12" cy="12" r="10" />
+                            <polyline points="12 6 12 12 16 14" />
+                          </svg>
+                          Track Package
+                        </button>
+                        <button
+                          onClick={(e) => {
+                            handleDownload(e);
+                            setShowActionsMenu(false);
+                          }}
+                          className="w-full px-4 py-2 text-left text-sm text-[#0F172A] hover:bg-gray-50 flex items-center gap-3"
+                        >
+                          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                            <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+                            <polyline points="7 10 12 15 17 10" />
+                            <line x1="12" y1="15" x2="12" y2="3" />
+                          </svg>
+                          Download Receipt
+                        </button>
+                      </>
+                    )}
                   </div>
                 </>
               )}
@@ -1342,6 +1367,7 @@ const MyDeliveries = () => {
                             <CompletedDeliveryRow
                               key={delivery._id || delivery.id || index}
                               delivery={delivery}
+                              isCancelled={true}
                             />
                           ))}
                         </tbody>
