@@ -1,11 +1,10 @@
 import React, { useState, useEffect } from 'react';
 import { IonIcon, IonToast } from '@ionic/react';
 import confetti from 'canvas-confetti';
-import
-  {
-    closeOutline,
-    informationCircleOutline
-  } from 'ionicons/icons';
+import {
+closeOutline,
+informationCircleOutline
+} from 'ionicons/icons';
 import GoogleMapsAutocomplete from '../../../components/GoogleMapsAutocomplete';
 import ForwardIcon from "../../../icons/Forwardicon";
 import BackIcon from "../../../icons/Backicon";
@@ -19,8 +18,7 @@ import { submitRiderVerification, getRiderProfile } from '../../../utils/authApi
 import { getCookie, setCookie, deleteCookie, setJSONCookie, getJSONCookie } from '../../../utils/cookies';
 import StyledDropdown from '../../../components/StyledDropdown';
 
-const VerificationPromptModal = ({ isOpen, onClose, previousFeedback }) =>
-{
+const VerificationPromptModal = ({ isOpen, onClose, previousFeedback }) => {
   const router = useIonRouter();
   const [currentStep, setCurrentStep] = useState(1);
   const [showSuccessModal, setShowSuccessModal] = useState(false);
@@ -30,8 +28,7 @@ const VerificationPromptModal = ({ isOpen, onClose, previousFeedback }) =>
   const [showToast, setShowToast] = useState(false);
 
 
-  useEffect(() =>
-  {
+  useEffect(() => {
     console.log('[VerificationPromptModal] 👁️ isOpen prop changed:', isOpen);
   }, [isOpen]);
 
@@ -62,15 +59,13 @@ const VerificationPromptModal = ({ isOpen, onClose, previousFeedback }) =>
   });
 
   // Trigger confetti when success modal shows
-  useEffect(() =>
-  {
+  useEffect(() => {
     if (showSuccessModal) {
       const duration = 3000;
       const end = Date.now() + duration;
       const colors = ['#00B876', '#00D68F', '#DCFCE7', '#FFD700', '#FF6B9D'];
 
-      (function frame()
-      {
+      (function frame() {
         confetti({
           particleCount: 3,
           angle: 60,
@@ -91,8 +86,7 @@ const VerificationPromptModal = ({ isOpen, onClose, previousFeedback }) =>
         }
       }());
 
-      setTimeout(() =>
-      {
+      setTimeout(() => {
         confetti({
           particleCount: 100,
           spread: 70,
@@ -112,24 +106,19 @@ const VerificationPromptModal = ({ isOpen, onClose, previousFeedback }) =>
 
   // if (!isOpen) return null;
 
-  const handleInputChange = (field, value) =>
-  {
+  const handleInputChange = (field, value) => {
     setFormData(prev => ({ ...prev, [field]: value }));
   };
 
   // Compress image files
-  const compressImage = async (file, maxSizeMB = 1) =>
-  {
-    return new Promise((resolve, reject) =>
-    {
+  const compressImage = async (file, maxSizeMB = 1) => {
+    return new Promise((resolve, reject) => {
       const reader = new FileReader();
       reader.readAsDataURL(file);
-      reader.onload = (event) =>
-      {
+      reader.onload = (event) => {
         const img = new Image();
         img.src = event.target.result;
-        img.onload = () =>
-        {
+        img.onload = () => {
           const canvas = document.createElement('canvas');
           let width = img.width;
           let height = img.height;
@@ -155,8 +144,7 @@ const VerificationPromptModal = ({ isOpen, onClose, previousFeedback }) =>
           // Start with quality 0.8 and reduce if needed
           let quality = 0.8;
           canvas.toBlob(
-            (blob) =>
-            {
+            (blob) => {
               if (blob) {
                 const compressedFile = new File([blob], file.name, {
                   type: 'image/jpeg',
@@ -182,8 +170,7 @@ const VerificationPromptModal = ({ isOpen, onClose, previousFeedback }) =>
     });
   };
 
-  const handleFileUpload = async (field, event) =>
-  {
+  const handleFileUpload = async (field, event) => {
     const file = event.target.files[0];
     if (!file) return;
 
@@ -230,15 +217,13 @@ const VerificationPromptModal = ({ isOpen, onClose, previousFeedback }) =>
     handleInputChange(field, processedFile);
   };
 
-  const nextStep = () =>
-  {
+  const nextStep = () => {
     if (currentStep < 4) {
       setCurrentStep(currentStep + 1);
     }
   };
 
-  const prevStep = () =>
-  {
+  const prevStep = () => {
     if (currentStep > 1) {
       setCurrentStep(currentStep - 1);
     }
@@ -247,8 +232,7 @@ const VerificationPromptModal = ({ isOpen, onClose, previousFeedback }) =>
   // Add this to the handleSubmit function in VerificationPromptModal
   // Replace the existing token check section
 
-  const handleSubmit = async () =>
-  {
+  const handleSubmit = async () => {
     if (!formData.agreeBackgroundCheck) {
       alert('Please accept the background check authorization');
       return;
@@ -503,8 +487,7 @@ const VerificationPromptModal = ({ isOpen, onClose, previousFeedback }) =>
     }
   };
 
-  const handleDismiss = () =>
-  {
+  const handleDismiss = () => {
     setCookie('verificationPromptDismissedAt', Date.now().toString(), 1);
     setCurrentStep(1);
     setFormData({
@@ -527,27 +510,23 @@ const VerificationPromptModal = ({ isOpen, onClose, previousFeedback }) =>
     onClose();
   };
 
-  const handleBackdropClick = (e) =>
-  {
+  const handleBackdropClick = (e) => {
     if (e.target === e.currentTarget) {
       handleDismiss();
     }
   };
 
-  const getStepColor = (stepId) =>
-  {
+  const getStepColor = (stepId) => {
     if (stepId < currentStep) return 'text-[#00D68F]';
     if (stepId === currentStep) return 'text-[#00D68F]';
     return 'text-gray-400';
   };
 
-  const getProgressWidth = () =>
-  {
+  const getProgressWidth = () => {
     return `${((currentStep - 1) / 3) * 100}%`;
   };
 
-  const isStep1Valid = () =>
-  {
+  const isStep1Valid = () => {
     // Allow progressing after phone and street are provided even if coords are not set.
     // Coordinates are nice-to-have for better matching but not required to continue.
     const phone = (formData.phoneNumber || '').toString().trim();
@@ -555,8 +534,7 @@ const VerificationPromptModal = ({ isOpen, onClose, previousFeedback }) =>
     return phone !== '' && street !== '';
   };
 
-  const isStep2Valid = () =>
-  {
+  const isStep2Valid = () => {
     const idNumber = (formData.idNumber || '').toString().trim();
     return (formData.idType || '') !== '' &&
       idNumber !== '' &&
@@ -564,8 +542,7 @@ const VerificationPromptModal = ({ isOpen, onClose, previousFeedback }) =>
       formData.profilePhoto !== null;
   };
 
-  const isStep3Valid = () =>
-  {
+  const isStep3Valid = () => {
     const makeModel = (formData.makeModel || '').toString().trim();
     const year = (formData.year || '').toString().trim();
     const license = (formData.licensePlate || '').toString().trim();
@@ -576,8 +553,7 @@ const VerificationPromptModal = ({ isOpen, onClose, previousFeedback }) =>
       formData.driversLicense !== null;
   };
 
-  const isCurrentStepValid = () =>
-  {
+  const isCurrentStepValid = () => {
     switch (currentStep) {
       case 1: return isStep1Valid();
       case 2: return isStep2Valid();
@@ -693,8 +669,7 @@ const VerificationPromptModal = ({ isOpen, onClose, previousFeedback }) =>
                       value={formData.streetAddress}
                       onChange={(value) => handleInputChange('streetAddress', value)}
                       placeholder="Enter your address"
-                      onPlaceSelect={(place) =>
-                      {
+                      onPlaceSelect={(place) => {
                         handleInputChange('streetAddress', place.street || place.formatted_address || place);
                         handleInputChange('lat', place.coordinates?.lat || 0);
                         handleInputChange('lng', place.coordinates?.lng || 0);
@@ -1006,13 +981,11 @@ const VerificationPromptModal = ({ isOpen, onClose, previousFeedback }) =>
                 We'll notify you via email once your account has been approved. You can then start accepting deliveries and earning!
               </p>
               <button
-                onClick={() =>
-                {
+                onClick={() => {
                   setShowSuccessModal(false);
                   onClose();
                   // Force a small delay to ensure cookies are written before reload
-                  setTimeout(() =>
-                  {
+                  setTimeout(() => {
                     window.location.reload();
                   }, 100);
                 }}
