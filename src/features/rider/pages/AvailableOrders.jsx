@@ -598,6 +598,11 @@ const AvailableOrders = () => {
     console.log('[AvailableOrders] 📍 User visited page - stopping notification sound');
     stopNotificationSound();
 
+    // Update lastSeenOrderCount to current order count since user is now viewing the page
+    // This prevents sound from playing for orders they've already seen
+    lastSeenOrderCount.current = orders.length;
+    console.log('[AvailableOrders] 📌 Updated lastSeenOrderCount to:', orders.length);
+
     // Listen for logout event to stop sound
     const handleLogout = () => {
       console.log('[AvailableOrders] 🚪 User logging out - stopping notification sound');
@@ -612,7 +617,7 @@ const AvailableOrders = () => {
       stopNotificationSound();
       window.removeEventListener('user:logout', handleLogout);
     };
-  }, []);
+  }, [orders.length]);
 
   // Auto-poll for new orders every 5 seconds (fallback for when socket events don't fire)
   useEffect(() => {
@@ -792,10 +797,19 @@ const AvailableOrders = () => {
       }, 3500);
 
       // Remove order from local list by matching on canonical id or the original id
-      setOrders(prev => prev.filter(order => {
-        const oid = order._id || order.id || order.deliveryId;
-        return !(String(oid) === String(acceptedId) || String(oid) === String(deliveryId));
-      }));
+      setOrders(prev => {
+        const filtered = prev.filter(order => {
+          const oid = order._id || order.id || order.deliveryId;
+          return !(String(oid) === String(acceptedId) || String(oid) === String(deliveryId));
+        });
+
+        // Update lastSeenOrderCount to reflect the new order count after acceptance
+        // This prevents sound from playing again for remaining orders
+        lastSeenOrderCount.current = filtered.length;
+        console.log('[AvailableOrders] 📌 Updated lastSeenOrderCount after acceptance to:', filtered.length);
+
+        return filtered;
+      });
 
       // Dispatch accepted event including delivery type and order payload so other clients can react
       const acceptedDetail = { deliveryId: acceptedId, deliveryType: acceptedOrder?.deliveryType || acceptedOrder?.type || null, order: acceptedOrder || respDelivery || null };
@@ -833,7 +847,15 @@ const AvailableOrders = () => {
       await rejectDeliveryJob(deliveryId);
       setToastMsg('Delivery request declined. It is now available to other riders.');
       setShowToast(true);
-      setOrders(prev => prev.filter(o => (o._id || o.id) !== deliveryId));
+      setOrders(prev => {
+        const filtered = prev.filter(o => (o._id || o.id) !== deliveryId);
+
+        // Update lastSeenOrderCount to reflect the new order count after rejection
+        lastSeenOrderCount.current = filtered.length;
+        console.log('[AvailableOrders] 📌 Updated lastSeenOrderCount after rejection to:', filtered.length);
+
+        return filtered;
+      });
       if (selectedOrder && (selectedOrder._id || selectedOrder.id) === deliveryId) {
         setSelectedOrder(null);
       }
