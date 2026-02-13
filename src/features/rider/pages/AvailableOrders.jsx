@@ -554,23 +554,49 @@ const AvailableOrders = () => {
     console.log('[AvailableOrders] 📍 User visited page - stopping notification sound');
     stopNotificationSound();
 
-    // On unmount, also stop sound
+    // Listen for logout event to stop sound
+    const handleLogout = () => {
+      console.log('[AvailableOrders] 🚪 User logging out - stopping notification sound');
+      stopNotificationSound();
+    };
+    
+    window.addEventListener('user:logout', handleLogout);
+    
+    // On unmount, also stop sound and remove listener
     return () => {
       console.log('[AvailableOrders] 🚪 User left page - stopping notification sound');
       stopNotificationSound();
+      window.removeEventListener('user:logout', handleLogout);
     };
   }, []);
 
   // Auto-poll for new orders every 5 seconds (fallback for when socket events don't fire)
   useEffect(() => {
+    let pollInterval;
+    let isActive = true;
+    
     console.log('[AvailableOrders] 🔄 Starting auto-polling for new orders (every 5s)');
-    const pollInterval = setInterval(() => {
-      fetchAvailableJobs(true); // silent=true to avoid spamming logs
+    
+    // Only poll if we have orders array initialized (means component is mounted properly)
+    pollInterval = setInterval(() => {
+      if (isActive) {
+        fetchAvailableJobs(true); // silent=true to avoid spamming logs
+      }
     }, 5000);
+    
+    const handleLogout = () => {
+      console.log('[AvailableOrders] 🛑 Logout detected - stopping polling');
+      isActive = false;
+      if (pollInterval) clearInterval(pollInterval);
+    };
+    
+    window.addEventListener('user:logout', handleLogout);
 
     return () => {
       console.log('[AvailableOrders] 🛑 Stopping auto-polling');
-      clearInterval(pollInterval);
+      isActive = false;
+      if (pollInterval) clearInterval(pollInterval);
+      window.removeEventListener('user:logout', handleLogout);
     };
   }, []); // Empty deps - run once on mount
 

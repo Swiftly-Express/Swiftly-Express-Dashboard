@@ -41,7 +41,7 @@ class PushNotificationService {
                 console.log('[PushNotifications] ✅ Permission granted!');
                 return true;
             } else {
-                console.warn('[PushNotifications] Permission denied');
+                console.warn('[PushNotifications] ❌ Permission denied');
                 return false;
             }
         } catch (error) {
