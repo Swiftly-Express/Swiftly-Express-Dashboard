@@ -1274,12 +1274,12 @@ const DeliveryCard = ({
         </YummyText>
 
         {showMapFull && (
-          <div className="fixed inset-0 bg-black/70 flex items-start justify-center" style={{ zIndex: 99999 }}>
-            <div className="relative w-full h-full max-w-4xl bg-white">
+          <div className="fixed inset-0 bg-black/70 flex items-center justify-center" style={{ zIndex: 99999 }}>
+            <div className="relative w-full h-full md:max-w-4xl bg-white">
               <button
                 onClick={closeMap}
                 aria-label="Close map"
-                className="absolute top-4 right-4 bg-white rounded-full p-2 shadow-lg flex items-center justify-center hover:bg-gray-100 transition-colors"
+                className="absolute top-20 md:top-4 right-4 bg-white rounded-full p-2 shadow-lg flex items-center justify-center hover:bg-gray-100 transition-colors"
                 style={{
                   width: 44,
                   height: 44,
