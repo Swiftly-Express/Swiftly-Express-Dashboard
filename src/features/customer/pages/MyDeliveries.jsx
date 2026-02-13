@@ -668,7 +668,7 @@ Amount: ₦${delivery.amount || delivery.price || delivery.total || '0.00'}
           {formatDate(delivery.createdAt || delivery.bookedDate)}
         </td>
         <td className="py-4 px-4 text-sm text-[#0A0A0A]">
-          {isCancelled 
+          {isCancelled
             ? formatDate(delivery.cancelledAt || delivery.updatedAt)
             : formatDate(delivery.deliveredAt || delivery.deliveredDate)
           }
