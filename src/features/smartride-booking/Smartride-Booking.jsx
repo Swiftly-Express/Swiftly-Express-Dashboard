@@ -2,7 +2,8 @@
 
 import React, { useState, useRef, useEffect } from 'react';
 import { Calendar, Bike, Phone, MessageCircle, Package, CheckCircle, X } from 'lucide-react';
-import { IonPage, IonContent, IonToast, useIonRouter } from '@ionic/react';
+import { IonPage, IonContent, IonToast, useIonRouter, IonIcon } from '@ionic/react';
+import { informationCircleOutline } from 'ionicons/icons';
 import Button from '../../components/Button';
 import { YummyText } from '../../components/YummyText';
 import Breadcrumb from '../../components/Breadcrumb';
@@ -1877,7 +1878,15 @@ export default function SmartRideBooking({ embedMode = false, initialData = {}, 
                                             </div>
 
                                             <div>
-                                                <label className="block text-sm font-medium text-[#0F172A] mb-2">Pickup Address</label>
+                                                <div className="flex items-center gap-2 mb-2">
+                                                    <label className="block text-sm font-medium text-[#0F172A]">Pickup Address</label>
+                                                    <div className="group relative">
+                                                        <IonIcon icon={informationCircleOutline} className="text-[#64748B] w-4 h-4 cursor-help" />
+                                                        <div className="absolute left-0 bottom-full mb-2 hidden group-hover:block w-64 p-2 bg-gray-900 text-white text-xs rounded-lg shadow-lg z-50">
+                                                            Please enter a precise location (e.g., street name, building number, landmark) for accurate pickup.
+                                                        </div>
+                                                    </div>
+                                                </div>
                                                 <GoogleMapsAutocomplete
                                                     value={formData.pickupAddress}
                                                     onChange={(val) => setFormData({ ...formData, pickupAddress: val })}
@@ -1938,7 +1947,15 @@ export default function SmartRideBooking({ embedMode = false, initialData = {}, 
                                             </div>
 
                                             <div>
-                                                <label className="block text-sm font-medium text-[#0F172A] mb-2">Delivery Address</label>
+                                                <div className="flex items-center gap-2 mb-2">
+                                                    <label className="block text-sm font-medium text-[#0F172A]">Delivery Address</label>
+                                                    <div className="group relative">
+                                                        <IonIcon icon={informationCircleOutline} className="text-[#64748B] w-4 h-4 cursor-help" />
+                                                        <div className="absolute left-0 bottom-full mb-2 hidden group-hover:block w-64 p-2 bg-gray-900 text-white text-xs rounded-lg shadow-lg z-50">
+                                                            Please enter a precise location (e.g., street name, building number, landmark) for accurate delivery.
+                                                        </div>
+                                                    </div>
+                                                </div>
                                                 <GoogleMapsAutocomplete
                                                     value={formData.deliveryAddress}
                                                     onChange={(val) => setFormData({ ...formData, deliveryAddress: val })}

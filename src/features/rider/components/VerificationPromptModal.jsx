@@ -680,7 +680,15 @@ const VerificationPromptModal = ({ isOpen, onClose, previousFeedback }) =>
                   </div>
 
                   <div>
-                    <label className="block text-sm font-medium text-[#0F172A] mb-2 mt-3">Address *</label>
+                    <div className="flex items-center gap-2 mb-2 mt-3">
+                      <label className="block text-sm font-medium text-[#0F172A]">Address *</label>
+                      <div className="group relative">
+                        <IonIcon icon={informationCircleOutline} className="text-[#64748B] w-4 h-4 cursor-help" />
+                        <div className="absolute left-0 bottom-full mb-2 hidden group-hover:block w-64 p-2 bg-gray-900 text-white text-xs rounded-lg shadow-lg z-50">
+                          Please enter a precise location (e.g., street name, building number, landmark) for accurate delivery service.
+                        </div>
+                      </div>
+                    </div>
                     <GoogleMapsAutocomplete
                       value={formData.streetAddress}
                       onChange={(value) => handleInputChange('streetAddress', value)}
