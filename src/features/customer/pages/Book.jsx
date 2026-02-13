@@ -1061,9 +1061,9 @@ const Book = () => {
                             Delivery Address
                           </label>
                           <div className="group relative">
-                            <IonIcon icon={informationCircleOutline} className="text-[#64748B] w-4 h-4 cursor-help" />
+                            <IonIcon icon={informationCircleOutline} className="text-[#64748B] w-4 h-4 mt-2" />
                             <div className="absolute left-0 bottom-full mb-2 hidden group-hover:block w-64 p-2 bg-gray-900 text-white text-xs rounded-lg shadow-lg z-50">
-                              Please enter a precise location (e.g., street name, building number, landmark) for accurate delivery.
+                              Please enter a precise location for accurate delivery.
                             </div>
                           </div>
                         </div>
