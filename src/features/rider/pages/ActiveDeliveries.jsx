@@ -1279,10 +1279,18 @@ const DeliveryCard = ({
               <button
                 onClick={closeMap}
                 aria-label="Close map"
-                className="fixed top-4 right-4 z-[100000] bg-white rounded-full p-2 shadow-lg flex items-center justify-center"
-                style={{ width: 44, height: 44, color: '#0A0A0A', fontSize: 20, lineHeight: '20px' }}
+                className="absolute top-4 right-4 bg-white rounded-full p-2 shadow-lg flex items-center justify-center hover:bg-gray-100 transition-colors"
+                style={{
+                  width: 44,
+                  height: 44,
+                  color: '#0A0A0A',
+                  fontSize: 24,
+                  lineHeight: '24px',
+                  zIndex: 10000,
+                  border: '2px solid #E5E7EB'
+                }}
               >
-                ×
+                ✕
               </button>
               <div className="w-full h-full">
                 <TrackingMap
