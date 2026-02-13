@@ -333,7 +333,6 @@ const MobileCompletedCard = ({ delivery }) => {
   const history = useHistory();
   const [isOpen, setIsOpen] = useState(false);
   const [showCopyToast, setShowCopyToast] = useState(false);
-  const [showActionsMenu, setShowActionsMenu] = useState(false);
   const paymentStatus = (delivery.paymentStatus || delivery.payment?.status || '').toLowerCase();
 
   const handleToggleDetails = () => {
@@ -462,63 +461,6 @@ Amount: ₦${delivery.amount || delivery.price || delivery.total || '0.00'}
             {delivery.status || 'Delivered'}
           </span>
         </div>
-        <div className="relative flex items-center ml-2">
-          <button
-            onClick={(e) => {
-              e.stopPropagation();
-              setShowActionsMenu(!showActionsMenu);
-            }}
-            className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
-            title="Actions"
-          >
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-              <circle cx="12" cy="5" r="2" fill="#64748B" />
-              <circle cx="12" cy="12" r="2" fill="#64748B" />
-              <circle cx="12" cy="19" r="2" fill="#64748B" />
-            </svg>
-          </button>
-
-          {showActionsMenu && (
-            <>
-              <div
-                className="fixed inset-0 z-10"
-                onClick={(e) => {
-                  e.stopPropagation();
-                  setShowActionsMenu(false);
-                }}
-              />
-              <div className="absolute right-0 top-full mt-2 w-48 bg-white rounded-lg shadow-lg border border-gray-200 py-1 z-20">
-                <button
-                  onClick={(e) => {
-                    handleTrack(e);
-                    setShowActionsMenu(false);
-                  }}
-                  className="w-full px-4 py-2 text-left text-sm text-[#0F172A] hover:bg-gray-50 flex items-center gap-3"
-                >
-                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                    <circle cx="12" cy="12" r="10" />
-                    <polyline points="12 6 12 12 16 14" />
-                  </svg>
-                  Track Package
-                </button>
-                <button
-                  onClick={(e) => {
-                    handleDownload(e);
-                    setShowActionsMenu(false);
-                  }}
-                  className="w-full px-4 py-2 text-left text-sm text-[#0F172A] hover:bg-gray-50 flex items-center gap-3"
-                >
-                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                    <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
-                    <polyline points="7 10 12 15 17 10" />
-                    <line x1="12" y1="15" x2="12" y2="3" />
-                  </svg>
-                  Download Receipt
-                </button>
-              </div>
-            </>
-          )}
-        </div>
       </div>
 
       {isOpen && (
@@ -575,7 +517,6 @@ const CompletedDeliveryRow = ({ delivery, isCancelled = false }) => {
   const history = useHistory();
   const [isOpen, setIsOpen] = useState(false);
   const [showCopyToast, setShowCopyToast] = useState(false);
-  const [showActionsMenu, setShowActionsMenu] = useState(false);
 
   const hasRated = delivery.rating || delivery.customerRating || delivery.hasRated;
 
@@ -685,91 +626,12 @@ Amount: ₦${delivery.amount || delivery.price || delivery.total || '0.00'}
                 ⭐ {delivery.rating || delivery.customerRating}
               </span>
             )}
-            <div className="relative">
-              <button
-                onClick={(e) => {
-                  e.stopPropagation();
-                  setShowActionsMenu(!showActionsMenu);
-                }}
-                className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
-                title="Actions"
-              >
-                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                  <circle cx="12" cy="5" r="2" fill="#64748B" />
-                  <circle cx="12" cy="12" r="2" fill="#64748B" />
-                  <circle cx="12" cy="19" r="2" fill="#64748B" />
-                </svg>
-              </button>
-
-              {showActionsMenu && (
-                <>
-                  <div
-                    className="fixed inset-0 z-10"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      setShowActionsMenu(false);
-                    }}
-                  />
-                  <div className="absolute right-0 mt-2 w-48 bg-white rounded-lg shadow-lg border border-gray-200 py-1 z-20">
-                    {isCancelled ? (
-                      <button
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          // Handle delete action
-                          console.log('Delete cancelled order:', delivery._id || delivery.id);
-                          setShowActionsMenu(false);
-                        }}
-                        className="w-full px-4 py-2 text-left text-sm text-red-600 hover:bg-red-50 flex items-center gap-3"
-                      >
-                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                          <polyline points="3 6 5 6 21 6" />
-                          <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" />
-                          <line x1="10" y1="11" x2="10" y2="17" />
-                          <line x1="14" y1="11" x2="14" y2="17" />
-                        </svg>
-                        Delete
-                      </button>
-                    ) : (
-                      <>
-                        <button
-                          onClick={(e) => {
-                            handleTrack(e);
-                            setShowActionsMenu(false);
-                          }}
-                          className="w-full px-4 py-2 text-left text-sm text-[#0F172A] hover:bg-gray-50 flex items-center gap-3"
-                        >
-                          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                            <circle cx="12" cy="12" r="10" />
-                            <polyline points="12 6 12 12 16 14" />
-                          </svg>
-                          Track Package
-                        </button>
-                        <button
-                          onClick={(e) => {
-                            handleDownload(e);
-                            setShowActionsMenu(false);
-                          }}
-                          className="w-full px-4 py-2 text-left text-sm text-[#0F172A] hover:bg-gray-50 flex items-center gap-3"
-                        >
-                          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                            <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
-                            <polyline points="7 10 12 15 17 10" />
-                            <line x1="12" y1="15" x2="12" y2="3" />
-                          </svg>
-                          Download Receipt
-                        </button>
-                      </>
-                    )}
-                  </div>
-                </>
-              )}
-            </div>
           </div>
         </td>
       </tr>
       {isOpen && (
         <tr className="bg-gray-50">
-          <td colSpan="5" className="py-4 px-4">
+          <td colSpan="4" className="py-4 px-4">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
                 <div className="text-xs font-medium text-[#64748B] mb-1">Package ID</div>
@@ -1300,7 +1162,6 @@ const MyDeliveries = () => {
                             <th className="text-left py-4 px-4 text-sm font-medium text-[#0F172A]">Booked Date</th>
                             <th className="text-left py-4 px-4 text-sm font-medium text-[#0F172A]">Delivered Date</th>
                             <th className="text-left py-4 px-4 text-sm font-medium text-[#0F172A]">Status</th>
-                            <th className="text-center py-4 px-4 text-sm font-medium text-[#0F172A]">Actions</th>
                           </tr>
                         </thead>
                         <tbody>
@@ -1359,7 +1220,6 @@ const MyDeliveries = () => {
                             <th className="text-left py-4 px-4 text-sm font-medium text-[#0F172A]">Booked Date</th>
                             <th className="text-left py-4 px-4 text-sm font-medium text-[#0F172A]">Cancelled Date</th>
                             <th className="text-left py-4 px-4 text-sm font-medium text-[#0F172A]">Status</th>
-                            <th className="text-center py-4 px-4 text-sm font-medium text-[#0F172A]">Actions</th>
                           </tr>
                         </thead>
                         <tbody>

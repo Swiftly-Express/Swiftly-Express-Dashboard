@@ -9,6 +9,7 @@ import DeliveryChat from '../../../components/DeliveryChat';
 // RatingModal is mounted globally in CustomerLayout and triggered via window events
 import { getDeliveryByTracking, rateDriver } from '../../../utils/authApi';
 import socketService from '../../../services/socket.service'; // NEW
+import { playNotificationSound } from '../../../utils/notificationSound';
 import BlockIcon from '../../../icons/Blockicon';
 import CheckIcon from '../../../icons/Checkicon';
 import LocationIcon from '../../../icons/Locationicon';
