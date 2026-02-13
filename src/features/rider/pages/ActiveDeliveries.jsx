@@ -1275,7 +1275,7 @@ const DeliveryCard = ({
 
         {showMapFull && (
           <div className="fixed inset-0 bg-black/70 flex items-center justify-center" style={{ zIndex: 99999 }}>
-            <div className="relative w-full h-full md:max-w-4xl bg-white">
+            <div className="relative w-full h-full md:w-[calc(100%-280px)] md:h-[calc(100%-40px)] md:ml-[260px] md:mr-5 md:my-5 bg-white md:rounded-xl overflow-hidden">
               <button
                 onClick={closeMap}
                 aria-label="Close map"
