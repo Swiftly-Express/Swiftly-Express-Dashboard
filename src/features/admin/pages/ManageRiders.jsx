@@ -60,7 +60,14 @@ const ManageRiders = () =>
       console.log('[ManageRiders] Delivery status changed, refreshing rider data...');
       fetchRiders();
     };
+    const handleRiderStatusChanged = () =>
+    {
+      console.log('[ManageRiders] Rider status/availability changed, refreshing rider data...');
+      fetchRiders();
+    };
     window.addEventListener('delivery:statusChanged', handleDeliveryStatusChanged);
+    window.addEventListener('rider:statusChanged', handleRiderStatusChanged);
+    window.addEventListener('rider:availabilityChanged', handleRiderStatusChanged);
     const handleResize = () => setIsMobile(window.innerWidth < 768);
     window.addEventListener('resize', handleResize);
     return () =>
@@ -157,24 +164,29 @@ const ManageRiders = () =>
           ? 'bg-red-100 text-red-800'
           : 'bg-gray-100 text-gray-800';
 
-      // Vehicle and license extraction from KYC/driver object
-      let vehicle = 'Not specified';
-      let license = 'N/A';
-      // Try to extract vehicle from multiple possible locations
-      if (rider.vehicleType) vehicle = rider.vehicleType;
-      else if (typeof rider.vehicle === 'string' && rider.vehicle) vehicle = rider.vehicle;
-      else if (rider.vehicle && typeof rider.vehicle === 'object') {
-        vehicle = rider.vehicle.type || rider.vehicle.vehicleType || rider.vehicle.name || rider.vehicle.model || rider.vehicle.make || vehicle;
-      }
-      else if (profile.vehicleType) vehicle = profile.vehicleType;
-      else if (typeof profile.vehicle === 'string' && profile.vehicle) vehicle = profile.vehicle;
-      else if (profile.vehicle && typeof profile.vehicle === 'object') {
-        vehicle = profile.vehicle.type || profile.vehicle.vehicleType || profile.vehicle.name || profile.vehicle.model || profile.vehicle.make || vehicle;
-      }
-      else if (rider.vehicleDetails?.type) vehicle = rider.vehicleDetails.type;
-      else if (rider.bikeType) vehicle = rider.bikeType;
-      else if (profile.bikeType) vehicle = profile.bikeType;
+      // Full vehicle object from API (for modal and details)
+      const vehicleObj = (rider.vehicle && typeof rider.vehicle === 'object')
+        ? rider.vehicle
+        : (profile.vehicle && typeof profile.vehicle === 'object')
+          ? profile.vehicle
+          : null;
 
+      // Display string for vehicle type (table/card)
+      let vehicleDisplay = 'Not specified';
+      if (vehicleObj?.type) vehicleDisplay = vehicleObj.type;
+      else if (vehicleObj?.vehicleType) vehicleDisplay = vehicleObj.vehicleType;
+      else if (vehicleObj?.name) vehicleDisplay = vehicleObj.name;
+      else if (vehicleObj?.model) vehicleDisplay = vehicleObj.model;
+      else if (vehicleObj?.make) vehicleDisplay = vehicleObj.make;
+      else if (rider.vehicleType) vehicleDisplay = rider.vehicleType;
+      else if (typeof rider.vehicle === 'string' && rider.vehicle) vehicleDisplay = rider.vehicle;
+      else if (profile.vehicleType) vehicleDisplay = profile.vehicleType;
+      else if (typeof profile.vehicle === 'string' && profile.vehicle) vehicleDisplay = profile.vehicle;
+      else if (rider.vehicleDetails?.type) vehicleDisplay = rider.vehicleDetails.type;
+      else if (rider.bikeType) vehicleDisplay = rider.bikeType;
+      else if (profile.bikeType) vehicleDisplay = profile.bikeType;
+
+      let license = 'N/A';
       if (rider.licenseNumber) license = rider.licenseNumber;
       else if (rider.license) license = rider.license;
       else if (profile.licenseNumber) license = profile.licenseNumber;
@@ -187,7 +199,8 @@ const ManageRiders = () =>
         joined: formatDate(profile.createdAt || profile.joinedDate || profile.registeredAt || rider.createdAt),
         email: profile.email || profile.contactEmail || rider.email || 'N/A',
         phone: profile.phone || profile.phoneNumber || profile.mobile || profile.contact || profile.tel || profile.telephone || rider.phone || rider.phoneNumber || rider.mobile || 'N/A',
-        vehicle,
+        vehicle: vehicleObj,
+        vehicleType: vehicleDisplay,
         license,
         deliveries: formatNumber(
           rider.totalDeliveries ||
@@ -537,6 +550,8 @@ const ManageRiders = () =>
                           <p className="text-gray-500">No riders found</p>
                         </div>
                       ) : (
+
+
                         paginatedRiders.map((rider, idx) => (
                           <div
                             key={rider.id || idx}
@@ -548,7 +563,7 @@ const ManageRiders = () =>
                                 <YummyText className="text-sm font-medium text-gray-900 truncate">{rider.name}</YummyText>
                                 <div className="text-xs text-gray-600 truncate mt-1">{rider.email}</div>
                                 <div className="text-xs text-gray-600 truncate mt-1">{rider.phone}</div>
-                                <div className="text-xs text-gray-600 truncate mt-1">{rider.vehicle}</div>
+                                <div className="text-xs text-gray-600 truncate mt-1">{rider.vehicle?.type ?? rider.vehicleType ?? 'Not specified'}</div>
                               </div>
                               <div className="text-right flex-shrink-0">
                                 <YummyText className="text-sm text-gray-600">{rider.id}</YummyText>
@@ -622,7 +637,7 @@ const ManageRiders = () =>
                                 </td>
                               </tr>
                             ) : (
-                              paginatedRiders.map((rider, index) => (
+                              (console.log('[ManageRiders] paginatedRiders', paginatedRiders), paginatedRiders.map((rider, index) => (
                                 <tr
                                   key={index}
                                   onClick={() => openRiderDetail(rider)}
@@ -678,9 +693,9 @@ const ManageRiders = () =>
                                   <td className="w-[20%] px-1 text-center py-4">
                                     <div>
                                       <div className="flex items-center justify-center text-xs text-gray-900 font-medium">
-                                        <span className="truncate">{rider.vehicle}</span>
+                                        <span className="truncate">{rider.vehicle?.type ?? rider.vehicleType ?? 'Not specified'}</span>
                                       </div>
-                                      <YummyText className="text-xs text-gray-500 truncate">{rider.license}</YummyText>
+                                      <YummyText className="text-xs text-gray-500 truncate">{rider.vehicle?.makeModel ?? rider.vehicleType ?? 'N/A'}</YummyText>
                                     </div>
                                   </td>
                                   <td className="w-[10%] px-5 py-4 whitespace-nowrap">
@@ -710,7 +725,7 @@ const ManageRiders = () =>
                                     </button>
                                   </td>
                                 </tr>
-                              ))
+                              )))
                             )}
                           </tbody>
                         </table>
