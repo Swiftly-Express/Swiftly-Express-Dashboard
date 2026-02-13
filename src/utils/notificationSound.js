@@ -92,41 +92,19 @@ class NotificationSound {
     stop() {
         console.log('[NotificationSound] 🛑 STOP CALLED');
 
-        // Clear playing flag FIRST to prevent any new plays
         this.isPlaying = false;
 
-        // Stop the interval loop
         if (this.beepInterval) {
             clearInterval(this.beepInterval);
             this.beepInterval = null;
-            console.log('[NotificationSound] ✅ Interval cleared');
         }
 
-        // Forcefully stop audio
         if (this.audio) {
-            try {
-                this.audio.pause();
-                this.audio.currentTime = 0;
-                this.audio.volume = 0;
-                // Force stop by removing src and reloading
-                this.audio.src = '';
-                this.audio.load();
-                console.log('[NotificationSound] ✅ Audio forcefully stopped');
-            } catch (e) {
-                console.warn('[NotificationSound] Error stopping audio:', e);
-            }
-
-            // Recreate audio element for next play
-            setTimeout(() => {
-                if (!this.isPlaying) {
-                    this.audio = new Audio('/notification.mp3');
-                    this.audio.volume = 1.0;
-                    this.audio.load();
-                }
-            }, 100);
+            this.audio.pause();
+            this.audio.currentTime = 0;
         }
 
-        console.log('[NotificationSound] ✅ Stopped completely');
+        console.log('[NotificationSound] ✅ Stopped');
     }
 }
 
