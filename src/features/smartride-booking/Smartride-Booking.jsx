@@ -630,16 +630,66 @@ export default function SmartRideBooking({ embedMode = false, initialData = {}, 
             }
         };
 
-        const handleStatusChanged = (e) => {
+        const handleStatusChanged = async (e) => {
             const dId = e?.detail?.deliveryId || e?.detail?.id || e?.detail?.delivery?._id;
             if (!dId) return;
-            if (String(dId) === String(deliveryId)) refreshDelivery(deliveryId);
+            if (String(dId) === String(deliveryId)) {
+                await refreshDelivery(deliveryId);
+                
+                // Check if delivery is completed and trigger rating modal
+                const newStatus = e?.detail?.newStatus || e?.detail?.status;
+                if (newStatus) {
+                    const statusLower = newStatus.toLowerCase();
+                    if (statusLower === 'delivered' || statusLower === 'completed') {
+                        try {
+                            const resp = await getDeliveryById(deliveryId);
+                            const delivery = resp?.data?.delivery || resp?.data || resp;
+                            const alreadyRated = delivery?.rating || delivery?.customerRating || delivery?.hasRated;
+                            
+                            if (!alreadyRated) {
+                                console.log('[SmartRide] 🔔 Delivery completed via event! Showing rating modal in 2s');
+                                setTimeout(() => {
+                                    console.log('[SmartRide] 🚀 Dispatching rating:show event');
+                                    window.dispatchEvent(new CustomEvent('rating:show', { detail: delivery }));
+                                }, 2000);
+                            }
+                        } catch (err) {
+                            console.warn('[SmartRide] Failed to check rating status:', err);
+                        }
+                    }
+                }
+            }
         };
 
-        const handleDeliveryUpdated = (e) => {
+        const handleDeliveryUpdated = async (e) => {
             const dId = e?.detail?.deliveryId || e?.detail?.id || e?.detail?.delivery?._id;
             if (!dId) return;
-            if (String(dId) === String(deliveryId)) refreshDelivery(deliveryId);
+            if (String(dId) === String(deliveryId)) {
+                await refreshDelivery(deliveryId);
+                
+                // Check if delivery is completed and trigger rating modal
+                const newStatus = e?.detail?.newStatus || e?.detail?.status;
+                if (newStatus) {
+                    const statusLower = newStatus.toLowerCase();
+                    if (statusLower === 'delivered' || statusLower === 'completed') {
+                        try {
+                            const resp = await getDeliveryById(deliveryId);
+                            const delivery = resp?.data?.delivery || resp?.data || resp;
+                            const alreadyRated = delivery?.rating || delivery?.customerRating || delivery?.hasRated;
+                            
+                            if (!alreadyRated) {
+                                console.log('[SmartRide] 🔔 Delivery completed via updated event! Showing rating modal in 2s');
+                                setTimeout(() => {
+                                    console.log('[SmartRide] 🚀 Dispatching rating:show event');
+                                    window.dispatchEvent(new CustomEvent('rating:show', { detail: delivery }));
+                                }, 2000);
+                            }
+                        } catch (err) {
+                            console.warn('[SmartRide] Failed to check rating status:', err);
+                        }
+                    }
+                }
+            }
         };
 
         window.addEventListener('delivery:statusChanged', handleStatusChanged);
@@ -745,6 +795,19 @@ export default function SmartRideBooking({ embedMode = false, initialData = {}, 
                                 setRiderDetails(merged);
                                 try { localStorage.setItem('smartride_rider_details', JSON.stringify(merged)); } catch (e) { }
                                 try { setJSONCookie('smartride_rider_details', merged); } catch (e) { }
+                            }
+                            
+                            // Show rating modal if delivery is completed and not yet rated
+                            const statusLower = (delivery.status || '').toLowerCase();
+                            const isCompleted = statusLower === 'delivered' || statusLower === 'completed';
+                            const alreadyRated = delivery.rating || delivery.customerRating || delivery.hasRated;
+                            
+                            if (isCompleted && !alreadyRated) {
+                                console.log('[SmartRide] 🔔 Delivery completed! Showing rating modal in 2s');
+                                setTimeout(() => {
+                                    console.log('[SmartRide] 🚀 Dispatching rating:show event for delivery:', delivery._id || delivery.id);
+                                    window.dispatchEvent(new CustomEvent('rating:show', { detail: delivery }));
+                                }, 2000);
                             }
                         }
                     } catch (e) { console.warn('[SmartRide] Failed to refresh on status update:', e); }
@@ -960,8 +1023,9 @@ export default function SmartRideBooking({ embedMode = false, initialData = {}, 
                             try { socketService.joinRoom(room); } catch (e) { }
                         } catch (e) { console.warn('[SmartRide] Failed to join stored delivery room:', e); }
 
-                        // Restore to appropriate step based on delivery status and stored step
-                        if (status === 'accepted' || status === 'in_progress' || status === 'picked-up' || status === 'in-transit' || storedStep === 'rider-details') {
+                        // Restore to appropriate step based on stored step first, then delivery status
+                        // Prioritize stored step to preserve user's last viewed screen on refresh
+                        if (storedStep === 'rider-details' || status === 'accepted' || status === 'in_progress' || status === 'picked-up' || status === 'in-transit') {
                             try {
                                 const rd = delivery?.rider || delivery?.assignedDriver || delivery?.driver || null;
                                 let finalRd = rd;
@@ -982,6 +1046,10 @@ export default function SmartRideBooking({ embedMode = false, initialData = {}, 
                                         if (storedRd) {
                                             const parsedRd = JSON.parse(storedRd);
                                             setRiderDetails(parsedRd);
+                                        } else {
+                                            // Also check cookie fallback
+                                            const cookieRd = getJSONCookie('smartride_rider_details');
+                                            if (cookieRd) setRiderDetails(cookieRd);
                                         }
                                     } catch (e) { }
                                 }

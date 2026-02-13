@@ -157,20 +157,20 @@ const RatingModal = ({ isOpen: controlledOpen, onClose: controlledClose, deliver
     const driverName = delivery?.driver?.name || delivery?.driver?.fullName || delivery?.driverName || 'Your Rider';
 
     return (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+        <div className="fixed inset-0 z-[100000] flex items-center justify-center" style={{ paddingTop: '80px', paddingBottom: '20px', paddingLeft: '20px', paddingRight: '20px' }}>
             {/* Backdrop with blur */}
             <div
                 className="absolute inset-0"
                 style={{
-                    background: 'rgba(0, 0, 0, 0.4)',
-                    backdropFilter: 'blur(8px)',
-                    WebkitBackdropFilter: 'blur(8px)'
+                    background: 'rgba(0, 0, 0, 0.5)',
+                    backdropFilter: 'blur(10px)',
+                    WebkitBackdropFilter: 'blur(10px)'
                 }}
                 onClick={!submitting && !showSuccess ? close : undefined}
             />
 
             {/* Modal with glassmorphism */}
-            <div className="relative w-full max-w-lg mx-auto">
+            <div className="relative w-full max-w-lg mx-auto" style={{ maxHeight: 'calc(100vh - 100px)', overflowY: 'auto' }}>
                 <div
                     className="relative rounded-3xl shadow-2xl w-full overflow-hidden border"
                     style={{
