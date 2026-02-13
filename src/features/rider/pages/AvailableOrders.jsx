@@ -559,9 +559,9 @@ const AvailableOrders = () => {
       console.log('[AvailableOrders] 🚪 User logging out - stopping notification sound');
       stopNotificationSound();
     };
-    
+
     window.addEventListener('user:logout', handleLogout);
-    
+
     // On unmount, also stop sound and remove listener
     return () => {
       console.log('[AvailableOrders] 🚪 User left page - stopping notification sound');
@@ -574,22 +574,22 @@ const AvailableOrders = () => {
   useEffect(() => {
     let pollInterval;
     let isActive = true;
-    
+
     console.log('[AvailableOrders] 🔄 Starting auto-polling for new orders (every 5s)');
-    
+
     // Only poll if we have orders array initialized (means component is mounted properly)
     pollInterval = setInterval(() => {
       if (isActive) {
         fetchAvailableJobs(true); // silent=true to avoid spamming logs
       }
     }, 5000);
-    
+
     const handleLogout = () => {
       console.log('[AvailableOrders] 🛑 Logout detected - stopping polling');
       isActive = false;
       if (pollInterval) clearInterval(pollInterval);
     };
-    
+
     window.addEventListener('user:logout', handleLogout);
 
     return () => {

@@ -131,12 +131,12 @@ const DeliveryCard = ({ delivery, onCancelDelivery }) => {
       onClick={handleCardClick}
     >
       {/* Mobile: Make Payment button at top-right (only for online/bank, not cash, and not cancelled) */}
-      {(paymentStatus === 'pending' || paymentStatus === 'unpaid' || paymentStatus === 'failed') && 
-       delivery.status?.toLowerCase() !== 'cancelled' && 
-       delivery.status?.toLowerCase() !== 'canceled' && (() => {
-        const method = (delivery.payment?.method || delivery.paymentMethod || delivery.payment?.paymentMethod || delivery.method || '').toString().toLowerCase();
-        return method !== 'cash' && method !== 'cash_on_delivery';
-      })() && (
+      {(paymentStatus === 'pending' || paymentStatus === 'unpaid' || paymentStatus === 'failed') &&
+        delivery.status?.toLowerCase() !== 'cancelled' &&
+        delivery.status?.toLowerCase() !== 'canceled' && (() => {
+          const method = (delivery.payment?.method || delivery.paymentMethod || delivery.payment?.paymentMethod || delivery.method || '').toString().toLowerCase();
+          return method !== 'cash' && method !== 'cash_on_delivery';
+        })() && (
           <button
             onClick={(e) => {
               e.stopPropagation();
@@ -176,12 +176,12 @@ const DeliveryCard = ({ delivery, onCancelDelivery }) => {
                 })()}
 
                 {/* Desktop/Tablet: show Make Payment tag when unpaid (only for online/bank, not cash, and not cancelled) */}
-                {(paymentStatus === 'pending' || paymentStatus === 'unpaid' || paymentStatus === 'failed') && 
-                 delivery.status?.toLowerCase() !== 'cancelled' && 
-                 delivery.status?.toLowerCase() !== 'canceled' && (() => {
-                  const method = (delivery.payment?.method || delivery.paymentMethod || delivery.payment?.paymentMethod || delivery.method || '').toString().toLowerCase().trim();
-                  return method !== 'cash' && method !== 'cash_on_delivery' && method !== 'cod';
-                })() && (
+                {(paymentStatus === 'pending' || paymentStatus === 'unpaid' || paymentStatus === 'failed') &&
+                  delivery.status?.toLowerCase() !== 'cancelled' &&
+                  delivery.status?.toLowerCase() !== 'canceled' && (() => {
+                    const method = (delivery.payment?.method || delivery.paymentMethod || delivery.payment?.paymentMethod || delivery.method || '').toString().toLowerCase().trim();
+                    return method !== 'cash' && method !== 'cash_on_delivery' && method !== 'cod';
+                  })() && (
                     <button
                       onClick={(e) => {
                         e.stopPropagation();
@@ -424,12 +424,12 @@ Amount: ₦${delivery.amount || delivery.price || delivery.total || '0.00'}
       className="bg-white rounded-2xl p-4 mb-3 border border-gray-100 relative cursor-pointer hover:shadow-lg transition-shadow"
       onClick={handleCardClick}
     >
-      {(paymentStatus === 'pending' || paymentStatus === 'unpaid' || paymentStatus === 'failed') && 
-       delivery.status?.toLowerCase() !== 'cancelled' && 
-       delivery.status?.toLowerCase() !== 'canceled' && (() => {
-        const method = (delivery.payment?.method || delivery.paymentMethod || delivery.payment?.paymentMethod || delivery.method || '').toString().toLowerCase();
-        return method !== 'cash' && method !== 'cash_on_delivery';
-      })() && (
+      {(paymentStatus === 'pending' || paymentStatus === 'unpaid' || paymentStatus === 'failed') &&
+        delivery.status?.toLowerCase() !== 'cancelled' &&
+        delivery.status?.toLowerCase() !== 'canceled' && (() => {
+          const method = (delivery.payment?.method || delivery.paymentMethod || delivery.payment?.paymentMethod || delivery.method || '').toString().toLowerCase();
+          return method !== 'cash' && method !== 'cash_on_delivery';
+        })() && (
           <button
             onClick={(e) => {
               e.stopPropagation();
