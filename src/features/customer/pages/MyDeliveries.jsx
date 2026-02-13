@@ -797,6 +797,7 @@ const MyDeliveries = () => {
   const [activeTab, setActiveTab] = useState('active');
   const [activeDeliveries, setActiveDeliveries] = useState([]);
   const [completedDeliveries, setCompletedDeliveries] = useState([]);
+  const [cancelledDeliveries, setCancelledDeliveries] = useState([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [page, setPage] = useState(1);
@@ -1066,8 +1067,8 @@ const MyDeliveries = () => {
 
       const active = validDeliveries.filter((d) => {
         const status = d?.status?.toLowerCase() || 'pending';
-        // Consider only delivered/completed as completed; everything else (including cancelled) remains visible in Active
-        return status !== 'delivered' && status !== 'completed';
+        // Exclude delivered, completed, cancelled, and canceled from active
+        return status !== 'delivered' && status !== 'completed' && status !== 'cancelled' && status !== 'canceled';
       });
 
       const completed = validDeliveries.filter((d) => {
@@ -1075,10 +1076,16 @@ const MyDeliveries = () => {
         return status === 'delivered' || status === 'completed';
       });
 
-      console.log('[MyDeliveries] Active:', active.length, 'Completed:', completed.length);
+      const cancelled = validDeliveries.filter((d) => {
+        const status = d?.status?.toLowerCase() || '';
+        return status === 'cancelled' || status === 'canceled';
+      });
+
+      console.log('[MyDeliveries] Active:', active.length, 'Completed:', completed.length, 'Cancelled:', cancelled.length);
 
       setActiveDeliveries(active);
       setCompletedDeliveries(completed);
+      setCancelledDeliveries(cancelled);
 
       return validDeliveries; // Return all deliveries
     } catch (err) {
@@ -1177,7 +1184,7 @@ const MyDeliveries = () => {
           <div className="flex items-center gap-2 mb-6 bg-gray-100 p-1 rounded-full w-full md:w-fit">
             <button
               onClick={() => setActiveTab('active')}
-              className={`flex-1 md:flex-none md:px-14 px-6 py-3 md:py-2 whitespace-nowrap rounded-full text-sm font-normal transition-colors ${activeTab === 'active'
+              className={`flex-1 md:flex-none md:px-10 px-4 py-3 md:py-2 whitespace-nowrap rounded-full text-sm font-normal transition-colors ${activeTab === 'active'
                 ? 'text-[#0F172A] bg-white shadow-sm'
                 : 'text-[#64748B]'
                 }`}
@@ -1186,12 +1193,21 @@ const MyDeliveries = () => {
             </button>
             <button
               onClick={() => setActiveTab('completed')}
-              className={`flex-1 md:flex-none md:px-14 px-6 py-3 md:py-2 whitespace-nowrap rounded-full text-sm font-normal transition-colors ${activeTab === 'completed'
+              className={`flex-1 md:flex-none md:px-10 px-4 py-3 md:py-2 whitespace-nowrap rounded-full text-sm font-normal transition-colors ${activeTab === 'completed'
                 ? 'text-[#0F172A] bg-white shadow-sm'
                 : 'text-[#64748B]'
                 }`}
             >
               Completed ({completedDeliveries.length})
+            </button>
+            <button
+              onClick={() => setActiveTab('cancelled')}
+              className={`flex-1 md:flex-none md:px-10 px-4 py-3 md:py-2 whitespace-nowrap rounded-full text-sm font-normal transition-colors ${activeTab === 'cancelled'
+                ? 'text-[#0F172A] bg-white shadow-sm'
+                : 'text-[#64748B]'
+                }`}
+            >
+              Cancelled ({cancelledDeliveries.length})
             </button>
           </div>
 
@@ -1264,6 +1280,65 @@ const MyDeliveries = () => {
                         </thead>
                         <tbody>
                           {completedDeliveries.map((delivery, index) => (
+                            <CompletedDeliveryRow
+                              key={delivery._id || delivery.id || index}
+                              delivery={delivery}
+                            />
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  )}
+                </div>
+              </YummyText>
+            </>
+          )}
+
+          {/* Cancelled Deliveries */}
+          {!loading && activeTab === 'cancelled' && (
+            <>
+              {/* Mobile View */}
+              <div className="block md:hidden">
+                {cancelledDeliveries.length === 0 ? (
+                  <div className="text-center py-12 bg-white rounded-2xl" style={sideBottomShadow}>
+                    <img src="/blockicon.svg" alt="No cancelled" className="w-16 h-16 mx-auto mb-4 opacity-50" />
+                    <p className="text-[#64748B] text-base mb-2">No cancelled deliveries</p>
+                    <p className="text-[#94A3B8] text-sm">Your cancelled orders will appear here</p>
+                  </div>
+                ) : (
+                  cancelledDeliveries.map((delivery, index) => (
+                    <DeliveryCard
+                      key={delivery._id || delivery.id || index}
+                      delivery={delivery}
+                      onCancelDelivery={handleCancelDelivery}
+                    />
+                  ))
+                )}
+              </div>
+
+              {/* Desktop Table */}
+              <YummyText>
+                <div className="hidden md:block bg-white rounded-2xl p-6" style={sideBottomShadow}>
+                  {cancelledDeliveries.length === 0 ? (
+                    <div className="text-center py-12">
+                      <img src="/blockicon.svg" alt="No cancelled" className="w-16 h-16 mx-auto mb-4 opacity-50" />
+                      <p className="text-[#64748B] text-lg mb-2">No cancelled deliveries</p>
+                      <p className="text-[#94A3B8] text-sm">Your cancelled orders will appear here</p>
+                    </div>
+                  ) : (
+                    <div className="overflow-x-auto">
+                      <table className="w-full">
+                        <thead>
+                          <tr className="border-b border-gray-200">
+                            <th className="text-left py-4 px-4 text-sm font-medium text-[#0F172A]">Tracking ID</th>
+                            <th className="text-left py-4 px-4 text-sm font-medium text-[#0F172A]">Booked Date</th>
+                            <th className="text-left py-4 px-4 text-sm font-medium text-[#0F172A]">Cancelled Date</th>
+                            <th className="text-left py-4 px-4 text-sm font-medium text-[#0F172A]">Status</th>
+                            <th className="text-center py-4 px-4 text-sm font-medium text-[#0F172A]">Actions</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {cancelledDeliveries.map((delivery, index) => (
                             <CompletedDeliveryRow
                               key={delivery._id || delivery.id || index}
                               delivery={delivery}
