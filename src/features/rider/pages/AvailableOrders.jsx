@@ -546,7 +546,27 @@ const AvailableOrders = () => {
       }
     };
 
-    requestPermission();
+    // Check current permission status without requesting
+    const checkCurrentPermission = () => {
+      if ('Notification' in window) {
+        const currentPermission = Notification.permission;
+        console.log('[AvailableOrders] 📱 Current notification permission:', currentPermission);
+        setNotificationPermission(currentPermission);
+      }
+    };
+
+    // Initial check
+    checkCurrentPermission();
+
+    // If permission is default (not granted or denied), request it
+    if ('Notification' in window && Notification.permission === 'default') {
+      requestPermission();
+    }
+
+    // Recheck permission every 10 seconds (handles mobile PWA edge cases)
+    const permissionCheckInterval = setInterval(checkCurrentPermission, 10000);
+
+    return () => clearInterval(permissionCheckInterval);
   }, []);
 
   // Stop sound when user visits this page (they've seen the orders) and on unmount
