@@ -844,7 +844,7 @@ const ActiveDeliveries = () => {
                 </div>
                 {activeTab !== 'completed' && (
                   <button
-                    onClick={() => window.location.href = '/rider/available-orders'}
+                    onClick={() => window.location.href = '/rider/available'}
                     className={isMobile ? "bg-[#00B75A] hover:bg-[#00B876] text-white px-6 py-3 rounded-full transition-colors font-medium w-full" : "bg-[#00B75A] hover:bg-[#00B876] text-white px-6 py-3 rounded-full transition-colors font-medium"}
                   >
                     View Available Orders

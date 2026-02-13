@@ -419,6 +419,30 @@ const AvailableOrders = () => {
     console.log('[AvailableOrders] 🔌 Setting up socket listeners...');
     socketService.connect();
 
+    // Get rider ID and join rider-specific room
+    const getRiderId = () => {
+      try {
+        const userData = getCookie('user_data');
+        if (userData) {
+          const parsed = JSON.parse(userData);
+          return parsed._id || parsed.id || null;
+        }
+      } catch (e) {
+        console.warn('[AvailableOrders] Failed to get rider ID from cookie:', e);
+      }
+      return null;
+    };
+
+    const riderId = getRiderId();
+    if (riderId) {
+      console.log('[AvailableOrders] 🔌 Joining rider room:', riderId);
+      // Join both general riders room and rider-specific room
+      socketService.joinRoom('riders'); // General room for all riders
+      socketService.joinRoom(`rider:${riderId}`); // Rider-specific room for invitations
+    } else {
+      console.warn('[AvailableOrders] ⚠️ No rider ID found, cannot join rider room');
+    }
+
     // Debug: Listen to ALL socket events
     if (socketService.socket) {
       socketService.socket.onAny((eventName, ...args) => {

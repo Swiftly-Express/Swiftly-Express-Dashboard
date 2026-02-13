@@ -441,6 +441,30 @@ const Dashboard = () => {
     // Socket: listen for new jobs and customer requests
     socketService.connect();
 
+    // Get rider ID and join rider-specific room
+    const getRiderId = () => {
+      try {
+        const userData = getCookie('user_data');
+        if (userData) {
+          const parsed = JSON.parse(userData);
+          return parsed._id || parsed.id || null;
+        }
+      } catch (e) {
+        console.warn('[Dashboard] Failed to get rider ID from cookie:', e);
+      }
+      return null;
+    };
+
+    const riderId = getRiderId();
+    if (riderId) {
+      console.log('[Dashboard] 🔌 Joining rider room:', riderId);
+      // Join both general riders room and rider-specific room
+      socketService.joinRoom('riders'); // General room for all riders
+      socketService.joinRoom(`rider:${riderId}`); // Rider-specific room for invitations
+    } else {
+      console.warn('[Dashboard] ⚠️ No rider ID found, cannot join rider room');
+    }
+
     const handleNewJob = (data) => {
       console.log('[Dashboard] 🔔 New job available (socket):', data);
 
