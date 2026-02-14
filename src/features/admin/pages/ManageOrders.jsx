@@ -1,13 +1,13 @@
 ﻿import React, { useState, useEffect } from 'react';
 import { IonPage, IonContent } from '@ionic/react';
-import { Search, Filter, MoreVertical, User, Bike, ChevronLeft, ChevronRight } from 'lucide-react';
+import { Search, Filter, MoreVertical, User, Bike, ChevronLeft, ChevronRight, Trash2, XCircle } from 'lucide-react';
 import AdminLayout from '../components/AdminLayout';
 import { YummyText } from '../../../components/YummyText';
 import BlockIcon from '../../../icons/Blockicon';
 import CheckIcon from '../../../icons/Checkicon';
 import ToyBikeIcon from '../../../icons/Toybikeicon';
 import ClockIcon from '../../../icons/Clockicon';
-import { getAllDeliveries } from '../../../utils/adminApi';
+import { getAllDeliveries, adminCancelDelivery, adminDeleteDelivery } from '../../../utils/adminApi';
 import { formatAddress } from '../../../utils/formatters';
 
 const ManageOrders = () => {
@@ -29,12 +29,30 @@ const ManageOrders = () => {
   });
 
   const [isMobile, setIsMobile] = useState(typeof window !== 'undefined' ? window.innerWidth < 768 : false);
+  const [openDropdown, setOpenDropdown] = useState(null);
+  const [showCancelModal, setShowCancelModal] = useState(false);
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
+  const [selectedOrder, setSelectedOrder] = useState(null);
+  const [actionLoading, setActionLoading] = useState(false);
+  const [cancelReason, setCancelReason] = useState('');
+  const [toast, setToast] = useState({ show: false, message: '', type: '' });
 
   useEffect(() => {
     const handleResize = () => setIsMobile(window.innerWidth < 768);
     window.addEventListener('resize', handleResize);
     return () => window.removeEventListener('resize', handleResize);
   }, []);
+
+  // Close dropdown when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (e) => {
+      if (openDropdown && !e.target.closest('.action-dropdown')) {
+        setOpenDropdown(null);
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, [openDropdown]);
 
   const fetchDeliveries = async (page = 1) => {
     try {
@@ -82,6 +100,91 @@ const ManageOrders = () => {
   useEffect(() => {
     fetchDeliveries(1);
   }, []);
+
+  const showToast = (message, type = 'success') => {
+    setToast({ show: true, message, type });
+    setTimeout(() => setToast({ show: false, message: '', type: '' }), 3000);
+  };
+
+  const handleCancelClick = (order) => {
+    setSelectedOrder(order);
+    setCancelReason('');
+    setShowCancelModal(true);
+    setOpenDropdown(null);
+  };
+
+  const handleDeleteClick = (order) => {
+    setSelectedOrder(order);
+    setShowDeleteModal(true);
+    setOpenDropdown(null);
+  };
+
+  const handleCancelDelivery = async () => {
+    if (!selectedOrder) return;
+    if (!cancelReason.trim()) {
+      showToast('Please provide a cancellation reason', 'error');
+      return;
+    }
+
+    try {
+      setActionLoading(true);
+      const deliveryId = selectedOrder._id || selectedOrder.id;
+
+      await adminCancelDelivery(deliveryId, cancelReason);
+
+      showToast('Delivery cancelled successfully', 'success');
+
+      // Dispatch event to update customer side
+      window.dispatchEvent(new CustomEvent('delivery:cancelled', {
+        detail: {
+          deliveryId,
+          reason: cancelReason,
+          cancelledBy: 'admin'
+        }
+      }));
+
+      // Refresh the list and update metrics
+      await fetchDeliveries(currentPage);
+
+      setShowCancelModal(false);
+      setSelectedOrder(null);
+      setCancelReason('');
+    } catch (err) {
+      console.error('Error cancelling delivery:', err);
+      showToast(err.message || 'Failed to cancel delivery', 'error');
+    } finally {
+      setActionLoading(false);
+    }
+  };
+
+  const handleDeleteDelivery = async () => {
+    if (!selectedOrder) return;
+
+    try {
+      setActionLoading(true);
+      const deliveryId = selectedOrder._id || selectedOrder.id;
+
+      await adminDeleteDelivery(deliveryId);
+
+      showToast('Delivery deleted successfully', 'success');
+
+      // Dispatch event to update customer side
+      window.dispatchEvent(new CustomEvent('delivery:deleted', {
+        detail: { deliveryId }
+      }));
+
+      // Refresh the list and update metrics
+      await fetchDeliveries(currentPage);
+
+      setShowDeleteModal(false);
+      setSelectedOrder(null);
+    } catch (err) {
+      console.error('Error deleting delivery:', err);
+      showToast(err.message || 'Failed to delete delivery', 'error');
+    } finally {
+      setActionLoading(false);
+    }
+  };
 
   const statsCards = [
     {
@@ -415,9 +518,32 @@ const ManageOrders = () => {
                         </div>
                       </div>
                       <div className="mt-3 flex items-center justify-end gap-2">
-                        <button className="text-gray-400 hover:text-gray-600">
-                          <MoreVertical className="w-5 h-5" />
-                        </button>
+                        <div className="relative action-dropdown">
+                          <button
+                            onClick={() => setOpenDropdown(openDropdown === `mobile-${order._id || order.id}` ? null : `mobile-${order._id || order.id}`)}
+                            className="text-gray-400 hover:text-gray-600"
+                          >
+                            <MoreVertical className="w-5 h-5" />
+                          </button>
+                          {openDropdown === `mobile-${order._id || order.id}` && (
+                            <div className="absolute right-0 mt-2 w-48 bg-white rounded-lg shadow-lg border border-gray-200 z-50">
+                              <button
+                                onClick={() => handleCancelClick(order)}
+                                className="w-full px-4 py-2 text-left text-sm text-orange-600 hover:bg-orange-50 flex items-center gap-2 rounded-t-lg"
+                              >
+                                <XCircle className="w-4 h-4" />
+                                Cancel Order
+                              </button>
+                              <button
+                                onClick={() => handleDeleteClick(order)}
+                                className="w-full px-4 py-2 text-left text-sm text-red-600 hover:bg-red-50 flex items-center gap-2 rounded-b-lg"
+                              >
+                                <Trash2 className="w-4 h-4" />
+                                Delete Order
+                              </button>
+                            </div>
+                          )}
+                        </div>
                       </div>
                     </div>
                   );
@@ -549,9 +675,32 @@ const ManageOrders = () => {
                               </div>
                             </td>
                             <td className="w-[5%] px-0 py-4 whitespace-nowrap text-center">
-                              <button className="text-gray-400 hover:text-gray-600">
-                                <MoreVertical className="w-5 h-5" />
-                              </button>
+                              <div className="relative action-dropdown">
+                                <button
+                                  onClick={() => setOpenDropdown(openDropdown === `desktop-${order._id || order.id}` ? null : `desktop-${order._id || order.id}`)}
+                                  className="text-gray-400 hover:text-gray-600"
+                                >
+                                  <MoreVertical className="w-5 h-5" />
+                                </button>
+                                {openDropdown === `desktop-${order._id || order.id}` && (
+                                  <div className="absolute right-0 mt-2 w-48 bg-white rounded-lg shadow-lg border border-gray-200 z-50">
+                                    <button
+                                      onClick={() => handleCancelClick(order)}
+                                      className="w-full px-4 py-2 text-left text-sm text-orange-600 hover:bg-orange-50 flex items-center gap-2 rounded-t-lg"
+                                    >
+                                      <XCircle className="w-4 h-4" />
+                                      Cancel Order
+                                    </button>
+                                    <button
+                                      onClick={() => handleDeleteClick(order)}
+                                      className="w-full px-4 py-2 text-left text-sm text-red-600 hover:bg-red-50 flex items-center gap-2 rounded-b-lg"
+                                    >
+                                      <Trash2 className="w-4 h-4" />
+                                      Delete Order
+                                    </button>
+                                  </div>
+                                )}
+                              </div>
                             </td>
                           </tr>
                         );
@@ -616,6 +765,108 @@ const ManageOrders = () => {
               </div>
             )}
           </div>
+
+          {/* Toast Notification */}
+          {toast.show && (
+            <div className={`fixed top-4 right-4 z-50 px-6 py-3 rounded-lg shadow-lg ${toast.type === 'success' ? 'bg-green-500' : 'bg-red-500'
+              } text-white`}>
+              {toast.message}
+            </div>
+          )}
+
+          {/* Cancel Confirmation Modal */}
+          {showCancelModal && (
+            <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+              <div className="bg-white rounded-lg p-6 max-w-md w-full">
+                <div className="flex items-center gap-3 mb-4">
+                  <div className="w-12 h-12 bg-orange-100 rounded-full flex items-center justify-center">
+                    <XCircle className="w-6 h-6 text-orange-600" />
+                  </div>
+                  <div>
+                    <h3 className="text-lg font-semibold text-gray-900">Cancel Order</h3>
+                    <p className="text-sm text-gray-500">Order ID: {selectedOrder?.deliveryId || selectedOrder?._id || selectedOrder?.id}</p>
+                  </div>
+                </div>
+                <p className="text-sm text-gray-600 mb-4">
+                  This will cancel the order and notify the customer. The order status will be updated to "Cancelled".
+                </p>
+                <div className="mb-4">
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Cancellation Reason *
+                  </label>
+                  <textarea
+                    value={cancelReason}
+                    onChange={(e) => setCancelReason(e.target.value)}
+                    placeholder="Enter reason for cancellation..."
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-transparent"
+                    rows="3"
+                  />
+                </div>
+                <div className="flex gap-3">
+                  <button
+                    onClick={() => {
+                      setShowCancelModal(false);
+                      setSelectedOrder(null);
+                      setCancelReason('');
+                    }}
+                    disabled={actionLoading}
+                    className="flex-1 px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 disabled:opacity-50"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    onClick={handleCancelDelivery}
+                    disabled={actionLoading || !cancelReason.trim()}
+                    className="flex-1 px-4 py-2 bg-orange-600 text-white rounded-lg hover:bg-orange-700 disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    {actionLoading ? 'Cancelling...' : 'Confirm Cancel'}
+                  </button>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* Delete Confirmation Modal */}
+          {showDeleteModal && (
+            <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+              <div className="bg-white rounded-lg p-6 max-w-md w-full">
+                <div className="flex items-center gap-3 mb-4">
+                  <div className="w-12 h-12 bg-red-100 rounded-full flex items-center justify-center">
+                    <Trash2 className="w-6 h-6 text-red-600" />
+                  </div>
+                  <div>
+                    <h3 className="text-lg font-semibold text-gray-900">Delete Order</h3>
+                    <p className="text-sm text-gray-500">Order ID: {selectedOrder?.deliveryId || selectedOrder?._id || selectedOrder?.id}</p>
+                  </div>
+                </div>
+                <p className="text-sm text-gray-600 mb-4">
+                  ⚠️ <strong>Warning:</strong> This action cannot be undone. The order will be permanently deleted from the database.
+                </p>
+                <p className="text-sm text-gray-600 mb-4">
+                  Customer: <strong>{selectedOrder?.customer?.name || selectedOrder?.customerName || 'N/A'}</strong>
+                </p>
+                <div className="flex gap-3">
+                  <button
+                    onClick={() => {
+                      setShowDeleteModal(false);
+                      setSelectedOrder(null);
+                    }}
+                    disabled={actionLoading}
+                    className="flex-1 px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 disabled:opacity-50"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    onClick={handleDeleteDelivery}
+                    disabled={actionLoading}
+                    className="flex-1 px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 disabled:opacity-50"
+                  >
+                    {actionLoading ? 'Deleting...' : 'Delete Permanently'}
+                  </button>
+                </div>
+              </div>
+            </div>
+          )}
         </IonContent>
       </AdminLayout>
     </IonPage>

@@ -101,6 +101,27 @@ export async function getAllUsers(page = 1, limit = 20) {
 }
 
 /**
+ * Cancel a delivery (admin)
+ * @param {string} deliveryId - Delivery ID to cancel
+ * @param {string} reason - Cancellation reason
+ * @returns {Promise} Cancellation result
+ */
+export async function adminCancelDelivery(deliveryId, reason = 'Cancelled by admin') {
+  console.log(`[adminApi] → Cancelling delivery ${deliveryId}`);
+  return adminApiClient.put(`/api/admin/deliveries/${deliveryId}/cancel`, { reason });
+}
+
+/**
+ * Delete a delivery completely (admin only)
+ * @param {string} deliveryId - Delivery ID to delete
+ * @returns {Promise} Deletion result
+ */
+export async function adminDeleteDelivery(deliveryId) {
+  console.log(`[adminApi] → Deleting delivery ${deliveryId}`);
+  return adminApiClient.delete(`/api/admin/deliveries/${deliveryId}`);
+}
+
+/**
  * Create a new user
  * @param {Object} userData - User data
  * @returns {Promise} Created user
