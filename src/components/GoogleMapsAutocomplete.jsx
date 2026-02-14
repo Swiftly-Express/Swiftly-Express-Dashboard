@@ -6,7 +6,8 @@ const GoogleMapsAutocomplete = ({
     placeholder = "Enter Location...",
     className = "",
     onPlaceSelect
-}) => {
+}) =>
+{
     const inputRef = useRef(null);
     const dropdownRef = useRef(null);
     const [predictions, setPredictions] = useState([]);
@@ -17,8 +18,10 @@ const GoogleMapsAutocomplete = ({
     const [isLoaded, setIsLoaded] = useState(false);
 
     // Check if Google Maps is loaded
-    useEffect(() => {
-        const checkGoogleMaps = () => {
+    useEffect(() =>
+    {
+        const checkGoogleMaps = () =>
+        {
             if (window.google && window.google.maps && window.google.maps.places) {
                 setIsLoaded(true);
             } else {
@@ -29,9 +32,11 @@ const GoogleMapsAutocomplete = ({
     }, []);
 
     // Debounce utility function
-    function debounce(func, wait) {
+    function debounce(func, wait)
+    {
         let timeout;
-        return (...args) => {
+        return (...args) =>
+        {
             clearTimeout(timeout);
             timeout = setTimeout(() => func(...args), wait);
         };
@@ -39,7 +44,8 @@ const GoogleMapsAutocomplete = ({
 
     // Debounced search function
     const debouncedSearch = useCallback(
-        debounce(async (query) => {
+        debounce(async (query) =>
+        {
             if (!isLoaded || !query.trim()) {
                 setPredictions([]);
                 setIsLoading(false);
@@ -84,13 +90,16 @@ const GoogleMapsAutocomplete = ({
         [isLoaded]
     );
 
-    useEffect(() => {
+    useEffect(() =>
+    {
         debouncedSearch(value);
     }, [value, debouncedSearch]);
 
     // Close dropdown when clicking outside
-    useEffect(() => {
-        const handleClickOutside = (event) => {
+    useEffect(() =>
+    {
+        const handleClickOutside = (event) =>
+        {
             if (
                 dropdownRef.current &&
                 !dropdownRef.current.contains(event.target) &&
@@ -101,12 +110,14 @@ const GoogleMapsAutocomplete = ({
         };
 
         document.addEventListener("mousedown", handleClickOutside);
-        return () => {
+        return () =>
+        {
             document.removeEventListener("mousedown", handleClickOutside);
         };
     }, []);
 
-    const handleSelect = async (prediction) => {
+    const handleSelect = async (prediction) =>
+    {
         setIsOpen(false);
 
         // ✅ ALWAYS use the original autocomplete suggestion text as the display value
@@ -126,9 +137,11 @@ const GoogleMapsAutocomplete = ({
                     const result = response.results[0];
                     const components = result.address_components || [];
 
-                    const extract = (componentsList) => {
+                    const extract = (componentsList) =>
+                    {
                         const out = { city: '', state: '', postal_code: '', country: '' };
-                        componentsList.forEach(component => {
+                        componentsList.forEach(component =>
+                        {
                             const types = component.types || [];
                             if (types.includes('locality') || types.includes('postal_town')) {
                                 if (!out.city) out.city = component.long_name;
@@ -167,7 +180,7 @@ const GoogleMapsAutocomplete = ({
                     // Fallback: minimal place data with description
                     onPlaceSelect({
                         street: prediction.description,
-                        city: '', 
+                        city: '',
                         state: '',
                         zipCode: '',
                         country: '',
@@ -189,7 +202,8 @@ const GoogleMapsAutocomplete = ({
         }
     };
 
-    const handleKeyDown = (e) => {
+    const handleKeyDown = (e) =>
+    {
         if (!isOpen) return;
 
         if (e.key === "ArrowDown") {
@@ -209,7 +223,8 @@ const GoogleMapsAutocomplete = ({
     };
 
     // Get current location and reverse geocode to address
-    const getCurrentLocation = () => {
+    const getCurrentLocation = () =>
+    {
         if (!navigator.geolocation) {
             alert("Geolocation is not supported by this browser.");
             return;
@@ -218,8 +233,11 @@ const GoogleMapsAutocomplete = ({
         setIsLocationLoading(true);
 
         navigator.geolocation.getCurrentPosition(
-            async (position) => {
-                const { latitude, longitude } = position.coords;
+            async (position) =>
+            {
+                const { latitude, longitude, accuracy } = position.coords;
+                // Accuracy is in meters. IP/network location often has accuracy > 1000–10000m and can be wrong (e.g. Lagos vs Akwa Ibom)
+                const isLowAccuracy = typeof accuracy === "number" && accuracy > 2000;
 
                 try {
                     if (!isLoaded) throw new Error("Google Maps not loaded");
@@ -256,7 +274,8 @@ const GoogleMapsAutocomplete = ({
 
                     const components = validResult.address_components || [];
 
-                    const extract = () => {
+                    const extract = () =>
+                    {
                         const out = {
                             streetNumber: "",
                             route: "",
@@ -266,7 +285,8 @@ const GoogleMapsAutocomplete = ({
                             country: ""
                         };
 
-                        components.forEach(c => {
+                        components.forEach(c =>
+                        {
                             if (c.types.includes("street_number")) out.streetNumber = c.long_name;
                             if (c.types.includes("route")) out.route = c.long_name;
                             if (c.types.includes("locality")) out.city = c.long_name;
@@ -311,6 +331,11 @@ const GoogleMapsAutocomplete = ({
                     onChange(cleanAddress);
                     onPlaceSelect?.(placeResult);
 
+                    if (isLowAccuracy) {
+                        alert(
+                            "Your device location may be approximate (e.g. from network/Wi‑Fi). If the address shown is wrong (e.g. wrong city or state), please type your correct address in the field above. For best results, use a phone with GPS or enter the address manually."
+                        );
+                    }
                 } catch (error) {
                     console.error("Location error:", error);
                     alert(
@@ -320,14 +345,18 @@ const GoogleMapsAutocomplete = ({
                     setIsLocationLoading(false);
                 }
             },
-            (error) => {
+            (error) =>
+            {
                 console.error("Geolocation error:", error);
-                alert("Failed to get current location.");
+                const msg = error.code === error.TIMEOUT || error.code === error.POSITION_UNAVAILABLE
+                    ? "Could not get precise location. If you're on a computer, try on a phone with GPS, or enter your address manually."
+                    : "Failed to get current location.";
+                alert(msg);
                 setIsLocationLoading(false);
             },
             {
                 enableHighAccuracy: true,
-                timeout: 15000,
+                timeout: 20000,
                 maximumAge: 0,
             }
         );

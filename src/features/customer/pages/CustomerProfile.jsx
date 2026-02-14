@@ -4,20 +4,23 @@ import { eyeOutline, eyeOffOutline } from 'ionicons/icons';
 import CustomerLayout from '../components/CustomerLayout';
 import { YummyText } from '../../../components/YummyText';
 import Loader from '../../../components/Loader';
-import {
+import
+{
   getCustomerProfile,
   updateCustomerProfile,
   uploadProfileImage,
   changePassword
 } from '../../../utils/authApi';
-import { getJSONCookie, setJSONCookie, setCookie } from '../../../utils/cookies';
+import { getJSONCookie, setJSONCookie, setCookie, getCookie } from '../../../utils/cookies';
+import GoogleMapsAutocomplete from '../../../components/GoogleMapsAutocomplete';
 import { useHistory } from 'react-router-dom';
 
 const sideBottomShadow = {
   boxShadow: '2px 4px 4px rgba(0,0,0,0.06), -2px 4px 4px rgba(0,0,0,0.06), 0 4px 8px rgba(0,0,0,0.08)'
 };
 
-const loadGoogleProfileData = () => {
+const loadGoogleProfileData = () =>
+{
   console.log('[CustomerProfile] Loading Google profile data...');
 
   const cachedUserData = getJSONCookie('user_data');
@@ -54,13 +57,20 @@ const loadGoogleProfileData = () => {
   };
 };
 
-const CustomerProfile = () => {
+const CustomerProfile = () =>
+{
   const [activeTab, setActiveTab] = useState('personal');
-  // Load profile image from localStorage immediately
-  const [profileImage, setProfileImage] = useState(() => {
-    const cached = localStorage.getItem('profile_image');
-    console.log('[CustomerProfile] Initial profile image from localStorage:', cached);
-    return cached || '/profileimage.svg';
+  // Load profile image from cookie or localStorage immediately (match CustomerLayout)
+  const [profileImage, setProfileImage] = useState(() =>
+  {
+    const fromCookie = getCookie('profile_image');
+    const fromStorage = localStorage.getItem('profile_image');
+    const cached = fromCookie || fromStorage;
+    if (cached && cached !== '/profileimage.svg' && !cached.includes('dicebear')) return cached;
+    const userData = getJSONCookie('user_data');
+    const img = userData?.profileImage || userData?.profilePhoto || userData?.picture || userData?.avatar;
+    if (img && !img.includes('dicebear')) return img;
+    return '/profileimage.svg';
   });
   const [loading, setLoading] = useState(false);
   const [uploading, setUploading] = useState(false);
@@ -99,11 +109,13 @@ const CustomerProfile = () => {
   const history = useHistory();
 
   // Fetch profile on component mount
-  useEffect(() => {
+  useEffect(() =>
+  {
     fetchProfile();
 
     // Listen for profile updates from other components
-    const handleProfileUpdated = (event) => {
+    const handleProfileUpdated = (event) =>
+    {
       console.log('[CustomerProfile] Received profile:updated event:', event.detail);
       if (event.detail?.profileImage || event.detail?.profilePhoto) {
         const newImage = event.detail.profileImage || event.detail.profilePhoto;
@@ -114,12 +126,14 @@ const CustomerProfile = () => {
 
     window.addEventListener('profile:updated', handleProfileUpdated);
 
-    return () => {
+    return () =>
+    {
       window.removeEventListener('profile:updated', handleProfileUpdated);
     };
   }, []);
 
-  const fetchProfile = async () => {
+  const fetchProfile = async () =>
+  {
     setLoading(true);
     try {
       // First, try to load Google profile data from cookies
@@ -151,13 +165,13 @@ const CustomerProfile = () => {
           }
         }
       } else {
-        // Fallback to localStorage if no Google data
-        const cachedUserData = localStorage.getItem('user_data');
-        const cachedProfileImage = localStorage.getItem('profile_image');
+        // Fallback: user_data from cookie first (auth stores it there), then localStorage
+        const cachedUserData = getJSONCookie('user_data') || (() => { try { const r = localStorage.getItem('user_data'); return r ? JSON.parse(r) : null; } catch { return null; } })();
+        const cachedProfileImage = getCookie('profile_image') || localStorage.getItem('profile_image');
 
         if (cachedUserData) {
           try {
-            const userData = JSON.parse(cachedUserData);
+            const userData = typeof cachedUserData === 'object' ? cachedUserData : JSON.parse(cachedUserData);
             console.log('[CustomerProfile] Loading cached user data:', userData);
 
             setFormData(prev => ({
@@ -166,12 +180,16 @@ const CustomerProfile = () => {
               email: userData?.email || '',
               phone: userData?.phone || userData?.phoneNumber || ''
             }));
+            const img = userData?.profileImage || userData?.profilePhoto || userData?.picture || userData?.avatar;
+            if (img && img !== '/profileimage.svg' && !String(img).includes('dicebear')) {
+              setProfileImage(img);
+            }
           } catch (e) {
             console.warn('[CustomerProfile] Failed to parse cached user data:', e);
           }
         }
 
-        if (cachedProfileImage) {
+        if (cachedProfileImage && cachedProfileImage !== '/profileimage.svg' && !String(cachedProfileImage).includes('dicebear')) {
           setProfileImage(cachedProfileImage);
           console.log('[CustomerProfile] Loaded cached profile image');
         }
@@ -182,8 +200,8 @@ const CustomerProfile = () => {
       const profile = await getCustomerProfile();
       console.log('[CustomerProfile] Profile data from server:', profile);
 
-      // Handle different response structures
-      const data = profile?.data || profile;
+      // Handle different response structures (backend returns { data: { user } })
+      const data = profile?.data?.user || profile?.data || profile;
 
       // Merge server data with existing form data (keeping Google data as priority for basic fields)
       setFormData(prev => ({
@@ -199,9 +217,10 @@ const CustomerProfile = () => {
 
       // Set profile image if available from server, otherwise keep cached/current
       const serverImage = data?.profileImage || data?.profile_image || data?.avatar;
-      if (serverImage && serverImage !== '/profileimage.svg') {
+      if (serverImage && serverImage !== '/profileimage.svg' && !String(serverImage).includes('dicebear')) {
         setProfileImage(serverImage);
         localStorage.setItem('profile_image', serverImage);
+        setCookie('profile_image', serverImage, 7);
         console.log('[CustomerProfile] Updated profile image from server:', serverImage);
       } else {
         console.log('[CustomerProfile] No valid server image, keeping current profile image');
@@ -228,28 +247,32 @@ const CustomerProfile = () => {
     }
   };
 
-  const handleChange = (e) => {
+  const handleChange = (e) =>
+  {
     setFormData({
       ...formData,
       [e.target.name]: e.target.value
     });
   };
 
-  const handlePasswordChange = (e) => {
+  const handlePasswordChange = (e) =>
+  {
     setPasswordData({
       ...passwordData,
       [e.target.name]: e.target.value
     });
   };
 
-  const handleNotificationToggle = (name) => {
+  const handleNotificationToggle = (name) =>
+  {
     setNotifications({
       ...notifications,
       [name]: !notifications[name]
     });
   };
 
-  const handlePhotoChange = async (e) => {
+  const handlePhotoChange = async (e) =>
+  {
     const file = e.target.files[0];
     if (!file) return;
 
@@ -299,7 +322,8 @@ const CustomerProfile = () => {
       } else {
         // If no URL returned, create preview
         const reader = new FileReader();
-        reader.onloadend = () => {
+        reader.onloadend = () =>
+        {
           setProfileImage(reader.result);
           // Persist to localStorage
           localStorage.setItem('profile_image', reader.result);
@@ -326,7 +350,8 @@ const CustomerProfile = () => {
     }
   };
 
-  const handleSubmit = async (e) => {
+  const handleSubmit = async (e) =>
+  {
     e.preventDefault();
     setLoading(true);
 
@@ -429,7 +454,8 @@ const CustomerProfile = () => {
     }
   };
 
-  const handlePasswordSubmit = async (e) => {
+  const handlePasswordSubmit = async (e) =>
+  {
     e.preventDefault();
 
     // Validate passwords
@@ -477,7 +503,8 @@ const CustomerProfile = () => {
     }
   };
 
-  const handleNotificationSubmit = async (e) => {
+  const handleNotificationSubmit = async (e) =>
+  {
     e.preventDefault();
     setLoading(true);
 
@@ -588,6 +615,10 @@ const CustomerProfile = () => {
                       src={profileImage}
                       alt="Profile"
                       className="w-20 h-20 rounded-full object-cover border-2 border-gray-200"
+                      onError={() =>
+                      {
+                        setProfileImage('/profileimage.svg');
+                      }}
                     />
                     {uploading && (
                       <div className="absolute inset-0 flex items-center justify-center bg-black bg-opacity-50 rounded-full">
@@ -670,18 +701,26 @@ const CustomerProfile = () => {
                       />
                     </div>
 
-                    {/* Address - Street */}
+                    {/* Address - Street (same as Book delivery: search + Use current location) */}
                     <div>
                       <label className="block text-sm font-medium text-[#0F172A] mb-2">
                         Street Address
                       </label>
-                      <input
-                        type="text"
-                        name="street"
+                      <GoogleMapsAutocomplete
                         value={formData.street}
-                        onChange={handleChange}
-                        placeholder='123 Main Street'
-                        className="w-full placeholder:text-[#94A3B8] px-4 py-3 rounded-xl border border-[#E2E8F0] focus:border-[#00D68F] focus:ring-2 focus:ring-[#00D68F]/20 focus:outline-none transition-all"
+                        onChange={(value) => setFormData(prev => ({ ...prev, street: value }))}
+                        placeholder="Enter address or use current location"
+                        onPlaceSelect={(place) =>
+                        {
+                          setFormData(prev => ({
+                            ...prev,
+                            street: place.street || place.formatted_address || prev.street,
+                            city: place.city || prev.city,
+                            state: place.state || prev.state,
+                            zipCode: place.zipCode || prev.zipCode,
+                            country: place.country || prev.country || 'Nigeria'
+                          }));
+                        }}
                       />
                     </div>
 
@@ -715,10 +754,10 @@ const CustomerProfile = () => {
                       </div>
                     </div>
 
-                    {/* Zip Code */}
+                    {/* Zip Code (optional) */}
                     <div>
                       <label className="block text-sm font-medium text-[#0F172A] mb-2">
-                        Zip/Postal Code
+                        Zip/Postal Code <span className="text-[#64748B] font-normal">(optional)</span>
                       </label>
                       <input
                         type="text"

@@ -56,7 +56,7 @@ const TrackingMap = ({ pickupLocation, dropoffLocation, driverLocation, onRouteS
         if (pickup) return pickup;
         if (dropoff) return dropoff;
         if (driver) return driver;
-        return { lat: 6.5244, lng: 3.3792 }; // Default to Lagos, Nigeria
+        return { lat: 5.0075, lng: 7.8492 }; // Default to Uyo, Nigeria
     }, [driver, pickup, dropoff]);
 
     const onLoad = useCallback((mapInstance) =>
