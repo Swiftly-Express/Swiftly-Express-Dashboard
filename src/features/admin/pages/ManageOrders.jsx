@@ -547,22 +547,31 @@ const ManageOrders = () => {
                       <div className="mt-3 flex items-center justify-end gap-2">
                         <div className="relative action-dropdown">
                           <button
-                            onClick={() => setOpenDropdown(openDropdown === `mobile-${order._id || order.id}` ? null : `mobile-${order._id || order.id}`)}
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setOpenDropdown(openDropdown === `mobile-${order._id || order.id}` ? null : `mobile-${order._id || order.id}`);
+                            }}
                             className="text-gray-400 hover:text-gray-600"
                           >
                             <MoreVertical className="w-5 h-5" />
                           </button>
                           {openDropdown === `mobile-${order._id || order.id}` && (
-                            <div className="absolute right-0 mt-2 w-48 bg-white rounded-lg shadow-lg border border-gray-200 z-50">
+                            <div className="absolute right-0 bottom-full mb-2 w-48 bg-white rounded-lg shadow-lg border border-gray-200 z-50">
                               <button
-                                onClick={() => handleCancelClick(order)}
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  handleCancelClick(order);
+                                }}
                                 className="w-full px-4 py-2 text-left text-sm text-orange-600 hover:bg-orange-50 flex items-center gap-2 rounded-t-lg"
                               >
                                 <XCircle className="w-4 h-4" />
                                 Cancel Order
                               </button>
                               <button
-                                onClick={() => handleDeleteClick(order)}
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  handleDeleteClick(order);
+                                }}
                                 className="w-full px-4 py-2 text-left text-sm text-red-600 hover:bg-red-50 flex items-center gap-2 rounded-b-lg"
                               >
                                 <Trash2 className="w-4 h-4" />
@@ -704,22 +713,31 @@ const ManageOrders = () => {
                             <td className="w-[5%] px-0 py-4 whitespace-nowrap text-center">
                               <div className="relative action-dropdown">
                                 <button
-                                  onClick={() => setOpenDropdown(openDropdown === `desktop-${order._id || order.id}` ? null : `desktop-${order._id || order.id}`)}
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    setOpenDropdown(openDropdown === `desktop-${order._id || order.id}` ? null : `desktop-${order._id || order.id}`);
+                                  }}
                                   className="text-gray-400 hover:text-gray-600"
                                 >
                                   <MoreVertical className="w-5 h-5" />
                                 </button>
                                 {openDropdown === `desktop-${order._id || order.id}` && (
-                                  <div className="absolute right-0 mt-2 w-48 bg-white rounded-lg shadow-lg border border-gray-200 z-50">
+                                  <div className="absolute right-full mr-2 top-0 w-48 bg-white rounded-lg shadow-lg border border-gray-200 z-50">
                                     <button
-                                      onClick={() => handleCancelClick(order)}
+                                      onClick={(e) => {
+                                        e.stopPropagation();
+                                        handleCancelClick(order);
+                                      }}
                                       className="w-full px-4 py-2 text-left text-sm text-orange-600 hover:bg-orange-50 flex items-center gap-2 rounded-t-lg"
                                     >
                                       <XCircle className="w-4 h-4" />
                                       Cancel Order
                                     </button>
                                     <button
-                                      onClick={() => handleDeleteClick(order)}
+                                      onClick={(e) => {
+                                        e.stopPropagation();
+                                        handleDeleteClick(order);
+                                      }}
                                       className="w-full px-4 py-2 text-left text-sm text-red-600 hover:bg-red-50 flex items-center gap-2 rounded-b-lg"
                                     >
                                       <Trash2 className="w-4 h-4" />

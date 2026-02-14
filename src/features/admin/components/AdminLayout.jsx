@@ -8,6 +8,12 @@ import {
   markNotificationAsRead,
   markAllNotificationsAsRead
 } from '../../../utils/authApi';
+import socketService from '../../../services/socket.service';
+import {
+  requestNotificationPermission,
+  notifyNewUserRegistration,
+  notifyNewKYCSubmission
+} from '../../../utils/pushNotifications';
 
 const AdminLayout = ({ children }) => {
   const [showNotifications, setShowNotifications] = useState(false);
@@ -106,7 +112,7 @@ const AdminLayout = ({ children }) => {
       try { if (document && document.activeElement) document.activeElement.blur(); } catch (err) { /* ignore */ }
       console.log('[AdminLayout] All notifications marked as read successfully');
     } catch (error) {
-   
+
       // Revert optimistic update on error
       try {
         await fetchNotifications(1, false);
@@ -124,7 +130,7 @@ const AdminLayout = ({ children }) => {
     try {
       console.log('[AdminLayout] Marking notification as read:', notificationId);
       const response = await markNotificationAsRead(notificationId);
-     
+
       setNotifications(prev =>
         prev.map(n => n._id === notificationId || n.id === notificationId ? { ...n, isRead: true, read: true } : n)
       );
@@ -143,30 +149,78 @@ const AdminLayout = ({ children }) => {
   useEffect(() => {
     checkNotifications();
 
+    // Request notification permission on mount for admin
+    requestNotificationPermission().catch(() => {
+      console.warn('[AdminLayout] Failed to request notification permission');
+    });
+
+    // Connect to socket and join admin room for real-time events
+    try {
+      socketService.connect();
+      socketService.joinRoom('admins'); // Join admin room to receive user registration and KYC events
+      console.log('[AdminLayout] 🔌 Joined admin room for real-time notifications');
+    } catch (e) {
+      console.warn('[AdminLayout] Failed to join admin socket room:', e);
+    }
+
+    // Socket listener: New user registration
+    const handleUserRegistered = (data) => {
+      console.log('[AdminLayout] 🔔 New user registered (socket):', data);
+      const role = data?.role || 'user';
+      const name = data?.name || data?.fullName || `${data?.firstName || ''} ${data?.lastName || ''}`.trim() || 'Unknown User';
+
+      // Show push notification
+      notifyNewUserRegistration(role, name);
+
+      // Refresh notification count
+      checkNotifications();
+    };
+
+    // Socket listener: New KYC submission
+    const handleKYCSubmitted = (data) => {
+      console.log('[AdminLayout] 🔔 New KYC submission (socket):', data);
+      const riderName = data?.riderName || data?.name || data?.fullName || `${data?.firstName || ''} ${data?.lastName || ''}`.trim() || 'Unknown Rider';
+
+      // Show push notification
+      notifyNewKYCSubmission(riderName);
+
+      // Refresh notification count
+      checkNotifications();
+    };
+
+    // Register socket event listeners
+    try {
+      socketService.on('user:registered', handleUserRegistered);
+      socketService.on('kyc:submitted', handleKYCSubmitted);
+      console.log('[AdminLayout] 📡 Registered socket listeners for user:registered and kyc:submitted');
+    } catch (e) {
+      console.warn('[AdminLayout] Failed to register socket listeners:', e);
+    }
+
     const notificationInterval = setInterval(() => {
       checkNotifications();
     }, 30000);
 
     const handleKycUpdate = () => {
-      
+
       checkNotifications();
     };
     const handleUserCreated = () => {
-      
+
       checkNotifications();
     };
-    const handleKycSubmitted = () => {
-      
+    const handleKycSubmittedWindow = () => {
+
       checkNotifications();
     };
 
     const handleVerificationCompleted = () => {
-      
+
       checkNotifications();
     };
 
     const handleDebtUpdated = (evt) => {
-      
+
       checkNotifications();
       // Optionally refresh visible notifications
       fetchNotifications(1, false).catch(() => { });
@@ -174,7 +228,7 @@ const AdminLayout = ({ children }) => {
 
     window.addEventListener('kyc:updated', handleKycUpdate);
     window.addEventListener('user:created', handleUserCreated);
-    window.addEventListener('kyc:submitted', handleKycSubmitted);
+    window.addEventListener('kyc:submitted', handleKycSubmittedWindow);
     window.addEventListener('verification:completed', handleVerificationCompleted);
     window.addEventListener('debt:updated', handleDebtUpdated);
 
@@ -182,9 +236,17 @@ const AdminLayout = ({ children }) => {
       clearInterval(notificationInterval);
       window.removeEventListener('kyc:updated', handleKycUpdate);
       window.removeEventListener('user:created', handleUserCreated);
-      window.removeEventListener('kyc:submitted', handleKycSubmitted);
+      window.removeEventListener('kyc:submitted', handleKycSubmittedWindow);
       window.removeEventListener('verification:completed', handleVerificationCompleted);
       window.removeEventListener('debt:updated', handleDebtUpdated);
+
+      // Clean up socket listeners
+      try {
+        socketService.off('user:registered', handleUserRegistered);
+        socketService.off('kyc:submitted', handleKYCSubmitted);
+      } catch (e) {
+        console.warn('[AdminLayout] Failed to clean up socket listeners:', e);
+      }
     };
   }, []);
   return (
@@ -263,7 +325,7 @@ const AdminLayout = ({ children }) => {
           </div>
         </div>
 
-      
+
         <div className="flex-1 md:p-8 p-0 pt-16 md:pt-24 overflow-y-auto no-scrollbar">
           {children}
         </div>

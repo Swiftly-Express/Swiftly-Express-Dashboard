@@ -123,6 +123,38 @@ class PushNotificationService {
             data: { type: 'invitation' }
         });
     }
+
+    /**
+     * Notify admin of new user registration
+     * @param {string} role - User role (customer or rider)
+     * @param {string} name - User name
+     */
+    notifyNewUserRegistration(role = 'user', name = 'A new user') {
+        const roleLabel = role === 'customer' ? 'Customer' : role === 'rider' ? 'Rider' : 'User';
+        return this.showNotification(`New ${roleLabel} Registered!`, {
+            body: `${name} just registered as a ${role}. Review their profile in the admin dashboard.`,
+            icon: '/swiftly-icon.svg',
+            badge: '/swiftly-icon.svg',
+            tag: 'new-user-registration',
+            renotify: true,
+            data: { type: 'new-user-registration', role, name }
+        });
+    }
+
+    /**
+     * Notify admin of new KYC verification submission
+     * @param {string} riderName - Rider name
+     */
+    notifyNewKYCSubmission(riderName = 'A rider') {
+        return this.showNotification('New KYC Verification Submitted!', {
+            body: `${riderName} submitted their verification documents. Review and approve in the KYC Approvals page.`,
+            icon: '/swiftly-icon.svg',
+            badge: '/swiftly-icon.svg',
+            tag: 'new-kyc-submission',
+            renotify: true,
+            data: { type: 'new-kyc-submission', riderName }
+        });
+    }
 }
 
 // Singleton instance
@@ -135,3 +167,5 @@ export const requestNotificationPermission = () => pushNotificationService.reque
 export const showNotification = (title, options) => pushNotificationService.showNotification(title, options);
 export const notifyNewOrders = (count) => pushNotificationService.notifyNewOrders(count);
 export const notifyInvitation = (customerName) => pushNotificationService.notifyInvitation(customerName);
+export const notifyNewUserRegistration = (role, name) => pushNotificationService.notifyNewUserRegistration(role, name);
+export const notifyNewKYCSubmission = (riderName) => pushNotificationService.notifyNewKYCSubmission(riderName);
