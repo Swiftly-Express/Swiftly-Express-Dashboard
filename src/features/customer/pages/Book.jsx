@@ -9,7 +9,7 @@ import StyledDropdown from '../../../components/StyledDropdown';
 import GoogleMapsAutocomplete from '../../../components/GoogleMapsAutocomplete';
 import CustomerLayout from '../components/CustomerLayout';
 import { YummyText } from '../../../components/YummyText';
-import { createDelivery, isAuthenticated, cancelDelivery, getDeliveryEstimate, getNearbyRiders } from '../../../utils/authApi';
+import { createDelivery, isAuthenticated, cancelDelivery, getDeliveryEstimate, getNearbyRiders, getCustomerProfile } from '../../../utils/authApi';
 import { calculateDistance } from '../../../utils/pricing';
 import SmartRideBooking from '../../smartride-booking/Smartride-Booking';
 import axios from 'axios';
@@ -29,7 +29,8 @@ const apiClient = axios.create({
 
 // Add request interceptor to attach auth token
 apiClient.interceptors.request.use(
-  (config) => {
+  (config) =>
+  {
     const riderToken = getCookie("rider_token");
     const customerToken = getCookie("customer_token");
     const adminToken = getCookie("admin_token");
@@ -50,9 +51,10 @@ const sideBottomShadow = {
   boxShadow: '2px 4px 4px rgba(0,0,0,0.06), -2px 4px 4px rgba(0,0,0,0.06), 0 4px 8px rgba(0,0,0,0.08)'
 };
 
-const Book = () => {
+const Book = () =>
+{
   const [formData, setFormData] = useState({
-    deliveryType: '',
+    deliveryType: 'express',
     senderName: '',
     senderPhone: '',
     pickupStreet: '',
@@ -110,6 +112,7 @@ const Book = () => {
   const [nearbyRidersLoading, setNearbyRidersLoading] = useState(false);
   const [nearbyPricing, setNearbyPricing] = useState(null);
   const [selectedRiderId, setSelectedRiderId] = useState(null);
+  const [fieldErrors, setFieldErrors] = useState({});
 
   const deliveryTypes = [
     { value: 'express', label: 'Express (Same day)', price: '₦400' },
@@ -118,7 +121,8 @@ const Book = () => {
 
   const selectedDeliveryType = deliveryTypes.find(t => t.value === formData.deliveryType);
 
-  const handleDeliveryTypeSelect = (value) => {
+  const handleDeliveryTypeSelect = (value) =>
+  {
     // If user selected Smart Ride, open Smart Ride inline on this page
     if (value === 'smart_ride') {
       setFormData({ ...formData, deliveryType: value });
@@ -139,23 +143,27 @@ const Book = () => {
   };
 
   // Ensure delivery type fee applied immediately when user selects a type
-  useEffect(() => {
+  useEffect(() =>
+  {
     const dt = (formData.deliveryType || '').toString().toLowerCase();
     const fee = dt === 'express' ? 400 : (dt === 'smart_ride' ? 600 : 0);
     setAppliedDeliveryTypeFee(fee);
   }, [formData.deliveryType]);
 
-  useEffect(() => {
+  useEffect(() =>
+  {
     if (!isAuthenticated()) {
       setToastMsg('Please log in to book a delivery');
       setShowToast(true);
-      setTimeout(() => {
+      setTimeout(() =>
+      {
         router.push('/auth/customer/login', 'root', 'replace');
       }, 2000);
     }
 
     // Listen for postMessage from payment callback popup
-    const handlePaymentMessage = (event) => {
+    const handlePaymentMessage = (event) =>
+    {
       console.log('[Book] Received postMessage:', event.data);
       if (event.data?.type === 'PAYMENT_REDIRECT') {
         const targetUrl = event.data.url || event.data.fullUrl;
@@ -176,11 +184,13 @@ const Book = () => {
   // Inline SmartRide state: open if ?delivery=smart_ride present
   const [showSmartRide, setShowSmartRide] = useState(false);
 
-  useEffect(() => {
+  useEffect(() =>
+  {
     const sp = new URLSearchParams(window.location.search);
     if (sp.get('delivery') === 'smart_ride') setShowSmartRide(true);
 
-    const onPop = () => {
+    const onPop = () =>
+    {
       const p = new URLSearchParams(window.location.search);
       setShowSmartRide(p.get('delivery') === 'smart_ride');
     };
@@ -189,7 +199,8 @@ const Book = () => {
     return () => window.removeEventListener('popstate', onPop);
   }, []);
 
-  useEffect(() => {
+  useEffect(() =>
+  {
     const check = () => setIsMobile(window.innerWidth <= 768);
     check();
     window.addEventListener('resize', check);
@@ -197,7 +208,8 @@ const Book = () => {
   }, []);
 
   // Initialize dimensions and weightCategory based on defaults
-  useEffect(() => {
+  useEffect(() =>
+  {
     const weightMap = { small: 'light', big: 'heavy', very_big: 'very_heavy' };
     const dimsMap = { small: [30, 30, 30], big: [50, 40, 30], very_big: [80, 60, 50] };
     const base = dimsMap[formData.sizeCategory] || dimsMap.small;
@@ -207,16 +219,72 @@ const Book = () => {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  const handleChange = (e) => {
+  // Auto-fill sender details from logged-in customer profile (Express & Smart Ride); fields remain editable
+  useEffect(() =>
+  {
+    const token = getCookie('customer_token') || getCookie('auth_token');
+    if (!token) return;
+
+    let cancelled = false;
+    (async () =>
+    {
+      try {
+        const res = await getCustomerProfile();
+        if (cancelled) return;
+        const user = res?.data?.user || res?.user;
+        if (!user) return;
+
+        const name = user.fullName || user.name || (user.firstName && user.lastName ? `${user.firstName} ${user.lastName}`.trim() : '');
+        const phone = user.phone || user.phoneNumber || '';
+        const addr = user.address;
+        const address = typeof addr === 'string' ? addr : (addr?.street || user.streetAddress || '');
+
+        if (name || phone || address) {
+          setFormData(prev => ({
+            ...prev,
+            ...(name && !prev.senderName && { senderName: name }),
+            ...(phone && !prev.senderPhone && { senderPhone: phone }),
+            ...(address && !prev.pickupStreet && { pickupStreet: address }),
+          }));
+        }
+      } catch (e) {
+        if (!cancelled) console.warn('[Book] Could not load customer profile for sender auto-fill:', e);
+      }
+    })();
+    return () => { cancelled = true; };
+  }, []);
+
+  const handleChange = (e) =>
+  {
+    const name = e.target.name;
     setFormData({
       ...formData,
-      [e.target.name]: e.target.value
+      [name]: e.target.value
     });
+    if (fieldErrors[name]) setFieldErrors(prev => ({ ...prev, [name]: undefined }));
   };
 
-  const handleSubmit = async () => {
+  // Map API validation field paths to form field key and user-friendly message
+  const getFieldErrorFromApi = (apiField, apiMessage) =>
+  {
+    const lower = (apiField || '').toLowerCase();
+    if (lower.includes('packagedetails.description')) return { key: 'packageDescription', msg: 'Please describe the contents of your package.' };
+    if (lower.includes('pickupaddress')) return { key: 'pickupStreet', msg: 'Please enter or select a valid pickup address.' };
+    if (lower.includes('deliveryaddress')) return { key: 'deliveryStreet', msg: 'Please enter or select a valid delivery address.' };
+    if (lower.includes('sender') && lower.includes('name')) return { key: 'senderName', msg: 'Please enter the sender\'s name.' };
+    if (lower.includes('sender') && (lower.includes('phone') || lower.includes('contact'))) return { key: 'senderPhone', msg: 'Please enter the sender\'s phone number.' };
+    if (lower.includes('recipient') && lower.includes('name')) return { key: 'recipientName', msg: 'Please enter the recipient\'s name.' };
+    if (lower.includes('recipient') && (lower.includes('phone') || lower.includes('contact'))) return { key: 'recipientPhone', msg: 'Please enter the recipient\'s phone number.' };
+    if (lower.includes('pickup') && lower.includes('date')) return { key: 'pickupDate', msg: 'Please select a pickup date.' };
+    if (lower.includes('description')) return { key: 'packageDescription', msg: 'Please describe the contents of your package.' };
+    return { key: 'packageDescription', msg: apiMessage || 'Please check this field.' };
+  };
+
+  const handleSubmit = async () =>
+  {
     console.log('[Book] handleSubmit called', { paymentMethod: formData.paymentMethod });
     setIsSubmitting(true);
+    setFieldErrors({});
     try {
       // determine weight string - use user input or default to category range
       const defaultWeightRanges = {
@@ -236,9 +304,11 @@ const Book = () => {
           if (res.results && res.results.length > 0) {
             const result = res.results.find(r => r.types && r.types.some(t => ['street_address', 'premise', 'establishment', 'route', 'postal_town', 'locality'].includes(t))) || res.results[0];
             const components = result.address_components || [];
-            const extract = (componentsList) => {
+            const extract = (componentsList) =>
+            {
               const out = { streetNumber: '', route: '', premise: '', subpremise: '', name: '', city: '', state: '', postal_code: '', country: '' };
-              componentsList.forEach(component => {
+              componentsList.forEach(component =>
+              {
                 const types = component.types || [];
                 if (types.includes('street_number')) out.streetNumber = component.long_name;
                 if (types.includes('route')) out.route = component.long_name;
@@ -292,9 +362,11 @@ const Book = () => {
           if (res.results && res.results.length > 0) {
             const result = res.results.find(r => r.types && r.types.some(t => ['street_address', 'premise', 'establishment', 'route', 'postal_town', 'locality'].includes(t))) || res.results[0];
             const components = result.address_components || [];
-            const extract = (componentsList) => {
+            const extract = (componentsList) =>
+            {
               const out = { streetNumber: '', route: '', premise: '', subpremise: '', name: '', city: '', state: '', postal_code: '', country: '' };
-              componentsList.forEach(component => {
+              componentsList.forEach(component =>
+              {
                 const types = component.types || [];
                 if (types.includes('street_number')) out.streetNumber = component.long_name;
                 if (types.includes('route')) out.route = component.long_name;
@@ -440,7 +512,8 @@ const Book = () => {
       if (formData.image) {
         const fd = new FormData();
         fd.append('images', formData.image);
-        Object.entries(payload).forEach(([k, v]) => {
+        Object.entries(payload).forEach(([k, v]) =>
+        {
           if (v === undefined || v === null) {
             fd.append(k, '');
           } else if (typeof v === 'object') {
@@ -525,7 +598,8 @@ const Book = () => {
           } catch (e) { /* ignore */ }
 
           // helper: cancel delivery if payment not completed
-          const cleanupOnPaymentCancel = async (did) => {
+          const cleanupOnPaymentCancel = async (did) =>
+          {
             try {
               console.log('[Book] Payment window closed without completion for delivery:', did);
               // Don't cancel the booking - user can try paying again
@@ -586,7 +660,8 @@ const Book = () => {
                     }
                   ]
                 },
-                onSuccess: async (transaction) => {
+                onSuccess: async (transaction) =>
+                {
                   console.log('Payment successful (inline):', transaction);
                   setToastMsg('Payment successful! Redirecting...');
                   setShowToast(true);
@@ -612,7 +687,8 @@ const Book = () => {
                     const didPart = deliveryId ? `&deliveryId=${encodeURIComponent(deliveryId)}` : '';
                     const target = `/customer/payment/success?paymentId=${pidEnc}${didPart}`;
 
-                    setTimeout(() => {
+                    setTimeout(() =>
+                    {
                       router.push(target, 'root', 'replace');
                     }, 350);
                   } catch (err) {
@@ -621,7 +697,8 @@ const Book = () => {
                     setIsSubmitting(false);
                   }
                 },
-                onCancel: async () => {
+                onCancel: async () =>
+                {
                   console.log('Payment cancelled by user');
                   // rollback delivery on cancel
                   try { await cleanupOnPaymentCancel(deliveryId); } catch (e) { console.warn(e); }
@@ -680,14 +757,23 @@ const Book = () => {
 
       setToastMsg('Delivery booked successfully!');
       setShowToast(true);
-      setTimeout(() => {
+      setTimeout(() =>
+      {
         router.push('/customer/deliveries', 'root', 'replace');
       }, 1500);
     } catch (err) {
-      if (err?.data?.errors && Array.isArray(err.data.errors)) {
-        const errorMessages = err.data.errors.map(e => `${e.field}: ${e.message}`).join('; ');
-        setToastMsg(`Validation error: ${errorMessages}`);
+      const data = err?.response?.data || err?.data;
+      if (data?.errors && Array.isArray(data.errors)) {
+        const next = {};
+        data.errors.forEach((e) =>
+        {
+          const { key, msg } = getFieldErrorFromApi(e.field, e.message);
+          if (key && msg) next[key] = msg;
+        });
+        setFieldErrors(next);
+        setToastMsg('Please fix the errors below.');
       } else {
+        setFieldErrors({});
         setToastMsg(err?.message || 'Failed to book delivery');
       }
       setShowToast(true);
@@ -696,7 +782,8 @@ const Book = () => {
     }
   };
 
-  const saveDraft = async () => {
+  const saveDraft = async () =>
+  {
     setIsSubmitting(true);
     try {
       const draftsRaw = getJSONCookie('delivery_drafts');
@@ -720,8 +807,10 @@ const Book = () => {
   };
 
   // Fetch price estimation when relevant fields change
-  useEffect(() => {
-    const fetchEstimate = async () => {
+  useEffect(() =>
+  {
+    const fetchEstimate = async () =>
+    {
       if (!pickupCoordinates?.lat || !deliveryCoordinates?.lat) {
         setEstimatedPrice(null);
         return;
@@ -757,7 +846,8 @@ const Book = () => {
   }, [pickupCoordinates, deliveryCoordinates, formData.deliveryType, isSpecialErrand]);
 
   // Fetch nearby riders only for Smart Ride when pickup location is set
-  useEffect(() => {
+  useEffect(() =>
+  {
     if (formData.deliveryType !== 'smart_ride') {
       setNearbyRiders([]);
       setNearbyPricing(null);
@@ -774,19 +864,22 @@ const Book = () => {
     let cancelled = false;
     setNearbyRidersLoading(true);
     getNearbyRiders({ lat, lng, radiusKm: 25, limit: 10 })
-      .then((res) => {
+      .then((res) =>
+      {
         if (cancelled) return;
         const data = res?.data?.data || res?.data;
         setNearbyRiders(Array.isArray(data?.riders) ? data.riders : []);
         setNearbyPricing(data?.pricing || null);
       })
-      .catch(() => {
+      .catch(() =>
+      {
         if (!cancelled) {
           setNearbyRiders([]);
           setNearbyPricing(null);
         }
       })
-      .finally(() => {
+      .finally(() =>
+      {
         if (!cancelled) setNearbyRidersLoading(false);
       });
     return () => { cancelled = true; };
@@ -794,7 +887,8 @@ const Book = () => {
 
   // Calculate distance whenever addresses change - KEEPING THIS FOR NOW BUT IS REDUNDANT WITH BACKEND RESPONSE potentially
   // If backend returns distance, we can use that.
-  useEffect(() => {
+  useEffect(() =>
+  {
     if (pickupCoordinates && deliveryCoordinates &&
       pickupCoordinates.lat !== 0 && deliveryCoordinates.lat !== 0) {
       const dist = calculateDistance(pickupCoordinates, deliveryCoordinates);
@@ -804,7 +898,8 @@ const Book = () => {
     }
   }, [pickupCoordinates, deliveryCoordinates]);
 
-  const getPricingBreakdown = () => {
+  const getPricingBreakdown = () =>
+  {
     if (estimatedPrice) {
       // Use the applied delivery type fee which updates immediately on selection
       const deliveryTypeFee = appliedDeliveryTypeFee || 0;
@@ -840,7 +935,8 @@ const Book = () => {
     };
   };
 
-  const calculateTotal = () => {
+  const calculateTotal = () =>
+  {
     const pricing = getPricingBreakdown();
     const base = 500; // Base fare
     const perKmRate = 150; // Per km rate after 2km
@@ -860,7 +956,8 @@ const Book = () => {
     return Math.max(0, base + distanceCharge + dtFee - discount);
   };
 
-  const getBaseRate = () => {
+  const getBaseRate = () =>
+  {
     // Logic for base rate display
     return getPricingBreakdown().deliveryCharge || 0;
   };
@@ -893,7 +990,8 @@ const Book = () => {
                 recipientEmail: formData.recipientEmail,
                 packageDescription: formData.packageDescription,
                 image: formData.image
-              }} onClose={() => {
+              }} onClose={() =>
+              {
                 setShowSmartRide(false);
                 try { window.history.replaceState({}, '', window.location.pathname); } catch (e) { }
               }} />
@@ -928,7 +1026,8 @@ const Book = () => {
                   <label className="block text-sm font-medium text-[#0F172A] mb-2">Delivery Type</label>
                   <StyledDropdown
                     value={selectedDeliveryType?.label || 'Select delivery type'}
-                    onChange={(label) => {
+                    onChange={(label) =>
+                    {
                       const selected = deliveryTypes.find(t => t.label === label);
                       if (selected) handleDeliveryTypeSelect(selected.value);
                     }}
@@ -960,8 +1059,9 @@ const Book = () => {
                           value={formData.senderName}
                           onChange={handleChange}
                           placeholder="John Doe"
-                          className="w-full px-4 py-3 rounded-xl bg-[#F8F9FA] text-sm md:text-base text-[#0F172A] placeholder:text-[#94A3B8] focus:outline-none focus:ring-2 focus:ring-[#00D68F] border-none"
+                          className={`w-full px-4 py-3 rounded-xl bg-[#F8F9FA] text-sm md:text-base text-[#0F172A] placeholder:text-[#94A3B8] focus:outline-none focus:ring-2 border-none ${fieldErrors.senderName ? 'focus:ring-red-500 ring-2 ring-red-200' : 'focus:ring-[#00D68F]'}`}
                         />
+                        {fieldErrors.senderName && <p className="text-sm text-red-600 mt-1.5" role="alert">{fieldErrors.senderName}</p>}
                       </div>
 
                       <div>
@@ -974,8 +1074,9 @@ const Book = () => {
                           value={formData.senderPhone}
                           onChange={handleChange}
                           placeholder="+234 800 000 0000"
-                          className="w-full px-4 py-3 rounded-xl bg-[#F8F9FA] text-sm md:text-base text-[#0F172A] placeholder:text-[#94A3B8] focus:outline-none focus:ring-2 focus:ring-[#00D68F] border-none"
+                          className={`w-full px-4 py-3 rounded-xl bg-[#F8F9FA] text-sm md:text-base text-[#0F172A] placeholder:text-[#94A3B8] focus:outline-none focus:ring-2 border-none ${fieldErrors.senderPhone ? 'focus:ring-red-500 ring-2 ring-red-200' : 'focus:ring-[#00D68F]'}`}
                         />
+                        {fieldErrors.senderPhone && <p className="text-sm text-red-600 mt-1.5" role="alert">{fieldErrors.senderPhone}</p>}
                       </div>
 
                       <div>
@@ -992,14 +1093,21 @@ const Book = () => {
                         </div>
                         <GoogleMapsAutocomplete
                           value={formData.pickupStreet}
-                          onChange={(value) => setFormData({ ...formData, pickupStreet: value })}
+                          onChange={(value) =>
+                          {
+                            setFormData(prev => ({ ...prev, pickupStreet: value }));
+                            if (fieldErrors.pickupStreet) setFieldErrors(prev => ({ ...prev, pickupStreet: undefined }));
+                          }}
                           placeholder="Enter pickup address"
-                          onPlaceSelect={(place) => {
+                          onPlaceSelect={(place) =>
+                          {
                             setFormData(prev => ({ ...prev, pickupStreet: place.street || place.formatted_address || '' }));
                             setPickupCoordinates(place.coordinates || { lat: 0, lng: 0 });
                             setPickupAddressObj(place);
+                            if (fieldErrors.pickupStreet) setFieldErrors(prev => ({ ...prev, pickupStreet: undefined }));
                           }}
                         />
+                        {fieldErrors.pickupStreet && <p className="text-sm text-red-600 mt-1.5" role="alert">{fieldErrors.pickupStreet}</p>}
                       </div>
 
                       <div>
@@ -1011,8 +1119,9 @@ const Book = () => {
                           name="pickupDate"
                           value={formData.pickupDate}
                           onChange={handleChange}
-                          className="w-full px-4 py-3 rounded-xl bg-[#F8F9FA] text-sm md:text-base text-[#0F172A] focus:outline-none focus:ring-2 focus:ring-[#00D68F] border-none"
+                          className={`w-full px-4 py-3 rounded-xl bg-[#F8F9FA] text-sm md:text-base text-[#0F172A] focus:outline-none focus:ring-2 border-none ${fieldErrors.pickupDate ? 'focus:ring-red-500 ring-2 ring-red-200' : 'focus:ring-[#00D68F]'}`}
                         />
+                        {fieldErrors.pickupDate && <p className="text-sm text-red-600 mt-1.5" role="alert">{fieldErrors.pickupDate}</p>}
                       </div>
                     </div>
                   </div>
@@ -1037,8 +1146,9 @@ const Book = () => {
                           value={formData.recipientName}
                           onChange={handleChange}
                           placeholder="Jane Smith"
-                          className="w-full px-4 py-3 rounded-xl bg-[#F8F9FA] text-sm md:text-base text-[#0F172A] placeholder:text-[#94A3B8] focus:outline-none focus:ring-2 focus:ring-[#00D68F] border-none"
+                          className={`w-full px-4 py-3 rounded-xl bg-[#F8F9FA] text-sm md:text-base text-[#0F172A] placeholder:text-[#94A3B8] focus:outline-none focus:ring-2 border-none ${fieldErrors.recipientName ? 'focus:ring-red-500 ring-2 ring-red-200' : 'focus:ring-[#00D68F]'}`}
                         />
+                        {fieldErrors.recipientName && <p className="text-sm text-red-600 mt-1.5" role="alert">{fieldErrors.recipientName}</p>}
                       </div>
 
                       <div>
@@ -1069,14 +1179,21 @@ const Book = () => {
                         </div>
                         <GoogleMapsAutocomplete
                           value={formData.deliveryStreet}
-                          onChange={(value) => setFormData({ ...formData, deliveryStreet: value })}
+                          onChange={(value) =>
+                          {
+                            setFormData(prev => ({ ...prev, deliveryStreet: value }));
+                            if (fieldErrors.deliveryStreet) setFieldErrors(prev => ({ ...prev, deliveryStreet: undefined }));
+                          }}
                           placeholder="Enter delivery address"
-                          onPlaceSelect={(place) => {
+                          onPlaceSelect={(place) =>
+                          {
                             setFormData(prev => ({ ...prev, deliveryStreet: place.street || place.formatted_address || '' }));
                             setDeliveryCoordinates(place.coordinates || { lat: 0, lng: 0 });
                             setDeliveryAddressObj(place);
+                            if (fieldErrors.deliveryStreet) setFieldErrors(prev => ({ ...prev, deliveryStreet: undefined }));
                           }}
                         />
+                        {fieldErrors.deliveryStreet && <p className="text-sm text-red-600 mt-1.5" role="alert">{fieldErrors.deliveryStreet}</p>}
                       </div>
 
                       <div>
@@ -1121,7 +1238,8 @@ const Book = () => {
                                 formData.sizeCategory === 'very_big' ? 'Very Big' :
                                   'Size Category'
                           }
-                          onChange={(label) => {
+                          onChange={(label) =>
+                          {
                             const valueMap = { 'Small': 'small', 'Medium': 'big', 'Very Big': 'very_big' };
                             const defaultScaleMap = { small: 85, big: 100, very_big: 120 };
                             const cat = valueMap[label];
@@ -1176,7 +1294,8 @@ const Book = () => {
                             max="130"
                             name="sizeScale"
                             value={formData.sizeScale}
-                            onChange={(e) => {
+                            onChange={(e) =>
+                            {
                               const scale = parseInt(e.target.value, 10);
                               const dimsMap = { small: [30, 30, 30], big: [50, 40, 30], very_big: [80, 60, 50] };
                               // Determine category from scale thresholds
@@ -1201,14 +1320,16 @@ const Book = () => {
                                 // ignore
                               }
                             }}
-                            onMouseMove={(e) => {
+                            onMouseMove={(e) =>
+                            {
                               if (!sliderRef.current) return;
                               const val = parseInt(sliderRef.current.value, 10);
                               const min = 70; const max = 130;
                               const percent = (val - min) / (max - min);
                               setSliderBubble({ percent, value: val });
                             }}
-                            onMouseLeave={() => {
+                            onMouseLeave={() =>
+                            {
                               if (hideBubbleTimeout.current) clearTimeout(hideBubbleTimeout.current);
                               hideBubbleTimeout.current = setTimeout(() => setSliderBubble(null), 800);
                             }}
@@ -1310,7 +1431,8 @@ const Book = () => {
                                 formData.weightCategory === 'very_heavy' ? 'Very Heavy' :
                                   'Weight Category'
                           }
-                          onChange={(label) => {
+                          onChange={(label) =>
+                          {
                             const valueMap = { 'Light': 'light', 'Heavy': 'heavy', 'Very Heavy': 'very_heavy' };
                             setFormData({ ...formData, weightCategory: valueMap[label] });
                           }}
@@ -1379,8 +1501,11 @@ const Book = () => {
                       onChange={handleChange}
                       placeholder="Describe the contents of your package"
                       rows="4"
-                      className="w-full px-4 py-3 rounded-xl bg-[#F8F9FA] text-sm md:text-base text-[#0F172A] placeholder:text-[#94A3B8] focus:outline-none focus:ring-2 focus:ring-[#00D68F] border-none resize-none"
+                      className={`w-full px-4 py-3 rounded-xl bg-[#F8F9FA] text-sm md:text-base text-[#0F172A] placeholder:text-[#94A3B8] focus:outline-none focus:ring-2 border-none resize-none ${fieldErrors.packageDescription ? 'ring-2 ring-red-200 focus:ring-red-500' : 'focus:ring-[#00D68F]'}`}
+                      aria-invalid={!!fieldErrors.packageDescription}
+                      aria-describedby={fieldErrors.packageDescription ? 'packageDescription-error' : undefined}
                     ></textarea>
+                    {fieldErrors.packageDescription && <p id="packageDescription-error" className="text-sm text-red-600 mt-1.5" role="alert">{fieldErrors.packageDescription}</p>}
                   </div>
 
                   {/* Riders nearby — Smart Ride only: customer can request a rider; Express goes to pool */}
@@ -1446,7 +1571,8 @@ const Book = () => {
                           alt="Package preview"
                           className="w-full h-48 object-cover rounded-xl border-2 border-[#00B75A]"
                           onLoad={(e) => URL.revokeObjectURL(e.target.src)}
-                          onError={(e) => {
+                          onError={(e) =>
+                          {
                             e.target.style.display = 'none';
                             console.error('Failed to load image preview');
                           }}
@@ -1474,7 +1600,8 @@ const Book = () => {
                               </div>
                               <button
                                 type="button"
-                                onClick={(e) => {
+                                onClick={(e) =>
+                                {
                                   e.preventDefault();
                                   e.stopPropagation();
                                   setFormData({ ...formData, image: null });
@@ -1594,7 +1721,8 @@ const Book = () => {
                 <div className="bg-[#F0FDF4] rounded-xl p-4 md:p-6 mb-6">
                   <h3 className="text-base font-semibold text-[#0F172A] mb-4">Cost Breakdown</h3>
                   <div className="space-y-2.5">
-                    {(() => {
+                    {(() =>
+                    {
                       const pricing = getPricingBreakdown();
                       return (
                         <>
@@ -1696,7 +1824,8 @@ const Book = () => {
 
                 <div className="p-6 overflow-y-auto h-[calc(100%-88px)]">
                   <button
-                    onClick={() => {
+                    onClick={() =>
+                    {
                       setFormData({ ...formData, paymentMethod: 'cash' });
                       setTimeout(() => setShowPaymentDrawer(false), 150);
                     }}
@@ -1730,7 +1859,8 @@ const Book = () => {
                   </button>
 
                   <button
-                    onClick={() => {
+                    onClick={() =>
+                    {
                       setFormData({ ...formData, paymentMethod: 'card' });
                       setTimeout(() => setShowPaymentDrawer(false), 150);
                     }}
@@ -1771,7 +1901,8 @@ const Book = () => {
                   </button>
 
                   <button
-                    onClick={() => {
+                    onClick={() =>
+                    {
                       setFormData({ ...formData, paymentMethod: 'transfer' });
                       setTimeout(() => setShowPaymentDrawer(false), 150);
                     }}
@@ -1833,7 +1964,8 @@ const Book = () => {
 
                   <div className="p-6 overflow-y-auto max-h-[70vh]">
                     <button
-                      onClick={() => {
+                      onClick={() =>
+                      {
                         setFormData({ ...formData, paymentMethod: 'cash' });
                         setTimeout(() => setShowPaymentDrawer(false), 150);
                       }}
@@ -1867,7 +1999,8 @@ const Book = () => {
                     </button>
 
                     <button
-                      onClick={() => {
+                      onClick={() =>
+                      {
                         setFormData({ ...formData, paymentMethod: 'card' });
                         setTimeout(() => setShowPaymentDrawer(false), 150);
                       }}
@@ -1908,7 +2041,8 @@ const Book = () => {
                     </button>
 
                     <button
-                      onClick={() => {
+                      onClick={() =>
+                      {
                         setFormData({ ...formData, paymentMethod: 'transfer' });
                         setTimeout(() => setShowPaymentDrawer(false), 150);
                       }}

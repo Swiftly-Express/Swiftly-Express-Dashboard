@@ -2,24 +2,28 @@ import React, { useEffect, useState } from 'react';
 import CustomerSidebar from './CustomerSidebar';
 import { YummyText } from '../../../components/YummyText';
 import RatingModal from './RatingModal';
-import {
-  getUnreadNotificationCount,
-  getNotifications,
-  markNotificationAsRead,
-  markAllNotificationsAsRead
-} from '../../../utils/authApi';
+import
+  {
+    getUnreadNotificationCount,
+    getNotifications,
+    markNotificationAsRead,
+    markAllNotificationsAsRead
+  } from '../../../utils/authApi';
 import socketService from '../../../services/socket.service';
-import { getCookie, setCookie } from '../../../utils/cookies';
+import { getCookie, setCookie, getJSONCookie } from '../../../utils/cookies';
+import { getCustomerProfile } from '../../../utils/authApi';
 
 const DEFAULT_AVATAR = 'https://api.dicebear.com/7.x/avataaars/svg?seed=User';
 
-const CustomerLayout = ({ children }) => {
+const CustomerLayout = ({ children }) =>
+{
   const [avatarSrc, setAvatarSrc] = useState(DEFAULT_AVATAR);
   const [showNotifications, setShowNotifications] = useState(false);
   const [notifications, setNotifications] = useState([]);
   // Local persistence for read notification IDs
   const NOTIF_READ_COOKIE = 'customer_read_notifications';
-  const getReadNotifIds = () => {
+  const getReadNotifIds = () =>
+  {
     try {
       const v = getCookie(NOTIF_READ_COOKIE);
       if (!v) return [];
@@ -28,7 +32,8 @@ const CustomerLayout = ({ children }) => {
       return [];
     }
   };
-  const setReadNotifIds = (ids) => {
+  const setReadNotifIds = (ids) =>
+  {
     try {
       setCookie(NOTIF_READ_COOKIE, JSON.stringify(ids), 7);
     } catch (e) { }
@@ -39,44 +44,38 @@ const CustomerLayout = ({ children }) => {
   const [hasMoreNotifications, setHasMoreNotifications] = useState(false);
   const [loadingNotifications, setLoadingNotifications] = useState(false);
 
-  const loadAvatar = () => {
+  const loadAvatar = () =>
+  {
     try {
-      // 1. Prefer an explicit cached profile image (uploaded or Google)
-      const cached = localStorage.getItem('profile_image') || '';
-      if (cached && !cached.includes('profileimage.svg')) {
-        // If cached looks like a placeholder (dicebear) we'll regenerate below
-        if (!cached.includes('dicebear')) {
-          setAvatarSrc(cached);
+      // 1. Prefer explicit cached profile image (cookie or localStorage – uploaded or Google)
+      const cachedLocal = localStorage.getItem('profile_image') || '';
+      const cachedCookie = getCookie('profile_image') || '';
+      const cached = cachedCookie || cachedLocal;
+      if (cached && !cached.includes('profileimage.svg') && !cached.includes('dicebear')) {
+        setAvatarSrc(cached);
+        return;
+      }
+
+      // 2. Check user_data (cookie first – auth stores it there; fallback localStorage)
+      const userFromCookie = getJSONCookie('user_data');
+      const userRaw = userFromCookie != null ? null : localStorage.getItem('user_data');
+      const user = userFromCookie != null ? userFromCookie : (userRaw ? (() => { try { return JSON.parse(userRaw); } catch { return null; } })() : null);
+      if (user) {
+        const img = user?.profileImage || user?.profile_image || user?.profilePhoto || user?.avatar || user?.picture || null;
+        const hasGoogleId = !!(user?.googleId || user?.id || user?._id || user?.sub);
+
+        if (img && !img.includes('profileimage.svg') && !img.includes('dicebear')) {
+          setAvatarSrc(img);
+          return;
+        }
+
+        if (hasGoogleId) {
+          const seed = (user?.fullName || user?.name || user?.email || 'User').split(' ')[0];
+          setAvatarSrc(`https://api.dicebear.com/7.x/avataaars/svg?seed=${encodeURIComponent(seed)}`);
           return;
         }
       }
 
-      // 2. Check user_data for a Google-provided photo or explicit profile fields
-      const userRaw = localStorage.getItem('user_data');
-      if (userRaw) {
-        try {
-          const user = JSON.parse(userRaw);
-          const img = user?.profileImage || user?.profile_image || user?.avatar || user?.picture || null;
-          const hasGoogleId = !!(user?.googleId || user?.id || user?._id || user?.sub);
-
-          if (img && !img.includes('profileimage.svg')) {
-            // Use explicit image if present
-            setAvatarSrc(img);
-            return;
-          }
-
-          // Only use name/email from cached data to seed an avatar if the data came from Google
-          if (hasGoogleId) {
-            const seed = (user?.fullName || user?.name || user?.email || 'User').split(' ')[0];
-            setAvatarSrc(`https://api.dicebear.com/7.x/avataaars/svg?seed=${encodeURIComponent(seed)}`);
-            return;
-          }
-        } catch (e) {
-          console.warn('[CustomerLayout] Failed to parse cached user_data', e);
-        }
-      }
-
-      // 3. As a last resort default avatar
       setAvatarSrc(DEFAULT_AVATAR);
     } catch (e) {
       console.warn('[CustomerLayout] Failed to load avatar from storage', e);
@@ -84,12 +83,39 @@ const CustomerLayout = ({ children }) => {
     }
   };
 
-  const checkNotifications = async () => {
+  // Fetch customer profile from API so nav shows server profile image (e.g. after upload)
+  useEffect(() =>
+  {
+    const token = getCookie('customer_token') || getCookie('auth_token');
+    if (!token) return;
+    let cancelled = false;
+    (async () =>
+    {
+      try {
+        const res = await getCustomerProfile();
+        if (cancelled) return;
+        const user = res?.data?.user || res?.user;
+        const img = user?.profileImage || user?.profile_image || user?.avatar || null;
+        if (img && !img.includes('dicebear') && !img.includes('profileimage.svg')) {
+          setAvatarSrc(img);
+          if (typeof localStorage !== 'undefined') localStorage.setItem('profile_image', img);
+          setCookie('profile_image', img, 7);
+        }
+      } catch (e) {
+        if (!cancelled) console.warn('[CustomerLayout] Could not fetch customer profile for avatar', e);
+      }
+    })();
+    return () => { cancelled = true; };
+  }, []);
+
+  const checkNotifications = async () =>
+  {
     try {
       // Try fetching notifications and compute unread excluding locally-read IDs
       const resp = await getNotifications(1, 100);
       const list = resp?.data?.notifications || resp?.notifications || resp?.data || [];
-      const unread = list.filter(n => {
+      const unread = list.filter(n =>
+      {
         const id = n._id || n.id;
         const alreadyRead = (n.isRead || n.read) || readNotifIds.includes(id);
         return !alreadyRead;
@@ -107,7 +133,8 @@ const CustomerLayout = ({ children }) => {
     }
   };
 
-  const fetchNotifications = async (page = 1, append = false) => {
+  const fetchNotifications = async (page = 1, append = false) =>
+  {
     try {
       setLoadingNotifications(true);
       const response = await getNotifications(page, 20);
@@ -130,7 +157,8 @@ const CustomerLayout = ({ children }) => {
     }
   };
 
-  const toggleNotifications = async () => {
+  const toggleNotifications = async () =>
+  {
     const newState = !showNotifications;
     setShowNotifications(newState);
     if (newState) {
@@ -153,13 +181,15 @@ const CustomerLayout = ({ children }) => {
       }
 
       // Fire server-side mark-all in background and refresh shortly after
-      (async () => {
+      (async () =>
+      {
         try {
           await markAllNotificationsAsRead();
         } catch (err) {
           console.warn('[CustomerLayout] markAllNotificationsAsRead failed', err);
         }
-        setTimeout(async () => {
+        setTimeout(async () =>
+        {
           try {
             await fetchNotifications(1, false);
             await checkNotifications();
@@ -171,7 +201,8 @@ const CustomerLayout = ({ children }) => {
     }
   };
 
-  const handleMarkAllAsRead = async (e) => {
+  const handleMarkAllAsRead = async (e) =>
+  {
     if (e) {
       e.preventDefault();
       e.stopPropagation();
@@ -194,7 +225,8 @@ const CustomerLayout = ({ children }) => {
       } catch (e) { }
 
       // Refresh from server in background (delayed to avoid race conditions)
-      setTimeout(async () => {
+      setTimeout(async () =>
+      {
         try {
           await fetchNotifications(1, false);
           await checkNotifications();
@@ -221,7 +253,8 @@ const CustomerLayout = ({ children }) => {
     }
   };
 
-  const handleMarkAsRead = async (notificationId, e) => {
+  const handleMarkAsRead = async (notificationId, e) =>
+  {
     if (e) {
       e.stopPropagation();
     }
@@ -236,7 +269,8 @@ const CustomerLayout = ({ children }) => {
       );
 
       // Persist this ID locally so future server count refreshes won't show it again
-      setReadNotifIdsState(prev => {
+      setReadNotifIdsState(prev =>
+      {
         const newIds = prev.includes(notificationId) ? prev : [...prev, notificationId];
         try { setReadNotifIds(newIds); } catch (e) { }
         return newIds;
@@ -252,20 +286,23 @@ const CustomerLayout = ({ children }) => {
     }
   };
 
-  const loadMoreNotifications = () => {
+  const loadMoreNotifications = () =>
+  {
     if (!loadingNotifications && hasMoreNotifications) {
       fetchNotifications(notificationPage + 1, true);
     }
   };
 
-  useEffect(() => {
+  useEffect(() =>
+  {
     loadAvatar();
     checkNotifications();
 
     // Connect to socket for realtime delivery events (e.g., delivery:accepted)
     try {
       socketService.connect();
-      socketService.on('delivery:accepted', (data) => {
+      socketService.on('delivery:accepted', (data) =>
+      {
         try {
           window.dispatchEvent(new CustomEvent('delivery:accepted', { detail: data }));
         } catch (e) { /* ignore */ }
@@ -274,15 +311,18 @@ const CustomerLayout = ({ children }) => {
       console.warn('[CustomerLayout] Failed to init socket service', e);
     }
 
-    const notificationInterval = setInterval(() => {
+    const notificationInterval = setInterval(() =>
+    {
       checkNotifications();
     }, 30000);
 
-    const handleDeliveryUpdated = () => {
+    const handleDeliveryUpdated = () =>
+    {
       checkNotifications();
     };
 
-    const handleVerificationCompleted = () => {
+    const handleVerificationCompleted = () =>
+    {
       checkNotifications();
     };
 
@@ -290,7 +330,8 @@ const CustomerLayout = ({ children }) => {
     window.addEventListener('delivery:updated', handleDeliveryUpdated);
     window.addEventListener('verification:completed', handleVerificationCompleted);
 
-    return () => {
+    return () =>
+    {
       window.removeEventListener('profile:updated', loadAvatar);
       window.removeEventListener('delivery:updated', handleDeliveryUpdated);
       window.removeEventListener('verification:completed', handleVerificationCompleted);
@@ -334,7 +375,7 @@ const CustomerLayout = ({ children }) => {
                 </button>
 
                 <button onClick={() => (window.location.href = '/customer/profile')} title="View Profile" aria-label="View Profile" className="w-10 h-10 rounded-full bg-gradient-to-br from-[#00D68F] to-[#00B876] flex items-center justify-center overflow-hidden cursor-pointer">
-                  <img src={avatarSrc} alt="Profile" className="w-full h-full object-cover" />
+                  <img src={avatarSrc} alt="Profile" className="w-full h-full object-cover" onError={() => setAvatarSrc(DEFAULT_AVATAR)} />
                 </button>
 
                 <button className="p-2 flex flex-col gap-1 justify-center" aria-label="menu" onClick={() => window.dispatchEvent(new CustomEvent('customer:toggleMobileSidebar'))}>
@@ -373,7 +414,7 @@ const CustomerLayout = ({ children }) => {
                   )}
                 </button>
                 <button onClick={() => (window.location.href = '/customer/profile')} title="View Profile" aria-label="View Profile" className="w-10 h-10 rounded-full bg-gradient-to-br from-[#00D68F] to-[#00B876] flex items-center justify-center overflow-hidden cursor-pointer">
-                  <img src={avatarSrc} alt="Profile" className="w-full h-full object-cover" />
+                  <img src={avatarSrc} alt="Profile" className="w-full h-full object-cover" onError={() => setAvatarSrc(DEFAULT_AVATAR)} />
                 </button>
               </div>
             </div>
@@ -421,7 +462,8 @@ const CustomerLayout = ({ children }) => {
                 ) : (
                   <>
                     <div className="divide-y divide-gray-100">
-                      {notifications.map(notification => {
+                      {notifications.map(notification =>
+                      {
                         const notifId = notification._id || notification.id;
                         const isRead = (notification.isRead || notification.read) || readNotifIds.includes(notifId);
                         const notifType = notification.type || 'info';
@@ -429,7 +471,8 @@ const CustomerLayout = ({ children }) => {
                         const message = notification.message || notification.body || '';
                         const timestamp = notification.createdAt || notification.timestamp || new Date().toISOString();
 
-                        const getIcon = () => {
+                        const getIcon = () =>
+                        {
                           if (notifType === 'delivery' || notifType === 'order') return '📦';
                           if (notifType === 'payment' || notifType === 'earning') return '💰';
                           if (notifType === 'warning' || notifType === 'alert') return '⚠️';
@@ -437,7 +480,8 @@ const CustomerLayout = ({ children }) => {
                           return '🔔';
                         };
 
-                        const getBgColor = () => {
+                        const getBgColor = () =>
+                        {
                           if (notifType === 'delivery' || notifType === 'order') return 'bg-blue-100';
                           if (notifType === 'payment' || notifType === 'earning') return 'bg-green-100';
                           if (notifType === 'warning' || notifType === 'alert') return 'bg-amber-100';
@@ -451,7 +495,8 @@ const CustomerLayout = ({ children }) => {
                             className={`p-4 hover:bg-gray-50 transition-colors cursor-pointer ${!isRead ? 'bg-blue-50' : ''}`}
                             onMouseDown={(e) => e.stopPropagation()}
                             onTouchStart={(e) => e.stopPropagation()}
-                            onClick={(e) => {
+                            onClick={(e) =>
+                            {
                               e.stopPropagation();
                               if (!isRead) {
                                 handleMarkAsRead(notifId, e);
