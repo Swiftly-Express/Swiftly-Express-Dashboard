@@ -9,6 +9,7 @@ import ToyBikeIcon from '../../../icons/Toybikeicon';
 import ClockIcon from '../../../icons/Clockicon';
 import { getAllDeliveries, adminCancelDelivery, adminDeleteDelivery } from '../../../utils/adminApi';
 import { formatAddress } from '../../../utils/formatters';
+import socketService from '../../../services/socket.service';
 
 const ManageOrders = () => {
   const [searchQuery, setSearchQuery] = useState('');
@@ -134,7 +135,7 @@ const ManageOrders = () => {
 
       showToast('Delivery cancelled successfully', 'success');
 
-      // Dispatch event to update customer side
+      // Dispatch window event to update customer and rider sides
       window.dispatchEvent(new CustomEvent('delivery:cancelled', {
         detail: {
           deliveryId,
@@ -142,6 +143,20 @@ const ManageOrders = () => {
           cancelledBy: 'admin'
         }
       }));
+
+      // Emit socket event to notify rider in real-time (even if on different device/page)
+      try {
+        socketService.connect();
+        socketService.emit('delivery:cancelled', {
+          deliveryId,
+          reason: cancelReason,
+          cancelledBy: 'admin',
+          status: 'cancelled'
+        });
+        console.log('[ManageOrders] Socket event emitted: delivery:cancelled for', deliveryId);
+      } catch (socketErr) {
+        console.warn('[ManageOrders] Failed to emit socket event:', socketErr);
+      }
 
       // Refresh the list and update metrics
       await fetchDeliveries(currentPage);
@@ -168,10 +183,22 @@ const ManageOrders = () => {
 
       showToast('Delivery deleted successfully', 'success');
 
-      // Dispatch event to update customer side
+      // Dispatch window event to update customer and rider sides
       window.dispatchEvent(new CustomEvent('delivery:deleted', {
         detail: { deliveryId }
       }));
+
+      // Emit socket event to notify rider in real-time
+      try {
+        socketService.connect();
+        socketService.emit('delivery:deleted', {
+          deliveryId,
+          deletedBy: 'admin'
+        });
+        console.log('[ManageOrders] Socket event emitted: delivery:deleted for', deliveryId);
+      } catch (socketErr) {
+        console.warn('[ManageOrders] Failed to emit socket event:', socketErr);
+      }
 
       // Refresh the list and update metrics
       await fetchDeliveries(currentPage);
