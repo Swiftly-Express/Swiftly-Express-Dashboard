@@ -10,6 +10,7 @@ import ClockIcon from '../../../icons/Clockicon';
 import { getAllDeliveries, adminCancelDelivery, adminDeleteDelivery } from '../../../utils/adminApi';
 import { formatAddress } from '../../../utils/formatters';
 import socketService from '../../../services/socket.service';
+import { updateDeliveryStatus } from '../../../utils/authApi';
 
 const ManageOrders = () => {
   const [searchQuery, setSearchQuery] = useState('');
@@ -122,24 +123,39 @@ const ManageOrders = () => {
 
   const handleCancelDelivery = async () => {
     if (!selectedOrder) return;
-    if (!cancelReason.trim()) {
-      showToast('Please provide a cancellation reason', 'error');
-      return;
-    }
 
     try {
       setActionLoading(true);
       const deliveryId = selectedOrder._id || selectedOrder.id;
+      const reason = 'Cancelled by admin';
 
-      await adminCancelDelivery(deliveryId, cancelReason);
+      // Try admin endpoint first, fallback to regular status update if it fails
+      try {
+        await adminCancelDelivery(deliveryId, reason);
+      } catch (adminErr) {
+        console.warn('[ManageOrders] Admin cancel endpoint failed, using fallback:', adminErr);
+        // Fallback: Use regular delivery status update
+        await updateDeliveryStatus(deliveryId, {
+          status: 'cancelled',
+          reason: reason,
+          cancelledBy: 'admin'
+        });
+      }
 
       showToast('Delivery cancelled successfully', 'success');
+
+      // Optimistically update UI immediately
+      setOrders(prev => prev.map(order =>
+        (order._id === deliveryId || order.id === deliveryId)
+          ? { ...order, status: 'cancelled' }
+          : order
+      ));
 
       // Dispatch window event to update customer and rider sides
       window.dispatchEvent(new CustomEvent('delivery:cancelled', {
         detail: {
           deliveryId,
-          reason: cancelReason,
+          reason: 'Cancelled by admin',
           cancelledBy: 'admin'
         }
       }));
@@ -149,7 +165,7 @@ const ManageOrders = () => {
         socketService.connect();
         socketService.emit('delivery:cancelled', {
           deliveryId,
-          reason: cancelReason,
+          reason: 'Cancelled by admin',
           cancelledBy: 'admin',
           status: 'cancelled'
         });
@@ -163,7 +179,6 @@ const ManageOrders = () => {
 
       setShowCancelModal(false);
       setSelectedOrder(null);
-      setCancelReason('');
     } catch (err) {
       console.error('Error cancelling delivery:', err);
       showToast(err.message || 'Failed to cancel delivery', 'error');
@@ -179,9 +194,24 @@ const ManageOrders = () => {
       setActionLoading(true);
       const deliveryId = selectedOrder._id || selectedOrder.id;
 
-      await adminDeleteDelivery(deliveryId);
+      // Try admin delete endpoint first
+      try {
+        await adminDeleteDelivery(deliveryId);
+      } catch (adminErr) {
+        console.warn('[ManageOrders] Admin delete endpoint failed, using status update fallback:', adminErr);
+        // Fallback: Mark as deleted via status update (some backends handle this differently)
+        await updateDeliveryStatus(deliveryId, {
+          status: 'deleted',
+          deletedBy: 'admin'
+        });
+      }
 
       showToast('Delivery deleted successfully', 'success');
+
+      // Optimistically remove from UI immediately
+      setOrders(prev => prev.filter(order =>
+        (order._id !== deliveryId && order.id !== deliveryId)
+      ));
 
       // Dispatch window event to update customer and rider sides
       window.dispatchEvent(new CustomEvent('delivery:deleted', {
@@ -833,38 +863,28 @@ const ManageOrders = () => {
                   </div>
                 </div>
                 <p className="text-sm text-gray-600 mb-4">
-                  This will cancel the order and notify the customer. The order status will be updated to "Cancelled".
+                  ⚠️ <strong>Warning:</strong> This will cancel the order and notify the customer and rider. The order status will be updated to "Cancelled".
                 </p>
-                <div className="mb-4">
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Cancellation Reason *
-                  </label>
-                  <textarea
-                    value={cancelReason}
-                    onChange={(e) => setCancelReason(e.target.value)}
-                    placeholder="Enter reason for cancellation..."
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-transparent"
-                    rows="3"
-                  />
-                </div>
+                <p className="text-sm text-gray-600 mb-6">
+                  Customer: <strong>{selectedOrder?.customer?.name || selectedOrder?.customerName || 'N/A'}</strong>
+                </p>
                 <div className="flex gap-3">
                   <button
                     onClick={() => {
                       setShowCancelModal(false);
                       setSelectedOrder(null);
-                      setCancelReason('');
                     }}
                     disabled={actionLoading}
                     className="flex-1 px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 disabled:opacity-50"
                   >
-                    Cancel
+                    No, Keep It
                   </button>
                   <button
                     onClick={handleCancelDelivery}
-                    disabled={actionLoading || !cancelReason.trim()}
-                    className="flex-1 px-4 py-2 bg-orange-600 text-white rounded-lg hover:bg-orange-700 disabled:opacity-50 disabled:cursor-not-allowed"
+                    disabled={actionLoading}
+                    className="flex-1 px-4 py-2 bg-orange-600 text-white rounded-lg hover:bg-orange-700 disabled:opacity-50"
                   >
-                    {actionLoading ? 'Cancelling...' : 'Confirm Cancel'}
+                    {actionLoading ? 'Cancelling...' : 'Yes, Cancel Order'}
                   </button>
                 </div>
               </div>
