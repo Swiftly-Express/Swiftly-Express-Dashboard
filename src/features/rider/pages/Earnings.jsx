@@ -31,7 +31,7 @@ const StatCard = ({ icon, iconBg, title, value, subtitle, debtAmount }) => (
             -{debtAmount}
           </div>
         ) : (
-          <div className="absolute bottom-2 right-3 bg-green-100 text-green-700 px-2 py-1 rounded-full text-xs font-medium border border-green-200">
+          <div className="absolute bottom-4 right-3 bg-green-100 text-green-700 px-2 py-1 rounded-full text-xs font-medium border border-green-200">
             settled
           </div>
         )
