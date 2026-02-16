@@ -501,7 +501,7 @@ const Earnings = () => {
                 <button className="bg-[#00B75A] hover:bg-[#00B876] whitespace-nowrap text-sm text-white px-3 py-2 rounded-full transition-colors font-[400]">
                   Request Payout
                 </button>
-                <button 
+                <button
                   onClick={handleSettleDebt}
                   className="bg-red-600 hover:bg-red-700 whitespace-nowrap text-sm text-white px-3 py-2 rounded-full transition-colors font-[400]"
                 >
