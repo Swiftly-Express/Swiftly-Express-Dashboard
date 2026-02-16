@@ -12,8 +12,7 @@ import { getApprovedRiders, getVerificationByDriver, approveVerification, reject
 import StyledDropdown from '../../../components/StyledDropdown';
 import { Check, XCircle } from 'lucide-react';
 
-const ManageRiders = () =>
-{
+const ManageRiders = () => {
   const [searchQuery, setSearchQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState('All Status');
   const [kycFilter, setKycFilter] = useState('All KYC');
@@ -37,8 +36,7 @@ const ManageRiders = () =>
   const [showDebtLimitModal, setShowDebtLimitModal] = useState(false);
   const [debtLimitAmount, setDebtLimitAmount] = useState('');
 
-  const fetchRiders = async () =>
-  {
+  const fetchRiders = async () => {
     try {
       setLoading(true);
       setError(null);
@@ -54,16 +52,13 @@ const ManageRiders = () =>
     }
   };
 
-  useEffect(() =>
-  {
+  useEffect(() => {
     fetchRiders();
-    const handleDeliveryStatusChanged = () =>
-    {
+    const handleDeliveryStatusChanged = () => {
       console.log('[ManageRiders] Delivery status changed, refreshing rider data...');
       fetchRiders();
     };
-    const handleRiderStatusChanged = () =>
-    {
+    const handleRiderStatusChanged = () => {
       console.log('[ManageRiders] Rider status/availability changed, refreshing rider data...');
       fetchRiders();
     };
@@ -72,8 +67,7 @@ const ManageRiders = () =>
     window.addEventListener('rider:availabilityChanged', handleRiderStatusChanged);
     const handleResize = () => setIsMobile(window.innerWidth < 768);
     window.addEventListener('resize', handleResize);
-    return () =>
-    {
+    return () => {
       window.removeEventListener('delivery:statusChanged', handleDeliveryStatusChanged);
       window.removeEventListener('rider:statusChanged', handleRiderStatusChanged);
       window.removeEventListener('rider:availabilityChanged', handleRiderStatusChanged);
@@ -82,8 +76,7 @@ const ManageRiders = () =>
   }, []);
 
   // Helper function to get KYC status from verificationStatus field
-  const getKycStatus = (rider) =>
-  {
+  const getKycStatus = (rider) => {
     const status = rider.verificationStatus || 'pending';
     if (status === 'approved' || status === 'verified') return 'Approved';
     if (status === 'rejected' || status === 'declined') return 'Rejected';
@@ -92,8 +85,7 @@ const ManageRiders = () =>
 
   // Helper function to get rider status
   // Use backend-provided active/inactive status directly if available
-  const getRiderStatus = (rider) =>
-  {
+  const getRiderStatus = (rider) => {
     if (rider.isSuspended || rider.suspended || rider.status === 'suspended') return 'Suspended';
     // Prefer backend-provided toggle/flag for active state
     if (typeof rider.isActive === 'boolean') return rider.isActive ? 'Active' : 'Inactive';
@@ -103,8 +95,7 @@ const ManageRiders = () =>
   };
 
   // Format date
-  const formatDate = (dateString) =>
-  {
+  const formatDate = (dateString) => {
     if (!dateString) return 'N/A';
     try {
       const date = new Date(dateString);
@@ -115,26 +106,22 @@ const ManageRiders = () =>
   };
 
   // Format currency
-  const formatCurrency = (amount) =>
-  {
+  const formatCurrency = (amount) => {
     if (amount === null || amount === undefined) return '₦0.00';
     const numAmount = typeof amount === 'string' ? parseFloat(amount) : amount;
     return `₦${numAmount.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
   };
 
   // Format number
-  const formatNumber = (num) =>
-  {
+  const formatNumber = (num) => {
     if (num === null || num === undefined) return '0';
     return num.toLocaleString('en-US');
   };
 
   // Transform API data to UI format
-  const transformedRiders = useMemo(() =>
-  {
+  const transformedRiders = useMemo(() => {
     console.log('[ManageRiders] Raw ridersData:', ridersData);
-    return ridersData.map((rider, idx) =>
-    {
+    return ridersData.map((rider, idx) => {
       // Prefer merged/profile data when available (some APIs return nested user/profile objects)
       const profile = rider._merged || rider.user || rider.driver || rider.profile || rider.account || rider;
 
@@ -228,10 +215,8 @@ const ManageRiders = () =>
   }, [ridersData]);
 
   // Filter riders based on search and filters
-  const filteredRiders = useMemo(() =>
-  {
-    return transformedRiders.filter(rider =>
-    {
+  const filteredRiders = useMemo(() => {
+    return transformedRiders.filter(rider => {
       // Search filter
       const searchLower = searchQuery.toLowerCase();
       const matchesSearch = !searchQuery ||
@@ -251,8 +236,7 @@ const ManageRiders = () =>
   }, [transformedRiders, searchQuery, statusFilter, kycFilter]);
 
   // Calculate stats from real data
-  const stats = useMemo(() =>
-  {
+  const stats = useMemo(() => {
     const totalRiders = transformedRiders.length;
     const activeCount = transformedRiders.filter(r => r.status === 'Active').length;
     const inactiveCount = transformedRiders.filter(r => r.status === 'Inactive').length;
@@ -300,8 +284,7 @@ const ManageRiders = () =>
 
   // Pagination
   const totalPages = Math.ceil(filteredRiders.length / itemsPerPage);
-  const paginatedRiders = useMemo(() =>
-  {
+  const paginatedRiders = useMemo(() => {
     const startIndex = (currentPage - 1) * itemsPerPage;
     const endIndex = startIndex + itemsPerPage;
     return filteredRiders.slice(startIndex, endIndex);
@@ -309,15 +292,13 @@ const ManageRiders = () =>
   console.log('Rendering riders:', paginatedRiders)
 
   // Handle page change
-  const handlePageChange = (newPage) =>
-  {
+  const handlePageChange = (newPage) => {
     if (newPage >= 1 && newPage <= totalPages) {
       setCurrentPage(newPage);
     }
   };
 
-  const openRiderDetail = async (rider) =>
-  {
+  const openRiderDetail = async (rider) => {
     setSelectedRider(rider);
     setRiderDetail(null);
     setDetailLoading(true);
@@ -334,8 +315,7 @@ const ManageRiders = () =>
     }
   };
 
-  const closeRiderDetail = () =>
-  {
+  const closeRiderDetail = () => {
     setSelectedRider(null);
     setRiderDetail(null);
     setDetailTab('contact');
@@ -347,8 +327,7 @@ const ManageRiders = () =>
   const verificationId = riderDetail?.verification?._id || riderDetail?.verification?.id;
   const isPendingKyc = riderDetail?.verification?.verificationStatus === 'pending';
 
-  const handleApprove = async () =>
-  {
+  const handleApprove = async () => {
     if (!verificationId) return;
     setActionMessage({ type: '', text: '' });
     setActionLoading(true);
@@ -365,8 +344,7 @@ const ManageRiders = () =>
     }
   };
 
-  const handleRejectConfirm = async () =>
-  {
+  const handleRejectConfirm = async () => {
     if (!verificationId || !rejectReason.trim()) return;
     setActionMessage({ type: '', text: '' });
     setActionLoading(true);
@@ -413,13 +391,11 @@ const ManageRiders = () =>
     }
   };
 
-  const openDocument = (url) =>
-  {
+  const openDocument = (url) => {
     if (url) window.open(url, '_blank');
   };
 
-  const getDetailFullDetails = () =>
-  {
+  const getDetailFullDetails = () => {
     if (!riderDetail || !selectedRider) return null;
     const { verification } = riderDetail;
     const contactInfo = verification?.contactInfo || {};
@@ -533,8 +509,7 @@ const ManageRiders = () =>
                           type="text"
                           placeholder="Search riders..."
                           value={searchQuery}
-                          onChange={(e) =>
-                          {
+                          onChange={(e) => {
                             setSearchQuery(e.target.value);
                             setCurrentPage(1);
                           }}
@@ -544,8 +519,7 @@ const ManageRiders = () =>
                       <div className="w-full md:w-auto">
                         <StyledDropdown
                           value={statusFilter}
-                          onChange={(val) =>
-                          {
+                          onChange={(val) => {
                             setStatusFilter(val);
                             setCurrentPage(1);
                           }}
@@ -557,8 +531,7 @@ const ManageRiders = () =>
                       <div className="w-full md:w-auto">
                         <StyledDropdown
                           value={kycFilter}
-                          onChange={(val) =>
-                          {
+                          onChange={(val) => {
                             setKycFilter(val);
                             setCurrentPage(1);
                           }}
@@ -781,8 +754,7 @@ const ManageRiders = () =>
 
                       {/* Page numbers */}
                       <div className="flex items-center gap-1">
-                        {Array.from({ length: Math.min(5, totalPages) }, (_, i) =>
-                        {
+                        {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
                           let pageNum;
                           if (totalPages <= 5) {
                             pageNum = i + 1;
@@ -861,8 +833,7 @@ const ManageRiders = () =>
                             Vehicle & Documents
                           </button>
                         </div>
-                        {(() =>
-                        {
+                        {(() => {
                           const fd = getDetailFullDetails();
                           if (!fd) return <YummyText className="text-sm text-gray-500">No additional details available.</YummyText>;
                           return (
