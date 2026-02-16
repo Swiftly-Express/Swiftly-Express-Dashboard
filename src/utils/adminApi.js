@@ -107,8 +107,9 @@ export async function getAllUsers(page = 1, limit = 20) {
  * @returns {Promise} Cancellation result
  */
 export async function adminCancelDelivery(deliveryId, reason = 'Cancelled by admin') {
+  if (!deliveryId) throw new Error('deliveryId is required');
   console.log(`[adminApi] → Cancelling delivery ${deliveryId}`);
-  return adminApiClient.put(`/api/admin/deliveries/${deliveryId}/cancel`, { reason });
+  return adminApiClient.post(`/api/admin/deliveries/${deliveryId}/cancel`, { reason });
 }
 
 /**
@@ -117,8 +118,21 @@ export async function adminCancelDelivery(deliveryId, reason = 'Cancelled by adm
  * @returns {Promise} Deletion result
  */
 export async function adminDeleteDelivery(deliveryId) {
+  if (!deliveryId) throw new Error('deliveryId is required');
   console.log(`[adminApi] → Deleting delivery ${deliveryId}`);
   return adminApiClient.delete(`/api/admin/deliveries/${deliveryId}`);
+}
+
+/**
+ * Update delivery status (admin)
+ * @param {string} deliveryId - Delivery ID to update
+ * @param {Object} statusData - Status update data
+ * @returns {Promise} Updated delivery
+ */
+export async function adminUpdateDeliveryStatus(deliveryId, statusData) {
+  if (!deliveryId) throw new Error('deliveryId is required');
+  console.log(`[adminApi] → Updating delivery status ${deliveryId}`);
+  return adminApiClient.put(`/api/admin/deliveries/${deliveryId}/status`, statusData);
 }
 
 /**

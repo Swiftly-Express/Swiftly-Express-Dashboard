@@ -7,10 +7,9 @@ import BlockIcon from '../../../icons/Blockicon';
 import CheckIcon from '../../../icons/Checkicon';
 import ToyBikeIcon from '../../../icons/Toybikeicon';
 import ClockIcon from '../../../icons/Clockicon';
-import { getAllDeliveries, adminCancelDelivery, adminDeleteDelivery } from '../../../utils/adminApi';
+import { getAllDeliveries, adminCancelDelivery, adminDeleteDelivery, adminUpdateDeliveryStatus } from '../../../utils/adminApi';
 import { formatAddress } from '../../../utils/formatters';
 import socketService from '../../../services/socket.service';
-import { updateDeliveryStatus } from '../../../utils/authApi';
 
 const ManageOrders = () => {
   const [searchQuery, setSearchQuery] = useState('');
@@ -124,9 +123,14 @@ const ManageOrders = () => {
   const handleCancelDelivery = async () => {
     if (!selectedOrder) return;
 
+    const deliveryId = selectedOrder._id || selectedOrder.id;
+    if (!deliveryId) {
+      showToast('Invalid delivery ID', 'error');
+      return;
+    }
+
     try {
       setActionLoading(true);
-      const deliveryId = selectedOrder._id || selectedOrder.id;
       const reason = 'Cancelled by admin';
 
       // Try admin endpoint first, fallback to regular status update if it fails
@@ -134,8 +138,8 @@ const ManageOrders = () => {
         await adminCancelDelivery(deliveryId, reason);
       } catch (adminErr) {
         console.warn('[ManageOrders] Admin cancel endpoint failed, using fallback:', adminErr);
-        // Fallback: Use regular delivery status update
-        await updateDeliveryStatus(deliveryId, {
+        // Fallback: Use admin status update endpoint
+        await adminUpdateDeliveryStatus(deliveryId, {
           status: 'cancelled',
           reason: reason,
           cancelledBy: 'admin'
@@ -190,17 +194,22 @@ const ManageOrders = () => {
   const handleDeleteDelivery = async () => {
     if (!selectedOrder) return;
 
+    const deliveryId = selectedOrder._id || selectedOrder.id;
+    if (!deliveryId) {
+      showToast('Invalid delivery ID', 'error');
+      return;
+    }
+
     try {
       setActionLoading(true);
-      const deliveryId = selectedOrder._id || selectedOrder.id;
 
       // Try admin delete endpoint first
       try {
         await adminDeleteDelivery(deliveryId);
       } catch (adminErr) {
         console.warn('[ManageOrders] Admin delete endpoint failed, using status update fallback:', adminErr);
-        // Fallback: Mark as deleted via status update (some backends handle this differently)
-        await updateDeliveryStatus(deliveryId, {
+        // Fallback: Mark as deleted via admin status update
+        await adminUpdateDeliveryStatus(deliveryId, {
           status: 'deleted',
           deletedBy: 'admin'
         });
