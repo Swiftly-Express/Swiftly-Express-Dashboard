@@ -25,9 +25,13 @@ const StatCard = ({ icon, iconBg, title, value, subtitle, debtAmount }) => (
       </div>
       <div className="text-3xl font-normal text-[#0F172A] mb-1">{value}</div>
       <div className="text-xs text-[#64748B]">{subtitle}</div>
-      {debtAmount && debtAmount > 0 && (
+      {debtAmount ? (
         <div className="absolute bottom-3 right-3 bg-red-100 text-red-700 px-2 py-1 rounded-full text-xs font-semibold border border-red-200">
-          (-{debtAmount})
+          -{debtAmount}
+        </div>
+      ) : (
+        <div className="absolute bottom-3 right-3 bg-green-100 text-green-700 px-2 py-1 rounded-full text-xs font-semibold border border-green-200">
+          Clear
         </div>
       )}
     </YummyText>
