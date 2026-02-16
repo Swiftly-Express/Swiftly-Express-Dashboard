@@ -15,7 +15,7 @@ const sideBottomShadow = {
 };
 
 const StatCard = ({ icon, iconBg, title, value, subtitle, debtAmount }) => (
-  <div className="bg-white rounded-xl p-5" style={sideBottomShadow}>
+  <div className="bg-white rounded-xl p-5 relative" style={sideBottomShadow}>
     <YummyText>
       <div className="flex items-start justify-between mb-4">
         <div className="text-sm text-[#64748B] mt-3">{title}</div>
@@ -24,10 +24,12 @@ const StatCard = ({ icon, iconBg, title, value, subtitle, debtAmount }) => (
         </div>
       </div>
       <div className="text-3xl font-normal text-[#0F172A] mb-1">{value}</div>
-      {debtAmount && debtAmount > 0 && (
-        <div className="text-sm font-semibold text-red-600 mb-1">(-{debtAmount})</div>
-      )}
       <div className="text-xs text-[#64748B]">{subtitle}</div>
+      {debtAmount && debtAmount > 0 && (
+        <div className="absolute bottom-3 right-3 bg-red-100 text-red-700 px-2 py-1 rounded-full text-xs font-semibold border border-red-200">
+          (-{debtAmount})
+        </div>
+      )}
     </YummyText>
   </div>
 );
