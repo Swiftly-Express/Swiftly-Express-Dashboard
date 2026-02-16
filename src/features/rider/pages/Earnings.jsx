@@ -25,14 +25,16 @@ const StatCard = ({ icon, iconBg, title, value, subtitle, debtAmount }) => (
       </div>
       <div className="text-3xl font-normal text-[#0F172A] mb-1">{value}</div>
       <div className="text-xs text-[#64748B]">{subtitle}</div>
-      {debtAmount ? (
-        <div className="absolute bottom-3 right-3 bg-red-100 text-red-700 px-2 py-1 rounded-full text-xs font-semibold border border-red-200">
-          -{debtAmount}
-        </div>
-      ) : (
-        <div className="absolute bottom-3 right-3 bg-green-100 text-green-700 px-2 py-1 rounded-full text-xs font-semibold border border-green-200">
-          Clear
-        </div>
+      {debtAmount !== undefined && (
+        debtAmount ? (
+          <div className="absolute bottom-3 right-3 bg-red-100 text-red-700 px-2 py-1 rounded-full text-xs font-semibold border border-red-200">
+            -{debtAmount}
+          </div>
+        ) : (
+          <div className="absolute bottom-3 right-3 bg-green-100 text-green-700 px-2 py-1 rounded-full text-xs font-semibold border border-green-200">
+            Debt settled
+          </div>
+        )
       )}
     </YummyText>
   </div>
@@ -510,12 +512,21 @@ const Earnings = () => {
                 <button className="bg-[#00B75A] hover:bg-[#00B876] whitespace-nowrap text-sm text-white px-3 py-2 rounded-full transition-colors font-[400]">
                   Request Payout
                 </button>
-                <button
-                  onClick={handleSettleDebt}
-                  className="bg-red-600 hover:bg-red-700 whitespace-nowrap text-sm text-white px-3 py-2 rounded-full transition-colors font-[400]"
-                >
-                  Settle Debt
-                </button>
+                {earnings?.outstandingBalance > 0 ? (
+                  <button
+                    onClick={handleSettleDebt}
+                    className="bg-red-600 hover:bg-red-700 whitespace-nowrap text-sm text-white px-3 py-2 rounded-full transition-colors font-[400]"
+                  >
+                    Settle Debt
+                  </button>
+                ) : (
+                  <button
+                    disabled
+                    className="bg-green-600 whitespace-nowrap text-sm text-white px-3 py-2 rounded-full font-[400] opacity-75 cursor-not-allowed"
+                  >
+                    No Debt
+                  </button>
+                )}
                 {earnings?.outstandingBalance > 0 && (
                   <div className="flex items-center gap-3 bg-red-50 px-4 py-2 rounded-full border border-red-200">
                     <span className="text-sm font-semibold text-red-700">Debt:</span>
