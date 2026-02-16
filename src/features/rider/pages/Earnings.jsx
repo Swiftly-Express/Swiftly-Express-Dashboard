@@ -14,7 +14,7 @@ const sideBottomShadow = {
   boxShadow: '0.5px 1.5px 2px rgba(0, 0, 0, 0.05), -0.5px 1.5px 2px rgba(0, 0, 0, 0.05), 0 1.5px 3px rgba(0, 0, 0, 0.07)'
 };
 
-const StatCard = ({ icon, iconBg, title, value, subtitle }) => (
+const StatCard = ({ icon, iconBg, title, value, subtitle, debtAmount }) => (
   <div className="bg-white rounded-xl p-5" style={sideBottomShadow}>
     <YummyText>
       <div className="flex items-start justify-between mb-4">
@@ -24,6 +24,9 @@ const StatCard = ({ icon, iconBg, title, value, subtitle }) => (
         </div>
       </div>
       <div className="text-3xl font-normal text-[#0F172A] mb-1">{value}</div>
+      {debtAmount && debtAmount > 0 && (
+        <div className="text-sm font-semibold text-red-600 mb-1">(-{debtAmount})</div>
+      )}
       <div className="text-xs text-[#64748B]">{subtitle}</div>
     </YummyText>
   </div>
@@ -525,6 +528,7 @@ const Earnings = () => {
               title="Today's Earnings"
               value={todayEarnings}
               subtitle={earnings?.todayChange || `${todayDeliveries.length} deliveries today`}
+              debtAmount={earnings?.outstandingBalance > 0 ? formatCurrency(earnings.outstandingBalance) : null}
             />
             <StatCard
               icon={<AnalyzeIcon width={24} height={24} stroke="#3B82F6" />}

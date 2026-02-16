@@ -122,6 +122,18 @@ export async function adminDeleteDelivery(deliveryId) {
 }
 
 /**
+ * Set driver debt limit (admin only)
+ * @param {string} driverId - Driver ID
+ * @param {number} debtLimit - Maximum debt limit amount
+ * @returns {Promise} Updated driver with new debt limit
+ */
+export async function setDriverDebtLimit(driverId, debtLimit) {
+  if (!driverId) throw new Error('driverId is required');
+  console.log(`[adminApi] → Setting debt limit for driver ${driverId}:`, debtLimit);
+  return adminApiClient.post(`/api/admin/drivers/${driverId}/debt-limit`, { debtLimit });
+}
+
+/**
  * Create a new user
  * @param {Object} userData - User data
  * @returns {Promise} Created user

@@ -8,7 +8,7 @@ import CheckCircleIcon from '../../../icons/Circlecheck';
 import PauseIcon from '../../../icons/Pauseicon';
 import ClockIcon from '../../../icons/Clockicon';
 import BanIcon from '../../../icons/Banicon';
-import { getApprovedRiders, getVerificationByDriver, approveVerification, rejectVerification } from '../../../utils/adminApi';
+import { getApprovedRiders, getVerificationByDriver, approveVerification, rejectVerification, setDriverDebtLimit } from '../../../utils/adminApi';
 import StyledDropdown from '../../../components/StyledDropdown';
 import { Check, XCircle } from 'lucide-react';
 
@@ -34,6 +34,8 @@ const ManageRiders = () =>
   const [showRejectModal, setShowRejectModal] = useState(false);
   const [rejectReason, setRejectReason] = useState('');
   const [actionMessage, setActionMessage] = useState({ type: '', text: '' });
+  const [showDebtLimitModal, setShowDebtLimitModal] = useState(false);
+  const [debtLimitAmount, setDebtLimitAmount] = useState('');
 
   const fetchRiders = async () =>
   {
@@ -378,6 +380,34 @@ const ManageRiders = () =>
       setRiderDetail(prev => prev?.verification ? { verification: { ...prev.verification, verificationStatus: 'rejected' } } : null);
     } catch (err) {
       setActionMessage({ type: 'error', text: err.message || 'Failed to reject.' });
+    } finally {
+      setActionLoading(false);
+    }
+  };
+
+  const handleSetDebtLimit = async () => {
+    if (!selectedRider || !debtLimitAmount.trim()) {
+      setActionMessage({ type: 'error', text: 'Please enter a valid debt limit amount' });
+      return;
+    }
+
+    const amount = parseFloat(debtLimitAmount);
+    if (isNaN(amount) || amount < 0) {
+      setActionMessage({ type: 'error', text: 'Please enter a valid positive number' });
+      return;
+    }
+
+    try {
+      setActionLoading(true);
+      const driverId = selectedRider._id || selectedRider.id;
+      await setDriverDebtLimit(driverId, amount);
+      setActionMessage({ type: 'success', text: `Debt limit set to ₦${amount.toLocaleString()} successfully` });
+      setShowDebtLimitModal(false);
+      setDebtLimitAmount('');
+      await fetchRiders();
+    } catch (err) {
+      console.error('Error setting debt limit:', err);
+      setActionMessage({ type: 'error', text: err.message || 'Failed to set debt limit' });
     } finally {
       setActionLoading(false);
     }
@@ -957,6 +987,17 @@ const ManageRiders = () =>
                     </div>
                   </div>
                 )}
+                {!detailLoading && (!riderDetail?.verification || !isPendingKyc) && (
+                  <div className="p-4 border-t border-gray-200 bg-gray-50 flex justify-end">
+                    <button
+                      type="button"
+                      onClick={() => setShowDebtLimitModal(true)}
+                      className="inline-flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium text-white bg-blue-600 hover:bg-blue-700"
+                    >
+                      Set Debt Limit
+                    </button>
+                  </div>
+                )}
               </div>
             </div>
           )}
@@ -984,6 +1025,46 @@ const ManageRiders = () =>
                     className="px-4 py-2 rounded-lg text-sm font-medium text-white bg-red-600 hover:bg-red-700 disabled:opacity-50 disabled:cursor-not-allowed"
                   >
                     {actionLoading ? 'Rejecting...' : 'Reject'}
+                  </button>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* Debt Limit Modal */}
+          {selectedRider && showDebtLimitModal && (
+            <div className="fixed inset-0 flex items-center justify-center p-4 backdrop-blur-sm bg-black/50" style={{ zIndex: 10000 }} onClick={() => setShowDebtLimitModal(false)}>
+              <div className="bg-white rounded-xl shadow-xl max-w-md w-full p-6" onClick={(e) => e.stopPropagation()}>
+                <YummyText className="text-lg font-medium text-gray-900 mb-2">Set Debt Limit</YummyText>
+                <p className="text-sm text-gray-600 mb-1">Rider: <strong>{selectedRider.name}</strong></p>
+                <p className="text-sm text-gray-600 mb-4">Set the maximum debt limit for this rider:</p>
+                <div className="mb-4">
+                  <label className="block text-sm font-medium text-gray-700 mb-2">Debt Limit (₦)</label>
+                  <input
+                    type="number"
+                    placeholder="Enter amount (e.g., 5000)"
+                    value={debtLimitAmount}
+                    onChange={(e) => setDebtLimitAmount(e.target.value)}
+                    className="w-full border border-gray-200 rounded-lg p-3 text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    autoFocus
+                    min="0"
+                    step="100"
+                  />
+                </div>
+                {actionMessage.text && (
+                  <p className={`text-sm mb-3 ${actionMessage.type === 'error' ? 'text-red-600' : 'text-green-600'}`}>{actionMessage.text}</p>
+                )}
+                <div className="flex gap-3 justify-end">
+                  <button type="button" onClick={() => { setShowDebtLimitModal(false); setDebtLimitAmount(''); setActionMessage({ type: '', text: '' }); }} className="px-4 py-2 rounded-lg text-sm font-medium text-gray-700 bg-gray-100 hover:bg-gray-200">
+                    Cancel
+                  </button>
+                  <button
+                    type="button"
+                    onClick={handleSetDebtLimit}
+                    disabled={actionLoading || !debtLimitAmount.trim()}
+                    className="px-4 py-2 rounded-lg text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    {actionLoading ? 'Setting...' : 'Set Limit'}
                   </button>
                 </div>
               </div>
