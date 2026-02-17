@@ -391,10 +391,10 @@ const ManageRiders = () => {
       console.log('Sending email to:', selectedRiderEmail);
       console.log('Subject:', mailSubject);
       console.log('Message:', mailMessage);
-      
+
       // Simulate API call
       await new Promise(resolve => setTimeout(resolve, 1000));
-      
+
       alert('Email sent successfully!');
       setShowMailModal(false);
       setMailSubject('');

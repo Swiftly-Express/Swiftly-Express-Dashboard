@@ -103,10 +103,10 @@ const ManageUsers = () => {
       console.log('Sending mail to:', selectedUserEmail);
       console.log('Subject:', mailSubject);
       console.log('Message:', mailMessage);
-      
+
       // Simulate API call
       await new Promise(resolve => setTimeout(resolve, 1000));
-      
+
       alert(`Email sent successfully to ${selectedUserEmail}`);
       setShowMailModal(false);
       setMailSubject('');
@@ -314,9 +314,9 @@ const ManageUsers = () => {
                           </div>
                         </div>
                         <div className="mt-3 flex items-center justify-end gap-2">
-                          <button 
-                            onClick={() => handleSendMail(user)} 
-                            className="text-blue-600 hover:text-blue-800" 
+                          <button
+                            onClick={() => handleSendMail(user)}
+                            className="text-blue-600 hover:text-blue-800"
                             title="Send email"
                           >
                             <Mail className="w-4 h-4" />

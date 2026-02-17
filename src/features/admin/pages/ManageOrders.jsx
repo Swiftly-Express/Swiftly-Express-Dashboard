@@ -136,10 +136,10 @@ const ManageOrders = () => {
       console.log('Sending email to:', selectedCustomerEmail);
       console.log('Subject:', mailSubject);
       console.log('Message:', mailMessage);
-      
+
       // Simulate API call
       await new Promise(resolve => setTimeout(resolve, 1000));
-      
+
       showToast('Email sent successfully!', 'success');
       setShowMailModal(false);
       setMailSubject('');
