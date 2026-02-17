@@ -1,6 +1,6 @@
 ﻿import React, { useState, useEffect } from 'react';
 import { IonPage, IonContent } from '@ionic/react';
-import { Search, Filter, MoreVertical, User, Bike, ChevronLeft, ChevronRight, Trash2, XCircle } from 'lucide-react';
+import { Search, Filter, MoreVertical, User, Bike, ChevronLeft, ChevronRight, Trash2, XCircle, Mail, Send, X } from 'lucide-react';
 import AdminLayout from '../components/AdminLayout';
 import { YummyText } from '../../../components/YummyText';
 import BlockIcon from '../../../icons/Blockicon';
@@ -38,6 +38,12 @@ const ManageOrders = () => {
   const [actionLoading, setActionLoading] = useState(false);
   const [cancelReason, setCancelReason] = useState('');
   const [toast, setToast] = useState({ show: false, message: '', type: '' });
+  const [showMailModal, setShowMailModal] = useState(false);
+  const [selectedCustomerEmail, setSelectedCustomerEmail] = useState('');
+  const [selectedCustomerName, setSelectedCustomerName] = useState('');
+  const [mailSubject, setMailSubject] = useState('');
+  const [mailMessage, setMailMessage] = useState('');
+  const [sendingMail, setSendingMail] = useState(false);
 
   useEffect(() => {
     const handleResize = () => setIsMobile(window.innerWidth < 768);
@@ -106,6 +112,44 @@ const ManageOrders = () => {
   const showToast = (message, type = 'success') => {
     setToast({ show: true, message, type });
     setTimeout(() => setToast({ show: false, message: '', type: '' }), 3000);
+  };
+
+  const handleSendMail = (order) => {
+    const email = order.customer?.email || order.customerEmail || '';
+    const name = order.customer?.name || order.customerName || 'Customer';
+    setSelectedCustomerEmail(email);
+    setSelectedCustomerName(name);
+    setMailSubject('');
+    setMailMessage('');
+    setShowMailModal(true);
+  };
+
+  const handleSendMailSubmit = async () => {
+    if (!mailSubject.trim() || !mailMessage.trim()) {
+      alert('Please enter both subject and message');
+      return;
+    }
+
+    try {
+      setSendingMail(true);
+      // TODO: Replace with actual API call
+      console.log('Sending email to:', selectedCustomerEmail);
+      console.log('Subject:', mailSubject);
+      console.log('Message:', mailMessage);
+      
+      // Simulate API call
+      await new Promise(resolve => setTimeout(resolve, 1000));
+      
+      showToast('Email sent successfully!', 'success');
+      setShowMailModal(false);
+      setMailSubject('');
+      setMailMessage('');
+    } catch (err) {
+      console.error('Error sending mail:', err);
+      showToast('Failed to send email', 'error');
+    } finally {
+      setSendingMail(false);
+    }
   };
 
   const handleCancelClick = (order) => {
@@ -590,9 +634,19 @@ const ManageOrders = () => {
                               <button
                                 onClick={(e) => {
                                   e.stopPropagation();
+                                  handleSendMail(order);
+                                }}
+                                className="w-full px-4 py-2 text-left text-sm text-blue-600 hover:bg-blue-50 flex items-center gap-2 rounded-t-lg"
+                              >
+                                <Mail className="w-4 h-4" />
+                                Send Mail
+                              </button>
+                              <button
+                                onClick={(e) => {
+                                  e.stopPropagation();
                                   handleCancelClick(order);
                                 }}
-                                className="w-full px-4 py-2 text-left text-sm text-orange-600 hover:bg-orange-50 flex items-center gap-2 rounded-t-lg"
+                                className="w-full px-4 py-2 text-left text-sm text-orange-600 hover:bg-orange-50 flex items-center gap-2"
                               >
                                 <XCircle className="w-4 h-4" />
                                 Cancel Order
@@ -756,9 +810,19 @@ const ManageOrders = () => {
                                     <button
                                       onClick={(e) => {
                                         e.stopPropagation();
+                                        handleSendMail(order);
+                                      }}
+                                      className="w-full px-4 py-2 text-left text-sm text-blue-600 hover:bg-blue-50 flex items-center gap-2 rounded-t-lg"
+                                    >
+                                      <Mail className="w-4 h-4" />
+                                      Send Mail
+                                    </button>
+                                    <button
+                                      onClick={(e) => {
+                                        e.stopPropagation();
                                         handleCancelClick(order);
                                       }}
-                                      className="w-full px-4 py-2 text-left text-sm text-orange-600 hover:bg-orange-50 flex items-center gap-2 rounded-t-lg"
+                                      className="w-full px-4 py-2 text-left text-sm text-orange-600 hover:bg-orange-50 flex items-center gap-2"
                                     >
                                       <XCircle className="w-4 h-4" />
                                       Cancel Order
@@ -932,7 +996,90 @@ const ManageOrders = () => {
               </div>
             </div>
           )}
-        </IonContent>
+
+          {/* Send Mail Modal */}
+          {showMailModal && (
+            <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+              <div className="bg-white rounded-lg max-w-md w-full p-6">
+                <div className="flex justify-between items-center mb-4">
+                  <h3 className="text-lg font-bold text-gray-900">Send Mail to Customer</h3>
+                  <button
+                    onClick={() => setShowMailModal(false)}
+                    className="text-gray-400 hover:text-gray-600"
+                  >
+                    <X size={20} />
+                  </button>
+                </div>
+
+                <div className="space-y-4">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      To:
+                    </label>
+                    <input
+                      type="email"
+                      value={selectedCustomerEmail}
+                      readOnly
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg bg-gray-50 text-gray-700"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Subject:
+                    </label>
+                    <input
+                      type="text"
+                      value={mailSubject}
+                      onChange={(e) => setMailSubject(e.target.value)}
+                      placeholder="Enter subject"
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Message:
+                    </label>
+                    <textarea
+                      value={mailMessage}
+                      onChange={(e) => setMailMessage(e.target.value)}
+                      placeholder="Enter your message"
+                      rows="6"
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 resize-none"
+                    />
+                  </div>
+                </div>
+
+                <div className="flex gap-3 mt-6">
+                  <button
+                    onClick={() => setShowMailModal(false)}
+                    disabled={sendingMail}
+                    className="flex-1 px-4 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50 disabled:opacity-50"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    onClick={handleSendMailSubmit}
+                    disabled={sendingMail}
+                    className="flex-1 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 flex items-center justify-center gap-2"
+                  >
+                    {sendingMail ? (
+                      <>
+                        <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
+                        Sending...
+                      </>
+                    ) : (
+                      <>
+                        <Send size={16} />
+                        Send Mail
+                      </>
+                    )}
+                  </button>
+                </div>
+              </div>
+            </div>
+          )}        </IonContent>
       </AdminLayout>
     </IonPage>
   );

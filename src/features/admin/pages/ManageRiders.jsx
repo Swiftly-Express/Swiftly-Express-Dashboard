@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { IonPage, IonContent } from '@ionic/react';
-import { Search, MoreVertical, Mail, Phone, AlertCircle, X, Eye, FileText } from 'lucide-react';
+import { Search, MoreVertical, Mail, Phone, AlertCircle, X, Eye, FileText, Send } from 'lucide-react';
 import AdminLayout from '../components/AdminLayout';
 import { YummyText } from '../../../components/YummyText';
 import ToyBikeIcon from '../../../icons/Toybikeicon';
@@ -35,6 +35,12 @@ const ManageRiders = () => {
   const [actionMessage, setActionMessage] = useState({ type: '', text: '' });
   const [showDebtLimitModal, setShowDebtLimitModal] = useState(false);
   const [debtLimitAmount, setDebtLimitAmount] = useState('');
+  const [showMailModal, setShowMailModal] = useState(false);
+  const [selectedRiderEmail, setSelectedRiderEmail] = useState('');
+  const [selectedRiderName, setSelectedRiderName] = useState('');
+  const [mailSubject, setMailSubject] = useState('');
+  const [mailMessage, setMailMessage] = useState('');
+  const [sendingMail, setSendingMail] = useState(false);
 
   const fetchRiders = async () => {
     try {
@@ -363,6 +369,44 @@ const ManageRiders = () => {
     }
   };
 
+  const handleSendMail = (rider) => {
+    const email = rider.email || rider.contactInfo?.email || '';
+    const name = `${rider.firstName || ''} ${rider.lastName || ''}`.trim() || 'Rider';
+    setSelectedRiderEmail(email);
+    setSelectedRiderName(name);
+    setMailSubject('');
+    setMailMessage('');
+    setShowMailModal(true);
+  };
+
+  const handleSendMailSubmit = async () => {
+    if (!mailSubject.trim() || !mailMessage.trim()) {
+      alert('Please enter both subject and message');
+      return;
+    }
+
+    try {
+      setSendingMail(true);
+      // TODO: Replace with actual API call
+      console.log('Sending email to:', selectedRiderEmail);
+      console.log('Subject:', mailSubject);
+      console.log('Message:', mailMessage);
+      
+      // Simulate API call
+      await new Promise(resolve => setTimeout(resolve, 1000));
+      
+      alert('Email sent successfully!');
+      setShowMailModal(false);
+      setMailSubject('');
+      setMailMessage('');
+    } catch (err) {
+      console.error('Error sending mail:', err);
+      alert('Failed to send email. Please try again.');
+    } finally {
+      setSendingMail(false);
+    }
+  };
+
   const handleSetDebtLimit = async () => {
     if (!selectedRider || !debtLimitAmount.trim()) {
       setActionMessage({ type: 'error', text: 'Please enter a valid debt limit amount' });
@@ -579,6 +623,14 @@ const ManageRiders = () => {
                             <div className="mt-3 flex items-center justify-end gap-2">
                               <button
                                 type="button"
+                                onClick={(e) => { e.stopPropagation(); handleSendMail(rider); }}
+                                className="text-blue-600 hover:text-blue-800"
+                                title="Send Mail"
+                              >
+                                <Mail size={20} />
+                              </button>
+                              <button
+                                type="button"
                                 onClick={(e) => { e.stopPropagation(); openRiderDetail(rider); }}
                                 className="text-[#0A0A0A] hover:text-gray-600"
                               >
@@ -719,13 +771,23 @@ const ManageRiders = () => {
                                     </span>
                                   </td>
                                   <td className="w-[6%] px-1 py-4 whitespace-nowrap text-center" onClick={(e) => e.stopPropagation()}>
-                                    <button
-                                      type="button"
-                                      onClick={() => openRiderDetail(rider)}
-                                      className="text-[#0A0A0A] hover:text-gray-600"
-                                    >
-                                      <MoreVertical className="w-5 h-5" />
-                                    </button>
+                                    <div className="flex items-center gap-2 justify-center">
+                                      <button
+                                        type="button"
+                                        onClick={() => handleSendMail(rider)}
+                                        className="text-blue-600 hover:text-blue-800"
+                                        title="Send Mail"
+                                      >
+                                        <Mail size={16} />
+                                      </button>
+                                      <button
+                                        type="button"
+                                        onClick={() => openRiderDetail(rider)}
+                                        className="text-[#0A0A0A] hover:text-gray-600"
+                                      >
+                                        <MoreVertical className="w-5 h-5" />
+                                      </button>
+                                    </div>
                                   </td>
                                 </tr>
                               )))
@@ -1042,6 +1104,90 @@ const ManageRiders = () => {
             </div>
           )}
         </IonContent>
+
+        {/* Send Mail Modal */}
+        {showMailModal && (
+          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+            <div className="bg-white rounded-lg max-w-md w-full p-6">
+              <div className="flex justify-between items-center mb-4">
+                <h3 className="text-lg font-bold text-gray-900">Send Mail to Rider</h3>
+                <button
+                  onClick={() => setShowMailModal(false)}
+                  className="text-gray-400 hover:text-gray-600"
+                >
+                  <X size={20} />
+                </button>
+              </div>
+
+              <div className="space-y-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    To:
+                  </label>
+                  <input
+                    type="email"
+                    value={selectedRiderEmail}
+                    readOnly
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg bg-gray-50 text-gray-700"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Subject:
+                  </label>
+                  <input
+                    type="text"
+                    value={mailSubject}
+                    onChange={(e) => setMailSubject(e.target.value)}
+                    placeholder="Enter subject"
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Message:
+                  </label>
+                  <textarea
+                    value={mailMessage}
+                    onChange={(e) => setMailMessage(e.target.value)}
+                    placeholder="Enter your message"
+                    rows="6"
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 resize-none"
+                  />
+                </div>
+              </div>
+
+              <div className="flex gap-3 mt-6">
+                <button
+                  onClick={() => setShowMailModal(false)}
+                  disabled={sendingMail}
+                  className="flex-1 px-4 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50 disabled:opacity-50"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={handleSendMailSubmit}
+                  disabled={sendingMail}
+                  className="flex-1 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 flex items-center justify-center gap-2"
+                >
+                  {sendingMail ? (
+                    <>
+                      <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
+                      Sending...
+                    </>
+                  ) : (
+                    <>
+                      <Send size={16} />
+                      Send Mail
+                    </>
+                  )}
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
       </AdminLayout>
     </IonPage>
   );

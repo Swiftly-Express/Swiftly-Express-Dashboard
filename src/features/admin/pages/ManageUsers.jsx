@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { IonPage, IonContent } from '@ionic/react';
-import { Search, Filter, MoreVertical, Mail, Phone, Plus, Edit, Trash2 } from 'lucide-react';
+import { Search, Filter, MoreVertical, Mail, Phone, Plus, Edit, Trash2, Send, X } from 'lucide-react';
 import AdminLayout from '../components/AdminLayout';
 import { YummyText } from '../../../components/YummyText';
 import LocationIcon from '../../../icons/Locationicon';
@@ -22,6 +22,14 @@ const ManageUsers = () => {
   const [totalUsers, setTotalUsers] = useState(0);
   const [isMobile, setIsMobile] = useState(typeof window !== 'undefined' ? window.innerWidth < 768 : false);
   const limit = 20;
+
+  // Send mail state
+  const [showMailModal, setShowMailModal] = useState(false);
+  const [selectedUserEmail, setSelectedUserEmail] = useState('');
+  const [selectedUserName, setSelectedUserName] = useState('');
+  const [mailSubject, setMailSubject] = useState('');
+  const [mailMessage, setMailMessage] = useState('');
+  const [sendingMail, setSendingMail] = useState(false);
 
   // Stats state
   const [stats, setStats] = useState({
@@ -70,6 +78,45 @@ const ManageUsers = () => {
     const suspended = usersData.filter(u => u.status === 'suspended' || u.isSuspended).length;
 
     setStats({ total, active, inactive, suspended });
+  };
+
+  // Send mail handler
+  const handleSendMail = (user) => {
+    const email = user.email || user.contactInfo?.email || '';
+    const name = user.fullName || user.name || 'User';
+    setSelectedUserEmail(email);
+    setSelectedUserName(name);
+    setMailSubject('');
+    setMailMessage('');
+    setShowMailModal(true);
+  };
+
+  const handleSendMailSubmit = async () => {
+    if (!mailSubject.trim() || !mailMessage.trim()) {
+      alert('Please enter both subject and message');
+      return;
+    }
+
+    try {
+      setSendingMail(true);
+      // TODO: Replace with actual API call to send email
+      console.log('Sending mail to:', selectedUserEmail);
+      console.log('Subject:', mailSubject);
+      console.log('Message:', mailMessage);
+      
+      // Simulate API call
+      await new Promise(resolve => setTimeout(resolve, 1000));
+      
+      alert(`Email sent successfully to ${selectedUserEmail}`);
+      setShowMailModal(false);
+      setMailSubject('');
+      setMailMessage('');
+    } catch (err) {
+      console.error('Error sending mail:', err);
+      alert('Failed to send email');
+    } finally {
+      setSendingMail(false);
+    }
   };
 
   // Delete user handler
@@ -267,6 +314,13 @@ const ManageUsers = () => {
                           </div>
                         </div>
                         <div className="mt-3 flex items-center justify-end gap-2">
+                          <button 
+                            onClick={() => handleSendMail(user)} 
+                            className="text-blue-600 hover:text-blue-800" 
+                            title="Send email"
+                          >
+                            <Mail className="w-4 h-4" />
+                          </button>
                           <button onClick={() => handleDeleteUser(userId)} className="text-red-600 hover:text-red-800" title="Delete user">
                             <Trash2 className="w-4 h-4" />
                           </button>
@@ -362,6 +416,13 @@ const ManageUsers = () => {
                             <td className="px-3 py-4 whitespace-nowrap">
                               <div className="flex items-center gap-2">
                                 <button
+                                  onClick={() => handleSendMail(user)}
+                                  className="text-blue-600 hover:text-blue-800"
+                                  title="Send Mail"
+                                >
+                                  <Mail size={16} />
+                                </button>
+                                <button
                                   onClick={() => handleDeleteUser(userId)}
                                   className="text-red-600 hover:text-red-800"
                                   title="Delete user"
@@ -403,6 +464,90 @@ const ManageUsers = () => {
             )}
           </div>
         </IonContent>
+
+        {/* Send Mail Modal */}
+        {showMailModal && (
+          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+            <div className="bg-white rounded-lg max-w-md w-full p-6">
+              <div className="flex justify-between items-center mb-4">
+                <h3 className="text-lg font-bold text-gray-900">Send Mail</h3>
+                <button
+                  onClick={() => setShowMailModal(false)}
+                  className="text-gray-400 hover:text-gray-600"
+                >
+                  <X size={20} />
+                </button>
+              </div>
+
+              <div className="space-y-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    To:
+                  </label>
+                  <input
+                    type="email"
+                    value={selectedUserEmail}
+                    readOnly
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg bg-gray-50 text-gray-700"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Subject:
+                  </label>
+                  <input
+                    type="text"
+                    value={mailSubject}
+                    onChange={(e) => setMailSubject(e.target.value)}
+                    placeholder="Enter subject"
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Message:
+                  </label>
+                  <textarea
+                    value={mailMessage}
+                    onChange={(e) => setMailMessage(e.target.value)}
+                    placeholder="Enter your message"
+                    rows="6"
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 resize-none"
+                  />
+                </div>
+              </div>
+
+              <div className="flex gap-3 mt-6">
+                <button
+                  onClick={() => setShowMailModal(false)}
+                  disabled={sendingMail}
+                  className="flex-1 px-4 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50 disabled:opacity-50"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={handleSendMailSubmit}
+                  disabled={sendingMail}
+                  className="flex-1 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 flex items-center justify-center gap-2"
+                >
+                  {sendingMail ? (
+                    <>
+                      <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
+                      Sending...
+                    </>
+                  ) : (
+                    <>
+                      <Send size={16} />
+                      Send Mail
+                    </>
+                  )}
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
       </AdminLayout>
     </IonPage>
   );
