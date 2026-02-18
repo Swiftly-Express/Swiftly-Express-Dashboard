@@ -8,7 +8,7 @@ import CheckCircleIcon from '../../../icons/Circlecheck';
 import PauseIcon from '../../../icons/Pauseicon';
 import ClockIcon from '../../../icons/Clockicon';
 import BanIcon from '../../../icons/Banicon';
-import { getApprovedRiders, getVerificationByDriver, approveVerification, rejectVerification, setDriverDebtLimit } from '../../../utils/adminApi';
+import { getApprovedRiders, getVerificationByDriver, approveVerification, rejectVerification, setDriverDebtLimit, setDriverDeclineLimit } from '../../../utils/adminApi';
 import StyledDropdown from '../../../components/StyledDropdown';
 import { Check, XCircle } from 'lucide-react';
 
@@ -35,6 +35,8 @@ const ManageRiders = () => {
   const [actionMessage, setActionMessage] = useState({ type: '', text: '' });
   const [showDebtLimitModal, setShowDebtLimitModal] = useState(false);
   const [debtLimitAmount, setDebtLimitAmount] = useState('');
+  const [showDeclineLimitModal, setShowDeclineLimitModal] = useState(false);
+  const [declineLimitAmount, setDeclineLimitAmount] = useState('');
   const [showMailModal, setShowMailModal] = useState(false);
   const [selectedRiderEmail, setSelectedRiderEmail] = useState('');
   const [selectedRiderName, setSelectedRiderName] = useState('');
@@ -430,6 +432,34 @@ const ManageRiders = () => {
     } catch (err) {
       console.error('Error setting debt limit:', err);
       setActionMessage({ type: 'error', text: err.message || 'Failed to set debt limit' });
+    } finally {
+      setActionLoading(false);
+    }
+  };
+
+  const handleSetDeclineLimit = async () => {
+    if (!selectedRider || !declineLimitAmount.trim()) {
+      setActionMessage({ type: 'error', text: 'Please enter a valid decline limit' });
+      return;
+    }
+
+    const limit = parseInt(declineLimitAmount);
+    if (isNaN(limit) || limit < 0) {
+      setActionMessage({ type: 'error', text: 'Please enter a valid positive number' });
+      return;
+    }
+
+    try {
+      setActionLoading(true);
+      const driverId = selectedRider._id || selectedRider.id;
+      await setDriverDeclineLimit(driverId, limit);
+      setActionMessage({ type: 'success', text: `Decline limit set to ${limit} per day successfully` });
+      setShowDeclineLimitModal(false);
+      setDeclineLimitAmount('');
+      await fetchRiders();
+    } catch (err) {
+      console.error('Error setting decline limit:', err);
+      setActionMessage({ type: 'error', text: err.message || 'Failed to set decline limit' });
     } finally {
       setActionLoading(false);
     }
@@ -880,10 +910,41 @@ const ManageRiders = () => {
                       </div>
                     ) : (
                       <>
-                        <div className="flex items-center gap-2 mb-6">
+                        <div className="flex items-center gap-2 mb-4">
                           <span className={`px-3 py-1 rounded-full text-xs font-medium ${selectedRider.kycColor}`}>{selectedRider.kyc}</span>
                           <span className={`px-3 py-1 rounded-full text-xs font-medium ${selectedRider.statusColor}`}>{selectedRider.status}</span>
                         </div>
+
+                        {/* Rider Statistics */}
+                        <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6 bg-gray-50 p-4 rounded-lg">
+                          <div>
+                            <YummyText className="text-xs text-gray-500 mb-1">Deliveries</YummyText>
+                            <YummyText className="text-lg font-semibold text-gray-900">{riderDetail?.totalDeliveries || selectedRider.deliveries || '0'}</YummyText>
+                          </div>
+                          <div>
+                            <YummyText className="text-xs text-gray-500 mb-1">Earnings</YummyText>
+                            <YummyText className="text-lg font-semibold text-gray-900">{selectedRider.earnings || '₦0'}</YummyText>
+                          </div>
+                          <div>
+                            <YummyText className="text-xs text-gray-500 mb-1">Declines Today</YummyText>
+                            <YummyText className="text-lg font-semibold text-orange-600">
+                              {riderDetail?.dailyDeclineCount || 0}
+                              {riderDetail?.declineLimit && <span className="text-xs text-gray-500">/{riderDetail.declineLimit}</span>}
+                            </YummyText>
+                          </div>
+                          <div>
+                            <YummyText className="text-xs text-gray-500 mb-1">Incentive Status</YummyText>
+                            <span className={`inline-block px-2 py-1 rounded-full text-xs font-medium ${riderDetail?.declineLimit && riderDetail?.dailyDeclineCount >= riderDetail?.declineLimit
+                                ? 'bg-red-100 text-red-800'
+                                : 'bg-green-100 text-green-800'
+                              }`}>
+                              {riderDetail?.declineLimit && riderDetail?.dailyDeclineCount >= riderDetail?.declineLimit
+                                ? 'Not Qualified'
+                                : 'Qualified'}
+                            </span>
+                          </div>
+                        </div>
+
                         <div className="flex gap-2 mb-6 bg-gray-100 p-1 rounded-full">
                           <button type="button" onClick={() => setDetailTab('contact')} className={`flex-1 px-4 py-2 rounded-full text-sm font-medium transition-colors ${detailTab === 'contact' ? 'bg-white text-[#0A0A0A] shadow-sm' : 'text-[#0A0A0A] hover:text-gray-900'}`}>
                             Contact
@@ -1021,7 +1082,14 @@ const ManageRiders = () => {
                   </div>
                 )}
                 {!detailLoading && (!riderDetail?.verification || !isPendingKyc) && (
-                  <div className="p-4 border-t border-gray-200 bg-gray-50 flex justify-end">
+                  <div className="p-4 border-t border-gray-200 bg-gray-50 flex justify-end gap-3">
+                    <button
+                      type="button"
+                      onClick={() => setShowDeclineLimitModal(true)}
+                      className="inline-flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium text-white bg-orange-600 hover:bg-orange-700"
+                    >
+                      Set Decline Limit
+                    </button>
                     <button
                       type="button"
                       onClick={() => setShowDebtLimitModal(true)}
@@ -1096,6 +1164,46 @@ const ManageRiders = () => {
                     onClick={handleSetDebtLimit}
                     disabled={actionLoading || !debtLimitAmount.trim()}
                     className="px-4 py-2 rounded-lg text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    {actionLoading ? 'Setting...' : 'Set Limit'}
+                  </button>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* Decline Limit Modal */}
+          {selectedRider && showDeclineLimitModal && (
+            <div className="fixed inset-0 flex items-center justify-center p-4 backdrop-blur-sm bg-black/50" style={{ zIndex: 10000 }} onClick={() => setShowDeclineLimitModal(false)}>
+              <div className="bg-white rounded-xl shadow-xl max-w-md w-full p-6" onClick={(e) => e.stopPropagation()}>
+                <YummyText className="text-lg font-medium text-gray-900 mb-2">Set Decline Limit</YummyText>
+                <p className="text-sm text-gray-600 mb-1">Rider: <strong>{selectedRider.name}</strong></p>
+                <p className="text-sm text-gray-600 mb-4">Set the maximum number of delivery declines allowed per day. Exceeding this limit will disqualify the rider from incentives.</p>
+                <div className="mb-4">
+                  <label className="block text-sm font-medium text-gray-700 mb-2">Daily Decline Limit</label>
+                  <input
+                    type="number"
+                    placeholder="Enter limit (e.g., 5)"
+                    value={declineLimitAmount}
+                    onChange={(e) => setDeclineLimitAmount(e.target.value)}
+                    className="w-full border border-gray-200 rounded-lg p-3 text-sm focus:ring-2 focus:ring-orange-500 focus:border-transparent"
+                    autoFocus
+                    min="0"
+                    step="1"
+                  />
+                </div>
+                {actionMessage.text && (
+                  <p className={`text-sm mb-3 ${actionMessage.type === 'error' ? 'text-red-600' : 'text-green-600'}`}>{actionMessage.text}</p>
+                )}
+                <div className="flex gap-3 justify-end">
+                  <button type="button" onClick={() => { setShowDeclineLimitModal(false); setDeclineLimitAmount(''); setActionMessage({ type: '', text: '' }); }} className="px-4 py-2 rounded-lg text-sm font-medium text-gray-700 bg-gray-100 hover:bg-gray-200">
+                    Cancel
+                  </button>
+                  <button
+                    type="button"
+                    onClick={handleSetDeclineLimit}
+                    disabled={actionLoading || !declineLimitAmount.trim()}
+                    className="px-4 py-2 rounded-lg text-sm font-medium text-white bg-orange-600 hover:bg-orange-700 disabled:opacity-50 disabled:cursor-not-allowed"
                   >
                     {actionLoading ? 'Setting...' : 'Set Limit'}
                   </button>

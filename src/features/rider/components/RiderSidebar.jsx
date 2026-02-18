@@ -41,6 +41,11 @@ const RiderSidebar = () => {
   const location = useLocation();
   const [availableOrdersCount, setAvailableOrdersCount] = useState(0);
   const [activeDeliveriesCount, setActiveDeliveriesCount] = useState(0);
+  const [isOnline, setIsOnline] = useState(() => {
+    const cookieVal = getCookie('rider_is_online');
+    if (cookieVal === 'false') return false;
+    return true;
+  });
 
   const fetchCounts = async () => {
     try {
@@ -67,6 +72,8 @@ const RiderSidebar = () => {
   const handleLogout = () => {
     (async () => {
       try {
+        // Set rider offline before logout
+        setIsOnline(false);
         // Dispatch logout event first so RiderLayout can set offline status
         window.dispatchEvent(new CustomEvent('user:logout'));
 
@@ -252,7 +259,16 @@ const RiderSidebar = () => {
               <div className="flex items-center justify-between mb-4">
                 <div className="text-base font-medium text-[#64748B]">Online</div>
                 <label className="relative inline-block w-14 h-7">
-                  <input type="checkbox" className="sr-only peer" defaultChecked />
+                  <input
+                    type="checkbox"
+                    className="sr-only peer"
+                    checked={isOnline}
+                    onChange={() => {
+                      const newState = !isOnline;
+                      setIsOnline(newState);
+                      window.dispatchEvent(new CustomEvent('rider:toggleAvailability', { detail: { active: newState } }));
+                    }}
+                  />
                   <div className="w-14 h-7 bg-gray-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:rounded-full after:h-6 after:w-6 after:transition-all peer-checked:bg-[#00D68F]"></div>
                 </label>
               </div>

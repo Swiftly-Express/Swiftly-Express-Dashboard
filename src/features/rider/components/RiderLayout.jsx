@@ -81,6 +81,9 @@ const RiderLayout = ({ children }) => {
     if (cookieVal === 'false') return false;
     return true;
   });
+  // Track if user manually toggled (to prevent profile fetch from overwriting)
+  const [userToggledAvailability, setUserToggledAvailability] = useState(false);
+
   // Helper to sync online state to backend and admin
   const syncOnlineStateToBackend = async (active) => {
     try {
@@ -99,8 +102,9 @@ const RiderLayout = ({ children }) => {
       }
       setCookie('rider_is_online', active ? 'true' : 'false', 1);
     } catch (err) {
-      // fallback: revert UI
-      setIsOnline(!active);
+      console.error('[RiderLayout] Failed to update availability:', err);
+      // Show error notification instead of reverting
+      alert('Failed to update availability status. Please try again.');
     }
   };
 
@@ -165,16 +169,28 @@ const RiderLayout = ({ children }) => {
     // On login, always set online and sync to backend
     const handleLogin = () => {
       setIsOnline(true);
+      setUserToggledAvailability(false);
       syncOnlineStateToBackend(true);
     };
     // On logout, set offline and sync to backend
     const handleLogout = () => {
       setIsOnline(false);
+      setUserToggledAvailability(false);
       syncOnlineStateToBackend(false);
+    };
+    // Handle toggle from sidebar
+    const handleToggleFromSidebar = (e) => {
+      const newState = e.detail?.active;
+      if (typeof newState === 'boolean') {
+        setIsOnline(newState);
+        setUserToggledAvailability(true);
+        syncOnlineStateToBackend(newState);
+      }
     };
 
     window.addEventListener('user:login', handleLogin);
     window.addEventListener('user:logout', handleLogout);
+    window.addEventListener('rider:toggleAvailability', handleToggleFromSidebar);
 
     // Poll notification count every 30 seconds
     const notificationInterval = setInterval(() => {
@@ -276,7 +292,8 @@ const RiderLayout = ({ children }) => {
         const name = profile.fullName || `${profile.firstName || ''} ${profile.lastName || ''}`.trim();
         if (name) setUserName(name);
 
-        if (typeof profile.availability === 'boolean') {
+        // Only update availability from profile if user hasn't manually toggled it
+        if (typeof profile.availability === 'boolean' && !userToggledAvailability) {
           setIsOnline(profile.availability);
           setCookie('rider_is_online', profile.availability ? 'true' : 'false', 1);
         }
@@ -325,6 +342,7 @@ const RiderLayout = ({ children }) => {
   const handleAvailabilityToggle = () => {
     const newState = !isOnline;
     setIsOnline(newState);
+    setUserToggledAvailability(true);
     syncOnlineStateToBackend(newState);
   };
 
@@ -531,8 +549,7 @@ const RiderLayout = ({ children }) => {
                     src={profileImage}
                     alt={userName}
                     className="w-full h-full object-cover"
-                    onError={() =>
-                    {
+                    onError={() => {
                       try {
                         console.warn('[RiderLayout] Failed to load profile image, falling back to generated avatar');
                         const name = userName || 'Rider';

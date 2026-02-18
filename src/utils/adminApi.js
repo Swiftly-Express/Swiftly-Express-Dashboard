@@ -134,6 +134,18 @@ export async function setDriverDebtLimit(driverId, debtLimit) {
 }
 
 /**
+ * Set driver decline limit (admin only)
+ * @param {string} driverId - Driver ID
+ * @param {number} declineLimit - Maximum number of declines allowed per day
+ * @returns {Promise} Updated driver with new decline limit
+ */
+export async function setDriverDeclineLimit(driverId, declineLimit) {
+  if (!driverId) throw new Error('driverId is required');
+  console.log(`[adminApi] → Setting decline limit for driver ${driverId}:`, declineLimit);
+  return adminApiClient.post(`/api/admin/drivers/${driverId}/decline-limit`, { declineLimit });
+}
+
+/**
  * Create a new user
  * @param {Object} userData - User data
  * @returns {Promise} Created user
