@@ -8,10 +8,11 @@ import PeopleIcon from '../../../icons/Peopleicon';
 import CheckCircleIcon from '../../../icons/Circlecheck';
 import PauseIcon from '../../../icons/Pauseicon';
 import BanIcon from '../../../icons/Banicon';
-import { getAllUsers, deleteUser } from '../../../utils/adminApi';
+import { getAllUsers, deleteUser, sendEmailToUser } from '../../../utils/adminApi';
 import { formatAddress } from '../../../utils/formatters';
 
-const ManageUsers = () => {
+const ManageUsers = () =>
+{
   const [searchQuery, setSearchQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState('All Status');
   const [users, setUsers] = useState([]);
@@ -27,6 +28,7 @@ const ManageUsers = () => {
   const [showMailModal, setShowMailModal] = useState(false);
   const [selectedUserEmail, setSelectedUserEmail] = useState('');
   const [selectedUserName, setSelectedUserName] = useState('');
+  const [selectedUserId, setSelectedUserId] = useState('');
   const [mailSubject, setMailSubject] = useState('');
   const [mailMessage, setMailMessage] = useState('');
   const [sendingMail, setSendingMail] = useState(false);
@@ -40,7 +42,8 @@ const ManageUsers = () => {
   });
 
   // Fetch users from API
-  const fetchUsers = async (page = 1) => {
+  const fetchUsers = async (page = 1) =>
+  {
     try {
       setLoading(true);
       setError('');
@@ -71,7 +74,8 @@ const ManageUsers = () => {
   };
 
   // Calculate stats from users data
-  const calculateStats = (usersData) => {
+  const calculateStats = (usersData) =>
+  {
     const total = usersData.length;
     const active = usersData.filter(u => u.status === 'active' || u.isActive).length;
     const inactive = usersData.filter(u => u.status === 'inactive' || (!u.isActive && u.status !== 'suspended')).length;
@@ -81,46 +85,50 @@ const ManageUsers = () => {
   };
 
   // Send mail handler
-  const handleSendMail = (user) => {
+  const handleSendMail = (user) =>
+  {
     const email = user.email || user.contactInfo?.email || '';
     const name = user.fullName || user.name || 'User';
+    const userId = user._id || user.id;
     setSelectedUserEmail(email);
     setSelectedUserName(name);
+    setSelectedUserId(userId);
     setMailSubject('');
     setMailMessage('');
     setShowMailModal(true);
   };
 
-  const handleSendMailSubmit = async () => {
+  const handleSendMailSubmit = async () =>
+  {
     if (!mailSubject.trim() || !mailMessage.trim()) {
       alert('Please enter both subject and message');
       return;
     }
 
+    if (!selectedUserId) {
+      alert('User ID is missing. Cannot send email.');
+      return;
+    }
+
     try {
       setSendingMail(true);
-      // TODO: Replace with actual API call to send email
-      console.log('Sending mail to:', selectedUserEmail);
-      console.log('Subject:', mailSubject);
-      console.log('Message:', mailMessage);
-
-      // Simulate API call
-      await new Promise(resolve => setTimeout(resolve, 1000));
-
+      await sendEmailToUser(selectedUserId, mailSubject.trim(), mailMessage.trim());
       alert(`Email sent successfully to ${selectedUserEmail}`);
       setShowMailModal(false);
       setMailSubject('');
       setMailMessage('');
+      setSelectedUserId('');
     } catch (err) {
       console.error('Error sending mail:', err);
-      alert('Failed to send email');
+      alert(err?.message || 'Failed to send email');
     } finally {
       setSendingMail(false);
     }
   };
 
   // Delete user handler
-  const handleDeleteUser = async (userId) => {
+  const handleDeleteUser = async (userId) =>
+  {
     if (!confirm('Are you sure you want to delete this user?')) return;
 
     try {
@@ -134,7 +142,8 @@ const ManageUsers = () => {
   };
 
   // Initial fetch
-  useEffect(() => {
+  useEffect(() =>
+  {
     fetchUsers(1);
     const handleResize = () => setIsMobile(window.innerWidth < 768);
     window.addEventListener('resize', handleResize);
@@ -174,7 +183,8 @@ const ManageUsers = () => {
   ];
 
   // Filter users based on search query
-  const filteredUsers = users.filter(user => {
+  const filteredUsers = users.filter(user =>
+  {
     const matchesSearch = !searchQuery ||
       (user.fullName || user.name || '').toLowerCase().includes(searchQuery.toLowerCase()) ||
       (user.email || '').toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -187,7 +197,8 @@ const ManageUsers = () => {
   });
 
   // Format user status
-  const getUserStatus = (user) => {
+  const getUserStatus = (user) =>
+  {
     if (user.isSuspended || user.status === 'suspended') {
       return { status: 'Suspended', color: 'bg-red-100 text-red-800' };
     }
@@ -289,7 +300,8 @@ const ManageUsers = () => {
                 </div>
               ) : isMobile ? (
                 <div className="space-y-4 p-4">
-                  {filteredUsers.map((user, index) => {
+                  {filteredUsers.map((user, index) =>
+                  {
                     const userStatus = getUserStatus(user);
                     const userId = user.userId || user._id || user.id;
                     const userName = user.fullName || user.name || 'N/A';
@@ -361,7 +373,8 @@ const ManageUsers = () => {
                       </tr>
                     </thead>
                     <tbody className="bg-white divide-y divide-gray-100">
-                      {filteredUsers.map((user, index) => {
+                      {filteredUsers.map((user, index) =>
+                      {
                         const userStatus = getUserStatus(user);
                         const userId = user.userId || user._id || user.id;
                         const userName = user.fullName || user.name || 'N/A';

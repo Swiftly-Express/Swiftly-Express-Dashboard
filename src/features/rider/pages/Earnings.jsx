@@ -1,13 +1,15 @@
 import React, { useState, useEffect } from 'react';
+import { useLocation } from 'react-router-dom';
 import { IonContent, IonPage, IonIcon, IonToast } from '@ionic/react';
 import { arrowForward } from 'ionicons/icons';
+import { X } from 'lucide-react';
 import RiderLayout from '../components/RiderLayout';
 import NairaIcon from '../../../icons/Nairaicon';
 import AnalyzeIcon from '../../../icons/Analyzeicon';
 import PeopleIcon from '../../../icons/Peopleicon';
 import RevenueIcon from '../../../icons/Revenueicon';
 import { YummyText } from '../../../components/YummyText';
-import { getRiderEarnings, getRiderBalance, payDebt, notifyAdminEmailChange } from '../../../utils/authApi';
+import { getRiderEarnings, getRiderBalance, initializeDebtPayment, requestPayout, getPayoutHistory, notifyAdminEmailChange, getRiderProfile } from '../../../utils/authApi';
 import { setCookie, deleteCookie, getCookie } from '../../../utils/cookies';
 
 const sideBottomShadow = {
@@ -40,31 +42,60 @@ const StatCard = ({ icon, iconBg, title, value, subtitle, debtAmount }) => (
   </div>
 );
 
-const Earnings = () => {
+const Earnings = () =>
+{
+  const location = useLocation();
   const [activeTab, setActiveTab] = useState('today');
   const [earnings, setEarnings] = useState(null);
   const [loading, setLoading] = useState(true);
   const [toastMsg, setToastMsg] = useState('');
   const [showToast, setShowToast] = useState(false);
+  const [showPayoutModal, setShowPayoutModal] = useState(false);
+  const [payoutAmount, setPayoutAmount] = useState('');
+  const [requestingPayout, setRequestingPayout] = useState(false);
+  const [payoutHistory, setPayoutHistory] = useState([]);
+  const [payoutHistoryLoading, setPayoutHistoryLoading] = useState(false);
+  const [declineLimitInfo, setDeclineLimitInfo] = useState(null);
+
+  // Fetch decline limit info
+  const fetchDeclineLimitInfo = async () =>
+  {
+    try {
+      const response = await getRiderProfile();
+      const data = response?.data?.data ?? response?.data ?? response;
+      const declineInfo = data?.declineLimitInfo;
+      if (declineInfo) {
+        setDeclineLimitInfo(declineInfo);
+      }
+    } catch (error) {
+      console.error('[Earnings] Failed to fetch decline limit info:', error);
+    }
+  };
 
   // Fetch earnings data on mount
-  useEffect(() => {
+  useEffect(() =>
+  {
     // Initial fetch
     fetchEarnings();
     fetchBalance();
+    fetchDeclineLimitInfo();
 
     // Refresh when window/tab becomes active or focused
-    const onFocus = () => {
+    const onFocus = () =>
+    {
       console.log('[Earnings] window focused — refreshing earnings');
       fetchEarnings();
       fetchBalance();
+      fetchDeclineLimitInfo();
     };
 
-    const onVisibilityChange = () => {
+    const onVisibilityChange = () =>
+    {
       if (document.visibilityState === 'visible') {
         console.log('[Earnings] tab visible — refreshing earnings');
         fetchEarnings();
         fetchBalance();
+        fetchDeclineLimitInfo();
       }
     };
 
@@ -72,21 +103,47 @@ const Earnings = () => {
     document.addEventListener('visibilitychange', onVisibilityChange);
 
     // Periodic refresh every 60 seconds
-    const interval = setInterval(() => {
+    const interval = setInterval(() =>
+    {
       console.log('[Earnings] periodic refresh');
       fetchEarnings();
       fetchBalance();
+      fetchDeclineLimitInfo();
     }, 60000);
 
-    return () => {
+    return () =>
+    {
       window.removeEventListener('focus', onFocus);
       document.removeEventListener('visibilitychange', onVisibilityChange);
       clearInterval(interval);
     };
   }, []);
 
-  useEffect(() => {
-    const handlePaymentCompleted = async (evt) => {
+  // Handle payment success/error query params
+  useEffect(() =>
+  {
+    const params = new URLSearchParams(location.search);
+    const paymentStatus = params.get('payment');
+    if (paymentStatus === 'success') {
+      setToastMsg('Debt payment successful! Your balance has been updated.');
+      setShowToast(true);
+      // Refresh earnings to show updated balance
+      fetchEarnings();
+      fetchBalance();
+      // Clean up URL
+      window.history.replaceState({}, '', '/rider/earnings');
+    } else if (paymentStatus === 'error') {
+      setToastMsg('Payment verification failed. Please contact support if the payment was deducted.');
+      setShowToast(true);
+      // Clean up URL
+      window.history.replaceState({}, '', '/rider/earnings');
+    }
+  }, [location.search]);
+
+  useEffect(() =>
+  {
+    const handlePaymentCompleted = async (evt) =>
+    {
       console.log('[Earnings] Payment completed event received:', evt?.detail);
 
       try {
@@ -146,7 +203,8 @@ const Earnings = () => {
     return () => window.removeEventListener('payment:completed', handlePaymentCompleted);
   }, [earnings]);
 
-  const fetchEarnings = async () => {
+  const fetchEarnings = async () =>
+  {
     try {
       setLoading(true);
       console.log('[Earnings] 🔍 Fetching earnings from API...');
@@ -154,8 +212,11 @@ const Earnings = () => {
       console.log('[Earnings] ✅ API Response:', response);
       const earningsData = response?.data?.earnings || response?.earnings || response?.data;
       console.log('[Earnings] 📊 Earnings data:', earningsData);
-      // Use backend-provided earnings object directly (avoid frontend recalculation)
-      setEarnings(earningsData || {});
+      // Merge so we never wipe outstandingBalance set by fetchBalance (fixes race)
+      setEarnings(prev => ({
+        ...(earningsData || {}),
+        outstandingBalance: prev?.outstandingBalance !== undefined ? prev.outstandingBalance : (earningsData?.outstandingBalance),
+      }));
     } catch (error) {
       console.error('[Earnings] ❌ Error fetching earnings:', error);
       setToastMsg(error.message || 'Failed to load earnings data');
@@ -166,15 +227,20 @@ const Earnings = () => {
     }
   };
 
-  const fetchBalance = async () => {
+  const fetchBalance = async () =>
+  {
     try {
       const resp = await getRiderBalance();
       const b = resp?.data || resp;
-      const outstanding = Number(b?.balance || b?.outstanding || b?.due || b?.amountDue || 0);
+      const balance = Number(b?.balance || b?.outstanding || b?.due || b?.amountDue || 0);
 
-      console.log('[Earnings] Fetched balance:', { outstanding, rawResponse: b });
+      // Convert negative balance to positive outstanding debt for display
+      // Balance is negative when rider owes money (e.g., -5000 means ₦5000 debt)
+      const outstanding = balance < 0 ? Math.abs(balance) : 0;
 
-      // Store balance in state
+      console.log('[Earnings] Fetched balance:', { balance, outstanding, rawResponse: b });
+
+      // Store outstanding debt (positive value) in state
       setEarnings(prev => ({ ...(prev || {}), outstandingBalance: outstanding }));
 
       const riderId = earnings?.riderId || earnings?.rider?._id || earnings?._id;
@@ -231,7 +297,8 @@ const Earnings = () => {
     }
   };
 
-  const handleSettleDebt = async () => {
+  const handleSettleDebt = async () =>
+  {
     try {
       const outstanding = earnings?.outstandingBalance || 0;
       if (!outstanding || Number(outstanding) <= 0) {
@@ -239,6 +306,8 @@ const Earnings = () => {
         setShowToast(true);
         return;
       }
+
+      // outstandingBalance is already a positive value (converted from negative balance)
 
       const riderId = earnings?.riderId || earnings?.rider?._id || earnings?._id;
 
@@ -268,18 +337,16 @@ const Earnings = () => {
       setToastMsg('Initializing payment...');
       setShowToast(true);
 
-      const initJson = await payDebt({
+      const initResponse = await initializeDebtPayment({
         amount: outstanding,
-        currency: 'NGN',
-        callback_url: `${window.location.origin}/rider/payment/callback`,
-        metadata: { riderId, type: 'debt_settlement' }
+        callback_url: `${window.location.origin}/payment/callback`,
       });
 
-      const initPayload = initJson?.data || initJson;
+      const initPayload = initResponse?.data || initResponse;
       const paymentObj = initPayload?.data?.payment || initPayload?.payment || initPayload?.data || initPayload;
-      const paymentId = paymentObj?._id || paymentObj?.id || paymentObj?.paymentId;
+      const paymentId = paymentObj?.id || paymentObj?._id;
       const paymentReference = paymentObj?.reference || paymentObj?.paystackReference;
-      const authorizationUrl = paymentObj?.authorizationUrl || paymentObj?.authorization_url || paymentObj?.url || paymentObj?.payment_url;
+      const authorizationUrl = paymentObj?.authorizationUrl || paymentObj?.authorization_url;
 
       console.log('[Earnings] Payment initialized:', { paymentId, paymentReference, authorizationUrl });
 
@@ -288,7 +355,8 @@ const Earnings = () => {
       if (paymentReference) setCookie('pending_debt_payment_reference', String(paymentReference), 1);
       if (riderId) setCookie('pending_debt_rider_id', String(riderId), 1);
 
-      const cleanupOnPaymentCancel = async () => {
+      const cleanupOnPaymentCancel = async () =>
+      {
         try {
           deleteCookie('pending_debt_payment_id');
           deleteCookie('pending_debt_payment_reference');
@@ -321,7 +389,8 @@ const Earnings = () => {
           }
 
           // Monitor popup closure
-          const popupInterval = setInterval(() => {
+          const popupInterval = setInterval(() =>
+          {
             try {
               if (!paymentWindow || paymentWindow.closed) {
                 clearInterval(popupInterval);
@@ -367,10 +436,12 @@ const Earnings = () => {
                 }
               ]
             },
-            onClose: function () {
+            onClose: function ()
+            {
               cleanupOnPaymentCancel();
             },
-            callback: function (response) {
+            callback: function (response)
+            {
               console.log('[Earnings] Payment successful:', response);
               setToastMsg('Payment successful! Verifying...');
               setShowToast(true);
@@ -383,8 +454,9 @@ const Earnings = () => {
               } catch (e) { /* ignore */ }
 
               // Redirect to callback/success page
-              setTimeout(() => {
-                window.location.href = `/rider/payment/callback?reference=${paymentReference}`;
+              setTimeout(() =>
+              {
+                window.location.href = `/payment/callback?reference=${paymentReference}`;
               }, 500);
             }
           });
@@ -393,7 +465,7 @@ const Earnings = () => {
         } catch (paystackErr) {
           console.error('[Earnings] Paystack inline failed:', paystackErr);
           // Final fallback: redirect to callback page
-          window.location.href = `/rider/payment/callback?reference=${paymentReference}`;
+          window.location.href = `/payment/callback?reference=${paymentReference}`;
         }
       }
     } catch (error) {
@@ -403,7 +475,65 @@ const Earnings = () => {
     }
   };
 
-  const formatCurrency = (val) => {
+  const handleRequestPayout = async () =>
+  {
+    if (!payoutAmount || parseFloat(payoutAmount) <= 0) {
+      setToastMsg('Please enter a valid payout amount');
+      setShowToast(true);
+      return;
+    }
+
+    const amount = parseFloat(payoutAmount);
+    const availableBalance = earnings?.availableBalance || earnings?.balance || 0;
+
+    if (amount > availableBalance) {
+      setToastMsg(`Insufficient balance. Available: ${formatCurrency(availableBalance)}`);
+      setShowToast(true);
+      return;
+    }
+
+    try {
+      setRequestingPayout(true);
+      await requestPayout(amount);
+      setToastMsg(`Payout request of ${formatCurrency(amount)} submitted successfully. Awaiting admin approval.`);
+      setShowToast(true);
+      setShowPayoutModal(false);
+      setPayoutAmount('');
+      // Refresh earnings to show updated balance
+      await fetchEarnings();
+      await fetchBalance();
+    } catch (error) {
+      console.error('[Earnings] Failed to request payout:', error);
+      setToastMsg(error?.message || 'Failed to submit payout request');
+      setShowToast(true);
+    } finally {
+      setRequestingPayout(false);
+    }
+  };
+
+  const fetchPayoutHistory = async () =>
+  {
+    try {
+      setPayoutHistoryLoading(true);
+      const response = await getPayoutHistory(1, 20);
+      const data = response?.data || response;
+      setPayoutHistory(data?.payoutRequests || []);
+    } catch (error) {
+      console.error('[Earnings] Failed to fetch payout history:', error);
+    } finally {
+      setPayoutHistoryLoading(false);
+    }
+  };
+
+  useEffect(() =>
+  {
+    if (activeTab === 'payouts') {
+      fetchPayoutHistory();
+    }
+  }, [activeTab]);
+
+  const formatCurrency = (val) =>
+  {
     if (val === null || val === undefined) return '₦0.00';
     const num = typeof val === 'string' ? parseFloat(val.replace(/[$,N\s]/g, '')) : Number(val);
     if (Number.isNaN(num)) return String(val);
@@ -437,7 +567,8 @@ const Earnings = () => {
   const nextPayoutDateRaw = nextPayoutObj?.date || nextPayoutObj?.scheduledAt || earnings?.nextPayoutDate || earnings?.upcomingDate || null;
   const nextPayoutDate = nextPayoutDateRaw ? new Date(nextPayoutDateRaw) : null;
 
-  const totalToday = todayDeliveries.reduce((sum, delivery) => {
+  const totalToday = todayDeliveries.reduce((sum, delivery) =>
+  {
     const raw = typeof delivery.total === 'string' ? delivery.total : String(delivery.total || '0');
     const cleaned = raw.replace(/[$₦N,\s]/g, '');
     const parsed = parseFloat(cleaned) || 0;
@@ -497,6 +628,70 @@ const Earnings = () => {
             </div>
           )}
 
+          {/* Decline Limit Banner */}
+          {declineLimitInfo && (
+            <div className={`mb-6 p-5 rounded-xl border-2 shadow-sm ${declineLimitInfo.remainingDeclines === 0
+              ? 'bg-red-50 border-red-200'
+              : declineLimitInfo.remainingDeclines <= 2
+                ? 'bg-orange-50 border-orange-200'
+                : 'bg-blue-50 border-blue-200'
+              }`}>
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-4">
+                  <div className={`w-12 h-12 rounded-full flex items-center justify-center flex-shrink-0 ${declineLimitInfo.remainingDeclines === 0
+                    ? 'bg-red-100'
+                    : declineLimitInfo.remainingDeclines <= 2
+                      ? 'bg-orange-100'
+                      : 'bg-blue-100'
+                    }`}>
+                    {declineLimitInfo.remainingDeclines === 0 ? (
+                      <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#DC2626" strokeWidth="2">
+                        <circle cx="12" cy="12" r="10" />
+                        <line x1="15" y1="9" x2="9" y2="15" />
+                        <line x1="9" y1="9" x2="15" y2="15" />
+                      </svg>
+                    ) : (
+                      <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke={declineLimitInfo.remainingDeclines <= 2 ? "#F59E0B" : "#3B82F6"} strokeWidth="2">
+                        <circle cx="12" cy="12" r="10" />
+                        <path d="M12 6v6l4 2" />
+                      </svg>
+                    )}
+                  </div>
+                  <div>
+                    <div className={`text-lg font-semibold mb-1 ${declineLimitInfo.remainingDeclines === 0
+                      ? 'text-red-700'
+                      : declineLimitInfo.remainingDeclines <= 2
+                        ? 'text-orange-700'
+                        : 'text-blue-700'
+                      }`}>
+                      Daily Decline Limit: <span className={declineLimitInfo.remainingDeclines === 0 ? 'text-red-900' : declineLimitInfo.remainingDeclines <= 2 ? 'text-orange-900' : 'text-blue-900'}>
+                        {declineLimitInfo.currentDeclines}/{declineLimitInfo.declineLimit}
+                      </span>
+                      {declineLimitInfo.remainingDeclines > 0 && (
+                        <span className="text-sm font-normal ml-2">
+                          ({declineLimitInfo.remainingDeclines} remaining)
+                        </span>
+                      )}
+                    </div>
+                    <div className={`text-sm ${declineLimitInfo.remainingDeclines === 0
+                      ? 'text-red-600'
+                      : declineLimitInfo.remainingDeclines <= 2
+                        ? 'text-orange-600'
+                        : 'text-blue-600'
+                      }`}>
+                      {declineLimitInfo.remainingDeclines === 0
+                        ? '⚠️ You have reached your daily decline limit. You cannot decline more deliveries today.'
+                        : declineLimitInfo.remainingDeclines <= 2
+                          ? `⚠️ You have ${declineLimitInfo.remainingDeclines} decline${declineLimitInfo.remainingDeclines !== 1 ? 's' : ''} remaining. Exceeding your limit will disqualify you from incentives.`
+                          : `You can decline up to ${declineLimitInfo.declineLimit} deliveries per day. Exceeding this limit will disqualify you from incentives.`
+                      }
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
+
           {/* Header */}
           <YummyText>
             <div className="flex items-center justify-between mb-8 py-2">
@@ -509,7 +704,20 @@ const Earnings = () => {
                 </div>
               </div>
               <div className="flex items-center gap-3">
-                <button className="bg-[#00B75A] hover:bg-[#00B876] whitespace-nowrap text-sm text-white px-3 py-2 rounded-full transition-colors font-[400]">
+                <button
+                  onClick={() =>
+                  {
+                    const balance = earnings?.availableBalance || earnings?.balance || 0;
+                    if (balance <= 0) {
+                      setToastMsg('You have no available balance to request payout');
+                      setShowToast(true);
+                      return;
+                    }
+                    setPayoutAmount('');
+                    setShowPayoutModal(true);
+                  }}
+                  className="bg-[#00B75A] hover:bg-[#00B876] whitespace-nowrap text-sm text-white px-3 py-2 rounded-full transition-colors font-[400]"
+                >
                   Request Payout
                 </button>
                 {earnings?.outstandingBalance > 0 ? (
@@ -593,9 +801,11 @@ const Earnings = () => {
                   </div>
                 </div>
               ) : (
-                weekDeliveries.map((day, index) => {
+                weekDeliveries.map((day, index) =>
+                {
                   // Calculate max earnings from the week for proper scaling
-                  const allEarnings = weekDeliveries.map(d => {
+                  const allEarnings = weekDeliveries.map(d =>
+                  {
                     const val = typeof d.earnings === 'number' ? d.earnings : parseFloat(String(d.earnings).replace(/[$N,]/g, ''));
                     return isNaN(val) ? 0 : val;
                   });
@@ -752,7 +962,8 @@ const Earnings = () => {
                           </tr>
                         </thead>
                         <tbody>
-                          {weekDeliveries.map((day, index) => {
+                          {weekDeliveries.map((day, index) =>
+                          {
                             const earningsValue = typeof day.earnings === 'number' ? day.earnings : parseFloat(String(day.earnings).replace(/[$N,]/g, ''));
                             const basePay = earningsValue * 0.85; // Assuming ~85% is base pay
                             const tips = earningsValue * 0.15; // Assuming ~15% is tips
@@ -811,6 +1022,63 @@ const Earnings = () => {
               </div>
             </YummyText>
           </div>
+
+          {/* Payout Request Modal */}
+          {showPayoutModal && (
+            <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+              <div className="bg-white rounded-2xl p-6 max-w-md w-full shadow-xl">
+                <div className="flex items-center justify-between mb-4">
+                  <h2 className="text-xl font-semibold text-[#0F172A]">Request Payout</h2>
+                  <button
+                    onClick={() =>
+                    {
+                      setShowPayoutModal(false);
+                      setPayoutAmount('');
+                    }}
+                    className="text-[#64748B] hover:text-[#0F172A]"
+                  >
+                    <X className="w-5 h-5" />
+                  </button>
+                </div>
+                <div className="mb-4">
+                  <p className="text-sm text-[#64748B] mb-2">Available Balance: <span className="font-semibold text-[#0F172A]">{formatCurrency(earnings?.availableBalance || earnings?.balance || 0)}</span></p>
+                  <label className="block text-sm font-medium text-[#0F172A] mb-2">
+                    Payout Amount
+                  </label>
+                  <input
+                    type="number"
+                    value={payoutAmount}
+                    onChange={(e) => setPayoutAmount(e.target.value)}
+                    placeholder="Enter amount"
+                    min="0"
+                    max={earnings?.availableBalance || earnings?.balance || 0}
+                    className="w-full px-4 py-3 rounded-xl border border-[#E2E8F0] focus:border-[#00D68F] focus:ring-2 focus:ring-[#00D68F]/20 focus:outline-none"
+                  />
+                  <p className="text-xs text-[#64748B] mt-1">Maximum: {formatCurrency(earnings?.availableBalance || earnings?.balance || 0)}</p>
+                </div>
+                <div className="flex gap-3">
+                  <button
+                    onClick={() =>
+                    {
+                      setShowPayoutModal(false);
+                      setPayoutAmount('');
+                    }}
+                    className="flex-1 px-4 py-2 border border-[#E2E8F0] text-[#0F172A] rounded-xl hover:bg-gray-50"
+                    disabled={requestingPayout}
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    onClick={handleRequestPayout}
+                    disabled={requestingPayout || !payoutAmount || parseFloat(payoutAmount) <= 0}
+                    className="flex-1 px-4 py-2 bg-[#00B75A] text-white rounded-xl hover:bg-[#00B876] disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    {requestingPayout ? 'Submitting...' : 'Submit Request'}
+                  </button>
+                </div>
+              </div>
+            </div>
+          )}
 
           {/* Toast Notification */}
           <IonToast

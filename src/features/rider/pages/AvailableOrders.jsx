@@ -7,7 +7,7 @@ import { YummyText } from '../../../components/YummyText';
 import Toast, { useToast } from '../../../components/Toast';
 import BanIcon from '../../../icons/Banicon';
 import TrackingMap from '../../../components/TrackingMap';
-import { getAvailableJobs, acceptDeliveryJob, rejectDeliveryJob, getRiderProfile, getRiderDeliveries, updateDriverLocation, getRiderEarnings } from '../../../utils/authApi';
+import { getAvailableJobs, acceptDeliveryJob, rejectDeliveryJob, getRiderProfile, getRiderDeliveries, updateDriverLocation, getRiderEarnings, getRiderBalance } from '../../../utils/authApi';
 import socketService from '../../../services/socket.service';
 import { getCookie, getJSONCookie, isRiderVerified, setCookie, setJSONCookie } from '../../../utils/cookies';
 import { playNotificationSound, stopNotificationSound } from '../../../utils/notificationSound';
@@ -157,7 +157,8 @@ const OrderCard = ({
   </div>
 );
 
-const AvailableOrders = () => {
+const AvailableOrders = () =>
+{
   const { toast, showToast: showCustomToast, hideToast, ToastComponent } = useToast();
   const [shownReminders, setShownReminders] = useState(new Set());
   const [activeTab, setActiveTab] = useState('all');
@@ -168,7 +169,8 @@ const AvailableOrders = () => {
   const [toastMsg, setToastMsg] = useState('');
   const [showToast, setShowToast] = useState(false);
   const [isVerified, setIsVerified] = useState(false);
-  const [verificationStatus, setVerificationStatus] = useState(() => {
+  const [verificationStatus, setVerificationStatus] = useState(() =>
+  {
     try {
       const ud = getJSONCookie('user_data') || {};
       return ud.verificationStatus || getCookie('riderVerificationStatus') || null;
@@ -181,7 +183,9 @@ const AvailableOrders = () => {
   const [avgPerDeliveryRaw, setAvgPerDeliveryRaw] = useState(0);
   const [lastRefresh, setLastRefresh] = useState(Date.now());
   const [selectedOrder, setSelectedOrder] = useState(null);
-  const [currentRiderId, setCurrentRiderId] = useState(() => {
+  const [isBlockedByDebt, setIsBlockedByDebt] = useState(false);
+  const [currentRiderId, setCurrentRiderId] = useState(() =>
+  {
     try {
       const ud = getJSONCookie('user_data') || {};
       return ud._id || ud.id || null;
@@ -199,7 +203,8 @@ const AvailableOrders = () => {
   const [notificationPermission, setNotificationPermission] = useState('default');
 
   // lock body scroll when drawer/modal is open
-  useEffect(() => {
+  useEffect(() =>
+  {
     if (selectedOrder) {
       const prev = document.body.style.overflow;
       document.body.style.overflow = 'hidden';
@@ -209,7 +214,8 @@ const AvailableOrders = () => {
   }, [selectedOrder]);
 
   // Debug: Check tokens on mount
-  useEffect(() => {
+  useEffect(() =>
+  {
     const riderToken = getCookie('rider_token');
     const customerToken = getCookie('customer_token');
     const authToken = getCookie('auth_token');
@@ -226,7 +232,8 @@ const AvailableOrders = () => {
   const router = useIonRouter();
 
   // Check verification status from backend
-  const checkVerificationStatus = async () => {
+  const checkVerificationStatus = async () =>
+  {
     try {
       console.log('[AvailableOrders] 🔍 Fetching verification status from backend...');
       const response = await getRiderProfile();
@@ -317,9 +324,11 @@ const AvailableOrders = () => {
     }
   };
 
-  useEffect(() => {
+  useEffect(() =>
+  {
     // Initial verification check with backend
-    checkVerificationStatus().then(verified => {
+    checkVerificationStatus().then(verified =>
+    {
       console.log('[AvailableOrders] Initial verification check:', verified);
       if (verified) {
         fetchAvailableJobs();
@@ -327,7 +336,8 @@ const AvailableOrders = () => {
     });
 
     // Fetch count of completed deliveries to determine "new user" state
-    const fetchCompleted = async () => {
+    const fetchCompleted = async () =>
+    {
       try {
         const resp = await getRiderDeliveries(1, 100);
         const deliveries = resp?.data?.deliveries || resp?.deliveries || resp?.data || [];
@@ -342,7 +352,8 @@ const AvailableOrders = () => {
 
     fetchCompleted();
     // Fetch rider earnings to get avgPerDelivery for potential earnings calculation
-    const fetchAvg = async () => {
+    const fetchAvg = async () =>
+    {
       try {
         const resp = await getRiderEarnings();
         const data = resp?.data?.earnings || resp?.earnings || resp?.data || resp || {};
@@ -355,8 +366,22 @@ const AvailableOrders = () => {
     };
     fetchAvg();
 
+    // Check if rider is blocked due to debt (so we can show banner and they see why accept fails)
+    const fetchBlockedStatus = async () =>
+    {
+      try {
+        const resp = await getRiderBalance();
+        const b = resp?.data || resp;
+        setIsBlockedByDebt(!!(b?.isBlocked));
+      } catch (e) {
+        setIsBlockedByDebt(false);
+      }
+    };
+    fetchBlockedStatus();
+
     // Listen for verification completion
-    const handleVerificationComplete = async (event) => {
+    const handleVerificationComplete = async (event) =>
+    {
       console.log('[AvailableOrders] Verification completed event received:', event.detail);
       // Re-check verification status from backend
       const verified = await checkVerificationStatus();
@@ -374,13 +399,15 @@ const AvailableOrders = () => {
     };
 
     window.addEventListener('verification:completed', handleVerificationComplete);
-    return () => {
+    return () =>
+    {
       window.removeEventListener('verification:completed', handleVerificationComplete);
     };
   }, []);
 
   // Fetch available jobs on mount and when page changes
-  useEffect(() => {
+  useEffect(() =>
+  {
     if (isVerified) {
       fetchAvailableJobs();
     }
@@ -389,8 +416,10 @@ const AvailableOrders = () => {
   // Auto-refresh removed — use pull-to-refresh or manual refresh instead
 
   // Listen for new deliveries created by customers
-  useEffect(() => {
-    const handleDeliveryCreated = (event) => {
+  useEffect(() =>
+  {
+    const handleDeliveryCreated = (event) =>
+    {
       console.log('[AvailableOrders] New delivery created, refreshing jobs:', event.detail);
       showCustomToast('🔔 New delivery available!', 'success');
       // Play notification sound for new delivery
@@ -400,7 +429,8 @@ const AvailableOrders = () => {
       fetchAvailableJobs();
     };
 
-    const handleDeliveriesRefresh = () => {
+    const handleDeliveriesRefresh = () =>
+    {
       console.log('[AvailableOrders] Deliveries refresh requested');
       fetchAvailableJobs();
     };
@@ -408,19 +438,22 @@ const AvailableOrders = () => {
     window.addEventListener('delivery:created', handleDeliveryCreated);
     window.addEventListener('deliveries:refresh', handleDeliveriesRefresh);
 
-    return () => {
+    return () =>
+    {
       window.removeEventListener('delivery:created', handleDeliveryCreated);
       window.removeEventListener('deliveries:refresh', handleDeliveriesRefresh);
     };
   }, []);
 
   // Socket: real-time invitation when a customer requests this rider
-  useEffect(() => {
+  useEffect(() =>
+  {
     console.log('[AvailableOrders] 🔌 Setting up socket listeners...');
     socketService.connect();
 
     // Get rider ID and join rider-specific room
-    const getRiderId = () => {
+    const getRiderId = () =>
+    {
       try {
         const userData = getCookie('user_data');
         if (userData) {
@@ -445,7 +478,8 @@ const AvailableOrders = () => {
 
     // Debug: Listen to ALL socket events
     if (socketService.socket) {
-      socketService.socket.onAny((eventName, ...args) => {
+      socketService.socket.onAny((eventName, ...args) =>
+      {
         console.log(`[AvailableOrders] 📡 ANY SOCKET EVENT: "${eventName}"`, args);
       });
 
@@ -453,7 +487,8 @@ const AvailableOrders = () => {
       console.log('[AvailableOrders] 🔌 Socket ID:', socketService.socket.id);
     }
 
-    const handleInvitation = (data) => {
+    const handleInvitation = (data) =>
+    {
       console.log('[AvailableOrders] 🚨🚨🚨 delivery:invitation received:', data);
       playNotificationSound();
       showCustomToast('A customer requested you for a delivery', 'success');
@@ -462,7 +497,8 @@ const AvailableOrders = () => {
       fetchAvailableJobs();
     };
 
-    const handleNewJob = (data) => {
+    const handleNewJob = (data) =>
+    {
       console.log('[AvailableOrders] 🚨🚨🚨 New job (socket):', data);
       playNotificationSound();
       showCustomToast('New delivery available!', 'success');
@@ -478,8 +514,10 @@ const AvailableOrders = () => {
       'delivery_created', 'deliveryCreated', 'new-delivery', 'newDelivery'
     ];
 
-    events.forEach(evt => {
-      socketService.on(evt, (data) => {
+    events.forEach(evt =>
+    {
+      socketService.on(evt, (data) =>
+      {
         console.log(`[AvailableOrders] 🎯 CAUGHT: "${evt}"`, data);
         if (evt === 'delivery:invitation') {
           handleInvitation(data);
@@ -491,13 +529,15 @@ const AvailableOrders = () => {
 
     console.log('[AvailableOrders] Listening to:', events);
 
-    return () => {
+    return () =>
+    {
       events.forEach(evt => socketService.off(evt));
     };
   }, []);
 
   // Send current location to backend so you show up in "nearby riders" (pickup within ~20 km)
-  const sendLocationToBackend = React.useCallback((showToastOnSuccess = false) => {
+  const sendLocationToBackend = React.useCallback((showToastOnSuccess = false) =>
+  {
     if (!navigator.geolocation) {
       setLocationStatus('error');
       setLocationError('Geolocation not supported');
@@ -506,14 +546,16 @@ const AvailableOrders = () => {
     setLocationStatus('updating');
     setLocationError(null);
     navigator.geolocation.getCurrentPosition(
-      (pos) => {
+      (pos) =>
+      {
         const lat = pos.coords.latitude;
         const lng = pos.coords.longitude;
         const acc = pos.coords.accuracy; // meters, may be undefined
         if (typeof acc === 'number') setLocationAccuracyM(Math.round(acc));
         else setLocationAccuracyM(null);
         updateDriverLocation(lat, lng)
-          .then(() => {
+          .then(() =>
+          {
             setLocationStatus('updated');
             setLocationError(null);
             if (showToastOnSuccess) {
@@ -521,7 +563,8 @@ const AvailableOrders = () => {
               setShowToast(true);
             }
           })
-          .catch((err) => {
+          .catch((err) =>
+          {
             setLocationStatus('error');
             const msg = err?.response?.data?.message || err?.message || 'Failed to update location';
             setLocationError(msg);
@@ -532,7 +575,8 @@ const AvailableOrders = () => {
             console.error('[AvailableOrders] updateDriverLocation failed:', err);
           });
       },
-      (err) => {
+      (err) =>
+      {
         setLocationStatus('error');
         const msg = err?.message === 'User denied the request for Geolocation.'
           ? 'Location permission denied. Allow location in your browser to appear in nearby riders.'
@@ -549,7 +593,8 @@ const AvailableOrders = () => {
   }, []);
 
   // Share location on mount and periodically so customers can find you
-  useEffect(() => {
+  useEffect(() =>
+  {
     if (!navigator.geolocation) return;
     sendLocationToBackend();
     const interval = setInterval(sendLocationToBackend, 20000);
@@ -557,8 +602,10 @@ const AvailableOrders = () => {
   }, [sendLocationToBackend]);
 
   // Request notification permission on mount
-  useEffect(() => {
-    const requestPermission = async () => {
+  useEffect(() =>
+  {
+    const requestPermission = async () =>
+    {
       console.log('[AvailableOrders] Requesting browser notification permission...');
       const granted = await pushNotificationService.requestPermission();
       setNotificationPermission(granted ? 'granted' : 'denied');
@@ -571,7 +618,8 @@ const AvailableOrders = () => {
     };
 
     // Check current permission status without requesting
-    const checkCurrentPermission = () => {
+    const checkCurrentPermission = () =>
+    {
       if ('Notification' in window) {
         const currentPermission = Notification.permission;
         console.log('[AvailableOrders] 📱 Current notification permission:', currentPermission);
@@ -594,7 +642,8 @@ const AvailableOrders = () => {
   }, []);
 
   // Stop sound when user visits this page (they've seen the orders) and on unmount
-  useEffect(() => {
+  useEffect(() =>
+  {
     console.log('[AvailableOrders] 📍 User visited page - stopping notification sound');
     stopNotificationSound();
 
@@ -604,7 +653,8 @@ const AvailableOrders = () => {
     console.log('[AvailableOrders] 📌 Updated lastSeenOrderCount to:', orders.length);
 
     // Listen for logout event to stop sound
-    const handleLogout = () => {
+    const handleLogout = () =>
+    {
       console.log('[AvailableOrders] 🚪 User logging out - stopping notification sound');
       stopNotificationSound();
     };
@@ -612,7 +662,8 @@ const AvailableOrders = () => {
     window.addEventListener('user:logout', handleLogout);
 
     // On unmount, also stop sound and remove listener
-    return () => {
+    return () =>
+    {
       console.log('[AvailableOrders] 🚪 User left page - stopping notification sound');
       stopNotificationSound();
       window.removeEventListener('user:logout', handleLogout);
@@ -620,20 +671,23 @@ const AvailableOrders = () => {
   }, [orders.length]);
 
   // Auto-poll for new orders every 5 seconds (fallback for when socket events don't fire)
-  useEffect(() => {
+  useEffect(() =>
+  {
     let pollInterval;
     let isActive = true;
 
     console.log('[AvailableOrders] 🔄 Starting auto-polling for new orders (every 5s)');
 
     // Only poll if we have orders array initialized (means component is mounted properly)
-    pollInterval = setInterval(() => {
+    pollInterval = setInterval(() =>
+    {
       if (isActive) {
         fetchAvailableJobs(true); // silent=true to avoid spamming logs
       }
     }, 5000);
 
-    const handleLogout = () => {
+    const handleLogout = () =>
+    {
       console.log('[AvailableOrders] 🛑 Logout detected - stopping polling');
       isActive = false;
       if (pollInterval) clearInterval(pollInterval);
@@ -641,7 +695,8 @@ const AvailableOrders = () => {
 
     window.addEventListener('user:logout', handleLogout);
 
-    return () => {
+    return () =>
+    {
       console.log('[AvailableOrders] 🛑 Stopping auto-polling');
       isActive = false;
       if (pollInterval) clearInterval(pollInterval);
@@ -649,7 +704,8 @@ const AvailableOrders = () => {
     };
   }, []); // Empty deps - run once on mount
 
-  const fetchAvailableJobs = async (silent = false) => {
+  const fetchAvailableJobs = async (silent = false) =>
+  {
     setLoading(true);
     try {
       if (!silent) console.log('[AvailableOrders] Fetching available jobs from API...');
@@ -722,7 +778,8 @@ const AvailableOrders = () => {
   };
 
   // Small helper to safely parse numbers from currency or string fields
-  const parseAmount = (val) => {
+  const parseAmount = (val) =>
+  {
     if (val === null || val === undefined) return 0;
     if (typeof val === 'number') return val;
     const s = String(val);
@@ -732,14 +789,16 @@ const AvailableOrders = () => {
     return Number.isNaN(n) ? 0 : n;
   };
 
-  const formatCurrency = (val) => {
+  const formatCurrency = (val) =>
+  {
     if (val === null || val === undefined) return '₦0.00';
     const num = typeof val === 'string' ? parseFloat(val.replace(/[$,N\s]/g, '')) : Number(val);
     if (Number.isNaN(num)) return '₦0.00';
     return `₦${num.toLocaleString('en-NG', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
   };
 
-  const handleAcceptOrder = async (deliveryId) => {
+  const handleAcceptOrder = async (deliveryId) =>
+  {
     if (!isAvailable) {
       setToastMsg('You must be available/active to accept orders. Please update your status in your profile.');
       setShowToast(true);
@@ -772,7 +831,8 @@ const AvailableOrders = () => {
       setShowToast(true);
 
       // Show payment reminder after accepting
-      setTimeout(() => {
+      setTimeout(() =>
+      {
         const reminderKey = `accepted_${acceptedId}`;
         if (!shownReminders.has(reminderKey)) {
           const paymentMethod = acceptedOrder?.paymentMethod || acceptedOrder?.payment?.method;
@@ -797,8 +857,10 @@ const AvailableOrders = () => {
       }, 3500);
 
       // Remove order from local list by matching on canonical id or the original id
-      setOrders(prev => {
-        const filtered = prev.filter(order => {
+      setOrders(prev =>
+      {
+        const filtered = prev.filter(order =>
+        {
           const oid = order._id || order.id || order.deliveryId;
           return !(String(oid) === String(acceptedId) || String(oid) === String(deliveryId));
         });
@@ -841,13 +903,37 @@ const AvailableOrders = () => {
     }
   };
 
-  const handleRejectOrder = async (deliveryId) => {
+  const handleRejectOrder = async (deliveryId) =>
+  {
     setRejecting(deliveryId);
     try {
-      await rejectDeliveryJob(deliveryId);
-      setToastMsg('Delivery request declined. It is now available to other riders.');
+      const response = await rejectDeliveryJob(deliveryId);
+      const data = response?.data?.data ?? response?.data ?? {};
+      const remainingDeclines = data?.remainingDeclines;
+      const declineLimit = data?.declineLimit;
+      const currentDeclines = data?.currentDeclines;
+
+      let message = 'Delivery request declined. It is now available to other riders.';
+      if (remainingDeclines !== undefined && declineLimit !== undefined) {
+        if (remainingDeclines === 0) {
+          message = `⚠️ Delivery declined. You have reached your daily decline limit of ${declineLimit}. You cannot decline more deliveries today.`;
+        } else {
+          message = `Delivery declined. You have ${remainingDeclines} decline${remainingDeclines !== 1 ? 's' : ''} remaining today (${currentDeclines || 0}/${declineLimit}).`;
+        }
+      }
+
+      setToastMsg(message);
       setShowToast(true);
-      setOrders(prev => {
+
+      // Refresh profile to update decline limit info
+      try {
+        await getRiderProfile();
+      } catch (e) {
+        console.warn('[AvailableOrders] Failed to refresh profile after decline:', e);
+      }
+
+      setOrders(prev =>
+      {
         const filtered = prev.filter(o => (o._id || o.id) !== deliveryId);
 
         // Update lastSeenOrderCount to reflect the new order count after rejection
@@ -868,7 +954,8 @@ const AvailableOrders = () => {
     }
   };
 
-  const handleViewDetails = (deliveryId) => {
+  const handleViewDetails = (deliveryId) =>
+  {
     // Scroll the card into view so rider doesn't lose context
     const el = document.getElementById(`order-${deliveryId}`);
     if (el && el.scrollIntoView) {
@@ -879,7 +966,8 @@ const AvailableOrders = () => {
   };
 
   // Express = normal ride (not Smart Ride); Nearby = within 2.5 km
-  const filteredOrders = orders.filter(order => {
+  const filteredOrders = orders.filter(order =>
+  {
     if (activeTab === 'express') return !order.smartRide && order.deliveryType !== 'smart_ride';
     if (activeTab === 'express') return !order.smartRide && order.deliveryType !== 'smart_ride';
     return true;
@@ -888,13 +976,15 @@ const AvailableOrders = () => {
   const expressCount = orders.filter(o => !o.smartRide && o.deliveryType !== 'smart_ride').length;
   const nearbyCount = orders.filter(o => parseFloat(o.distance) <= 2.5).length;
 
-  const handleRefresh = async (event) => {
+  const handleRefresh = async (event) =>
+  {
     await fetchAvailableJobs();
     event.detail.complete();
   };
 
   // Helper to extract coords from various payload shapes
-  const extractCoords = (order, which) => {
+  const extractCoords = (order, which) =>
+  {
     // which = 'pickup' or 'delivery'
     try {
       if (!order) return null;
@@ -915,7 +1005,8 @@ const AvailableOrders = () => {
   };
 
   // Haversine formula to calculate distance in kilometers between two [lng, lat] points
-  const calculateHaversineKm = (a, b) => {
+  const calculateHaversineKm = (a, b) =>
+  {
     try {
       if (!a || !b || a.length < 2 || b.length < 2) return null;
       const toRad = (deg) => deg * (Math.PI / 180);
@@ -1017,6 +1108,20 @@ const AvailableOrders = () => {
                 Go to Dashboard
               </button>
             </div>
+          ) : isBlockedByDebt ? (
+            <div className="text-center py-20 rounded-2xl px-6" style={sideBottomShadow}>
+              <BanIcon className="w-16 h-16 mx-auto mb-4 text-red-500" />
+              <div className="text-xl font-medium text-[#0F172A] mb-3">Account Blocked</div>
+              <div className="text-sm text-[#64748B] max-w-md mx-auto mb-6">
+                You cannot accept deliveries until you settle your outstanding debt. Please go to Earnings and use &quot;Settle Now&quot; to pay your balance.
+              </div>
+              <button
+                onClick={() => window.location.href = '/rider/earnings'}
+                className="bg-[#00B75A] hover:bg-[#00B876] text-white px-6 py-3 rounded-full font-medium transition-colors"
+              >
+                Go to Earnings
+              </button>
+            </div>
           ) : !isAvailable ? (
             <div className="text-center py-20 rounded-2xl px-6" style={sideBottomShadow}>
               <BanIcon className="w-16 h-16 mx-auto mb-4 text-[#FF6B00]" />
@@ -1116,7 +1221,8 @@ const AvailableOrders = () => {
                   </div>
                 </div>
               ) : (
-                filteredOrders.map((order) => {
+                filteredOrders.map((order) =>
+                {
                   const orderId = order._id || order.id;
                   const invitedDriverId = order.invitedDriver?._id ?? order.invitedDriver;
                   const isRequestedForMe = !!invitedDriverId && !!currentRiderId && (String(invitedDriverId) === String(currentRiderId));
@@ -1189,11 +1295,13 @@ const AvailableOrders = () => {
                     <div className="text-sm text-[#64748B] mb-4">{selectedOrder.distance ? `${selectedOrder.distance} km` : 'N/A'}</div>
 
                     {/* Package Image Preview */}
-                    {(() => {
+                    {(() =>
+                    {
                       console.log('[AvailableOrders] Full order object:', JSON.stringify(selectedOrder, null, 2));
 
                       // Function to extract image URL from various possible formats
-                      const extractImageUrl = (value) => {
+                      const extractImageUrl = (value) =>
+                      {
                         if (!value) return null;
 
                         // If it's already a string URL
@@ -1270,7 +1378,8 @@ const AvailableOrders = () => {
                         const urlPattern = /^(https?:\/\/|\/|\.\.\/|uploads\/|images\/).*\.(jpg|jpeg|png|gif|webp|svg)/i;
                         const partialPattern = /(uploads|images|media|cdn|s3|cloudinary|imgbb|imgur).*\.(jpg|jpeg|png|gif|webp|svg)/i;
 
-                        const deepScan = (obj, path = '') => {
+                        const deepScan = (obj, path = '') =>
+                        {
                           if (!obj || typeof obj !== 'object') return null;
 
                           for (const [key, value] of Object.entries(obj)) {
@@ -1308,7 +1417,8 @@ const AvailableOrders = () => {
                                 src={imageUrl}
                                 alt="Package"
                                 className="w-full h-full object-cover"
-                                onError={(e) => {
+                                onError={(e) =>
+                                {
                                   console.error('[AvailableOrders] Image failed to load:', imageUrl);
                                   e.target.parentElement.innerHTML = '<div class="flex items-center justify-center h-full text-xs text-red-500">Failed to load image</div>';
                                 }}
@@ -1335,7 +1445,8 @@ const AvailableOrders = () => {
                     })()}
 
                     {/* Package Description */}
-                    {(() => {
+                    {(() =>
+                    {
                       const description = selectedOrder.packageDescription ||
                         selectedOrder.description ||
                         selectedOrder.notes ||

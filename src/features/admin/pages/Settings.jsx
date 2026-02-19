@@ -1,11 +1,13 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { IonPage, IonContent } from '@ionic/react';
-import { Settings, DollarSign, Bell, Shield, Globe } from 'lucide-react';
+import { Settings, DollarSign, Bell, Shield, Globe, AlertCircle } from 'lucide-react';
 import AdminLayout from '../components/AdminLayout';
 import StyledDropdown from '../../../components/StyledDropdown';
 import { YummyText } from '../../../components/YummyText';
+import { getPricingConfig, updatePricingConfig } from '../../../utils/adminApi';
 
-const SettingsPage = () => {
+const SettingsPage = () =>
+{
   const [activeTab, setActiveTab] = useState('general');
   const [settings, setSettings] = useState({
     maintenanceMode: false,
@@ -26,13 +28,75 @@ const SettingsPage = () => {
     autoBackup: true
   });
 
-  const handleToggle = (key) => {
+  const handleToggle = (key) =>
+  {
     setSettings(prev => ({ ...prev, [key]: !prev[key] }));
   };
 
   const [isMobile, setIsMobile] = useState(typeof window !== 'undefined' ? window.innerWidth < 768 : false);
 
-  React.useEffect(() => {
+  // Pricing config (from backend)
+  const [pricingConfig, setPricingConfig] = useState({
+    baseFare: 800,
+    perKmRate: 200,
+    commissionRate: 0.15,
+    defaultDebtLimit: -50,
+    defaultDeclineLimit: 5,
+  });
+  const [pricingLoading, setPricingLoading] = useState(false);
+  const [pricingSaving, setPricingSaving] = useState(false);
+  const [pricingMessage, setPricingMessage] = useState({ type: '', text: '' });
+
+  useEffect(() =>
+  {
+    if (activeTab === 'pricing') {
+      setPricingLoading(true);
+      setPricingMessage({ type: '', text: '' });
+      getPricingConfig()
+        .then((res) =>
+        {
+          const d = res?.data ?? res;
+          const p = d?.pricing ?? {};
+          setPricingConfig({
+            baseFare: p.baseFare ?? 800,
+            perKmRate: p.perKmRate ?? 200,
+            commissionRate: typeof p.commissionRate === 'number' ? p.commissionRate : 0.15,
+            defaultDebtLimit: d?.defaultDebtLimit ?? -50,
+            defaultDeclineLimit: d?.defaultDeclineLimit ?? 5,
+          });
+        })
+        .catch((err) =>
+        {
+          setPricingMessage({ type: 'error', text: err?.message || 'Failed to load pricing config' });
+        })
+        .finally(() => setPricingLoading(false));
+    }
+  }, [activeTab]);
+
+  const handleSavePricing = async () =>
+  {
+    setPricingSaving(true);
+    setPricingMessage({ type: '', text: '' });
+    try {
+      const debtLimit = pricingConfig.defaultDebtLimit;
+      const debtLimitForApi = typeof debtLimit === 'number' && debtLimit > 0 ? -debtLimit : debtLimit;
+      await updatePricingConfig({
+        baseFare: pricingConfig.baseFare,
+        perKmRate: pricingConfig.perKmRate,
+        commissionRate: pricingConfig.commissionRate,
+        defaultDebtLimit: debtLimitForApi,
+        defaultDeclineLimit: pricingConfig.defaultDeclineLimit,
+      });
+      setPricingMessage({ type: 'success', text: 'Pricing configuration saved successfully.' });
+    } catch (err) {
+      setPricingMessage({ type: 'error', text: err?.message || 'Failed to save pricing config' });
+    } finally {
+      setPricingSaving(false);
+    }
+  };
+
+  React.useEffect(() =>
+  {
     const handleResize = () => setIsMobile(window.innerWidth < 768);
     window.addEventListener('resize', handleResize);
     return () => window.removeEventListener('resize', handleResize);
@@ -73,7 +137,8 @@ const SettingsPage = () => {
                           activeTab === 'security' ? 'Security' :
                             'System'
                   }
-                  onChange={(v) => {
+                  onChange={(v) =>
+                  {
                     const map = { General: 'general', Pricing: 'pricing', Notifications: 'notifications', Security: 'security', System: 'system' };
                     setActiveTab(map[v]);
                   }}
@@ -211,80 +276,125 @@ const SettingsPage = () => {
                   <DollarSign className="w-5 h-5 mr-2" />
                   <YummyText className="text-xl font-bold text-gray-900">Pricing Configuration</YummyText>
                 </div>
-                <YummyText className="text-gray-500 mb-8">Manage delivery pricing and commission rates</YummyText>
+                <YummyText className="text-gray-500 mb-8">Manage delivery pricing, commission rates, and rider limits</YummyText>
 
-                <div className="space-y-6">
-                  <div>
-                    <label className="block text-sm font-medium text-gray-900 mb-2">Base Fare ($)</label>
-                    <input
-                      type="number"
-                      defaultValue="5.00"
-                      step="0.01"
-                      className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-                    />
-                    <YummyText className="text-xs text-gray-500 mt-1">Minimum charge for any delivery</YummyText>
-                  </div>
-
-                  <div>
-                    <label className="block text-sm font-medium text-gray-900 mb-2">Price per Kilometer ($)</label>
-                    <input
-                      type="number"
-                      defaultValue="2.50"
-                      step="0.01"
-                      className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-                    />
-                  </div>
-
-                  <div>
-                    <label className="block text-sm font-medium text-gray-900 mb-2">Price per Minute ($)</label>
-                    <input
-                      type="number"
-                      defaultValue="0.50"
-                      step="0.01"
-                      className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-                    />
-                  </div>
-
-                  <div>
-                    <label className="block text-sm font-medium text-gray-900 mb-2">Platform Commission (%)</label>
-                    <input
-                      type="number"
-                      defaultValue="20"
-                      className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-                    />
-                    <YummyText className="text-xs text-gray-500 mt-1">Percentage taken from each delivery</YummyText>
-                  </div>
-
-                  <div>
-                    <label className="block text-sm font-medium text-gray-900 mb-2">Surge Pricing Multiplier</label>
-                    <input
-                      type="number"
-                      defaultValue="1.5"
-                      step="0.1"
-                      className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-                    />
-                    <YummyText className="text-xs text-gray-500 mt-1">Applied during peak hours</YummyText>
-                  </div>
-
-                  <div className="flex items-center justify-between py-4 border-t border-gray-100">
+                {pricingLoading ? (
+                  <div className="py-12 text-center text-gray-500">Loading pricing config...</div>
+                ) : (
+                  <div className="space-y-6">
                     <div>
-                      <YummyText className="text-sm font-medium text-gray-900">Enable Surge Pricing</YummyText>
-                      <YummyText className="text-sm text-gray-500">Automatic price adjustments during high demand</YummyText>
+                      <label className="block text-sm font-medium text-gray-900 mb-2">Base Fare (₦)</label>
+                      <input
+                        type="number"
+                        value={pricingConfig.baseFare}
+                        onChange={(e) => setPricingConfig((p) => ({ ...p, baseFare: Number(e.target.value) || 0 }))}
+                        min="0"
+                        step="10"
+                        className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      />
+                      <YummyText className="text-xs text-gray-500 mt-1">Minimum charge for any delivery</YummyText>
                     </div>
-                    <Toggle checked={settings.enableSurgePricing} onChange={() => handleToggle('enableSurgePricing')} />
-                  </div>
 
-                  <div className="flex items-center justify-between py-4 border-t border-gray-100">
                     <div>
-                      <YummyText className="text-sm font-medium text-gray-900">Show Price Breakdown</YummyText>
-                      <YummyText className="text-sm text-gray-500">Display detailed pricing to users</YummyText>
+                      <label className="block text-sm font-medium text-gray-900 mb-2">Price per Kilometer (₦)</label>
+                      <input
+                        type="number"
+                        value={pricingConfig.perKmRate}
+                        onChange={(e) => setPricingConfig((p) => ({ ...p, perKmRate: Number(e.target.value) || 0 }))}
+                        min="0"
+                        step="10"
+                        className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      />
                     </div>
-                    <Toggle checked={settings.showPriceBreakdown} onChange={() => handleToggle('showPriceBreakdown')} />
-                  </div>
-                </div>
 
-                <button className={`mt-8 bg-green-500 hover:bg-green-600 text-white px-6 py-3 rounded-lg text-sm font-medium transition-colors ${isMobile ? 'w-full' : ''}`}>
-                  Save Changes
+                    <div>
+                      <label className="block text-sm font-medium text-gray-900 mb-2">Platform Commission (%)</label>
+                      <input
+                        type="number"
+                        value={Math.round((pricingConfig.commissionRate || 0) * 100)}
+                        onChange={(e) => setPricingConfig((p) => ({ ...p, commissionRate: (Number(e.target.value) || 0) / 100 }))}
+                        min="0"
+                        max="100"
+                        className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      />
+                      <YummyText className="text-xs text-gray-500 mt-1">Percentage taken from each delivery (e.g. 15 for 15%)</YummyText>
+                    </div>
+
+                    <div className="border-t border-gray-200 pt-6 mt-6">
+                      <YummyText className="text-base font-semibold text-gray-900 mb-4">Rider Limits (Global Defaults)</YummyText>
+                      <YummyText className="text-sm text-gray-500 mb-4">
+                        These apply to all riders unless you set an individual limit on Manage Riders.
+                      </YummyText>
+
+                      <div className="space-y-4">
+                        <div>
+                          <label className="block text-sm font-medium text-gray-900 mb-2">Default Decline Limit</label>
+                          <input
+                            type="number"
+                            value={pricingConfig.defaultDeclineLimit}
+                            onChange={(e) => setPricingConfig((p) => ({ ...p, defaultDeclineLimit: Math.max(0, Number(e.target.value) || 0) }))}
+                            min="0"
+                            className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                          />
+                          <YummyText className="text-xs text-gray-500 mt-1">
+                            Max delivery declines allowed per rider per day. Exceeding this disqualifies from incentives. Individual limits can be set per rider on Manage Riders.
+                          </YummyText>
+                        </div>
+
+                        <div>
+                          <label className="block text-sm font-medium text-gray-900 mb-2">Default Debt Limit (₦)</label>
+                          <input
+                            type="number"
+                            value={Math.abs(pricingConfig.defaultDebtLimit || 0)}
+                            onChange={(e) => setPricingConfig((p) => ({ ...p, defaultDebtLimit: -Math.abs(Number(e.target.value) || 0) }))}
+                            min="0"
+                            step="50"
+                            className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                          />
+                          <YummyText className="text-xs text-gray-500 mt-1">
+                            Max debt (₦) a rider can owe before being blocked. Individual limits can be set per rider on Manage Riders.
+                          </YummyText>
+                        </div>
+                      </div>
+
+                      <div className="mt-4 flex items-start gap-2 p-3 bg-blue-50 rounded-lg border border-blue-100">
+                        <AlertCircle className="w-5 h-5 text-blue-600 flex-shrink-0 mt-0.5" />
+                        <YummyText className="text-sm text-blue-800">
+                          Individual rider limits override these global defaults. To set a custom decline or debt limit for a specific rider, go to Manage Riders and use the rider actions.
+                        </YummyText>
+                      </div>
+                    </div>
+
+                    <div className="flex items-center justify-between py-4 border-t border-gray-100">
+                      <div>
+                        <YummyText className="text-sm font-medium text-gray-900">Enable Surge Pricing</YummyText>
+                        <YummyText className="text-sm text-gray-500">Automatic price adjustments during high demand</YummyText>
+                      </div>
+                      <Toggle checked={settings.enableSurgePricing} onChange={() => handleToggle('enableSurgePricing')} />
+                    </div>
+
+                    <div className="flex items-center justify-between py-4 border-t border-gray-100">
+                      <div>
+                        <YummyText className="text-sm font-medium text-gray-900">Show Price Breakdown</YummyText>
+                        <YummyText className="text-sm text-gray-500">Display detailed pricing to users</YummyText>
+                      </div>
+                      <Toggle checked={settings.showPriceBreakdown} onChange={() => handleToggle('showPriceBreakdown')} />
+                    </div>
+                  </div>
+                )}
+
+                {pricingMessage.text && (
+                  <p className={`mt-4 text-sm ${pricingMessage.type === 'error' ? 'text-red-600' : 'text-green-600'}`}>
+                    {pricingMessage.text}
+                  </p>
+                )}
+
+                <button
+                  onClick={handleSavePricing}
+                  disabled={pricingLoading || pricingSaving}
+                  className={`mt-8 bg-green-500 hover:bg-green-600 text-white px-6 py-3 rounded-lg text-sm font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed ${isMobile ? 'w-full' : ''}`}
+                >
+                  {pricingSaving ? 'Saving...' : 'Save Changes'}
                 </button>
               </div>
             )}

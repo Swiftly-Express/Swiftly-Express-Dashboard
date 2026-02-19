@@ -7,14 +7,17 @@ import { YummyText } from '../../../components/YummyText';
 
 const useQuery = (search) => new URLSearchParams(search);
 
-const PaymentCallback = () => {
+const PaymentCallback = () =>
+{
   const location = useLocation();
   const history = useHistory();
   const q = useQuery(location.search);
   const [status, setStatus] = useState('Processing payment...');
 
-  useEffect(() => {
-    const processCallback = async () => {
+  useEffect(() =>
+  {
+    const processCallback = async () =>
+    {
       console.log('[PaymentCallback] Component mounted, processing callback');
       console.log('[PaymentCallback] Full URL:', window.location.href);
       console.log('[PaymentCallback] Search params:', location.search);
@@ -39,9 +42,22 @@ const PaymentCallback = () => {
 
         console.log('[PaymentCallback] Extracted deliveryId:', deliveryId);
 
+        // Check if this is a debt payment (rider)
+        const pendingDebtRiderId = getCookie('pending_debt_rider_id');
+        if (pendingDebtRiderId) {
+          console.log('[PaymentCallback] Detected debt payment, redirecting to rider callback');
+          // Redirect to rider-specific callback handler
+          setTimeout(() =>
+          {
+            history.replace(`/rider/payment/callback?reference=${reference || ''}`);
+          }, 100);
+          return;
+        }
+
         if (!reference) {
           setStatus('No payment reference found. Redirecting...');
-          setTimeout(() => {
+          setTimeout(() =>
+          {
             history.replace('/customer/deliveries');
           }, 2000);
           return;
@@ -58,7 +74,8 @@ const PaymentCallback = () => {
         // Navigate this window (the popup) to the success page
         // The success page will show confirmation and auto-close after 3 seconds
         console.log('[PaymentCallback] Navigating popup to success page');
-        setTimeout(() => {
+        setTimeout(() =>
+        {
           console.log('[PaymentCallback] Executing navigation');
           try {
             history.replace(relativeUrl);
@@ -71,7 +88,8 @@ const PaymentCallback = () => {
       } catch (err) {
         console.error('[PaymentCallback] Error processing callback:', err);
         setStatus('Error processing payment. Redirecting...');
-        setTimeout(() => {
+        setTimeout(() =>
+        {
           history.replace('/customer/deliveries');
         }, 2000);
       }
