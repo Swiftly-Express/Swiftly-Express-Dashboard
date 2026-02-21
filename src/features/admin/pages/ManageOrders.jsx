@@ -1,4 +1,4 @@
-﻿import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect } from 'react';
 import { IonPage, IonContent } from '@ionic/react';
 import { Search, Filter, MoreVertical, User, Bike, ChevronLeft, ChevronRight, Trash2, XCircle, Mail, Send, X } from 'lucide-react';
 import AdminLayout from '../components/AdminLayout';
@@ -7,12 +7,13 @@ import BlockIcon from '../../../icons/Blockicon';
 import CheckIcon from '../../../icons/Checkicon';
 import ToyBikeIcon from '../../../icons/Toybikeicon';
 import ClockIcon from '../../../icons/Clockicon';
-import { getAllDeliveries, adminCancelDelivery, adminDeleteDelivery } from '../../../utils/adminApi';
+import { getAllDeliveries, adminCancelDelivery, adminDeleteDelivery, sendEmailToUser } from '../../../utils/adminApi';
 import { formatAddress } from '../../../utils/formatters';
 import socketService from '../../../services/socket.service';
 import { updateDeliveryStatus } from '../../../utils/authApi';
 
-const ManageOrders = () => {
+const ManageOrders = () =>
+{
   const [searchQuery, setSearchQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState('All Status');
   const [orders, setOrders] = useState([]);
@@ -41,19 +42,23 @@ const ManageOrders = () => {
   const [showMailModal, setShowMailModal] = useState(false);
   const [selectedCustomerEmail, setSelectedCustomerEmail] = useState('');
   const [selectedCustomerName, setSelectedCustomerName] = useState('');
+  const [selectedCustomerId, setSelectedCustomerId] = useState('');
   const [mailSubject, setMailSubject] = useState('');
   const [mailMessage, setMailMessage] = useState('');
   const [sendingMail, setSendingMail] = useState(false);
 
-  useEffect(() => {
+  useEffect(() =>
+  {
     const handleResize = () => setIsMobile(window.innerWidth < 768);
     window.addEventListener('resize', handleResize);
     return () => window.removeEventListener('resize', handleResize);
   }, []);
 
   // Close dropdown when clicking outside
-  useEffect(() => {
-    const handleClickOutside = (e) => {
+  useEffect(() =>
+  {
+    const handleClickOutside = (e) =>
+    {
       if (openDropdown && !e.target.closest('.action-dropdown')) {
         setOpenDropdown(null);
       }
@@ -62,7 +67,8 @@ const ManageOrders = () => {
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, [openDropdown]);
 
-  const fetchDeliveries = async (page = 1) => {
+  const fetchDeliveries = async (page = 1) =>
+  {
     try {
       setLoading(true);
       setError('');
@@ -90,7 +96,8 @@ const ManageOrders = () => {
     }
   };
 
-  const calculateStats = (deliveriesData) => {
+  const calculateStats = (deliveriesData) =>
+  {
     const total = deliveriesData.length;
     const delivered = deliveriesData.filter(d =>
       d.status === 'delivered' || d.status === 'completed'
@@ -105,67 +112,75 @@ const ManageOrders = () => {
     setStats({ total, delivered, inTransit, pending });
   };
 
-  useEffect(() => {
+  useEffect(() =>
+  {
     fetchDeliveries(1);
   }, []);
 
-  const showToast = (message, type = 'success') => {
+  const showToast = (message, type = 'success') =>
+  {
     setToast({ show: true, message, type });
     setTimeout(() => setToast({ show: false, message: '', type: '' }), 3000);
   };
 
-  const handleSendMail = (order) => {
+  const handleSendMail = (order) =>
+  {
     const email = order.customer?.email || order.customerEmail || '';
-    const name = order.customer?.name || order.customerName || 'Customer';
+    const name = order.customer?.fullName || order.customer?.name || order.customerName || 'Customer';
+    const customerId = order.customer?._id || order.customer?.id || order.customerId;
     setSelectedCustomerEmail(email);
     setSelectedCustomerName(name);
+    setSelectedCustomerId(customerId);
     setMailSubject('');
     setMailMessage('');
     setShowMailModal(true);
   };
 
-  const handleSendMailSubmit = async () => {
+  const handleSendMailSubmit = async () =>
+  {
     if (!mailSubject.trim() || !mailMessage.trim()) {
       alert('Please enter both subject and message');
       return;
     }
 
+    if (!selectedCustomerId) {
+      showToast('Customer ID is missing. Cannot send email.', 'error');
+      return;
+    }
+
     try {
       setSendingMail(true);
-      // TODO: Replace with actual API call
-      console.log('Sending email to:', selectedCustomerEmail);
-      console.log('Subject:', mailSubject);
-      console.log('Message:', mailMessage);
-
-      // Simulate API call
-      await new Promise(resolve => setTimeout(resolve, 1000));
-
+      await sendEmailToUser(selectedCustomerId, mailSubject.trim(), mailMessage.trim());
       showToast('Email sent successfully!', 'success');
       setShowMailModal(false);
       setMailSubject('');
       setMailMessage('');
+      setSelectedCustomerId('');
     } catch (err) {
       console.error('Error sending mail:', err);
-      showToast('Failed to send email', 'error');
+      showToast(err?.message || 'Failed to send email', 'error');
     } finally {
       setSendingMail(false);
     }
   };
 
-  const handleCancelClick = (order) => {
+  const handleCancelClick = (order) =>
+  {
     setSelectedOrder(order);
     setCancelReason('');
     setShowCancelModal(true);
     setOpenDropdown(null);
   };
 
-  const handleDeleteClick = (order) => {
+  const handleDeleteClick = (order) =>
+  {
     setSelectedOrder(order);
     setShowDeleteModal(true);
     setOpenDropdown(null);
   };
 
-  const handleCancelDelivery = async () => {
+  const handleCancelDelivery = async () =>
+  {
     if (!selectedOrder) return;
 
     try {
@@ -231,7 +246,8 @@ const ManageOrders = () => {
     }
   };
 
-  const handleDeleteDelivery = async () => {
+  const handleDeleteDelivery = async () =>
+  {
     if (!selectedOrder) return;
 
     try {
@@ -318,7 +334,8 @@ const ManageOrders = () => {
     }
   ];
 
-  const filteredOrders = orders.filter(order => {
+  const filteredOrders = orders.filter(order =>
+  {
     const orderId = order.deliveryId || order._id || order.id || '';
     // Extract customer name from various possible structures
     const customerName = order.customer?.name ||
@@ -346,7 +363,8 @@ const ManageOrders = () => {
     return matchesSearch && matchesStatus;
   });
 
-  const getDeliveryStatus = (order) => {
+  const getDeliveryStatus = (order) =>
+  {
     const status = (order.status || 'pending').toLowerCase();
 
     if (status === 'delivered' || status === 'completed') {
@@ -367,7 +385,8 @@ const ManageOrders = () => {
     };
   };
 
-  const formatDateTime = (dateString) => {
+  const formatDateTime = (dateString) =>
+  {
     if (!dateString) return { date: 'N/A', time: '' };
 
     try {
@@ -388,18 +407,21 @@ const ManageOrders = () => {
     }
   };
 
-  const formatCurrency = (amount) => {
+  const formatCurrency = (amount) =>
+  {
     if (!amount && amount !== 0) return 'N/A';
     return `${Number(amount).toLocaleString()}`;
   };
 
-  const formatDistance = (distance) => {
+  const formatDistance = (distance) =>
+  {
     if (!distance && distance !== 0) return 'N/A';
     return `${Number(distance).toFixed(1)} km`;
   };
 
   // Calculate actual delivery distance from coordinates if available
-  const calculateDeliveryDistance = (order) => {
+  const calculateDeliveryDistance = (order) =>
+  {
     // Priority 1: Use real-time tracked/recorded distance from completed delivery
     if (order.actualDistance && order.actualDistance > 0) return order.actualDistance;
     if (order.deliveredDistance && order.deliveredDistance > 0) return order.deliveredDistance;
@@ -448,23 +470,27 @@ const ManageOrders = () => {
     return 0;
   };
 
-  const handlePreviousPage = () => {
+  const handlePreviousPage = () =>
+  {
     if (currentPage > 1) {
       fetchDeliveries(currentPage - 1);
     }
   };
 
-  const handleNextPage = () => {
+  const handleNextPage = () =>
+  {
     if (currentPage < totalPages) {
       fetchDeliveries(currentPage + 1);
     }
   };
 
-  const handlePageClick = (page) => {
+  const handlePageClick = (page) =>
+  {
     fetchDeliveries(page);
   };
 
-  const getPageNumbers = () => {
+  const getPageNumbers = () =>
+  {
     const pages = [];
     const maxVisible = 5;
 
@@ -578,7 +604,8 @@ const ManageOrders = () => {
               </div>
             ) : isMobile ? (
               <div className="space-y-4 p-4">
-                {filteredOrders.map((order, idx) => {
+                {filteredOrders.map((order, idx) =>
+                {
                   const orderId = order.deliveryId || order._id || order.id || 'N/A';
                   // Extract real-time customer name
                   const customerName = order.customer?.name ||
@@ -621,7 +648,8 @@ const ManageOrders = () => {
                       <div className="mt-3 flex items-center justify-end gap-2">
                         <div className="relative action-dropdown">
                           <button
-                            onClick={(e) => {
+                            onClick={(e) =>
+                            {
                               e.stopPropagation();
                               setOpenDropdown(openDropdown === `mobile-${order._id || order.id}` ? null : `mobile-${order._id || order.id}`);
                             }}
@@ -632,7 +660,8 @@ const ManageOrders = () => {
                           {openDropdown === `mobile-${order._id || order.id}` && (
                             <div className="absolute right-0 bottom-full mb-2 w-48 bg-white rounded-lg shadow-lg border border-gray-200 z-50">
                               <button
-                                onClick={(e) => {
+                                onClick={(e) =>
+                                {
                                   e.stopPropagation();
                                   handleSendMail(order);
                                 }}
@@ -642,7 +671,8 @@ const ManageOrders = () => {
                                 Send Mail
                               </button>
                               <button
-                                onClick={(e) => {
+                                onClick={(e) =>
+                                {
                                   e.stopPropagation();
                                   handleCancelClick(order);
                                 }}
@@ -652,7 +682,8 @@ const ManageOrders = () => {
                                 Cancel Order
                               </button>
                               <button
-                                onClick={(e) => {
+                                onClick={(e) =>
+                                {
                                   e.stopPropagation();
                                   handleDeleteClick(order);
                                 }}
@@ -705,7 +736,8 @@ const ManageOrders = () => {
                       </tr>
                     </thead>
                     <tbody className="bg-white divide-y divide-gray-200">
-                      {filteredOrders.map((order, index) => {
+                      {filteredOrders.map((order, index) =>
+                      {
                         const orderId = order.deliveryId || order._id || order.id || 'N/A';
                         // Extract real-time customer name
                         const customerName = order.customer?.name ||
@@ -797,7 +829,8 @@ const ManageOrders = () => {
                             <td className="w-[5%] px-0 py-4 whitespace-nowrap text-center">
                               <div className="relative action-dropdown">
                                 <button
-                                  onClick={(e) => {
+                                  onClick={(e) =>
+                                  {
                                     e.stopPropagation();
                                     setOpenDropdown(openDropdown === `desktop-${order._id || order.id}` ? null : `desktop-${order._id || order.id}`);
                                   }}
@@ -808,7 +841,8 @@ const ManageOrders = () => {
                                 {openDropdown === `desktop-${order._id || order.id}` && (
                                   <div className="absolute right-full mr-2 top-0 w-48 bg-white rounded-lg shadow-lg border border-gray-200 z-50">
                                     <button
-                                      onClick={(e) => {
+                                      onClick={(e) =>
+                                      {
                                         e.stopPropagation();
                                         handleSendMail(order);
                                       }}
@@ -818,7 +852,8 @@ const ManageOrders = () => {
                                       Send Mail
                                     </button>
                                     <button
-                                      onClick={(e) => {
+                                      onClick={(e) =>
+                                      {
                                         e.stopPropagation();
                                         handleCancelClick(order);
                                       }}
@@ -828,7 +863,8 @@ const ManageOrders = () => {
                                       Cancel Order
                                     </button>
                                     <button
-                                      onClick={(e) => {
+                                      onClick={(e) =>
+                                      {
                                         e.stopPropagation();
                                         handleDeleteClick(order);
                                       }}
@@ -934,7 +970,8 @@ const ManageOrders = () => {
                 </p>
                 <div className="flex gap-3">
                   <button
-                    onClick={() => {
+                    onClick={() =>
+                    {
                       setShowCancelModal(false);
                       setSelectedOrder(null);
                     }}
@@ -976,7 +1013,8 @@ const ManageOrders = () => {
                 </p>
                 <div className="flex gap-3">
                   <button
-                    onClick={() => {
+                    onClick={() =>
+                    {
                       setShowDeleteModal(false);
                       setSelectedOrder(null);
                     }}

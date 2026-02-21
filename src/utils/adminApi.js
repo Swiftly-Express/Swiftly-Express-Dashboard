@@ -106,9 +106,14 @@ export async function getAllUsers(page = 1, limit = 20) {
  * @param {string} reason - Cancellation reason
  * @returns {Promise} Cancellation result
  */
-export async function adminCancelDelivery(deliveryId, reason = 'Cancelled by admin') {
+export async function adminCancelDelivery(
+  deliveryId,
+  reason = "Cancelled by admin",
+) {
   console.log(`[adminApi] → Cancelling delivery ${deliveryId}`);
-  return adminApiClient.put(`/api/admin/deliveries/${deliveryId}/cancel`, { reason });
+  return adminApiClient.put(`/api/admin/deliveries/${deliveryId}/cancel`, {
+    reason,
+  });
 }
 
 /**
@@ -128,9 +133,14 @@ export async function adminDeleteDelivery(deliveryId) {
  * @returns {Promise} Updated driver with new debt limit
  */
 export async function setDriverDebtLimit(driverId, debtLimit) {
-  if (!driverId) throw new Error('driverId is required');
-  console.log(`[adminApi] → Setting debt limit for driver ${driverId}:`, debtLimit);
-  return adminApiClient.post(`/api/admin/drivers/${driverId}/debt-limit`, { debtLimit });
+  if (!driverId) throw new Error("driverId is required");
+  console.log(
+    `[adminApi] → Setting debt limit for driver ${driverId}:`,
+    debtLimit,
+  );
+  return adminApiClient.put(`/api/admin/drivers/${driverId}/debt-limit`, {
+    debtLimit,
+  });
 }
 
 /**
@@ -140,9 +150,14 @@ export async function setDriverDebtLimit(driverId, debtLimit) {
  * @returns {Promise} Updated driver with new decline limit
  */
 export async function setDriverDeclineLimit(driverId, declineLimit) {
-  if (!driverId) throw new Error('driverId is required');
-  console.log(`[adminApi] → Setting decline limit for driver ${driverId}:`, declineLimit);
-  return adminApiClient.post(`/api/admin/drivers/${driverId}/decline-limit`, { declineLimit });
+  if (!driverId) throw new Error("driverId is required");
+  console.log(
+    `[adminApi] → Setting decline limit for driver ${driverId}:`,
+    declineLimit,
+  );
+  return adminApiClient.put(`/api/admin/drivers/${driverId}/decline-limit`, {
+    declineLimit,
+  });
 }
 
 /**
@@ -295,6 +310,25 @@ export async function getCommissionRate() {
   return adminApiClient.get("/api/admin/settings/commission");
 }
 
+/**
+ * Get pricing configuration (pricing, default debt limit, default decline limit)
+ * @returns {Promise} { data: { pricing, defaultDebtLimit, defaultDeclineLimit, updatedAt } }
+ */
+export async function getPricingConfig() {
+  console.log("[adminApi] → Getting pricing config");
+  return adminApiClient.get("/api/admin/settings/pricing");
+}
+
+/**
+ * Update pricing configuration
+ * @param {Object} payload - { baseFare, perKmRate, commissionRate, defaultDebtLimit, defaultDeclineLimit, ... }
+ * @returns {Promise} Updated config
+ */
+export async function updatePricingConfig(payload) {
+  console.log("[adminApi] → Updating pricing config");
+  return adminApiClient.put("/api/admin/settings/pricing", payload);
+}
+
 // ==================== KYC/VERIFICATION MANAGEMENT ====================
 
 /**
@@ -361,6 +395,112 @@ export async function rejectVerification(verificationId, rejectionData) {
   );
 }
 
+// ==================== EMAIL MANAGEMENT ====================
+
+/**
+ * Send email to user (admin)
+ * @param {string} userId - User ID
+ * @param {string} subject - Email subject
+ * @param {string} message - Email message
+ * @returns {Promise} Email sending result
+ */
+export async function sendEmailToUser(userId, subject, message) {
+  if (!userId) throw new Error("userId is required");
+  if (!subject) throw new Error("subject is required");
+  if (!message) throw new Error("message is required");
+  console.log("[adminApi] → Sending email to user:", userId);
+  return adminApiClient.post(`/api/admin/users/${userId}/send-email`, {
+    subject,
+    message,
+  });
+}
+
+/**
+ * Send email to rider/driver (admin)
+ * @param {string} driverId - Driver ID
+ * @param {string} subject - Email subject
+ * @param {string} message - Email message
+ * @returns {Promise} Email sending result
+ */
+export async function sendEmailToRider(driverId, subject, message) {
+  if (!driverId) throw new Error("driverId is required");
+  if (!subject) throw new Error("subject is required");
+  if (!message) throw new Error("message is required");
+  console.log("[adminApi] → Sending email to rider:", driverId);
+  return adminApiClient.post(`/api/admin/drivers/${driverId}/send-email`, {
+    subject,
+    message,
+  });
+}
+
+// ==================== PAYOUT MANAGEMENT ====================
+
+/**
+ * Get all payout requests (admin)
+ * @param {number} page - Page number
+ * @param {number} limit - Items per page
+ * @param {string} status - Filter by status (pending, approved, rejected, processed)
+ * @returns {Promise} Payout requests list with pagination
+ */
+export async function getPayoutRequests(page = 1, limit = 20, status = "") {
+  console.log(
+    `[adminApi] → Getting payout requests (page ${page}, limit ${limit}, status: ${status || "all"})`,
+  );
+  const queryParams = new URLSearchParams({
+    page: page.toString(),
+    limit: limit.toString(),
+  });
+  if (status) queryParams.append("status", status);
+  return adminApiClient.get(
+    `/api/admin/payouts/requests?${queryParams.toString()}`,
+  );
+}
+
+/**
+ * Approve payout request (admin)
+ * @param {string} payoutRequestId - Payout request ID
+ * @returns {Promise} Approval result
+ */
+export async function approvePayout(payoutRequestId) {
+  if (!payoutRequestId) throw new Error("payoutRequestId is required");
+  console.log("[adminApi] → Approving payout request:", payoutRequestId);
+  return adminApiClient.post(`/api/admin/payouts/${payoutRequestId}/approve`);
+}
+
+/**
+ * Reject payout request (admin)
+ * @param {string} payoutRequestId - Payout request ID
+ * @param {string} reason - Rejection reason
+ * @returns {Promise} Rejection result
+ */
+export async function rejectPayout(payoutRequestId, reason = "") {
+  if (!payoutRequestId) throw new Error("payoutRequestId is required");
+  console.log("[adminApi] → Rejecting payout request:", payoutRequestId);
+  return adminApiClient.post(`/api/admin/payouts/${payoutRequestId}/reject`, {
+    reason,
+  });
+}
+
+/**
+ * Process payout (admin) - marks as processed and deducts from driver balance
+ * @param {string} payoutRequestId - Payout request ID
+ * @param {string} paymentReference - Payment reference/transaction ID
+ * @param {string} paymentMethod - Payment method (bank_transfer, etc.)
+ * @returns {Promise} Processing result
+ */
+export async function processPayout(
+  payoutRequestId,
+  paymentReference = "",
+  paymentMethod = "",
+) {
+  if (!payoutRequestId) throw new Error("payoutRequestId is required");
+  console.log("[adminApi] → Processing payout request:", payoutRequestId);
+  return adminApiClient.post(`/api/admin/payouts/${payoutRequestId}/process`, {
+    paymentReference,
+    paymentMethod,
+  });
+}
+
 // Export all functions
 export default {
   // User management
@@ -387,4 +527,18 @@ export default {
   getVerificationByDriver,
   approveVerification,
   rejectVerification,
+
+  // Email management
+  sendEmailToUser,
+  sendEmailToRider,
+
+  // Delivery management (cancel/delete)
+  adminCancelDelivery,
+  adminDeleteDelivery,
+
+  // Payout management
+  getPayoutRequests,
+  approvePayout,
+  rejectPayout,
+  processPayout,
 };
