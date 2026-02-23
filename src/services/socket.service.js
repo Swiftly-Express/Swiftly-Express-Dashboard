@@ -94,7 +94,7 @@ class SocketService {
             "[SocketService] WebSocket closed before connection established — server may not support websocket or CORS may be blocking upgrades.",
           );
         }
-        // Socket hang up is commonly a TLS or backend termination; hint to developer
+
         if (err && err.message && String(err.message).toLowerCase().includes('socket hang up')) {
           console.warn('[SocketService] Detected socket hang up — check backend availability, TLS certs, and proxy settings.');
         }
@@ -104,11 +104,6 @@ class SocketService {
     });
   }
 
-  /**
-   * Run callback when the socket is connected (or immediately if already connected).
-   * Use this before joining rooms so the server receives join events.
-   * Returns a cleanup function to remove the listener.
-   */
   onConnected(callback) {
     this.connect();
     if (this.socket.connected) {
