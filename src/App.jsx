@@ -1,10 +1,10 @@
 import React from "react";
 import
-  {
-    IonApp,
-    IonRouterOutlet,
-    setupIonicReact,
-  } from "@ionic/react";
+{
+  IonApp,
+  IonRouterOutlet,
+  setupIonicReact,
+} from "@ionic/react";
 import { IonReactRouter } from "@ionic/react-router";
 import { Route, Redirect } from "react-router-dom";
 import "@ionic/react/css/core.css";
@@ -34,6 +34,7 @@ import ResetPassword from "./features/auth/pages/ResetPassword";
 import AdminLogin from "./features/auth/pages/AdminLogin";
 import AuthCallback from "./features/auth/pages/AuthCallback";
 import PaymentCallback from "./features/customer/pages/PaymentCallback";
+import RiderPaymentCallback from "./features/rider/pages/RiderPaymentCallback";
 
 /* Customer Dashboard pages */
 import CustomerDashboard from "./features/customer/pages/Dashboard";
@@ -256,7 +257,10 @@ const App = () =>
                 </AdminRouteGuard>
               </Route>
 
-              {/* Public/General Routes */}
+              {/* Payment Callback Routes */}
+              <Route exact path="/rider/payment/callback">
+                <RiderPaymentCallback />
+              </Route>
               <Route exact path="/payment/callback">
                 <PaymentCallback />
               </Route>

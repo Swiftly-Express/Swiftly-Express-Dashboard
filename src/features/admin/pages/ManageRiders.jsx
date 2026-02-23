@@ -8,11 +8,12 @@ import CheckCircleIcon from '../../../icons/Circlecheck';
 import PauseIcon from '../../../icons/Pauseicon';
 import ClockIcon from '../../../icons/Clockicon';
 import BanIcon from '../../../icons/Banicon';
-import { getApprovedRiders, getVerificationByDriver, approveVerification, rejectVerification, setDriverDebtLimit, setDriverDeclineLimit } from '../../../utils/adminApi';
+import { getApprovedRiders, getVerificationByDriver, approveVerification, rejectVerification, setDriverDebtLimit, setDriverDeclineLimit, sendEmailToRider } from '../../../utils/adminApi';
 import StyledDropdown from '../../../components/StyledDropdown';
 import { Check, XCircle } from 'lucide-react';
 
-const ManageRiders = () => {
+const ManageRiders = () =>
+{
   const [searchQuery, setSearchQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState('All Status');
   const [kycFilter, setKycFilter] = useState('All KYC');
@@ -40,11 +41,13 @@ const ManageRiders = () => {
   const [showMailModal, setShowMailModal] = useState(false);
   const [selectedRiderEmail, setSelectedRiderEmail] = useState('');
   const [selectedRiderName, setSelectedRiderName] = useState('');
+  const [selectedRiderId, setSelectedRiderId] = useState('');
   const [mailSubject, setMailSubject] = useState('');
   const [mailMessage, setMailMessage] = useState('');
   const [sendingMail, setSendingMail] = useState(false);
 
-  const fetchRiders = async () => {
+  const fetchRiders = async () =>
+  {
     try {
       setLoading(true);
       setError(null);
@@ -60,13 +63,16 @@ const ManageRiders = () => {
     }
   };
 
-  useEffect(() => {
+  useEffect(() =>
+  {
     fetchRiders();
-    const handleDeliveryStatusChanged = () => {
+    const handleDeliveryStatusChanged = () =>
+    {
       console.log('[ManageRiders] Delivery status changed, refreshing rider data...');
       fetchRiders();
     };
-    const handleRiderStatusChanged = () => {
+    const handleRiderStatusChanged = () =>
+    {
       console.log('[ManageRiders] Rider status/availability changed, refreshing rider data...');
       fetchRiders();
     };
@@ -75,7 +81,8 @@ const ManageRiders = () => {
     window.addEventListener('rider:availabilityChanged', handleRiderStatusChanged);
     const handleResize = () => setIsMobile(window.innerWidth < 768);
     window.addEventListener('resize', handleResize);
-    return () => {
+    return () =>
+    {
       window.removeEventListener('delivery:statusChanged', handleDeliveryStatusChanged);
       window.removeEventListener('rider:statusChanged', handleRiderStatusChanged);
       window.removeEventListener('rider:availabilityChanged', handleRiderStatusChanged);
@@ -84,7 +91,8 @@ const ManageRiders = () => {
   }, []);
 
   // Helper function to get KYC status from verificationStatus field
-  const getKycStatus = (rider) => {
+  const getKycStatus = (rider) =>
+  {
     const status = rider.verificationStatus || 'pending';
     if (status === 'approved' || status === 'verified') return 'Approved';
     if (status === 'rejected' || status === 'declined') return 'Rejected';
@@ -93,7 +101,8 @@ const ManageRiders = () => {
 
   // Helper function to get rider status
   // Use backend-provided active/inactive status directly if available
-  const getRiderStatus = (rider) => {
+  const getRiderStatus = (rider) =>
+  {
     if (rider.isSuspended || rider.suspended || rider.status === 'suspended') return 'Suspended';
     // Prefer backend-provided toggle/flag for active state
     if (typeof rider.isActive === 'boolean') return rider.isActive ? 'Active' : 'Inactive';
@@ -103,7 +112,8 @@ const ManageRiders = () => {
   };
 
   // Format date
-  const formatDate = (dateString) => {
+  const formatDate = (dateString) =>
+  {
     if (!dateString) return 'N/A';
     try {
       const date = new Date(dateString);
@@ -114,22 +124,26 @@ const ManageRiders = () => {
   };
 
   // Format currency
-  const formatCurrency = (amount) => {
+  const formatCurrency = (amount) =>
+  {
     if (amount === null || amount === undefined) return '₦0.00';
     const numAmount = typeof amount === 'string' ? parseFloat(amount) : amount;
     return `₦${numAmount.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
   };
 
   // Format number
-  const formatNumber = (num) => {
+  const formatNumber = (num) =>
+  {
     if (num === null || num === undefined) return '0';
     return num.toLocaleString('en-US');
   };
 
   // Transform API data to UI format
-  const transformedRiders = useMemo(() => {
+  const transformedRiders = useMemo(() =>
+  {
     console.log('[ManageRiders] Raw ridersData:', ridersData);
-    return ridersData.map((rider, idx) => {
+    return ridersData.map((rider, idx) =>
+    {
       // Prefer merged/profile data when available (some APIs return nested user/profile objects)
       const profile = rider._merged || rider.user || rider.driver || rider.profile || rider.account || rider;
 
@@ -223,8 +237,10 @@ const ManageRiders = () => {
   }, [ridersData]);
 
   // Filter riders based on search and filters
-  const filteredRiders = useMemo(() => {
-    return transformedRiders.filter(rider => {
+  const filteredRiders = useMemo(() =>
+  {
+    return transformedRiders.filter(rider =>
+    {
       // Search filter
       const searchLower = searchQuery.toLowerCase();
       const matchesSearch = !searchQuery ||
@@ -244,7 +260,8 @@ const ManageRiders = () => {
   }, [transformedRiders, searchQuery, statusFilter, kycFilter]);
 
   // Calculate stats from real data
-  const stats = useMemo(() => {
+  const stats = useMemo(() =>
+  {
     const totalRiders = transformedRiders.length;
     const activeCount = transformedRiders.filter(r => r.status === 'Active').length;
     const inactiveCount = transformedRiders.filter(r => r.status === 'Inactive').length;
@@ -292,7 +309,8 @@ const ManageRiders = () => {
 
   // Pagination
   const totalPages = Math.ceil(filteredRiders.length / itemsPerPage);
-  const paginatedRiders = useMemo(() => {
+  const paginatedRiders = useMemo(() =>
+  {
     const startIndex = (currentPage - 1) * itemsPerPage;
     const endIndex = startIndex + itemsPerPage;
     return filteredRiders.slice(startIndex, endIndex);
@@ -300,13 +318,15 @@ const ManageRiders = () => {
   console.log('Rendering riders:', paginatedRiders)
 
   // Handle page change
-  const handlePageChange = (newPage) => {
+  const handlePageChange = (newPage) =>
+  {
     if (newPage >= 1 && newPage <= totalPages) {
       setCurrentPage(newPage);
     }
   };
 
-  const openRiderDetail = async (rider) => {
+  const openRiderDetail = async (rider) =>
+  {
     setSelectedRider(rider);
     setRiderDetail(null);
     setDetailLoading(true);
@@ -323,7 +343,8 @@ const ManageRiders = () => {
     }
   };
 
-  const closeRiderDetail = () => {
+  const closeRiderDetail = () =>
+  {
     setSelectedRider(null);
     setRiderDetail(null);
     setDetailTab('contact');
@@ -335,7 +356,8 @@ const ManageRiders = () => {
   const verificationId = riderDetail?.verification?._id || riderDetail?.verification?.id;
   const isPendingKyc = riderDetail?.verification?.verificationStatus === 'pending';
 
-  const handleApprove = async () => {
+  const handleApprove = async () =>
+  {
     if (!verificationId) return;
     setActionMessage({ type: '', text: '' });
     setActionLoading(true);
@@ -352,7 +374,8 @@ const ManageRiders = () => {
     }
   };
 
-  const handleRejectConfirm = async () => {
+  const handleRejectConfirm = async () =>
+  {
     if (!verificationId || !rejectReason.trim()) return;
     setActionMessage({ type: '', text: '' });
     setActionLoading(true);
@@ -371,45 +394,49 @@ const ManageRiders = () => {
     }
   };
 
-  const handleSendMail = (rider) => {
+  const handleSendMail = (rider) =>
+  {
     const email = rider.email || rider.contactInfo?.email || '';
-    const name = `${rider.firstName || ''} ${rider.lastName || ''}`.trim() || 'Rider';
+    const name = rider.fullName || `${rider.firstName || ''} ${rider.lastName || ''}`.trim() || 'Rider';
+    const riderId = rider._id || rider.id || rider.riderId;
     setSelectedRiderEmail(email);
     setSelectedRiderName(name);
+    setSelectedRiderId(riderId);
     setMailSubject('');
     setMailMessage('');
     setShowMailModal(true);
   };
 
-  const handleSendMailSubmit = async () => {
+  const handleSendMailSubmit = async () =>
+  {
     if (!mailSubject.trim() || !mailMessage.trim()) {
       alert('Please enter both subject and message');
       return;
     }
 
+    if (!selectedRiderId) {
+      alert('Rider ID is missing. Cannot send email.');
+      return;
+    }
+
     try {
       setSendingMail(true);
-      // TODO: Replace with actual API call
-      console.log('Sending email to:', selectedRiderEmail);
-      console.log('Subject:', mailSubject);
-      console.log('Message:', mailMessage);
-
-      // Simulate API call
-      await new Promise(resolve => setTimeout(resolve, 1000));
-
+      await sendEmailToRider(selectedRiderId, mailSubject.trim(), mailMessage.trim());
       alert('Email sent successfully!');
       setShowMailModal(false);
       setMailSubject('');
       setMailMessage('');
+      setSelectedRiderId('');
     } catch (err) {
       console.error('Error sending mail:', err);
-      alert('Failed to send email. Please try again.');
+      alert(err?.message || 'Failed to send email. Please try again.');
     } finally {
       setSendingMail(false);
     }
   };
 
-  const handleSetDebtLimit = async () => {
+  const handleSetDebtLimit = async () =>
+  {
     if (!selectedRider || !debtLimitAmount.trim()) {
       setActionMessage({ type: 'error', text: 'Please enter a valid debt limit amount' });
       return;
@@ -426,9 +453,31 @@ const ManageRiders = () => {
       const driverId = selectedRider._id || selectedRider.id;
       await setDriverDebtLimit(driverId, amount);
       setActionMessage({ type: 'success', text: `Debt limit set to ₦${amount.toLocaleString()} successfully` });
-      setShowDebtLimitModal(false);
-      setDebtLimitAmount('');
+
+      // Refresh riders list and rider detail if modal is open
       await fetchRiders();
+      if (selectedRider) {
+        // Refresh rider detail
+        const verificationRes = await getVerificationByDriver(selectedRider.id).catch(() => ({ data: { verification: null } }));
+        const verification = verificationRes?.data?.verification ?? verificationRes?.verification ?? null;
+        setRiderDetail({ verification });
+
+        // Update selectedRider with new debt limit
+        const updatedRiders = await getApprovedRiders(1, 1000).catch(() => ({ data: { riders: [] } }));
+        const riders = updatedRiders?.data?.riders || updatedRiders?.riders || [];
+        const updatedRider = riders.find(r => (r._id || r.id) === driverId);
+        if (updatedRider) {
+          setSelectedRider(updatedRider);
+        }
+      }
+
+      // Close modal after a short delay to show success message
+      setTimeout(() =>
+      {
+        setShowDebtLimitModal(false);
+        setDebtLimitAmount('');
+        setActionMessage({ type: '', text: '' });
+      }, 1500);
     } catch (err) {
       console.error('Error setting debt limit:', err);
       setActionMessage({ type: 'error', text: err.message || 'Failed to set debt limit' });
@@ -437,7 +486,8 @@ const ManageRiders = () => {
     }
   };
 
-  const handleSetDeclineLimit = async () => {
+  const handleSetDeclineLimit = async () =>
+  {
     if (!selectedRider || !declineLimitAmount.trim()) {
       setActionMessage({ type: 'error', text: 'Please enter a valid decline limit' });
       return;
@@ -454,9 +504,31 @@ const ManageRiders = () => {
       const driverId = selectedRider._id || selectedRider.id;
       await setDriverDeclineLimit(driverId, limit);
       setActionMessage({ type: 'success', text: `Decline limit set to ${limit} per day successfully` });
-      setShowDeclineLimitModal(false);
-      setDeclineLimitAmount('');
+
+      // Refresh riders list and rider detail if modal is open
       await fetchRiders();
+      if (selectedRider) {
+        // Refresh rider detail to show updated decline limit
+        const verificationRes = await getVerificationByDriver(selectedRider.id).catch(() => ({ data: { verification: null } }));
+        const verification = verificationRes?.data?.verification ?? verificationRes?.verification ?? null;
+        setRiderDetail({ verification });
+
+        // Update selectedRider with new decline limit
+        const updatedRiders = await getApprovedRiders(1, 1000).catch(() => ({ data: { riders: [] } }));
+        const riders = updatedRiders?.data?.riders || updatedRiders?.riders || [];
+        const updatedRider = riders.find(r => (r._id || r.id) === driverId);
+        if (updatedRider) {
+          setSelectedRider(updatedRider);
+        }
+      }
+
+      // Close modal after a short delay to show success message
+      setTimeout(() =>
+      {
+        setShowDeclineLimitModal(false);
+        setDeclineLimitAmount('');
+        setActionMessage({ type: '', text: '' });
+      }, 1500);
     } catch (err) {
       console.error('Error setting decline limit:', err);
       setActionMessage({ type: 'error', text: err.message || 'Failed to set decline limit' });
@@ -465,11 +537,13 @@ const ManageRiders = () => {
     }
   };
 
-  const openDocument = (url) => {
+  const openDocument = (url) =>
+  {
     if (url) window.open(url, '_blank');
   };
 
-  const getDetailFullDetails = () => {
+  const getDetailFullDetails = () =>
+  {
     if (!riderDetail || !selectedRider) return null;
     const { verification } = riderDetail;
     const contactInfo = verification?.contactInfo || {};
@@ -583,7 +657,8 @@ const ManageRiders = () => {
                           type="text"
                           placeholder="Search riders..."
                           value={searchQuery}
-                          onChange={(e) => {
+                          onChange={(e) =>
+                          {
                             setSearchQuery(e.target.value);
                             setCurrentPage(1);
                           }}
@@ -593,7 +668,8 @@ const ManageRiders = () => {
                       <div className="w-full md:w-auto">
                         <StyledDropdown
                           value={statusFilter}
-                          onChange={(val) => {
+                          onChange={(val) =>
+                          {
                             setStatusFilter(val);
                             setCurrentPage(1);
                           }}
@@ -605,7 +681,8 @@ const ManageRiders = () => {
                       <div className="w-full md:w-auto">
                         <StyledDropdown
                           value={kycFilter}
-                          onChange={(val) => {
+                          onChange={(val) =>
+                          {
                             setKycFilter(val);
                             setCurrentPage(1);
                           }}
@@ -846,7 +923,8 @@ const ManageRiders = () => {
 
                       {/* Page numbers */}
                       <div className="flex items-center gap-1">
-                        {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
+                        {Array.from({ length: Math.min(5, totalPages) }, (_, i) =>
+                        {
                           let pageNum;
                           if (totalPages <= 5) {
                             pageNum = i + 1;
@@ -935,8 +1013,8 @@ const ManageRiders = () => {
                           <div>
                             <YummyText className="text-xs text-gray-500 mb-1">Incentive Status</YummyText>
                             <span className={`inline-block px-2 py-1 rounded-full text-xs font-medium ${riderDetail?.declineLimit && riderDetail?.dailyDeclineCount >= riderDetail?.declineLimit
-                                ? 'bg-red-100 text-red-800'
-                                : 'bg-green-100 text-green-800'
+                              ? 'bg-red-100 text-red-800'
+                              : 'bg-green-100 text-green-800'
                               }`}>
                               {riderDetail?.declineLimit && riderDetail?.dailyDeclineCount >= riderDetail?.declineLimit
                                 ? 'Not Qualified'
@@ -956,7 +1034,8 @@ const ManageRiders = () => {
                             Vehicle & Documents
                           </button>
                         </div>
-                        {(() => {
+                        {(() =>
+                        {
                           const fd = getDetailFullDetails();
                           if (!fd) return <YummyText className="text-sm text-gray-500">No additional details available.</YummyText>;
                           return (
@@ -1134,7 +1213,7 @@ const ManageRiders = () => {
 
           {/* Debt Limit Modal */}
           {selectedRider && showDebtLimitModal && (
-            <div className="fixed inset-0 flex items-center justify-center p-4 backdrop-blur-sm bg-black/50" style={{ zIndex: 10000 }} onClick={() => setShowDebtLimitModal(false)}>
+            <div className="fixed inset-0 flex items-center justify-center p-4 backdrop-blur-sm bg-black/50" style={{ zIndex: 10000 }} onClick={() => !actionLoading && setShowDebtLimitModal(false)}>
               <div className="bg-white rounded-xl shadow-xl max-w-md w-full p-6" onClick={(e) => e.stopPropagation()}>
                 <YummyText className="text-lg font-medium text-gray-900 mb-2">Set Debt Limit</YummyText>
                 <p className="text-sm text-gray-600 mb-1">Rider: <strong>{selectedRider.name}</strong></p>
@@ -1156,15 +1235,33 @@ const ManageRiders = () => {
                   <p className={`text-sm mb-3 ${actionMessage.type === 'error' ? 'text-red-600' : 'text-green-600'}`}>{actionMessage.text}</p>
                 )}
                 <div className="flex gap-3 justify-end">
-                  <button type="button" onClick={() => { setShowDebtLimitModal(false); setDebtLimitAmount(''); setActionMessage({ type: '', text: '' }); }} className="px-4 py-2 rounded-lg text-sm font-medium text-gray-700 bg-gray-100 hover:bg-gray-200">
+                  <button
+                    type="button"
+                    onClick={() =>
+                    {
+                      if (!actionLoading) {
+                        setShowDebtLimitModal(false);
+                        setDebtLimitAmount('');
+                        setActionMessage({ type: '', text: '' });
+                      }
+                    }}
+                    disabled={actionLoading}
+                    className="px-4 py-2 rounded-lg text-sm font-medium text-gray-700 bg-gray-100 hover:bg-gray-200 disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
                     Cancel
                   </button>
                   <button
                     type="button"
                     onClick={handleSetDebtLimit}
                     disabled={actionLoading || !debtLimitAmount.trim()}
-                    className="px-4 py-2 rounded-lg text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed"
+                    className="px-4 py-2 rounded-lg text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
                   >
+                    {actionLoading && (
+                      <svg className="animate-spin h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                      </svg>
+                    )}
                     {actionLoading ? 'Setting...' : 'Set Limit'}
                   </button>
                 </div>
@@ -1174,7 +1271,7 @@ const ManageRiders = () => {
 
           {/* Decline Limit Modal */}
           {selectedRider && showDeclineLimitModal && (
-            <div className="fixed inset-0 flex items-center justify-center p-4 backdrop-blur-sm bg-black/50" style={{ zIndex: 10000 }} onClick={() => setShowDeclineLimitModal(false)}>
+            <div className="fixed inset-0 flex items-center justify-center p-4 backdrop-blur-sm bg-black/50" style={{ zIndex: 10000 }} onClick={() => !actionLoading && setShowDeclineLimitModal(false)}>
               <div className="bg-white rounded-xl shadow-xl max-w-md w-full p-6" onClick={(e) => e.stopPropagation()}>
                 <YummyText className="text-lg font-medium text-gray-900 mb-2">Set Decline Limit</YummyText>
                 <p className="text-sm text-gray-600 mb-1">Rider: <strong>{selectedRider.name}</strong></p>
@@ -1196,15 +1293,33 @@ const ManageRiders = () => {
                   <p className={`text-sm mb-3 ${actionMessage.type === 'error' ? 'text-red-600' : 'text-green-600'}`}>{actionMessage.text}</p>
                 )}
                 <div className="flex gap-3 justify-end">
-                  <button type="button" onClick={() => { setShowDeclineLimitModal(false); setDeclineLimitAmount(''); setActionMessage({ type: '', text: '' }); }} className="px-4 py-2 rounded-lg text-sm font-medium text-gray-700 bg-gray-100 hover:bg-gray-200">
+                  <button
+                    type="button"
+                    onClick={() =>
+                    {
+                      if (!actionLoading) {
+                        setShowDeclineLimitModal(false);
+                        setDeclineLimitAmount('');
+                        setActionMessage({ type: '', text: '' });
+                      }
+                    }}
+                    disabled={actionLoading}
+                    className="px-4 py-2 rounded-lg text-sm font-medium text-gray-700 bg-gray-100 hover:bg-gray-200 disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
                     Cancel
                   </button>
                   <button
                     type="button"
                     onClick={handleSetDeclineLimit}
                     disabled={actionLoading || !declineLimitAmount.trim()}
-                    className="px-4 py-2 rounded-lg text-sm font-medium text-white bg-orange-600 hover:bg-orange-700 disabled:opacity-50 disabled:cursor-not-allowed"
+                    className="px-4 py-2 rounded-lg text-sm font-medium text-white bg-orange-600 hover:bg-orange-700 disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
                   >
+                    {actionLoading && (
+                      <svg className="animate-spin h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                      </svg>
+                    )}
                     {actionLoading ? 'Setting...' : 'Set Limit'}
                   </button>
                 </div>

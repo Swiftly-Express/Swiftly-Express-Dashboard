@@ -386,7 +386,8 @@ const RiderProfile = () =>
       }
     };
 
-    const handleProfileUpdated = (event) => {
+    const handleProfileUpdated = (event) =>
+    {
       console.log('[Profile] Profile updated event received:', event.detail);
 
       // Update profile image if provided
@@ -514,8 +515,15 @@ const RiderProfile = () =>
         if (data.verification?.vehicle) {
           profile.vehicle = profile.vehicle ? { ...profile.vehicle, ...data.verification.vehicle } : data.verification.vehicle;
         }
+        // Store decline limit info
+        if (data.declineLimitInfo) {
+          profile.declineLimitInfo = data.declineLimitInfo;
+        }
       } else {
         profile = data?.driver ?? response?.driver ?? data;
+        if (data?.declineLimitInfo) {
+          profile.declineLimitInfo = data.declineLimitInfo;
+        }
       }
       setProfileData(profile);
 
@@ -1129,6 +1137,71 @@ const RiderProfile = () =>
 
             {activeTab === 'personal' && (
               <div className="bg-white rounded-2xl p-6 border border-gray-100" style={sideBottomShadow}>
+                {/* Decline Limit Info Card */}
+                {profileData?.declineLimitInfo && (
+                  <div className={`mb-6 p-5 rounded-xl border-2 ${profileData.declineLimitInfo.remainingDeclines === 0
+                      ? 'bg-red-50 border-red-200'
+                      : profileData.declineLimitInfo.remainingDeclines <= 2
+                        ? 'bg-orange-50 border-orange-200'
+                        : 'bg-blue-50 border-blue-200'
+                    }`}>
+                    <div className="flex items-center gap-4">
+                      <div className={`w-12 h-12 rounded-full flex items-center justify-center flex-shrink-0 ${profileData.declineLimitInfo.remainingDeclines === 0
+                          ? 'bg-red-100'
+                          : profileData.declineLimitInfo.remainingDeclines <= 2
+                            ? 'bg-orange-100'
+                            : 'bg-blue-100'
+                        }`}>
+                        {profileData.declineLimitInfo.remainingDeclines === 0 ? (
+                          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#DC2626" strokeWidth="2">
+                            <circle cx="12" cy="12" r="10" />
+                            <line x1="15" y1="9" x2="9" y2="15" />
+                            <line x1="9" y1="9" x2="15" y2="15" />
+                          </svg>
+                        ) : (
+                          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke={profileData.declineLimitInfo.remainingDeclines <= 2 ? "#F59E0B" : "#3B82F6"} strokeWidth="2">
+                            <circle cx="12" cy="12" r="10" />
+                            <path d="M12 6v6l4 2" />
+                          </svg>
+                        )}
+                      </div>
+                      <div className="flex-1">
+                        <div className={`text-lg font-semibold mb-1 ${profileData.declineLimitInfo.remainingDeclines === 0
+                            ? 'text-red-700'
+                            : profileData.declineLimitInfo.remainingDeclines <= 2
+                              ? 'text-orange-700'
+                              : 'text-blue-700'
+                          }`}>
+                          Daily Decline Limit: <span className={profileData.declineLimitInfo.remainingDeclines === 0 ? 'text-red-900' : profileData.declineLimitInfo.remainingDeclines <= 2 ? 'text-orange-900' : 'text-blue-900'}>
+                            {profileData.declineLimitInfo.currentDeclines}/{profileData.declineLimitInfo.declineLimit}
+                          </span>
+                          {profileData.declineLimitInfo.remainingDeclines > 0 && (
+                            <span className="text-sm font-normal ml-2">
+                              ({profileData.declineLimitInfo.remainingDeclines} remaining)
+                            </span>
+                          )}
+                        </div>
+                        <div className={`text-sm ${profileData.declineLimitInfo.remainingDeclines === 0
+                            ? 'text-red-600'
+                            : profileData.declineLimitInfo.remainingDeclines <= 2
+                              ? 'text-orange-600'
+                              : 'text-blue-600'
+                          }`}>
+                          {profileData.declineLimitInfo.remainingDeclines === 0
+                            ? '⚠️ You have reached your daily decline limit. You cannot decline more deliveries today.'
+                            : profileData.declineLimitInfo.remainingDeclines <= 2
+                              ? `⚠️ You have ${profileData.declineLimitInfo.remainingDeclines} decline${profileData.declineLimitInfo.remainingDeclines !== 1 ? 's' : ''} remaining. Exceeding your limit will disqualify you from incentives.`
+                              : `You can decline up to ${profileData.declineLimitInfo.declineLimit} deliveries per day. Exceeding this limit will disqualify you from incentives.`
+                          }
+                          {profileData.declineLimitInfo.isIndividualLimit && (
+                            <span className="ml-2 text-xs opacity-75">(Individual limit set by admin)</span>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                )}
+
                 <div className="mb-6">
                   <div className="text-xl font-normal text-[#0A0A0A] mb-1">
                     Personal Information

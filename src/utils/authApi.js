@@ -877,8 +877,55 @@ export async function getRiderBalance() {
  * Create/initiate a debt payment for a rider.
  * @param {object} payload - optional payload { amount, currency, callback_url, metadata }
  */
+export async function initializeDebtPayment(payload = {}) {
+  try {
+    const response = await apiClient.post(
+      "/api/driver/pay-debt/initialize",
+      payload,
+    );
+    return response.data;
+  } catch (error) {
+    throw error;
+  }
+}
+
+export async function verifyDebtPayment(reference) {
+  try {
+    const response = await apiClient.get(
+      `/api/driver/pay-debt/verify/${reference}`,
+    );
+    return response.data;
+  } catch (error) {
+    throw error;
+  }
+}
+
 export async function payDebt(payload = {}) {
   return apiClient.post("/api/driver/pay-debt", payload);
+}
+
+/**
+ * Request payout (driver)
+ * @param {number} amount - Payout amount
+ * @returns {Promise} Payout request result
+ */
+export async function requestPayout(amount) {
+  if (!amount || amount <= 0)
+    throw new Error("Valid payout amount is required");
+  const payload = { amount };
+  return apiClient.post("/api/driver/payout/request", payload);
+}
+
+/**
+ * Get payout history (driver)
+ * @param {number} page - Page number
+ * @param {number} limit - Items per page
+ * @returns {Promise} Payout history with pagination
+ */
+export async function getPayoutHistory(page = 1, limit = 20) {
+  return apiClient.get(
+    `/api/driver/payout/history?page=${page}&limit=${limit}`,
+  );
 }
 
 export async function logout(payload = {}) {
