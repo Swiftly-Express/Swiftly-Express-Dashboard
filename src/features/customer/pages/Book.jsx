@@ -9,7 +9,7 @@ import StyledDropdown from '../../../components/StyledDropdown';
 import GoogleMapsAutocomplete from '../../../components/GoogleMapsAutocomplete';
 import CustomerLayout from '../components/CustomerLayout';
 import { YummyText } from '../../../components/YummyText';
-import { createDelivery, isAuthenticated, cancelDelivery, getDeliveryEstimate, getNearbyRiders, getCustomerProfile } from '../../../utils/authApi';
+import { createDelivery, isAuthenticated, cancelDelivery, getDeliveryEstimate, getCustomerProfile } from '../../../utils/authApi';
 import socketService from '../../../services/socket.service';
 import { calculateDistance } from '../../../utils/pricing';
 import SmartRideBooking from '../../smartride-booking/Smartride-Booking';
@@ -107,9 +107,6 @@ const Book = () => {
   const [appliedDeliveryTypeFee, setAppliedDeliveryTypeFee] = useState(0);
   const [estimatedPrice, setEstimatedPrice] = useState(null);
   const [isCaclulatingPrice, setIsCalculatingPrice] = useState(false);
-  const [nearbyRiders, setNearbyRiders] = useState([]);
-  const [nearbyRidersLoading, setNearbyRidersLoading] = useState(false);
-  const [nearbyPricing, setNearbyPricing] = useState(null);
   const [bookingStatus, setBookingStatus] = useState(null); // null | 'searching' | 'rider_found'
   const [assignedRider, setAssignedRider] = useState(null);
   const [fieldErrors, setFieldErrors] = useState({});
@@ -863,40 +860,8 @@ const Book = () => {
     return () => clearTimeout(debounceTimer);
   }, [pickupCoordinates, deliveryCoordinates, formData.deliveryType, isSpecialErrand]);
 
-  // Fetch nearby riders only for Smart Ride when pickup location is set
-  useEffect(() => {
-    if (formData.deliveryType !== 'smart_ride') {
-      setNearbyRiders([]);
-      setNearbyPricing(null);
-      return;
-    }
-    const lat = pickupCoordinates?.lat;
-    const lng = pickupCoordinates?.lng;
-    if (typeof lat !== 'number' || typeof lng !== 'number' || lat === 0 || lng === 0) {
-      setNearbyRiders([]);
-      setNearbyPricing(null);
-      return;
-    }
-    let cancelled = false;
-    setNearbyRidersLoading(true);
-    getNearbyRiders({ lat, lng, radiusKm: 25, limit: 10 })
-      .then((res) => {
-        if (cancelled) return;
-        const data = res?.data?.data || res?.data;
-        setNearbyRiders(Array.isArray(data?.riders) ? data.riders : []);
-        setNearbyPricing(data?.pricing || null);
-      })
-      .catch(() => {
-        if (!cancelled) {
-          setNearbyRiders([]);
-          setNearbyPricing(null);
-        }
-      })
-      .finally(() => {
-        if (!cancelled) setNearbyRidersLoading(false);
-      });
-    return () => { cancelled = true; };
-  }, [formData.deliveryType, pickupCoordinates?.lat, pickupCoordinates?.lng]);
+  // Smart Ride: Orders go directly to pool for any available rider to accept (first-come, first-serve)
+  // No need to fetch or display nearby riders to customer
 
   // Calculate distance whenever addresses change - KEEPING THIS FOR NOW BUT IS REDUNDANT WITH BACKEND RESPONSE potentially
   // If backend returns distance, we can use that.
@@ -1505,41 +1470,6 @@ const Book = () => {
                     ></textarea>
                     {fieldErrors.packageDescription && <p id="packageDescription-error" className="text-sm text-red-600 mt-1.5" role="alert">{fieldErrors.packageDescription}</p>}
                   </div>
-
-                  {/* Riders nearby — Smart Ride only: customer can request a rider; Express goes to pool */}
-                  {formData.deliveryType === 'smart_ride' && pickupCoordinates?.lat && pickupCoordinates?.lng && (
-                    <div className="mb-6 bg-[#F8F9FA] rounded-2xl p-4 border border-gray-200">
-                      <div className="flex items-center justify-between mb-3">
-                        <span className="text-sm font-semibold text-[#0F172A]">Riders nearby (Smart Ride)</span>
-                        {nearbyPricing?.deliveryStartsFrom != null && (
-                          <span className="text-xs text-[#64748B]">From ₦{Number(nearbyPricing.deliveryStartsFrom).toLocaleString()}</span>
-                        )}
-                      </div>
-                      <p className="text-xs text-[#64748B] mb-2">Your order will be posted to nearby riders. The first rider to accept the job will be assigned (first-come, first-serve).</p>
-                      {nearbyRidersLoading ? (
-                        <p className="text-sm text-[#64748B]">Loading riders...</p>
-                      ) : nearbyRiders.length === 0 ? (
-                        <p className="text-sm text-[#64748B]">No riders in range. Your order will be visible to all riders when you book.</p>
-                      ) : (
-                        <div className="flex items-center gap-3">
-                          {nearbyRiders.slice(0, 5).map((r) => (
-                            <div key={r.riderId} className="flex items-center gap-2 bg-white p-2 rounded-lg border border-gray-100">
-                              {r.profileImage ? (
-                                <img src={r.profileImage} alt="" className="w-8 h-8 rounded-full object-cover" />
-                              ) : (
-                                <div className="w-8 h-8 rounded-full bg-[#00B75A]/20 flex items-center justify-center text-[#0F172A] font-semibold text-sm">
-                                  {(r.fullName || 'R').charAt(0)}
-                                </div>
-                              )}
-                            </div>
-                          ))}
-                          {nearbyRiders.length > 5 && <div className="text-xs text-[#64748B]">+{nearbyRiders.length - 5} more</div>}
-                        </div>
-                      )}
-                    </div>
-                  )}
-
-
 
                   {/* Package Image Upload - Redesigned */}
                   <div className="mb-6">
