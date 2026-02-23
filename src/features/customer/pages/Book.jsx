@@ -123,6 +123,9 @@ const Book = () => {
     if (value === 'smart_ride') {
       setFormData({ ...formData, deliveryType: value });
       setShowDeliveryTypeModal(false);
+      // Reset Smart Ride states to ensure clean start
+      setBookingStatus(null);
+      setAssignedRider(null);
       // update URL so state is shareable
       try {
         const url = `${window.location.pathname}?delivery=smart_ride`;
@@ -194,6 +197,26 @@ const Book = () => {
     check();
     window.addEventListener('resize', check);
     return () => window.removeEventListener('resize', check);
+  }, []);
+
+  // Cleanup socket listeners on unmount to prevent memory leaks
+  useEffect(() => {
+    return () => {
+      try {
+        const info = socketService._lastDeliveryListeners;
+        if (info && info.handleAssigned) {
+          socketService.off('delivery:assigned', info.handleAssigned);
+          socketService.off('delivery:accepted', info.handleAssigned);
+          socketService.off('delivery:status', info.handleAssigned);
+          if (info.deliveryId) {
+            socketService.leaveDelivery(info.deliveryId);
+          }
+          delete socketService._lastDeliveryListeners;
+        }
+      } catch (e) {
+        console.warn('[Book] Failed to clean up socket listeners on unmount', e);
+      }
+    };
   }, []);
 
   // Initialize dimensions and weightCategory based on defaults
@@ -966,6 +989,24 @@ const Book = () => {
                 image: formData.image
               }} onClose={() => {
                 setShowSmartRide(false);
+                // Reset all Smart Ride related state so next booking starts fresh
+                setBookingStatus(null);
+                setAssignedRider(null);
+                // Clean up socket listeners if any
+                try {
+                  const info = socketService._lastDeliveryListeners;
+                  if (info && info.handleAssigned) {
+                    socketService.off('delivery:assigned', info.handleAssigned);
+                    socketService.off('delivery:accepted', info.handleAssigned);
+                    socketService.off('delivery:status', info.handleAssigned);
+                    if (info.deliveryId) {
+                      socketService.leaveDelivery(info.deliveryId);
+                    }
+                    delete socketService._lastDeliveryListeners;
+                  }
+                } catch (e) {
+                  console.warn('[Book] Failed to clean up socket listeners on close', e);
+                }
                 try { window.history.replaceState({}, '', window.location.pathname); } catch (e) { }
               }} />
             </div>
