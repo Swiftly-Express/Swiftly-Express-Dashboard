@@ -76,34 +76,32 @@ export default function SmartRideBooking({ embedMode = false, initialData = {}, 
             const key = userId ? `smartride_form_data_${userId}` : 'smartride_form_data';
             const saved = localStorage.getItem(key);
             const base = saved ? JSON.parse(saved) : {};
-            return {
+            const defaults = {
                 deliveryType: 'smart_ride',
                 senderName: '',
                 senderPhone: '',
                 pickupAddress: '',
                 pickupPlace: null,
-                // pickupDate removed for Smart Ride flow
                 recipientName: '',
                 recipientPhone: '',
                 deliveryAddress: '',
                 deliveryPlace: null,
                 recipientEmail: '',
-                // New package sizing fields
                 sizeCategory: 'small',
                 weightCategory: 'light',
                 dimensions: '30×30×30 cm',
                 sizeScale: 100,
                 weight: '',
                 packageDescription: '',
-                // Payment and image fields
                 image: null,
                 paymentMethod: '',
-                paymentNotes: '',
-                ...initialData,
-                ...base
+                paymentNotes: ''
             };
+            // When parent passes initialData (e.g. from Express form), it wins over localStorage so switching Express → Smart Ride keeps the info
+            const hasInitial = initialData && typeof initialData === 'object' && Object.keys(initialData).length > 0;
+            return hasInitial ? { ...defaults, ...base, ...initialData } : { ...defaults, ...base };
         } catch (e) {
-            return {
+            const defaults = {
                 deliveryType: 'smart_ride',
                 senderName: '',
                 senderPhone: '',
@@ -122,9 +120,9 @@ export default function SmartRideBooking({ embedMode = false, initialData = {}, 
                 packageDescription: '',
                 image: null,
                 paymentMethod: '',
-                paymentNotes: '',
-                ...initialData
+                paymentNotes: ''
             };
+            return { ...defaults, ...initialData };
         }
     });
 
@@ -367,8 +365,9 @@ export default function SmartRideBooking({ embedMode = false, initialData = {}, 
                         specialErrand: isSpecialErrand
                     });
                     if (response && response.data) {
-                        setEstimatedPrice(response.data);
-                        setDistanceKm(response.data.distance);
+                        const payload = response.data?.data ?? response.data;
+                        setEstimatedPrice(payload);
+                        setDistanceKm(payload.distance ?? response.data?.distance);
                     }
                 } catch (e) {
                     console.error("Failed to estimate price", e);
@@ -1253,24 +1252,35 @@ export default function SmartRideBooking({ embedMode = false, initialData = {}, 
     const calculateTotal = () =>
     {
         if (estimatedPrice) {
+            const pb = estimatedPrice.pricingBreakdown;
+            // Use backend breakdown so displayed price matches stored price after create
+            if (pb && (estimatedPrice.estimatedPrice != null || pb.total != null)) {
+                const total = Number(estimatedPrice.estimatedPrice ?? pb.total ?? 0);
+                return {
+                    total,
+                    riderEarnings: Number(pb.riderEarnings ?? total * 0.7),
+                    baseFare: Number(pb.baseFare ?? 0),
+                    distance: Number(estimatedPrice.distance ?? 0),
+                    distanceCharge: Number(pb.distanceCharge ?? 0),
+                    smartRideFee: Number(pb.smartRideFee ?? 0),
+                    priorityFee: 0,
+                    errandFee: Number(pb.errandFee ?? 0),
+                    waitingTimeFee: Number(pb.waitingTimeFee ?? 0),
+                    subtotal: Number(pb.subtotal ?? total),
+                    discountAmount: Number(pb.discount ?? 0),
+                    discountPercentage: (pb.discount && total + pb.discount > 0) ? Math.round((pb.discount / (total + pb.discount)) * 100) : 0,
+                    note: estimatedPrice.note
+                };
+            }
+            // Fallback: local calculation
             const distance = estimatedPrice.distance ?? 0;
-
-            // Base fare: ₦500 (covers first 2km)
             const baseFare = 500;
-
-            // Distance charge: ₦150 per km after first 2km
             const distanceCharge = distance > 2 ? (distance - 2) * 150 : 0;
-
-            // Delivery type fee: Express = ₦400, Smart Ride = ₦600
-            const deliveryTypeFee = formData.deliveryType === 'express' ? 400 : 600;
-
-            // Total calculation
+            const deliveryTypeFee = 600; // Smart Ride
             const total = baseFare + distanceCharge + deliveryTypeFee;
-            const riderEarnings = total * 0.70; // Rider gets 70%
-
             return {
                 total: Number(total),
-                riderEarnings: Number(riderEarnings),
+                riderEarnings: Number(total * 0.7),
                 baseFare,
                 distance,
                 distanceCharge: Number(distanceCharge),
@@ -1278,7 +1288,10 @@ export default function SmartRideBooking({ embedMode = false, initialData = {}, 
                 priorityFee: 0,
                 errandFee: 0,
                 waitingTimeFee: 0,
-                subtotal: Number(total)
+                subtotal: Number(total),
+                discountAmount: 0,
+                discountPercentage: 0,
+                note: null
             };
         }
         return {
@@ -1291,7 +1304,10 @@ export default function SmartRideBooking({ embedMode = false, initialData = {}, 
             smartRideFee: 0,
             errandFee: 0,
             waitingTimeFee: 0,
-            subtotal: 0
+            subtotal: 0,
+            discountAmount: 0,
+            discountPercentage: 0,
+            note: null
         };
     };
 
@@ -1717,6 +1733,8 @@ export default function SmartRideBooking({ embedMode = false, initialData = {}, 
             const paymentObj = initPayload?.data?.payment || initPayload?.payment || initPayload?.data;
             const paymentReference = paymentObj?.reference || paymentObj?.id || paymentObj?.paymentId;
             const authorizationUrl = paymentObj?.authorizationUrl || paymentObj?.authorization_url || paymentObj?.url || paymentObj?.payment_url;
+            // Use backend-confirmed amount (delivery.price) so inline Paystack charges the same as hosted
+            const amountNaira = paymentObj?.amount ?? initPayload?.data?.payment?.amount ?? initPayload?.payment?.amount;
 
             if (!paymentReference && !authorizationUrl) {
                 throw new Error('Payment initialization failed');
@@ -1786,10 +1804,11 @@ export default function SmartRideBooking({ embedMode = false, initialData = {}, 
                 const PaystackPop = (await import('@paystack/inline-js')).default;
                 const paystackPublicKey = import.meta.env.VITE_PAYSTACK_PUBLIC_KEY || 'pk_test_xxxx';
 
+                const amountKobo = Math.round((amountNaira ?? calculateTotal().total) * 100);
                 const handler = PaystackPop.setup({
                     key: paystackPublicKey,
                     email: formData.recipientEmail || 'customer@swiftlyxpress.com',
-                    amount: calculateTotal().total * 100, // Paystack expects kobo
+                    amount: amountKobo, // Paystack expects kobo; use backend amount to match delivery.price
                     ref: paymentReference,
                     onClose: function ()
                     {
@@ -2912,7 +2931,24 @@ export default function SmartRideBooking({ embedMode = false, initialData = {}, 
 
                             {/* Declared value removed */}
 
-                            {/* Pricing - Smart Ride charge breakdown */}
+                            {/* Discount / Launch offer notice */}
+                            {((pricing.discountAmount ?? 0) > 0 || (pricing.note && String(pricing.note).trim())) && (
+                                <div className="mb-4 rounded-xl p-4 flex items-start gap-3 bg-green-50 border border-green-200">
+                                    <span className="text-green-600 flex-shrink-0 mt-0.5" aria-hidden>✓</span>
+                                    <div className="flex-1 min-w-0">
+                                        {(pricing.discountAmount ?? 0) > 0 && (
+                                            <p className="text-sm font-medium text-green-800 mb-1">
+                                                You&apos;re eligible for a discount of ₦{Number(pricing.discountAmount ?? 0).toLocaleString()} on this delivery.
+                                            </p>
+                                        )}
+                                        {pricing.note && String(pricing.note).trim() && (
+                                            <p className="text-xs text-green-700">{String(pricing.note).trim()}</p>
+                                        )}
+                                    </div>
+                                </div>
+                            )}
+
+                            {/* Pricing - Smart Ride (backend as source of truth) */}
                             <div className="bg-[#F0FDF4] rounded-xl p-6 mb-6">
                                 <h3 className="text-base font-semibold text-[#0F172A] mb-4">Cost Breakdown</h3>
                                 <div className="space-y-2.5">
@@ -2922,33 +2958,41 @@ export default function SmartRideBooking({ embedMode = false, initialData = {}, 
                                         <span className="text-[15px]">₦{Number(pricing.baseFare || 0).toLocaleString()}</span>
                                     </div>
 
-                                    {/* Smart Ride Fee */}
-                                    {/* {(pricing.smartRideFee > 0 || (formData.deliveryType === 'smart_ride' && (pricing.total || 0) > (pricing.baseFare || 0))) && (
-                                        <div className="flex justify-between items-center text-[#0F172A]">
-                                            <span className="text-[15px]">Smart Ride</span>
-                                            <span className="text-[15px]">₦{Number(pricing.smartRideFee || Math.max(0, (pricing.total || 0) - (pricing.baseFare || 0) - (pricing.distanceCharge || 0))).toLocaleString()}</span>
-                                        </div>
-                                    )} */}
-
                                     {/* Distance charge */}
-                                    {pricing.distanceCharge > 0 && (
+                                    {(pricing.distanceCharge ?? 0) > 0 && (
                                         <div className="flex justify-between items-center text-[#0F172A]">
                                             <span className="text-[15px]">Distance ({Number(pricing.distance || 0).toFixed(1)} km)</span>
-                                            <span className="text-[15px]">₦{Number(pricing.distanceCharge).toLocaleString()}</span>
+                                            <span className="text-[15px]">₦{Number(pricing.distanceCharge ?? 0).toLocaleString()}</span>
                                         </div>
                                     )}
 
-                                    {/* Priority / Errand (if ever used) */}
-                                    {pricing.priorityFee > 0 && (
-                                        <div className="flex justify-between items-center text-orange-700">
-                                            <span className="text-sm">Priority Delivery</span>
-                                            <span className="text-sm font-medium">+₦{Number(pricing.priorityFee).toLocaleString()}</span>
+                                    {/* Smart Ride fee */}
+                                    {(pricing.smartRideFee ?? 0) > 0 && (
+                                        <div className="flex justify-between items-center text-[#0F172A]">
+                                            <span className="text-[15px]">Smart Ride</span>
+                                            <span className="text-[15px]">₦{Number(pricing.smartRideFee ?? 0).toLocaleString()}</span>
                                         </div>
                                     )}
-                                    {pricing.errandFee > 0 && (
+
+                                    {/* Priority / Errand */}
+                                    {(pricing.priorityFee ?? 0) > 0 && (
+                                        <div className="flex justify-between items-center text-orange-700">
+                                            <span className="text-sm">Priority Delivery</span>
+                                            <span className="text-sm font-medium">+₦{Number(pricing.priorityFee ?? 0).toLocaleString()}</span>
+                                        </div>
+                                    )}
+                                    {(pricing.errandFee ?? 0) > 0 && (
                                         <div className="flex justify-between items-center text-[#0F172A]">
                                             <span className="text-[15px]">Special Errand</span>
-                                            <span className="text-[15px]">₦{Number(pricing.errandFee).toLocaleString()}</span>
+                                            <span className="text-[15px]">₦{Number(pricing.errandFee ?? 0).toLocaleString()}</span>
+                                        </div>
+                                    )}
+
+                                    {/* Discount */}
+                                    {(pricing.discountAmount ?? 0) > 0 && (
+                                        <div className="flex justify-between items-center text-green-700">
+                                            <span className="text-[15px]">Discount{pricing.discountPercentage ? ` (${pricing.discountPercentage}%)` : ''}</span>
+                                            <span className="text-[15px] font-medium">-₦{Number(pricing.discountAmount ?? 0).toLocaleString()}</span>
                                         </div>
                                     )}
 
@@ -2956,7 +3000,7 @@ export default function SmartRideBooking({ embedMode = false, initialData = {}, 
                                     <div className="border-t border-gray-300 pt-3 mt-3">
                                         <div className="flex justify-between items-center">
                                             <span className="text-lg font-medium text-[#0F172A]">Total</span>
-                                            <span className="text-2xl font-medium text-[#00B75A]">₦{Number(pricing.total || 0).toLocaleString()}</span>
+                                            <span className="text-2xl font-medium text-[#00B75A]">₦{Number(pricing.total || 0).toLocaleString('en-NG', { minimumFractionDigits: 2 })}</span>
                                         </div>
                                     </div>
                                 </div>
@@ -3509,7 +3553,7 @@ export default function SmartRideBooking({ embedMode = false, initialData = {}, 
                                 <button onClick={() => setShowChat(false)} className="text-gray-500 hover:text-gray-700 text-sm font-medium px-3 py-1 rounded-lg hover:bg-gray-100">Close</button>
                             </div>
                             <div className="flex-1 overflow-hidden">
-                                <DeliveryChat deliveryId={deliveryId} currentUserRole="customer" maxHeight="60vh" />
+                                <DeliveryChat deliveryId={deliveryId} currentUserRole="customer" canSend={!!(deliveryData?.driver || deliveryData?.rider || deliveryData?.assignedDriver)} maxHeight="60vh" />
                             </div>
                         </div>
                     </div>

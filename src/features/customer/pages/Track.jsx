@@ -7,7 +7,8 @@ import Loader from '../../../components/Loader';
 import TrackingMap from '../../../components/TrackingMap';
 import DeliveryChat from '../../../components/DeliveryChat';
 // RatingModal is mounted globally in CustomerLayout and triggered via window events
-import { getDeliveryByTracking, rateDriver } from '../../../utils/authApi';
+import { getDeliveryByTracking, rateDriver, initializePayment, verifyPaymentByReference } from '../../../utils/authApi';
+import { getCookie, setCookie, deleteCookie, getJSONCookie } from '../../../utils/cookies';
 import socketService from '../../../services/socket.service'; // NEW
 import { playNotificationSound } from '../../../utils/notificationSound';
 import BlockIcon from '../../../icons/Blockicon';
@@ -47,6 +48,7 @@ const Track = () => {
   const [showToast, setShowToast] = useState(false);
   const [driverLocation, setDriverLocation] = useState(null);
   const [hasRated, setHasRated] = useState(false);
+  const [isPaymentProcessing, setIsPaymentProcessing] = useState(false);
   const params = useParams();
 
   // Auto-fetch when a trackingId is present in the URL (e.g. /customer/track/SX-... or /track/SX-...)
@@ -322,6 +324,152 @@ const Track = () => {
     return s ? `${s} kg` : 'N/A';
   })();
 
+  const refetchDelivery = async () => {
+    const id = params?.trackingId || trackingId || deliveryData?.trackingNumber || deliveryData?.trackingId;
+    if (!id) return;
+    try {
+      const response = await getDeliveryByTracking(id);
+      const data = response?.data?.delivery || response?.delivery || response?.data || response;
+      setDeliveryData(data);
+    } catch (e) {
+      console.warn('[Track] Refetch after payment failed', e);
+    }
+  };
+
+  useEffect(() => {
+    const onPaymentCompleted = () => {
+      refetchDelivery();
+      setToastMsg('Payment completed successfully.');
+      setShowToast(true);
+    };
+    window.addEventListener('payment:completed', onPaymentCompleted);
+    return () => window.removeEventListener('payment:completed', onPaymentCompleted);
+  }, [params?.trackingId, trackingId, deliveryData?.trackingNumber]);
+
+  // Refetch delivery when user returns to this tab (e.g. after completing payment in popup).
+  // If we have a pending_payment_id cookie (user just came back from Paystack), verify once then refetch.
+  useEffect(() => {
+    const onVisibilityChange = async () => {
+      if (document.visibilityState !== 'visible') return;
+      const pendingRef = getCookie('pending_payment_id');
+      if (pendingRef && deliveryData) {
+        try {
+          await verifyPaymentByReference(pendingRef);
+          deleteCookie('pending_payment_id');
+          deleteCookie('pending_payment_delivery_id');
+        } catch (e) {
+          console.warn('[Track] Verify by reference on visibility failed', e);
+        }
+      }
+      if (deliveryData) refetchDelivery();
+    };
+    document.addEventListener('visibilitychange', onVisibilityChange);
+    return () => document.removeEventListener('visibilitychange', onVisibilityChange);
+  }, [params?.trackingId, trackingId, deliveryData?.trackingNumber]);
+
+  const handlePayNow = async () => {
+    const deliveryId = deliveryData?._id || deliveryData?.id;
+    if (!deliveryId) {
+      setToastMsg('Unable to start payment.');
+      setShowToast(true);
+      return;
+    }
+    const amountRaw = deliveryData?.price ?? deliveryData?.total ?? deliveryData?.amount ?? 0;
+    const amount = typeof amountRaw === 'string' ? parseFloat(amountRaw.replace(/[^0-9.-]+/g, '')) : Number(amountRaw) || 0;
+    const email = deliveryData?.recipientInfo?.email || deliveryData?.recipientEmail || (getJSONCookie && getJSONCookie('user_data')?.email) || 'customer@swiftlyxpress.com';
+
+    let paymentWindow = null;
+    try {
+      paymentWindow = window.open('', '_blank');
+      if (paymentWindow) paymentWindow.document.write('<p>Preparing payment...</p>');
+    } catch (e) {
+      paymentWindow = null;
+    }
+
+    try {
+      setIsPaymentProcessing(true);
+      setToastMsg('Preparing payment...');
+      setShowToast(true);
+
+      const initJson = await initializePayment(deliveryId, {
+        amount,
+        currency: 'NGN',
+        email,
+        callback_url: `${window.location.origin}/customer/payment/callback`,
+        metadata: { deliveryId },
+      });
+
+      const initPayload = initJson?.data || initJson;
+      const paymentObj = initPayload?.data?.payment || initPayload?.payment || initPayload?.data;
+      const paymentReference = paymentObj?.reference || paymentObj?.id || paymentObj?.paymentId;
+      const authorizationUrl = paymentObj?.authorizationUrl || paymentObj?.authorization_url || paymentObj?.url || paymentObj?.payment_url;
+
+      if (deliveryId) setCookie('pending_payment_delivery_id', String(deliveryId), 1);
+      if (paymentReference) setCookie('pending_payment_id', String(paymentReference), 1);
+
+      const cleanupOnCancel = () => {
+        try {
+          deleteCookie('pending_payment_delivery_id');
+          deleteCookie('pending_payment_id');
+        } catch (e) { }
+        setIsPaymentProcessing(false);
+      };
+
+      if (authorizationUrl) {
+        try {
+          if (paymentWindow) paymentWindow.location.href = authorizationUrl;
+          else window.open(authorizationUrl, '_blank');
+          const popupInterval = setInterval(() => {
+            try {
+              if (!paymentWindow || paymentWindow.closed) {
+                clearInterval(popupInterval);
+                setTimeout(() => {
+                  const pending = getCookie('pending_payment_id');
+                  if (pending) cleanupOnCancel();
+                  else refetchDelivery();
+                }, 1500);
+              }
+            } catch (e) {
+              clearInterval(popupInterval);
+            }
+          }, 1000);
+          return;
+        } catch (navErr) {
+          console.warn('[Track] Failed to open payment URL', navErr);
+        }
+      }
+
+      if (paymentReference) {
+        try {
+          if (paymentWindow) paymentWindow.close();
+        } catch (e) { }
+        const PaystackPop = (await import('@paystack/inline-js')).default;
+        const paystackPublicKey = import.meta.env.VITE_PAYSTACK_PUBLIC_KEY || 'pk_test_xxxx';
+        const handler = PaystackPop.setup({
+          key: paystackPublicKey,
+          email,
+          amount: Math.round((amount || 0) * 100),
+          ref: paymentReference,
+          onClose: cleanupOnCancel,
+          callback: () => {
+            try {
+              deleteCookie('pending_payment_delivery_id');
+              deleteCookie('pending_payment_id');
+            } catch (e) { }
+            window.location.href = '/customer/payment/callback';
+          },
+        });
+        handler.openIframe();
+      }
+    } catch (err) {
+      console.error('[Track] Payment init error', err);
+      setToastMsg(err?.message || 'Failed to start payment');
+      setShowToast(true);
+    } finally {
+      setIsPaymentProcessing(false);
+    }
+  };
+
   // Handle rating submission
   const handleSubmitRating = async (ratingData) => {
     try {
@@ -475,10 +623,68 @@ const Track = () => {
                   <DeliveryChat
                     deliveryId={deliveryData._id || deliveryData.id}
                     currentUserRole="customer"
+                    canSend={!!deliveryData.driver}
                     maxHeight="280px"
                   />
                 </div>
               )}
+
+              {/* Payment information and Pay now */}
+              <div className="bg-white rounded-2xl p-6" style={sideBottomShadow}>
+                <YummyText>
+                  <div className="text-sm font-medium text-[#0F172A] mb-4">Payment</div>
+                  <div className="space-y-3">
+                    <div className="flex justify-between items-center">
+                      <span className="text-sm text-[#64748B]">Amount</span>
+                      <span className="text-sm font-medium text-[#0F172A]">
+                        ₦{(deliveryData.price != null ? Number(deliveryData.price) : 0).toLocaleString('en-NG', { minimumFractionDigits: 2 })}
+                      </span>
+                    </div>
+                    <div className="border-t border-gray-200 my-3" />
+                    <div className="flex justify-between items-center">
+                      <span className="text-sm text-[#64748B]">Method</span>
+                      <span className="text-sm font-medium text-[#0F172A] capitalize">
+                        {(deliveryData.paymentMethod || deliveryData.payment?.method || 'Cash').replace(/_/g, ' ')}
+                      </span>
+                    </div>
+                    <div className="border-t border-gray-200 my-3" />
+                    <div className="flex justify-between items-center">
+                      <span className="text-sm text-[#64748B]">Status</span>
+                      {(() => {
+                        const ps = (deliveryData.paymentStatus || deliveryData.payment?.status || '').toLowerCase();
+                        if (ps === 'paid') {
+                          return <span className="px-3 py-1 rounded-full text-xs font-medium bg-green-100 text-green-700">Paid</span>;
+                        }
+                        const method = (deliveryData.paymentMethod || deliveryData.payment?.method || '').toString().toLowerCase();
+                        if (method === 'cash' || method === 'cash_on_delivery' || method === 'cod') {
+                          return <span className="px-3 py-1 rounded-full text-xs font-medium bg-gray-100 text-gray-700">Pay on delivery</span>;
+                        }
+                        return <span className="px-3 py-1 rounded-full text-xs font-medium bg-amber-100 text-amber-700">Unpaid</span>;
+                      })()}
+                    </div>
+                    {(() => {
+                      const paymentStatus = (deliveryData.paymentStatus || deliveryData.payment?.status || '').toLowerCase();
+                      const method = (deliveryData.paymentMethod || deliveryData.payment?.method || '').toString().toLowerCase().trim();
+                      const isCod = method === 'cash' || method === 'cash_on_delivery' || method === 'cod';
+                      const canPay = (paymentStatus === 'pending' || paymentStatus === 'unpaid' || paymentStatus === 'failed') &&
+                        deliveryData.status?.toLowerCase() !== 'cancelled';
+                      if (!canPay) return null;
+                      return (
+                        <div className="pt-3">
+                          <button
+                            type="button"
+                            onClick={handlePayNow}
+                            disabled={isPaymentProcessing}
+                            className="w-full py-3 bg-[#00B75A] hover:bg-[#00a352] disabled:opacity-50 disabled:cursor-not-allowed text-white rounded-xl font-medium transition-colors"
+                          >
+                            {isPaymentProcessing ? 'Preparing payment...' : (isCod ? 'Pay online instead' : 'Pay now')}
+                          </button>
+                        </div>
+                      );
+                    })()}
+                  </div>
+                </YummyText>
+              </div>
 
               {/* Package Details and Recipient Information */}
               <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
@@ -527,6 +733,15 @@ const Track = () => {
                         <span className="text-sm text-[#64748B]">Weight</span>
                         <span className="text-sm font-medium text-[#0F172A]">
                           {weightDisplay}
+                        </span>
+                      </div>
+
+                      <div className="border-t border-gray-200 my-3"></div>
+
+                      <div className="flex justify-between items-center">
+                        <span className="text-sm text-[#64748B]">Dimensions</span>
+                        <span className="text-sm font-medium text-[#0F172A]">
+                          {deliveryData.packageDetails?.dimensions || 'N/A'}
                         </span>
                       </div>
 

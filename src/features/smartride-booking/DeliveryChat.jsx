@@ -19,7 +19,8 @@ const DeliveryChat = ({
   deliveryId,
   currentUserRole = 'customer',
   className = '',
-  maxHeight = '300px'
+  maxHeight = '300px',
+  canSend = true
 }) => {
   const [messages, setMessages] = useState([]);
   const [newMessage, setNewMessage] = useState('');
@@ -118,38 +119,6 @@ const DeliveryChat = ({
     scrollToBottom();
   }, [messages]);
 
-  // Auto-refresh messages when not typing (polling fallback)
-  useEffect(() => {
-    if (!deliveryId || isTyping) return;
-
-    const refreshMessages = async () => {
-      try {
-        const res = await getDeliveryMessages(deliveryId);
-        const messageList = res?.data?.messages || res?.messages || [];
-
-        if (Array.isArray(messageList)) {
-          const formattedMessages = messageList.map(m => ({
-            id: m._id || m.id,
-            text: m.content || m.message || m.text,
-            sender: m.senderRole || m.role,
-            senderName: m.senderName || m.sender?.fullName || 'Unknown',
-            timestamp: m.createdAt || m.timestamp,
-            senderId: m.senderId || m.sender?._id
-          }));
-
-          setMessages(formattedMessages);
-        }
-      } catch (e) {
-        console.error('[SmartRideChat] Failed to refresh messages:', e);
-      }
-    };
-
-    // Poll every 3 seconds when not typing
-    const interval = setInterval(refreshMessages, 3000);
-
-    return () => clearInterval(interval);
-  }, [deliveryId, isTyping]);
-
   // Cleanup typing timeout on unmount
   useEffect(() => {
     return () => {
@@ -228,7 +197,7 @@ const DeliveryChat = ({
 
   // Send message
   const handleSendMessage = async () => {
-    if (!newMessage.trim() || sending) return;
+    if (!canSend || !newMessage.trim() || sending) return;
 
     const messageText = newMessage.trim();
     setSending(true);
@@ -304,7 +273,13 @@ const DeliveryChat = ({
           scrollbarWidth: 'thin'
         }}
       >
-        {messages.length === 0 ? (
+        {messages.length === 0 && !canSend ? (
+          <div className="flex items-center justify-center h-full">
+            <YummyText className="text-xs text-gray-400">
+              Chat will be available when a rider is assigned.
+            </YummyText>
+          </div>
+        ) : messages.length === 0 ? (
           <div className="flex items-center justify-center h-full">
             <YummyText className="text-xs text-gray-400">
               No messages yet. Start a conversation!
@@ -356,41 +331,49 @@ const DeliveryChat = ({
 
       {/* Input Area */}
       <div className="border-t border-gray-200 p-2 flex items-center gap-2">
-        <input
-          type="text"
-          value={newMessage}
-          onChange={(e) => {
-            setNewMessage(e.target.value);
+        {canSend ? (
+          <>
+            <input
+              type="text"
+              value={newMessage}
+              onChange={(e) => {
+                setNewMessage(e.target.value);
 
-            // Mark as typing
-            setIsTyping(true);
+                // Mark as typing
+                setIsTyping(true);
 
-            // Clear existing timeout
-            if (typingTimeoutRef.current) {
-              clearTimeout(typingTimeoutRef.current);
-            }
+                // Clear existing timeout
+                if (typingTimeoutRef.current) {
+                  clearTimeout(typingTimeoutRef.current);
+                }
 
-            // Set new timeout to mark as not typing after 2 seconds of inactivity
-            typingTimeoutRef.current = setTimeout(() => {
-              setIsTyping(false);
-            }, 2000);
-          }}
-          onKeyPress={handleKeyPress}
-          placeholder="Type a message..."
-          disabled={sending}
-          className="flex-1 px-3 py-2 text-sm border border-gray-200 rounded-full focus:outline-none focus:border-[#00B75A] disabled:bg-gray-50"
-        />
-        <button
-          onClick={handleSendMessage}
-          disabled={!newMessage.trim() || sending}
-          className="w-9 h-9 flex items-center justify-center bg-[#00B75A] hover:bg-[#00A04A] disabled:bg-gray-300 rounded-full transition-colors flex-shrink-0"
-          aria-label="Send message"
-        >
-          <IonIcon
-            icon={send}
-            className="text-white text-lg"
-          />
-        </button>
+                // Set new timeout to mark as not typing after 2 seconds of inactivity
+                typingTimeoutRef.current = setTimeout(() => {
+                  setIsTyping(false);
+                }, 2000);
+              }}
+              onKeyPress={handleKeyPress}
+              placeholder="Type a message..."
+              disabled={sending}
+              className="flex-1 px-3 py-2 text-sm border border-gray-200 rounded-full focus:outline-none focus:border-[#00B75A] disabled:bg-gray-50"
+            />
+            <button
+              onClick={handleSendMessage}
+              disabled={!newMessage.trim() || sending}
+              className="w-9 h-9 flex items-center justify-center bg-[#00B75A] hover:bg-[#00A04A] disabled:bg-gray-300 rounded-full transition-colors flex-shrink-0"
+              aria-label="Send message"
+            >
+              <IonIcon
+                icon={send}
+                className="text-white text-lg"
+              />
+            </button>
+          </>
+        ) : (
+          <YummyText className="text-xs text-gray-500 py-1 w-full">
+            Chat is available once a rider has been assigned.
+          </YummyText>
+        )}
       </div>
 
       <style jsx>{`

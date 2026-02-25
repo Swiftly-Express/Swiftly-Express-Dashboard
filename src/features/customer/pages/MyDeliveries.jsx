@@ -7,7 +7,7 @@ import PaymentFailedModal from '../components/PaymentFailedModal';
 import { YummyText } from '../../../components/YummyText';
 import Loader from '../../../components/Loader';
 import DeliveryChat from '../../../components/DeliveryChat';
-import { getCustomerDeliveries, rateDriver, cancelDelivery, initializePayment } from '../../../utils/authApi';
+import { getCustomerDeliveries, rateDriver, cancelDelivery, initializePayment, getDeliveryReceiptPdf } from '../../../utils/authApi';
 import { getCookie, deleteCookie, setCookie, getJSONCookie } from '../../../utils/cookies';
 import { playNotificationSound } from '../../../utils/notificationSound';
 
@@ -130,26 +130,27 @@ const DeliveryCard = ({ delivery, onCancelDelivery }) => {
       style={sideBottomShadow}
       onClick={handleCardClick}
     >
-      {/* Mobile: Make Payment button at top-right (only for online/bank, not cash, and not cancelled) */}
+      {/* Mobile: Make Payment / Pay online instead (any unpaid, not cancelled) */}
       {(paymentStatus === 'pending' || paymentStatus === 'unpaid' || paymentStatus === 'failed') &&
         delivery.status?.toLowerCase() !== 'cancelled' &&
         delivery.status?.toLowerCase() !== 'canceled' && (() => {
           const method = (delivery.payment?.method || delivery.paymentMethod || delivery.payment?.paymentMethod || delivery.method || '').toString().toLowerCase();
-          return method !== 'cash' && method !== 'cash_on_delivery';
-        })() && (
-          <button
-            onClick={(e) => {
-              e.stopPropagation();
-              const deliveryId = delivery._id || delivery.id || delivery.trackingNumber;
-              window.dispatchEvent(new CustomEvent('payment:init', { detail: { deliveryId } }));
-            }}
-            className="md:hidden absolute top-3 right-3 px-3 py-1 rounded-full border border-black bg-white text-black text-xs font-medium z-20"
-            aria-label="Make Payment"
-            style={{ borderStyle: 'solid' }}
-          >
-            <YummyText className="text-xs font-medium">Make Payment</YummyText>
-          </button>
-        )}
+          const isCod = method === 'cash' || method === 'cash_on_delivery' || method === 'cod';
+          return (
+            <button
+              onClick={(e) => {
+                e.stopPropagation();
+                const deliveryId = delivery._id || delivery.id || delivery.trackingNumber;
+                window.dispatchEvent(new CustomEvent('payment:init', { detail: { deliveryId } }));
+              }}
+              className="md:hidden absolute top-3 right-3 px-3 py-1 rounded-full border border-black bg-white text-black text-xs font-medium z-20"
+              aria-label={isCod ? 'Pay online instead' : 'Make Payment'}
+              style={{ borderStyle: 'solid' }}
+            >
+              <YummyText className="text-xs font-medium">{isCod ? 'Pay online instead' : 'Make Payment'}</YummyText>
+            </button>
+          );
+        })()}
       {/* Mobile & Desktop Layout */}
       <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
         <div className="flex-1">
@@ -175,25 +176,26 @@ const DeliveryCard = ({ delivery, onCancelDelivery }) => {
                   ) : null;
                 })()}
 
-                {/* Desktop/Tablet: show Make Payment tag when unpaid (only for online/bank, not cash, and not cancelled) */}
+                {/* Desktop/Tablet: show Make Payment / Pay online instead when unpaid (any method, not cancelled) */}
                 {(paymentStatus === 'pending' || paymentStatus === 'unpaid' || paymentStatus === 'failed') &&
                   delivery.status?.toLowerCase() !== 'cancelled' &&
                   delivery.status?.toLowerCase() !== 'canceled' && (() => {
                     const method = (delivery.payment?.method || delivery.paymentMethod || delivery.payment?.paymentMethod || delivery.method || '').toString().toLowerCase().trim();
-                    return method !== 'cash' && method !== 'cash_on_delivery' && method !== 'cod';
-                  })() && (
-                    <button
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        const deliveryId = delivery._id || delivery.id || delivery.trackingNumber;
-                        window.dispatchEvent(new CustomEvent('payment:init', { detail: { deliveryId } }));
-                      }}
-                      className="hidden md:inline-flex px-3 py-1 rounded-full text-xs font-medium border-2 border-black bg-white text-black z-10"
-                      style={{ borderStyle: 'solid' }}
-                    >
-                      <YummyText className="text-xs font-medium">Make Payment</YummyText>
-                    </button>
-                  )}
+                    const isCod = method === 'cash' || method === 'cash_on_delivery' || method === 'cod';
+                    return (
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          const deliveryId = delivery._id || delivery.id || delivery.trackingNumber;
+                          window.dispatchEvent(new CustomEvent('payment:init', { detail: { deliveryId } }));
+                        }}
+                        className="hidden md:inline-flex px-3 py-1 rounded-full text-xs font-medium border-2 border-black bg-white text-black z-10"
+                        style={{ borderStyle: 'solid' }}
+                      >
+                        <YummyText className="text-xs font-medium">{isCod ? 'Pay online instead' : 'Make Payment'}</YummyText>
+                      </button>
+                    );
+                  })()}
               </div>
             </div>
 
@@ -255,9 +257,9 @@ const DeliveryCard = ({ delivery, onCancelDelivery }) => {
         </div>
       </div>
 
-      {/* Expanded Details */}
+      {/* Expanded Details - stopPropagation so clicking chat/inputs doesn't close the card */}
       {isOpen && (
-        <div className="mt-4 pt-4 border-t border-gray-100">
+        <div className="mt-4 pt-4 border-t border-gray-100" onClick={(e) => e.stopPropagation()}>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
               <div className="text-xs font-medium text-[#64748B] mb-1">Package ID</div>
@@ -310,6 +312,7 @@ const DeliveryCard = ({ delivery, onCancelDelivery }) => {
               <DeliveryChat
                 deliveryId={delivery._id || delivery.id}
                 currentUserRole="customer"
+                canSend={!!delivery.driver}
                 className="rounded-xl border border-gray-200 overflow-hidden"
                 maxHeight="240px"
               />
@@ -404,6 +407,28 @@ Amount: ₦${delivery.amount || delivery.price || delivery.total || '0.00'}
     window.URL.revokeObjectURL(url);
   };
 
+  const handleDownloadPdf = async (e) => {
+    e.stopPropagation();
+    const deliveryId = delivery._id || delivery.id;
+    if (!deliveryId) return;
+    setDownloadingPdf(true);
+    try {
+      const blob = await getDeliveryReceiptPdf(deliveryId);
+      const url = window.URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = `receipt-${delivery.trackingNumber || deliveryId}.pdf`;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      window.URL.revokeObjectURL(url);
+    } catch (err) {
+      console.error('Failed to download receipt PDF:', err);
+    } finally {
+      setDownloadingPdf(false);
+    }
+  };
+
   const handleCardClick = () => {
     handleToggleDetails();
   };
@@ -427,21 +452,22 @@ Amount: ₦${delivery.amount || delivery.price || delivery.total || '0.00'}
         delivery.status?.toLowerCase() !== 'cancelled' &&
         delivery.status?.toLowerCase() !== 'canceled' && (() => {
           const method = (delivery.payment?.method || delivery.paymentMethod || delivery.payment?.paymentMethod || delivery.method || '').toString().toLowerCase();
-          return method !== 'cash' && method !== 'cash_on_delivery';
-        })() && (
-          <button
-            onClick={(e) => {
-              e.stopPropagation();
-              const deliveryId = delivery._id || delivery.id || delivery.trackingNumber;
-              window.dispatchEvent(new CustomEvent('payment:init', { detail: { deliveryId } }));
-            }}
-            className="md:hidden absolute top-3 right-3 px-3 py-1 rounded-full border-2 border-black bg-white text-black text-xs font-medium z-20"
-            aria-label="Make Payment"
-            style={{ borderStyle: 'solid' }}
-          >
-            <YummyText className="text-xs font-medium">Make Payment</YummyText>
-          </button>
-        )}
+          const isCod = method === 'cash' || method === 'cash_on_delivery' || method === 'cod';
+          return (
+            <button
+              onClick={(e) => {
+                e.stopPropagation();
+                const deliveryId = delivery._id || delivery.id || delivery.trackingNumber;
+                window.dispatchEvent(new CustomEvent('payment:init', { detail: { deliveryId } }));
+              }}
+              className="md:hidden absolute top-3 right-3 px-3 py-1 rounded-full border-2 border-black bg-white text-black text-xs font-medium z-20"
+              aria-label={isCod ? 'Pay online instead' : 'Make Payment'}
+              style={{ borderStyle: 'solid' }}
+            >
+              <YummyText className="text-xs font-medium">{isCod ? 'Pay online instead' : 'Make Payment'}</YummyText>
+            </button>
+          );
+        })()}
       <div className="flex items-start justify-between mb-3">
         <div className="flex-1">
           <YummyText className="text-base font-medium text-[#0F172A] mb-1">
@@ -498,6 +524,25 @@ Amount: ₦${delivery.amount || delivery.price || delivery.total || '0.00'}
                 {delivery.deliveryAddress?.street}, {delivery.deliveryAddress?.city}, {delivery.deliveryAddress?.state}
               </div>
             </div>
+            <div className="flex flex-wrap gap-2 pt-2">
+              <button
+                onClick={handleTrack}
+                className="flex items-center justify-center gap-2 text-sm text-[#64748B] shadow-sm px-4 py-2 rounded-xl hover:text-[#0F172A] hover:border-gray-800 transition-colors"
+                style={{ border: '1.5px solid #0000001A' }}
+              >
+                <YummyText>Track</YummyText>
+              </button>
+              {paymentStatus === 'paid' && (
+                <button
+                  onClick={handleDownloadPdf}
+                  disabled={downloadingPdf}
+                  className="flex items-center justify-center gap-2 text-sm text-[#64748B] shadow-sm px-4 py-2 rounded-xl hover:text-[#0F172A] hover:border-gray-800 transition-colors disabled:opacity-50"
+                  style={{ border: '1.5px solid #0000001A' }}
+                >
+                  <YummyText>{downloadingPdf ? 'Downloading…' : 'Download receipt (PDF)'}</YummyText>
+                </button>
+              )}
+            </div>
           </div>
         </div>
       )}
@@ -517,7 +562,8 @@ const CompletedDeliveryRow = ({ delivery, isCancelled = false }) => {
   const history = useHistory();
   const [isOpen, setIsOpen] = useState(false);
   const [showCopyToast, setShowCopyToast] = useState(false);
-
+  const [downloadingPdf, setDownloadingPdf] = useState(false);
+  const paymentStatus = (delivery.paymentStatus || delivery.payment?.status || '').toLowerCase();
   const hasRated = delivery.rating || delivery.customerRating || delivery.hasRated;
 
   const handleTrack = (e) => {
@@ -631,7 +677,7 @@ Amount: ₦${delivery.amount || delivery.price || delivery.total || '0.00'}
       </tr>
       {isOpen && (
         <tr className="bg-gray-50">
-          <td colSpan="4" className="py-4 px-4">
+          <td colSpan="5" className="py-4 px-4">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
                 <div className="text-xs font-medium text-[#64748B] mb-1">Package ID</div>
@@ -665,6 +711,25 @@ Amount: ₦${delivery.amount || delivery.price || delivery.total || '0.00'}
                   {delivery.deliveryAddress?.street}, {delivery.deliveryAddress?.city}, {delivery.deliveryAddress?.state}
                 </div>
               </div>
+            </div>
+            <div className="flex flex-wrap gap-3 mt-4">
+              <button
+                onClick={handleTrack}
+                className="flex items-center justify-center gap-2 text-sm text-[#64748B] shadow-sm px-4 py-2 rounded-xl hover:text-[#0F172A] hover:border-gray-800 transition-colors"
+                style={{ border: '1.5px solid #0000001A' }}
+              >
+                <YummyText>Track</YummyText>
+              </button>
+              {paymentStatus === 'paid' && (
+                <button
+                  onClick={handleDownloadPdf}
+                  disabled={downloadingPdf}
+                  className="flex items-center justify-center gap-2 text-sm text-[#64748B] shadow-sm px-4 py-2 rounded-xl hover:text-[#0F172A] hover:border-gray-800 transition-colors disabled:opacity-50"
+                  style={{ border: '1.5px solid #0000001A' }}
+                >
+                  <YummyText>{downloadingPdf ? 'Downloading…' : 'Download receipt (PDF)'}</YummyText>
+                </button>
+              )}
             </div>
           </td>
         </tr>

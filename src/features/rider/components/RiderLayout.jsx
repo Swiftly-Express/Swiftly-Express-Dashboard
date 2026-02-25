@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { useHistory } from 'react-router-dom';
 import RiderSidebar from './RiderSidebar';
 import { YummyText } from '../../../components/YummyText';
 import {
@@ -11,6 +12,8 @@ import {
   getAvailableJobs
 } from '../../../utils/authApi';
 import { getCookie, setCookie, getJSONCookie } from '../../../utils/cookies';
+import socketService from '../../../services/socket.service';
+import { getNotificationRoute } from '../../../utils/notificationNavigation';
 
 // Notification read IDs persistence
 const NOTIF_READ_COOKIE = 'rider_read_notifications';
@@ -55,6 +58,7 @@ const getProfileImageKey = () => {
 };
 
 const RiderLayout = ({ children }) => {
+  const history = useHistory();
   const [profileImage, setProfileImage] = useState(() => {
     const imageKey = getProfileImageKey();
     const cachedImage = getCookie(imageKey);
@@ -176,10 +180,23 @@ const RiderLayout = ({ children }) => {
     window.addEventListener('user:login', handleLogin);
     window.addEventListener('user:logout', handleLogout);
 
-    // Poll notification count every 30 seconds
-    const notificationInterval = setInterval(() => {
-      checkNotifications();
-    }, 30000);
+    socketService.connect();
+    const handleNotificationNew = (payload) => {
+      if (payload && payload._id) {
+        setNotifications((prev) => [{ ...payload, isRead: false, read: false }, ...prev]);
+        setUnreadCount((c) => c + 1);
+      }
+    };
+    socketService.on('notification:new', handleNotificationNew);
+
+    const handleDeliveryCancelled = (data) => {
+      window.dispatchEvent(new CustomEvent('delivery:cancelled', { detail: data || {} }));
+    };
+    const handleDeliveryDeleted = (data) => {
+      window.dispatchEvent(new CustomEvent('delivery:deleted', { detail: data || {} }));
+    };
+    socketService.on('delivery:cancelled', handleDeliveryCancelled);
+    socketService.on('delivery:deleted', handleDeliveryDeleted);
 
     // Listen for profile updates
     const handleProfileUpdate = (event) => {
@@ -238,7 +255,9 @@ const RiderLayout = ({ children }) => {
       window.removeEventListener('order:available', handleOrderAvailable);
       window.removeEventListener('earnings:updated', handleEarningsUpdated);
       window.removeEventListener('payout:scheduled', handleEarningsUpdated);
-      clearInterval(notificationInterval);
+      socketService.off('notification:new', handleNotificationNew);
+      socketService.off('delivery:cancelled', handleDeliveryCancelled);
+      socketService.off('delivery:deleted', handleDeliveryDeleted);
     };
   }, []);
 
@@ -636,6 +655,9 @@ const RiderLayout = ({ children }) => {
                               if (!isRead) {
                                 handleMarkAsRead(notifId, e);
                               }
+                              const route = getNotificationRoute(notification, 'rider');
+                              setShowNotifications(false);
+                              history.push(route);
                             }}
                           >
                             <div className="flex items-start gap-3">

@@ -670,39 +670,17 @@ const AvailableOrders = () =>
     };
   }, [orders.length]);
 
-  // Auto-poll for new orders every 5 seconds (fallback for when socket events don't fire)
-  useEffect(() =>
-  {
-    let pollInterval;
-    let isActive = true;
-
-    console.log('[AvailableOrders] 🔄 Starting auto-polling for new orders (every 5s)');
-
-    // Only poll if we have orders array initialized (means component is mounted properly)
-    pollInterval = setInterval(() =>
-    {
-      if (isActive) {
-        fetchAvailableJobs(true); // silent=true to avoid spamming logs
-      }
-    }, 5000);
-
-    const handleLogout = () =>
-    {
-      console.log('[AvailableOrders] 🛑 Logout detected - stopping polling');
-      isActive = false;
-      if (pollInterval) clearInterval(pollInterval);
+  // Socket: refetch when a new job becomes available (no polling)
+  useEffect(() => {
+    socketService.connect();
+    const handleJobAvailable = () => {
+      fetchAvailableJobs(true);
     };
-
-    window.addEventListener('user:logout', handleLogout);
-
-    return () =>
-    {
-      console.log('[AvailableOrders] 🛑 Stopping auto-polling');
-      isActive = false;
-      if (pollInterval) clearInterval(pollInterval);
-      window.removeEventListener('user:logout', handleLogout);
+    socketService.on('job:available', handleJobAvailable);
+    return () => {
+      socketService.off('job:available', handleJobAvailable);
     };
-  }, []); // Empty deps - run once on mount
+  }, []);
 
   const fetchAvailableJobs = async (silent = false) =>
   {

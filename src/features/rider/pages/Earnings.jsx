@@ -9,12 +9,84 @@ import AnalyzeIcon from '../../../icons/Analyzeicon';
 import PeopleIcon from '../../../icons/Peopleicon';
 import RevenueIcon from '../../../icons/Revenueicon';
 import { YummyText } from '../../../components/YummyText';
-import { getRiderEarnings, getRiderBalance, initializeDebtPayment, requestPayout, getPayoutHistory, notifyAdminEmailChange, getRiderProfile } from '../../../utils/authApi';
+import { getRiderEarnings, getRiderBalance, initializeDebtPayment, requestPayout, getPayoutHistory, notifyAdminEmailChange, getRiderProfile, updateBankDetails, setWithdrawalPin, resolveBankAccount } from '../../../utils/authApi';
 import { setCookie, deleteCookie, getCookie } from '../../../utils/cookies';
 
 const sideBottomShadow = {
   boxShadow: '0.5px 1.5px 2px rgba(0, 0, 0, 0.05), -0.5px 1.5px 2px rgba(0, 0, 0, 0.05), 0 1.5px 3px rgba(0, 0, 0, 0.07)'
 };
+
+// Nigerian banks: name and CBN/NIP or NIBSS code (used for transfers). Alphabetical.
+const NIGERIAN_BANKS = [
+  { name: 'Select your bank', code: '' },
+  { name: 'Access Bank', code: '044' },
+  { name: 'Alternative Bank Limited', code: '000028' },
+  { name: 'Citibank Nigeria', code: '023' },
+  { name: 'Coronation Merchant Bank', code: '060001' },
+  { name: 'Ecobank Nigeria', code: '050' },
+  { name: 'FBNQuest Merchant Bank', code: '060002' },
+  { name: 'Fidelity Bank', code: '070' },
+  { name: 'First Bank of Nigeria', code: '011' },
+  { name: 'First City Monument Bank (FCMB)', code: '214' },
+  { name: 'FSDH Merchant Bank', code: '400001' },
+  { name: 'Globus Bank', code: '103' },
+  { name: 'Greenwich Merchant Bank', code: '060004' },
+  { name: 'Guaranty Trust Bank (GTBank)', code: '058' },
+  { name: 'Heritage Bank', code: '030' },
+  { name: 'Jaiz Bank', code: '301' },
+  { name: 'Keystone Bank', code: '082' },
+  { name: 'Kuda Microfinance Bank', code: '50211' },
+  { name: 'Lotus Bank', code: '303' },
+  { name: 'Moniepoint Microfinance Bank', code: '090405' },
+  { name: 'Nova Merchant Bank', code: '060003' },
+  { name: 'Optimus Bank', code: '559' },
+  { name: 'Opay', code: '999992' },
+  { name: 'Palmpay', code: '999991' },
+  { name: 'Parallex Bank', code: '526' },
+  { name: 'Polaris Bank', code: '076' },
+  { name: 'Premium Trust Bank', code: '105' },
+  { name: 'Providus Bank', code: '101' },
+  { name: 'Rand Merchant Bank', code: '000024' },
+  { name: 'Signature Bank', code: '566' },
+  { name: 'Sparkle Microfinance Bank', code: '090325' },
+  { name: 'Stanbic IBTC Bank', code: '221' },
+  { name: 'Standard Chartered Bank', code: '068' },
+  { name: 'Sterling Bank', code: '232' },
+  { name: 'Summit Bank', code: '309' },
+  { name: 'SunTrust Bank Nigeria', code: '100' },
+  { name: 'TAJ Bank', code: '302' },
+  { name: 'Titan Trust Bank', code: '565' },
+  { name: 'Union Bank of Nigeria', code: '032' },
+  { name: 'United Bank for Africa (UBA)', code: '033' },
+  { name: 'Unity Bank', code: '215' },
+  { name: 'VFD Microfinance Bank', code: '090110' },
+  { name: 'Wema Bank', code: '035' },
+  { name: 'Zenith Bank', code: '057' },
+  // Additional commercial, mortgage & microfinance banks
+  { name: '9PSB (9 Payment Service Bank)', code: '120001' },
+  { name: 'Abbey Mortgage Bank', code: '070010' },
+  { name: 'Accion Microfinance Bank', code: '090134' },
+  { name: 'Alpha Morgan Bank', code: '000028' },
+  { name: 'Carbon', code: '100026' },
+  { name: 'Development Bank of Nigeria', code: '050001' },
+  { name: 'FairMoney Microfinance Bank', code: '090551' },
+  { name: 'FCMB Microfinance Bank', code: '090409' },
+  { name: 'Gateway Mortgage Bank', code: '070009' },
+  { name: 'GOMoney', code: '100022' },
+  { name: 'Hope PSB', code: '120002' },
+  { name: 'Infinity Trust Mortgage Bank', code: '070016' },
+  { name: 'LAPO Microfinance Bank', code: '090177' },
+  { name: 'LivingTrust Mortgage Bank', code: '070007' },
+  { name: 'Mainstreet Microfinance Bank', code: '090171' },
+  { name: 'MoMo PSB', code: '120003' },
+  { name: 'Money Master PSB', code: '120005' },
+  { name: 'Pecan Trust Microfinance Bank', code: '090137' },
+  { name: 'Renmoney Microfinance Bank', code: '090198' },
+  { name: 'SafeTrust Microfinance Bank', code: '090006' },
+  { name: 'SmartCash PSB', code: '120004' },
+  { name: 'Tangerine', code: '100023' },
+  { name: 'Other (enter code below)', code: '__other__' }
+];
 
 const StatCard = ({ icon, iconBg, title, value, subtitle, debtAmount }) => (
   <div className="bg-white rounded-xl p-5 relative" style={sideBottomShadow}>
@@ -56,8 +128,26 @@ const Earnings = () =>
   const [payoutHistory, setPayoutHistory] = useState([]);
   const [payoutHistoryLoading, setPayoutHistoryLoading] = useState(false);
   const [declineLimitInfo, setDeclineLimitInfo] = useState(null);
+  const [bankDetails, setBankDetails] = useState(null);
+  const [hasWithdrawalPin, setHasWithdrawalPin] = useState(false);
+  const [showBankModal, setShowBankModal] = useState(false);
+  const [showPinModal, setShowPinModal] = useState(false);
+  const [payoutWithdrawalPin, setPayoutWithdrawalPin] = useState('');
+  const [bankCode, setBankCode] = useState('');
+  const [bankCodeOther, setBankCodeOther] = useState('');
+  const [bankAccountNumber, setBankAccountNumber] = useState('');
+  const [bankAccountName, setBankAccountName] = useState('');
+  const [bankUpdatePin, setBankUpdatePin] = useState('');
+  const [bankUpdatePinConfirm, setBankUpdatePinConfirm] = useState('');
+  const [resolvingAccount, setResolvingAccount] = useState(false);
+  const [pinCurrentPassword, setPinCurrentPassword] = useState('');
+  const [pinCurrentPin, setPinCurrentPin] = useState('');
+  const [pinNewPin, setPinNewPin] = useState('');
+  const [pinConfirm, setPinConfirm] = useState('');
+  const [savingBank, setSavingBank] = useState(false);
+  const [savingPin, setSavingPin] = useState(false);
 
-  // Fetch decline limit info
+  // Fetch decline limit info and bank/PIN status
   const fetchDeclineLimitInfo = async () =>
   {
     try {
@@ -67,6 +157,8 @@ const Earnings = () =>
       if (declineInfo) {
         setDeclineLimitInfo(declineInfo);
       }
+      if (data?.bankDetails) setBankDetails(data.bankDetails);
+      setHasWithdrawalPin(!!data?.hasWithdrawalPin);
     } catch (error) {
       console.error('[Earnings] Failed to fetch decline limit info:', error);
     }
@@ -477,8 +569,27 @@ const Earnings = () =>
 
   const handleRequestPayout = async () =>
   {
+    if (!bankDetails) {
+      setToastMsg('Please add your bank details first (Earnings or Profile).');
+      setShowToast(true);
+      setShowPayoutModal(false);
+      setShowBankModal(true);
+      return;
+    }
+    if (!hasWithdrawalPin) {
+      setToastMsg('Please set your withdrawal PIN first (Earnings or Profile).');
+      setShowToast(true);
+      setShowPayoutModal(false);
+      setShowPinModal(true);
+      return;
+    }
     if (!payoutAmount || parseFloat(payoutAmount) <= 0) {
       setToastMsg('Please enter a valid payout amount');
+      setShowToast(true);
+      return;
+    }
+    if (!payoutWithdrawalPin || payoutWithdrawalPin.length < 4 || payoutWithdrawalPin.length > 6 || !/^\d+$/.test(payoutWithdrawalPin)) {
+      setToastMsg('Please enter your 4-6 digit withdrawal PIN');
       setShowToast(true);
       return;
     }
@@ -494,20 +605,125 @@ const Earnings = () =>
 
     try {
       setRequestingPayout(true);
-      await requestPayout(amount);
+      await requestPayout(amount, payoutWithdrawalPin);
       setToastMsg(`Payout request of ${formatCurrency(amount)} submitted successfully. Awaiting admin approval.`);
       setShowToast(true);
       setShowPayoutModal(false);
       setPayoutAmount('');
-      // Refresh earnings to show updated balance
+      setPayoutWithdrawalPin('');
       await fetchEarnings();
       await fetchBalance();
     } catch (error) {
       console.error('[Earnings] Failed to request payout:', error);
-      setToastMsg(error?.message || 'Failed to submit payout request');
+      setToastMsg(error?.response?.data?.message || error?.message || 'Failed to submit payout request');
       setShowToast(true);
     } finally {
       setRequestingPayout(false);
+    }
+  };
+
+  const handleResolveAccountName = async () => {
+    const effectiveBankCode = (bankCode === '__other__' ? bankCodeOther : bankCode).trim();
+    const num = (bankAccountNumber || '').replace(/\D/g, '');
+    if (!effectiveBankCode || num.length < 10) {
+      setToastMsg('Select your bank and enter a 10-digit account number first');
+      setShowToast(true);
+      return;
+    }
+    try {
+      setResolvingAccount(true);
+      const { accountName } = await resolveBankAccount(effectiveBankCode, num);
+      setBankAccountName(accountName || '');
+      if (accountName) setToastMsg('Account name found');
+      else setToastMsg('Could not resolve account name');
+      setShowToast(true);
+    } catch (err) {
+      setToastMsg(err?.response?.data?.message || err?.message || 'Could not resolve account. Check bank and number.');
+      setShowToast(true);
+    } finally {
+      setResolvingAccount(false);
+    }
+  };
+
+  const handleSaveBankDetails = async () => {
+    const effectiveBankCode = (bankCode === '__other__' ? bankCodeOther : bankCode).trim();
+    if (!effectiveBankCode || !bankAccountNumber.trim() || !bankAccountName.trim()) {
+      setToastMsg('Please select your bank (or enter bank code), account number and account name');
+      setShowToast(true);
+      return;
+    }
+    if (hasWithdrawalPin) {
+      if (!bankUpdatePin || bankUpdatePin.length < 4 || bankUpdatePin.length > 6 || !/^\d+$/.test(bankUpdatePin)) {
+        setToastMsg('Enter your withdrawal PIN (4-6 digits)');
+        setShowToast(true);
+        return;
+      }
+      if (bankUpdatePin !== bankUpdatePinConfirm) {
+        setToastMsg('Withdrawal PIN and confirmation do not match');
+        setShowToast(true);
+        return;
+      }
+    }
+    try {
+      setSavingBank(true);
+      const payload = { bankCode: effectiveBankCode, accountNumber: bankAccountNumber.trim(), accountName: bankAccountName.trim() };
+      if (hasWithdrawalPin) payload.withdrawalPin = bankUpdatePin;
+      await updateBankDetails(payload);
+      setToastMsg('Bank details saved successfully');
+      setShowToast(true);
+      setShowBankModal(false);
+      setBankCode('');
+      setBankCodeOther('');
+      setBankAccountNumber('');
+      setBankAccountName('');
+      setBankUpdatePin('');
+      setBankUpdatePinConfirm('');
+      await fetchDeclineLimitInfo();
+    } catch (error) {
+      setToastMsg(error?.response?.data?.message || error?.message || 'Failed to save bank details');
+      setShowToast(true);
+    } finally {
+      setSavingBank(false);
+    }
+  };
+
+  const handleSavePin = async () => {
+    if (!pinNewPin || pinNewPin.length < 4 || pinNewPin.length > 6 || !/^\d+$/.test(pinNewPin)) {
+      setToastMsg('New PIN must be 4-6 digits');
+      setShowToast(true);
+      return;
+    }
+    if (pinNewPin !== pinConfirm) {
+      setToastMsg('New PIN and confirmation do not match');
+      setShowToast(true);
+      return;
+    }
+    if (hasWithdrawalPin && !pinCurrentPin) {
+      setToastMsg('Enter your current PIN to change it');
+      setShowToast(true);
+      return;
+    }
+    // When setting PIN for first time, password is optional (Google sign-in users may not have one)
+    try {
+      setSavingPin(true);
+      await setWithdrawalPin({
+        currentPassword: hasWithdrawalPin ? undefined : pinCurrentPassword,
+        currentPin: hasWithdrawalPin ? pinCurrentPin : undefined,
+        newPin: pinNewPin,
+      });
+      setToastMsg(hasWithdrawalPin ? 'Withdrawal PIN updated' : 'Withdrawal PIN set successfully');
+      setShowToast(true);
+      setShowPinModal(false);
+      setPinCurrentPassword('');
+      setPinCurrentPin('');
+      setPinNewPin('');
+      setPinConfirm('');
+      await fetchDeclineLimitInfo();
+    } catch (error) {
+      setToastMsg(error?.response?.data?.message || error?.message || 'Failed to save PIN');
+      setShowToast(true);
+    } finally {
+      setSavingPin(false);
     }
   };
 
@@ -744,6 +960,19 @@ const Earnings = () =>
               </div>
             </div>
           </YummyText>
+
+          {/* Prominent Add bank details banner when not set */}
+          {!bankDetails && (
+            <div className="mb-6 p-5 rounded-2xl bg-gradient-to-r from-[#00B75A] to-[#00A63E] text-white flex flex-wrap items-center justify-between gap-4" style={sideBottomShadow}>
+              <div>
+                <h3 className="text-lg font-semibold mb-1">Add your bank details</h3>
+                <p className="text-sm text-white/90">Add your bank account to receive payouts. Withdrawals are sent to the account you provide.</p>
+              </div>
+              <button type="button" onClick={() => setShowBankModal(true)} className="px-6 py-3 bg-white text-[#00B75A] font-semibold rounded-xl hover:bg-gray-100 transition-colors shadow-md">
+                Add bank details
+              </button>
+            </div>
+          )}
 
           {/* Stats Grid (2x2 layout to match dashboard) */}
           <div className="grid grid-cols-2 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
@@ -1020,6 +1249,32 @@ const Earnings = () =>
                   </div>
                 </div>
               </div>
+              {bankDetails && (
+                <div className="mt-4 pt-4 border-t border-gray-200">
+                  <div className="text-xs text-[#64748B] mb-1">Current bank account</div>
+                  <div className="text-sm text-[#0F172A]">
+                    {(() => {
+                      const bankName = NIGERIAN_BANKS.find((b) => b.code === bankDetails.bankCode)?.name;
+                      return (
+                        <>
+                          <span className="font-medium">{bankName || `Bank (${bankDetails.bankCode})`}</span>
+                          {' · '}
+                          <span>{bankDetails.accountNumberMasked ?? bankDetails.accountNumber ?? '***'}</span>
+                          {bankDetails.accountName && <><span> · </span><span>{bankDetails.accountName}</span></>}
+                        </>
+                      );
+                    })()}
+                  </div>
+                </div>
+              )}
+              <div className="flex flex-wrap gap-3 mt-4 pt-4 border-t border-gray-200">
+                <button type="button" onClick={() => setShowBankModal(true)} className={bankDetails ? 'px-4 py-2 rounded-xl border border-[#00B75A] text-[#00B75A] text-sm font-medium hover:bg-[#00B75A]/10' : 'px-4 py-2 rounded-xl bg-[#00B75A] text-white text-sm font-medium hover:bg-[#00A63E] shadow-sm'}>
+                  {bankDetails ? 'Update bank details' : 'Add bank details'}
+                </button>
+                <button type="button" onClick={() => setShowPinModal(true)} className={hasWithdrawalPin ? 'px-4 py-2 rounded-xl border border-[#00B75A] text-[#00B75A] text-sm font-medium hover:bg-[#00B75A]/10' : 'px-4 py-2 rounded-xl bg-[#00B75A] text-white text-sm font-medium hover:bg-[#00A63E] shadow-sm'}>
+                  {hasWithdrawalPin ? 'Change withdrawal PIN' : 'Set withdrawal PIN'}
+                </button>
+              </div>
             </YummyText>
           </div>
 
@@ -1030,51 +1285,149 @@ const Earnings = () =>
                 <div className="flex items-center justify-between mb-4">
                   <h2 className="text-xl font-semibold text-[#0F172A]">Request Payout</h2>
                   <button
-                    onClick={() =>
-                    {
-                      setShowPayoutModal(false);
-                      setPayoutAmount('');
-                    }}
+                    onClick={() => { setShowPayoutModal(false); setPayoutAmount(''); setPayoutWithdrawalPin(''); }}
                     className="text-[#64748B] hover:text-[#0F172A]"
                   >
                     <X className="w-5 h-5" />
                   </button>
                 </div>
-                <div className="mb-4">
-                  <p className="text-sm text-[#64748B] mb-2">Available Balance: <span className="font-semibold text-[#0F172A]">{formatCurrency(earnings?.availableBalance || earnings?.balance || 0)}</span></p>
-                  <label className="block text-sm font-medium text-[#0F172A] mb-2">
-                    Payout Amount
-                  </label>
-                  <input
-                    type="number"
-                    value={payoutAmount}
-                    onChange={(e) => setPayoutAmount(e.target.value)}
-                    placeholder="Enter amount"
-                    min="0"
-                    max={earnings?.availableBalance || earnings?.balance || 0}
-                    className="w-full px-4 py-3 rounded-xl border border-[#E2E8F0] focus:border-[#00D68F] focus:ring-2 focus:ring-[#00D68F]/20 focus:outline-none"
-                  />
-                  <p className="text-xs text-[#64748B] mt-1">Maximum: {formatCurrency(earnings?.availableBalance || earnings?.balance || 0)}</p>
+                {!bankDetails && (
+                  <div className="mb-4 p-3 rounded-xl bg-amber-50 border border-amber-200">
+                    <p className="text-sm text-amber-800">Add your bank details first to receive payouts.</p>
+                    <button onClick={() => { setShowPayoutModal(false); setShowBankModal(true); }} className="mt-2 text-sm font-medium text-amber-700 underline">Add bank details</button>
+                  </div>
+                )}
+                {bankDetails && !hasWithdrawalPin && (
+                  <div className="mb-4 p-3 rounded-xl bg-amber-50 border border-amber-200">
+                    <p className="text-sm text-amber-800">Set your withdrawal PIN first for security.</p>
+                    <button onClick={() => { setShowPayoutModal(false); setShowPinModal(true); }} className="mt-2 text-sm font-medium text-amber-700 underline">Set withdrawal PIN</button>
+                  </div>
+                )}
+                {bankDetails && hasWithdrawalPin && (
+                  <>
+                    <div className="mb-4">
+                      <p className="text-sm text-[#64748B] mb-2">Available: <span className="font-semibold text-[#0F172A]">{formatCurrency(earnings?.availableBalance || earnings?.balance || 0)}</span></p>
+                      <label className="block text-sm font-medium text-[#0F172A] mb-2">Payout Amount</label>
+                      <input
+                        type="number"
+                        value={payoutAmount}
+                        onChange={(e) => setPayoutAmount(e.target.value)}
+                        placeholder="Enter amount"
+                        min="0"
+                        max={earnings?.availableBalance || earnings?.balance || 0}
+                        className="w-full px-4 py-3 rounded-xl border border-[#E2E8F0] focus:border-[#00D68F] focus:ring-2 focus:ring-[#00D68F]/20 focus:outline-none"
+                      />
+                      <label className="block text-sm font-medium text-[#0F172A] mt-3 mb-2">Withdrawal PIN (4-6 digits)</label>
+                      <input
+                        type="password"
+                        inputMode="numeric"
+                        maxLength={6}
+                        value={payoutWithdrawalPin}
+                        onChange={(e) => setPayoutWithdrawalPin(e.target.value.replace(/\D/g, ''))}
+                        placeholder="Enter your PIN"
+                        className="w-full px-4 py-3 rounded-xl border border-[#E2E8F0] focus:border-[#00D68F] focus:ring-2 focus:ring-[#00D68F]/20 focus:outline-none"
+                      />
+                    </div>
+                    <div className="flex gap-3">
+                      <button onClick={() => { setShowPayoutModal(false); setPayoutAmount(''); setPayoutWithdrawalPin(''); }} className="flex-1 px-4 py-2 border border-[#E2E8F0] text-[#0F172A] rounded-xl hover:bg-gray-50" disabled={requestingPayout}>Cancel</button>
+                      <button onClick={handleRequestPayout} disabled={requestingPayout || !payoutAmount || parseFloat(payoutAmount) <= 0 || !payoutWithdrawalPin || payoutWithdrawalPin.length < 4} className="flex-1 px-4 py-2 bg-[#00B75A] text-white rounded-xl hover:bg-[#00B876] disabled:opacity-50 disabled:cursor-not-allowed">{requestingPayout ? 'Submitting...' : 'Submit Request'}</button>
+                    </div>
+                  </>
+                )}
+                {(!bankDetails || !hasWithdrawalPin) && (
+                  <button onClick={() => { setShowPayoutModal(false); setPayoutAmount(''); }} className="w-full mt-2 px-4 py-2 border border-[#E2E8F0] text-[#0F172A] rounded-xl hover:bg-gray-50">Close</button>
+                )}
+              </div>
+            </div>
+          )}
+
+          {/* Bank Details Modal */}
+          {showBankModal && (
+            <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+              <div className="bg-white rounded-2xl p-6 max-w-md w-full shadow-xl">
+                <div className="flex items-center justify-between mb-4">
+                  <h2 className="text-xl font-semibold text-[#0F172A]">Bank Details</h2>
+                  <button onClick={() => { setShowBankModal(false); setBankCode(''); setBankCodeOther(''); setBankAccountNumber(''); setBankAccountName(''); setBankUpdatePin(''); setBankUpdatePinConfirm(''); }} className="text-[#64748B] hover:text-[#0F172A]"><X className="w-5 h-5" /></button>
+                </div>
+                <p className="text-sm text-[#64748B] mb-4">Withdrawals will be sent to this account. Select your bank below (we use the bank code for transfers).</p>
+                <div className="space-y-3 mb-4">
+                  <div>
+                    <label className="block text-sm font-medium text-[#0F172A] mb-1">Bank</label>
+                    <select value={bankCode} onChange={(e) => setBankCode(e.target.value)} className="w-full px-4 py-2 rounded-xl border border-[#E2E8F0] focus:border-[#00D68F] focus:outline-none bg-white">
+                      {NIGERIAN_BANKS.map((b) => (
+                        <option key={b.code || b.name} value={b.code}>{b.name || `Code ${b.code}`}</option>
+                      ))}
+                    </select>
+                    {bankCode === '__other__' && (
+                      <input type="text" value={bankCodeOther} onChange={(e) => setBankCodeOther(e.target.value.replace(/\D/g, ''))} placeholder="Enter your bank code (e.g. 058)" className="w-full mt-2 px-4 py-2 rounded-xl border border-[#E2E8F0] focus:border-[#00D68F] focus:outline-none" />
+                    )}
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-[#0F172A] mb-1">Account number</label>
+                    <input type="text" value={bankAccountNumber} onChange={(e) => setBankAccountNumber(e.target.value.replace(/\D/g, ''))} placeholder="10 digits" maxLength={10} className="w-full px-4 py-2 rounded-xl border border-[#E2E8F0] focus:border-[#00D68F] focus:outline-none" />
+                    <button type="button" onClick={handleResolveAccountName} disabled={resolvingAccount || (bankCode === '__other__' ? !bankCodeOther.trim() : !bankCode) || bankAccountNumber.replace(/\D/g, '').length < 10} className="mt-2 text-sm font-medium text-[#00B75A] hover:underline disabled:opacity-50 disabled:cursor-not-allowed disabled:no-underline">
+                      {resolvingAccount ? 'Resolving...' : 'Find account name automatically'}
+                    </button>
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-[#0F172A] mb-1">Account name</label>
+                    <input type="text" value={bankAccountName} onChange={(e) => setBankAccountName(e.target.value)} placeholder="As on bank account or click above to resolve" className="w-full px-4 py-2 rounded-xl border border-[#E2E8F0] focus:border-[#00D68F] focus:outline-none" />
+                  </div>
+                  {hasWithdrawalPin && (
+                    <>
+                      <div>
+                        <label className="block text-sm font-medium text-[#0F172A] mb-1">Withdrawal PIN (enter to confirm update)</label>
+                        <input type="password" inputMode="numeric" maxLength={6} value={bankUpdatePin} onChange={(e) => setBankUpdatePin(e.target.value.replace(/\D/g, ''))} placeholder="4-6 digits" className="w-full px-4 py-2 rounded-xl border border-[#E2E8F0] focus:border-[#00D68F] focus:outline-none" />
+                      </div>
+                      <div>
+                        <label className="block text-sm font-medium text-[#0F172A] mb-1">Confirm withdrawal PIN</label>
+                        <input type="password" inputMode="numeric" maxLength={6} value={bankUpdatePinConfirm} onChange={(e) => setBankUpdatePinConfirm(e.target.value.replace(/\D/g, ''))} placeholder="Re-enter PIN" className="w-full px-4 py-2 rounded-xl border border-[#E2E8F0] focus:border-[#00D68F] focus:outline-none" />
+                      </div>
+                    </>
+                  )}
                 </div>
                 <div className="flex gap-3">
-                  <button
-                    onClick={() =>
-                    {
-                      setShowPayoutModal(false);
-                      setPayoutAmount('');
-                    }}
-                    className="flex-1 px-4 py-2 border border-[#E2E8F0] text-[#0F172A] rounded-xl hover:bg-gray-50"
-                    disabled={requestingPayout}
-                  >
-                    Cancel
-                  </button>
-                  <button
-                    onClick={handleRequestPayout}
-                    disabled={requestingPayout || !payoutAmount || parseFloat(payoutAmount) <= 0}
-                    className="flex-1 px-4 py-2 bg-[#00B75A] text-white rounded-xl hover:bg-[#00B876] disabled:opacity-50 disabled:cursor-not-allowed"
-                  >
-                    {requestingPayout ? 'Submitting...' : 'Submit Request'}
-                  </button>
+                  <button onClick={() => { setShowBankModal(false); setBankCode(''); setBankCodeOther(''); setBankAccountNumber(''); setBankAccountName(''); setBankUpdatePin(''); setBankUpdatePinConfirm(''); }} className="flex-1 px-4 py-2 border border-[#E2E8F0] text-[#0F172A] rounded-xl hover:bg-gray-50">Cancel</button>
+                  <button onClick={handleSaveBankDetails} disabled={savingBank} className="flex-1 px-4 py-2 bg-[#00B75A] text-white rounded-xl hover:bg-[#00B876] disabled:opacity-50">{savingBank ? 'Saving...' : 'Save'}</button>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* Withdrawal PIN Modal */}
+          {showPinModal && (
+            <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+              <div className="bg-white rounded-2xl p-6 max-w-md w-full shadow-xl">
+                <div className="flex items-center justify-between mb-4">
+                  <h2 className="text-xl font-semibold text-[#0F172A]">{hasWithdrawalPin ? 'Change Withdrawal PIN' : 'Set Withdrawal PIN'}</h2>
+                  <button onClick={() => { setShowPinModal(false); setPinCurrentPassword(''); setPinCurrentPin(''); setPinNewPin(''); setPinConfirm(''); }} className="text-[#64748B] hover:text-[#0F172A]"><X className="w-5 h-5" /></button>
+                </div>
+                <p className="text-sm text-[#64748B] mb-4">Use this PIN when requesting a payout. Enter your new PIN twice below so you can be sure you remember it (4-6 digits).</p>
+                <div className="space-y-3 mb-4">
+                  {hasWithdrawalPin ? (
+                    <div>
+                      <label className="block text-sm font-medium text-[#0F172A] mb-1">Current PIN</label>
+                      <input type="password" inputMode="numeric" maxLength={6} value={pinCurrentPin} onChange={(e) => setPinCurrentPin(e.target.value.replace(/\D/g, ''))} placeholder="Current PIN" className="w-full px-4 py-2 rounded-xl border border-[#E2E8F0] focus:border-[#00D68F] focus:outline-none" />
+                    </div>
+                  ) : (
+                    <div>
+                      <label className="block text-sm font-medium text-[#0F172A] mb-1">Your account password (optional)</label>
+                      <input type="password" value={pinCurrentPassword} onChange={(e) => setPinCurrentPassword(e.target.value)} placeholder="Leave blank if you signed up with Google" className="w-full px-4 py-2 rounded-xl border border-[#E2E8F0] focus:border-[#00D68F] focus:outline-none" />
+                      <p className="text-xs text-[#64748B] mt-1">If you signed up with Google, leave this blank. Otherwise enter your password to confirm.</p>
+                    </div>
+                  )}
+                  <div>
+                    <label className="block text-sm font-medium text-[#0F172A] mb-1">New PIN (4-6 digits)</label>
+                    <input type="password" inputMode="numeric" maxLength={6} value={pinNewPin} onChange={(e) => setPinNewPin(e.target.value.replace(/\D/g, ''))} placeholder="Enter new PIN" className="w-full px-4 py-2 rounded-xl border border-[#E2E8F0] focus:border-[#00D68F] focus:outline-none" />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-[#0F172A] mb-1">Re-enter new PIN</label>
+                    <input type="password" inputMode="numeric" maxLength={6} value={pinConfirm} onChange={(e) => setPinConfirm(e.target.value.replace(/\D/g, ''))} placeholder="Enter again to confirm" className="w-full px-4 py-2 rounded-xl border border-[#E2E8F0] focus:border-[#00D68F] focus:outline-none" />
+                  </div>
+                </div>
+                <div className="flex gap-3">
+                  <button onClick={() => { setShowPinModal(false); setPinCurrentPassword(''); setPinCurrentPin(''); setPinNewPin(''); setPinConfirm(''); }} className="flex-1 px-4 py-2 border border-[#E2E8F0] text-[#0F172A] rounded-xl hover:bg-gray-50">Cancel</button>
+                  <button onClick={handleSavePin} disabled={savingPin} className="flex-1 px-4 py-2 bg-[#00B75A] text-white rounded-xl hover:bg-[#00B876] disabled:opacity-50">{savingPin ? 'Saving...' : 'Save'}</button>
                 </div>
               </div>
             </div>

@@ -44,6 +44,7 @@ import Book from "./features/customer/pages/Book";
 import CustomerProfile from "./features/customer/pages/CustomerProfile";
 import CustomerSupport from "./features/customer/pages/CustomerSupport";
 import PaymentSuccess from "./features/customer/pages/PaymentSuccess";
+import Transactions from "./features/customer/pages/Transactions";
 import SmartRideBooking from "./features/smartride-booking/index";
 
 /* Rider Dashboard pages */
@@ -63,6 +64,7 @@ import ManageOrders from "./features/admin/pages/ManageOrders";
 import KYCApprovals from "./features/admin/pages/KYCApprovals";
 import Analytics from "./features/admin/pages/Analytics";
 import Settings from "./features/admin/pages/Settings";
+import AdminPayouts from "./features/admin/pages/AdminPayouts";
 import AdminRouteGuard from "./features/admin/components/AdminRouteGuard";
 import CustomerRouteGuard from "./features/customer/components/CustomerRouteGuard";
 import RiderRouteGuard from "./features/rider/components/RiderRouteGuard";
@@ -153,6 +155,11 @@ const App = () =>
                   <MyDeliveries />
                 </CustomerRouteGuard>
               </Route>
+              <Route exact path="/customer/transactions">
+                <CustomerRouteGuard>
+                  <Transactions />
+                </CustomerRouteGuard>
+              </Route>
 
               {/* Payment Routes - Should be accessible without auth guard for callback */}
               <Route exact path="/customer/payment/callback">
@@ -239,6 +246,11 @@ const App = () =>
               <Route exact path="/admin/orders">
                 <AdminRouteGuard>
                   <ManageOrders />
+                </AdminRouteGuard>
+              </Route>
+              <Route exact path="/admin/payouts">
+                <AdminRouteGuard>
+                  <AdminPayouts />
                 </AdminRouteGuard>
               </Route>
               <Route exact path="/admin/kyc">

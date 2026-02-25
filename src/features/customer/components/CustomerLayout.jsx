@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from 'react';
+import { useHistory } from 'react-router-dom';
 import CustomerSidebar from './CustomerSidebar';
 import { YummyText } from '../../../components/YummyText';
 import RatingModal from './RatingModal';
@@ -12,11 +13,13 @@ import
 import socketService from '../../../services/socket.service';
 import { getCookie, setCookie, getJSONCookie } from '../../../utils/cookies';
 import { getCustomerProfile } from '../../../utils/authApi';
+import { getNotificationRoute } from '../../../utils/notificationNavigation';
 
 const DEFAULT_AVATAR = 'https://api.dicebear.com/7.x/avataaars/svg?seed=User';
 
 const CustomerLayout = ({ children }) =>
 {
+  const history = useHistory();
   const [avatarSrc, setAvatarSrc] = useState(DEFAULT_AVATAR);
   const [showNotifications, setShowNotifications] = useState(false);
   const [notifications, setNotifications] = useState([]);
@@ -298,23 +301,34 @@ const CustomerLayout = ({ children }) =>
     loadAvatar();
     checkNotifications();
 
-    // Connect to socket for realtime delivery events (e.g., delivery:accepted)
+    // Connect to socket for realtime delivery events (rider accepted -> server emits delivery:assigned)
     try {
       socketService.connect();
       socketService.on('delivery:accepted', (data) =>
       {
         try {
           window.dispatchEvent(new CustomEvent('delivery:accepted', { detail: data }));
+          window.dispatchEvent(new Event('deliveries:refresh'));
+        } catch (e) { /* ignore */ }
+      });
+      socketService.on('delivery:assigned', (data) =>
+      {
+        try {
+          window.dispatchEvent(new CustomEvent('delivery:assigned', { detail: data }));
+          window.dispatchEvent(new Event('deliveries:refresh'));
         } catch (e) { /* ignore */ }
       });
     } catch (e) {
       console.warn('[CustomerLayout] Failed to init socket service', e);
     }
 
-    const notificationInterval = setInterval(() =>
-    {
-      checkNotifications();
-    }, 30000);
+    const handleNotificationNew = (payload) => {
+      if (payload && payload._id) {
+        setNotifications((prev) => [{ ...payload, isRead: false, read: false }, ...prev]);
+        setUnreadCount((c) => c + 1);
+      }
+    };
+    socketService.on('notification:new', handleNotificationNew);
 
     const handleDeliveryUpdated = () =>
     {
@@ -335,9 +349,10 @@ const CustomerLayout = ({ children }) =>
       window.removeEventListener('profile:updated', loadAvatar);
       window.removeEventListener('delivery:updated', handleDeliveryUpdated);
       window.removeEventListener('verification:completed', handleVerificationCompleted);
-      clearInterval(notificationInterval);
       try {
+        socketService.off('notification:new', handleNotificationNew);
         socketService.off('delivery:accepted');
+        socketService.off('delivery:assigned');
       } catch (e) { }
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -501,6 +516,9 @@ const CustomerLayout = ({ children }) =>
                               if (!isRead) {
                                 handleMarkAsRead(notifId, e);
                               }
+                              const route = getNotificationRoute(notification, 'customer');
+                              setShowNotifications(false);
+                              history.push(route);
                             }}
                           >
                             <div className="flex items-start gap-3">

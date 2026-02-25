@@ -302,7 +302,14 @@ const ActiveDeliveries = () => {
     window.addEventListener('delivery:accepted', handleDeliveryAccepted);
     window.addEventListener('delivery:statusChanged', handleDeliveryStatusChanged);
     window.addEventListener('delivery:cancelled', handleDeliveryCancelled);
-    // Refresh on payment completion
+    const handleDeliveryDeleted = (event) => {
+      const deliveryId = event?.detail?.deliveryId;
+      if (deliveryId) {
+        setDeliveries(prev => prev.filter(d => (d._id !== deliveryId && d.id !== deliveryId)));
+      }
+      fetchActiveDeliveries();
+    };
+    window.addEventListener('delivery:deleted', handleDeliveryDeleted);
     const handlePaymentCompleted = () => fetchActiveDeliveries();
     window.addEventListener('payment:completed', handlePaymentCompleted);
 
@@ -310,6 +317,7 @@ const ActiveDeliveries = () => {
       window.removeEventListener('delivery:accepted', handleDeliveryAccepted);
       window.removeEventListener('delivery:statusChanged', handleDeliveryStatusChanged);
       window.removeEventListener('delivery:cancelled', handleDeliveryCancelled);
+      window.removeEventListener('delivery:deleted', handleDeliveryDeleted);
       window.removeEventListener('payment:completed', handlePaymentCompleted);
     };
   }, []);
