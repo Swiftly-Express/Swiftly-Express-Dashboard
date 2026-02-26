@@ -607,6 +607,11 @@ export async function getRiderDeliveries(page = 1, limit = 10) {
   return apiClient.get(`/api/driver/my-deliveries?page=${page}&limit=${limit}`);
 }
 
+export async function getRiderDeliveryById(deliveryId) {
+  if (!deliveryId) throw new Error('deliveryId is required');
+  return apiClient.get(`/api/driver/deliveries/${deliveryId}`);
+}
+
 export async function updateDeliveryStatus(deliveryId, statusData) {
   if (!deliveryId) throw new Error("deliveryId is required");
   return apiClient.put(
@@ -675,10 +680,17 @@ export async function uploadRiderProfileImage(file) {
 
 export async function createDelivery(payload) {
   if (payload instanceof FormData) {
-    return apiClient.post("/api/customer/deliveries", payload);
+    // IMPORTANT: delete the default Content-Type so axios auto-sets
+    // "multipart/form-data; boundary=..." which multer requires.
+    // If Content-Type: application/json is left in place, multer never
+    // parses req.files and images are silently dropped.
+    return apiClient.post("/api/customer/deliveries", payload, {
+      headers: { "Content-Type": undefined },
+    });
   }
   return apiClient.post("/api/customer/deliveries", payload);
 }
+
 
 export async function getDeliveryEstimate(params) {
   const {

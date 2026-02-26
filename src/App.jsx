@@ -54,6 +54,7 @@ import ActiveDeliveries from "./features/rider/pages/ActiveDeliveries";
 import Earnings from "./features/rider/pages/Earnings";
 import Profile from "./features/rider/pages/Profile";
 import Support from "./features/rider/pages/Support";
+import DeliveryDetail from "./features/rider/pages/DeliveryDetail";
 // import VerifyAccount from "./features/rider/pages/VerifyAccount";
 
 /* Admin Dashboard pages */
@@ -224,6 +225,11 @@ const App = () =>
               <Route exact path="/rider/support">
                 <RiderRouteGuard>
                   <Support />
+                </RiderRouteGuard>
+              </Route>
+              <Route path="/rider/delivery/:deliveryId">
+                <RiderRouteGuard>
+                  <DeliveryDetail />
                 </RiderRouteGuard>
               </Route>
 

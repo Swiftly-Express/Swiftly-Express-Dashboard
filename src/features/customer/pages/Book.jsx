@@ -211,7 +211,8 @@ const Book = () =>
         packageDescription: data.packageDescription ?? prev.packageDescription,
         paymentMethod: data.paymentMethod ?? prev.paymentMethod,
         paymentNotes: data.paymentNotes ?? prev.paymentNotes,
-        image: data.image ?? prev.image
+        image: data.image ?? prev.image,
+        images: data.images ?? prev.images,
       }));
 
       if (data.pickupPlace?.coordinates) {
@@ -553,9 +554,10 @@ const Book = () =>
       // If user selected online payment, create delivery record first (draft/pending),
       // then call payment initialize endpoint with the returned deliveryId.
       let response;
-      if (formData.image) {
+      const imageFiles = formData.images || (formData.image ? [formData.image] : []);
+      if (imageFiles.length > 0) {
         const fd = new FormData();
-        fd.append('images', formData.image);
+        imageFiles.forEach(file => fd.append('images', file));
         Object.entries(payload).forEach(([k, v]) =>
         {
           if (v === undefined || v === null) {
@@ -675,7 +677,8 @@ const Book = () =>
                 }
                 setIsProcessingPayment(false);
                 // Redirect main window to My Deliveries so user sees the new delivery and can track it while paying in popup
-                setTimeout(() => {
+                setTimeout(() =>
+                {
                   router.push('/customer/deliveries', 'root', 'replace');
                 }, 400);
                 // Payment will complete in popup; callback/success page will refresh deliveries
@@ -1631,74 +1634,85 @@ const Book = () =>
 
 
 
-                  {/* Package Image Upload - Redesigned */}
+                  {/* Package Images Upload — up to 5 */}
                   <div className="mb-6">
-                    <label className="block text-sm font-medium text-[#0F172A] mb-3">Package Image (optional)</label>
-
-                    {/* Image Preview */}
-                    {formData.image && formData.image instanceof File && (
-                      <div className="mb-3">
-                        <img
-                          src={URL.createObjectURL(formData.image)}
-                          alt="Package preview"
-                          className="w-full h-48 object-cover rounded-xl border-2 border-[#00B75A]"
-                          onLoad={(e) => URL.revokeObjectURL(e.target.src)}
-                          onError={(e) =>
-                          {
-                            e.target.style.display = 'none';
-                            console.error('Failed to load image preview');
-                          }}
-                        />
-                      </div>
-                    )}
-
-                    <div className="border-2 border-dashed border-gray-300 rounded-xl p-6 hover:border-[#00B75A] transition-colors cursor-pointer bg-[#F8F9FA]">
-                      <input
-                        type="file"
-                        accept="image/*"
-                        id="package-image-upload"
-                        onChange={(e) => setFormData({ ...formData, image: e.target.files && e.target.files[0] ? e.target.files[0] : null })}
-                        className="hidden"
-                      />
-                      <label htmlFor="package-image-upload" className="cursor-pointer flex flex-col items-center justify-center text-center">
-                        {formData.image ? (
-                          <div className="w-full">
-                            <div className="flex items-center justify-between mb-2">
-                              <div className="flex items-center gap-2">
-                                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                                  <path d="M21 19V5c0-1.1-.9-2-2-2H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2zM8.5 13.5l2.5 3.01L14.5 12l4.5 6H5l3.5-4.5z" fill="#00B75A" />
-                                </svg>
-                                <span className="text-sm font-medium text-[#0F172A]">{formData.image.name}</span>
-                              </div>
-                              <button
-                                type="button"
-                                onClick={(e) =>
-                                {
-                                  e.preventDefault();
-                                  e.stopPropagation();
-                                  setFormData({ ...formData, image: null });
-                                }}
-                                className="text-red-500 hover:text-red-700"
-                              >
-                                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                                  <path d="M6 19c0 1.1.9 2 2 2h8c1.1 0 2-.9 2-2V7H6v12zM19 4h-3.5l-1-1h-5l-1 1H5v2h14V4z" fill="currentColor" />
-                                </svg>
-                              </button>
-                            </div>
-                            <p className="text-xs text-[#64748B]">Click to change image</p>
-                          </div>
-                        ) : (
-                          <>
-                            <svg width="48" height="48" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" className="mb-3">
-                              <path d="M21 19V5c0-1.1-.9-2-2-2H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2zM8.5 13.5l2.5 3.01L14.5 12l4.5 6H5l3.5-4.5z" fill="#94A3B8" />
-                            </svg>
-                            <p className="text-sm font-medium text-[#0F172A] mb-1">Click to upload package image</p>
-                            <p className="text-xs text-[#64748B]">PNG, JPG up to 10MB</p>
-                          </>
-                        )}
+                    <div className="flex items-center justify-between mb-3">
+                      <label className="block text-sm font-medium text-[#0F172A]">
+                        Package Images <span className="text-[#94A3B8] font-normal">(optional · up to 5)</span>
                       </label>
+                      {(formData.images || []).length > 0 && (
+                        <span className="text-xs text-[#64748B]">{(formData.images || []).length}/5 added</span>
+                      )}
                     </div>
+
+                    {/* Thumbnail row */}
+                    <div className="flex flex-wrap gap-3">
+                      {(formData.images || []).map((file, idx) => (
+                        <div
+                          key={idx}
+                          className="relative w-24 h-24 rounded-xl overflow-hidden border-2 border-[#00B75A] flex-shrink-0"
+                        >
+                          <img
+                            src={URL.createObjectURL(file)}
+                            alt={`Package ${idx + 1}`}
+                            className="w-full h-full object-cover"
+                          />
+                          {/* Remove button */}
+                          <button
+                            type="button"
+                            onClick={() =>
+                            {
+                              const updated = (formData.images || []).filter((_, i) => i !== idx);
+                              setFormData({ ...formData, images: updated });
+                            }}
+                            className="absolute top-1 right-1 w-5 h-5 bg-red-500 rounded-full flex items-center justify-center hover:bg-red-600 transition-colors"
+                            title="Remove image"
+                          >
+                            <svg width="10" height="10" viewBox="0 0 24 24" fill="none">
+                              <path d="M18 6L6 18M6 6l12 12" stroke="white" strokeWidth="3" strokeLinecap="round" />
+                            </svg>
+                          </button>
+                        </div>
+                      ))}
+
+                      {/* Add tile — shown while under the limit */}
+                      {(formData.images || []).length < 5 && (
+                        <>
+                          <input
+                            type="file"
+                            accept="image/*"
+                            multiple
+                            id="package-image-upload"
+                            className="hidden"
+                            onChange={(e) =>
+                            {
+                              const incoming = Array.from(e.target.files || []);
+                              const existing = formData.images || [];
+                              const combined = [...existing, ...incoming].slice(0, 5);
+                              setFormData({ ...formData, images: combined });
+                              e.target.value = ''; // reset so same file can be re-added
+                            }}
+                          />
+                          <label
+                            htmlFor="package-image-upload"
+                            className="w-24 h-24 rounded-xl border-2 border-dashed border-gray-300 hover:border-[#00B75A] transition-colors cursor-pointer flex flex-col items-center justify-center bg-[#F8F9FA] hover:bg-[#F0FDF4] flex-shrink-0"
+                          >
+                            <svg width="28" height="28" viewBox="0 0 24 24" fill="none" className="mb-1">
+                              <path d="M12 5v14M5 12h14" stroke="#94A3B8" strokeWidth="2.5" strokeLinecap="round" />
+                            </svg>
+                            <span className="text-[10px] text-[#94A3B8] text-center leading-tight px-1">
+                              {(formData.images || []).length === 0 ? 'Add photos' : 'Add more'}
+                            </span>
+                          </label>
+                        </>
+                      )}
+                    </div>
+
+                    {(formData.images || []).length === 0 && (
+                      <p className="text-xs text-[#94A3B8] mt-2">PNG, JPG, WebP up to 10MB each</p>
+                    )}
                   </div>
+
 
                   {/* Payment Method - exact copy from SmartRide */}
                   <div className="mb-6">
@@ -1790,7 +1804,8 @@ const Book = () =>
                 </div>
 
                 {/* Discount / Launch offer notice */}
-                {(() => {
+                {(() =>
+                {
                   const pricing = getPricingBreakdown();
                   const hasDiscount = (pricing.discountAmount ?? 0) > 0;
                   const note = estimatedPrice?.note;

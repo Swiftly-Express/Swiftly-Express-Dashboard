@@ -41,6 +41,7 @@ const Transactions = () => {
       setLoading(true);
       try {
         const res = await getCustomerPayments(1, 50);
+        console.log("transactions response", res);
         const list = res?.data?.data?.payments || res?.data?.payments || res?.payments || [];
         if (!cancelled) setPayments(Array.isArray(list) ? list : []);
       } catch (e) {

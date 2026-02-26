@@ -1459,9 +1459,10 @@ export default function SmartRideBooking({ embedMode = false, initialData = {}, 
         setIsSendingRequest(true);
         try {
             let createResp = null;
-            if (formData.image) {
+            const srImageFiles = formData.images || (formData.image ? [formData.image] : []);
+            if (srImageFiles.length > 0) {
                 const fd = new FormData();
-                fd.append('images', formData.image);
+                srImageFiles.forEach(file => fd.append('images', file));
                 Object.entries(payload).forEach(([k, v]) =>
                 {
                     if (typeof v === 'object' && v !== null && !(v instanceof File)) fd.append(k, JSON.stringify(v));
@@ -1669,9 +1670,10 @@ export default function SmartRideBooking({ embedMode = false, initialData = {}, 
             };
 
             let createResp = null;
-            if (formData.image) {
+            const srImageFiles2 = formData.images || (formData.image ? [formData.image] : []);
+            if (srImageFiles2.length > 0) {
                 const fd = new FormData();
-                fd.append('images', formData.image);
+                srImageFiles2.forEach(file => fd.append('images', file));
                 Object.entries(payload).forEach(([k, v]) =>
                 {
                     if (typeof v === 'object') fd.append(k, JSON.stringify(v));
@@ -2445,87 +2447,80 @@ export default function SmartRideBooking({ embedMode = false, initialData = {}, 
 
                                     {/* Live price preview removed for Smart Ride (hidden by design) */}
 
-                                    {/* Package Image Upload */}
+                                    {/* Package Images Upload — up to 5 */}
                                     <div className="mb-6">
-                                        <label className="block text-sm font-medium text-[#0F172A] mb-2">Package Image (optional)</label>
-                                        <div className="relative">
-                                            <input
-                                                type="file"
-                                                id="package-image-upload"
-                                                accept="image/*"
-                                                className="hidden"
-                                                onChange={(e) =>
-                                                {
-                                                    const file = e.target.files?.[0];
-                                                    if (file) {
-                                                        if (file.size > 10 * 1024 * 1024) {
-                                                            alert('File size must be less than 10MB');
-                                                            return;
-                                                        }
-                                                        setFormData({ ...formData, image: file });
-                                                    }
-                                                }}
-                                            />
-                                            {formData.image ? (
-                                                <div className="space-y-3">
-                                                    {/* Image Preview */}
-                                                    <div className="w-full h-48 rounded-xl overflow-hidden bg-gray-100 border-2 border-[#00B75A]">
-                                                        <img
-                                                            src={formData.image instanceof File ? URL.createObjectURL(formData.image) : (typeof formData.image === 'string' ? formData.image : '')}
-                                                            alt="Package preview"
-                                                            className="w-full h-full object-cover"
-                                                            onLoad={(e) => URL.revokeObjectURL(e.target.src)}
-                                                        />
-                                                    </div>
-                                                    {/* Image Info */}
-                                                    <div className="relative border-2 border-[#00B75A] rounded-xl p-4 bg-[#F0FDF4]">
-                                                        <div className="flex items-center gap-3">
-                                                            <div className="w-12 h-12 rounded-lg bg-[#00B75A]/10 flex items-center justify-center flex-shrink-0">
-                                                                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#00B75A" strokeWidth="2">
-                                                                    <rect x="3" y="3" width="18" height="18" rx="2" ry="2" />
-                                                                    <circle cx="8.5" cy="8.5" r="1.5" />
-                                                                    <polyline points="21 15 16 10 5 21" />
-                                                                </svg>
-                                                            </div>
-                                                            <div className="flex-1 min-w-0">
-                                                                <p className="text-sm font-medium text-[#0F172A] truncate">{formData.image.name}</p>
-                                                                <p className="text-xs text-[#64748B]">{(formData.image.size / 1024).toFixed(1)} KB</p>
-                                                            </div>
-                                                            <button
-                                                                type="button"
-                                                                onClick={() => setFormData({ ...formData, image: null })}
-                                                                className="p-2 rounded-lg hover:bg-red-50 transition-colors"
-                                                            >
-                                                                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#EF4444" strokeWidth="2">
-                                                                    <line x1="18" y1="6" x2="6" y2="18" />
-                                                                    <line x1="6" y1="6" x2="18" y2="18" />
-                                                                </svg>
-                                                            </button>
-                                                        </div>
-                                                    </div>
-                                                </div>
-                                            ) : (
-                                                <label
-                                                    htmlFor="package-image-upload"
-                                                    className="block border-2 border-dashed border-gray-300 rounded-xl p-6 text-center cursor-pointer hover:border-[#00B75A] hover:bg-[#F0FDF4]/30 transition-all"
-                                                >
-                                                    <div className="flex flex-col items-center gap-2">
-                                                        <div className="w-12 h-12 rounded-full bg-[#F8F9FA] flex items-center justify-center">
-                                                            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#94A3B8" strokeWidth="2">
-                                                                <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
-                                                                <polyline points="17 8 12 3 7 8" />
-                                                                <line x1="12" y1="3" x2="12" y2="15" />
-                                                            </svg>
-                                                        </div>
-                                                        <div>
-                                                            <p className="text-sm font-medium text-[#0F172A]">Click to upload package image</p>
-                                                            <p className="text-xs text-[#64748B] mt-1">PNG, JPG up to 10MB</p>
-                                                        </div>
-                                                    </div>
-                                                </label>
+                                        <div className="flex items-center justify-between mb-2">
+                                            <label className="block text-sm font-medium text-[#0F172A]">
+                                                Package Images <span className="text-[#94A3B8] font-normal">(optional · up to 5)</span>
+                                            </label>
+                                            {(formData.images || []).length > 0 && (
+                                                <span className="text-xs text-[#64748B]">{(formData.images || []).length}/5 added</span>
                                             )}
                                         </div>
+
+                                        <div className="flex flex-wrap gap-3">
+                                            {(formData.images || []).map((file, idx) => (
+                                                <div
+                                                    key={idx}
+                                                    className="relative w-24 h-24 rounded-xl overflow-hidden border-2 border-[#00B75A] flex-shrink-0"
+                                                >
+                                                    <img
+                                                        src={file instanceof File ? URL.createObjectURL(file) : (typeof file === 'string' ? file : '')}
+                                                        alt={`Package ${idx + 1}`}
+                                                        className="w-full h-full object-cover"
+                                                    />
+                                                    <button
+                                                        type="button"
+                                                        onClick={() =>
+                                                        {
+                                                            const updated = (formData.images || []).filter((_, i) => i !== idx);
+                                                            setFormData({ ...formData, images: updated });
+                                                        }}
+                                                        className="absolute top-1 right-1 w-5 h-5 bg-red-500 rounded-full flex items-center justify-center hover:bg-red-600 transition-colors"
+                                                    >
+                                                        <svg width="10" height="10" viewBox="0 0 24 24" fill="none">
+                                                            <path d="M18 6L6 18M6 6l12 12" stroke="white" strokeWidth="3" strokeLinecap="round" />
+                                                        </svg>
+                                                    </button>
+                                                </div>
+                                            ))}
+
+                                            {(formData.images || []).length < 5 && (
+                                                <>
+                                                    <input
+                                                        type="file"
+                                                        accept="image/*"
+                                                        multiple
+                                                        id="package-image-upload"
+                                                        className="hidden"
+                                                        onChange={(e) =>
+                                                        {
+                                                            const incoming = Array.from(e.target.files || []).filter(f => f.size <= 10 * 1024 * 1024);
+                                                            const existing = formData.images || [];
+                                                            const combined = [...existing, ...incoming].slice(0, 5);
+                                                            setFormData({ ...formData, images: combined });
+                                                            e.target.value = '';
+                                                        }}
+                                                    />
+                                                    <label
+                                                        htmlFor="package-image-upload"
+                                                        className="w-24 h-24 rounded-xl border-2 border-dashed border-gray-300 hover:border-[#00B75A] transition-colors cursor-pointer flex flex-col items-center justify-center bg-[#F8F9FA] hover:bg-[#F0FDF4] flex-shrink-0"
+                                                    >
+                                                        <svg width="28" height="28" viewBox="0 0 24 24" fill="none" className="mb-1">
+                                                            <path d="M12 5v14M5 12h14" stroke="#94A3B8" strokeWidth="2.5" strokeLinecap="round" />
+                                                        </svg>
+                                                        <span className="text-[10px] text-[#94A3B8] text-center leading-tight px-1">
+                                                            {(formData.images || []).length === 0 ? 'Add photos' : 'Add more'}
+                                                        </span>
+                                                    </label>
+                                                </>
+                                            )}
+                                        </div>
+                                        {(formData.images || []).length === 0 && (
+                                            <p className="text-xs text-[#94A3B8] mt-2">PNG, JPG, WebP up to 10MB each</p>
+                                        )}
                                     </div>
+
 
                                     {/* Payment Method Selection */}
                                     <div className="mb-6">
