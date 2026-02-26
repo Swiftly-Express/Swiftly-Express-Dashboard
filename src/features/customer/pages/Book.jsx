@@ -184,6 +184,51 @@ const Book = () =>
   // Inline SmartRide state: open if ?delivery=smart_ride present
   const [showSmartRide, setShowSmartRide] = useState(false);
 
+  // Restore form data when returning from Smart Ride (user switched delivery type to Express)
+  useEffect(() =>
+  {
+    try {
+      const raw = sessionStorage.getItem('booking_form_data');
+      if (!raw) return;
+      const data = JSON.parse(raw);
+      sessionStorage.removeItem('booking_form_data');
+
+      setFormData(prev => ({
+        ...prev,
+        deliveryType: data.deliveryType === 'express' ? 'express' : prev.deliveryType,
+        senderName: data.senderName ?? prev.senderName,
+        senderPhone: data.senderPhone ?? prev.senderPhone,
+        recipientName: data.recipientName ?? prev.recipientName,
+        recipientPhone: data.recipientPhone ?? prev.recipientPhone,
+        recipientEmail: data.recipientEmail ?? prev.recipientEmail,
+        pickupStreet: data.pickupAddress ?? data.pickupStreet ?? prev.pickupStreet,
+        deliveryStreet: data.deliveryAddress ?? data.deliveryStreet ?? prev.deliveryStreet,
+        pickupDate: data.pickupDate ?? prev.pickupDate,
+        sizeCategory: data.sizeCategory ?? prev.sizeCategory,
+        weightCategory: data.weightCategory ?? prev.weightCategory,
+        dimensions: data.dimensions ?? prev.dimensions,
+        weight: data.weight ?? prev.weight,
+        packageDescription: data.packageDescription ?? prev.packageDescription,
+        paymentMethod: data.paymentMethod ?? prev.paymentMethod,
+        paymentNotes: data.paymentNotes ?? prev.paymentNotes,
+        image: data.image ?? prev.image,
+        images: data.images ?? prev.images,
+      }));
+
+      if (data.pickupPlace?.coordinates) {
+        setPickupAddressObj(data.pickupPlace);
+        setPickupCoordinates({ lat: data.pickupPlace.coordinates.lat, lng: data.pickupPlace.coordinates.lng });
+      }
+      if (data.deliveryPlace?.coordinates) {
+        setDeliveryAddressObj(data.deliveryPlace);
+        setDeliveryCoordinates({ lat: data.deliveryPlace.coordinates.lat, lng: data.deliveryPlace.coordinates.lng });
+      }
+    } catch (e) {
+      console.warn('[Book] Failed to restore booking_form_data from sessionStorage', e);
+      try { sessionStorage.removeItem('booking_form_data'); } catch (e2) { }
+    }
+  }, []);
+
   useEffect(() =>
   {
     const sp = new URLSearchParams(window.location.search);
@@ -509,9 +554,10 @@ const Book = () =>
       // If user selected online payment, create delivery record first (draft/pending),
       // then call payment initialize endpoint with the returned deliveryId.
       let response;
-      if (formData.image) {
+      const imageFiles = formData.images || (formData.image ? [formData.image] : []);
+      if (imageFiles.length > 0) {
         const fd = new FormData();
-        fd.append('images', formData.image);
+        imageFiles.forEach(file => fd.append('images', file));
         Object.entries(payload).forEach(([k, v]) =>
         {
           if (v === undefined || v === null) {
@@ -630,8 +676,12 @@ const Book = () =>
                   window.open(authorizationUrl, '_blank');
                 }
                 setIsProcessingPayment(false);
-                // Do not proceed further; payment will complete on hosted page
-                // The callback page will handle the redirect back to success
+                // Redirect main window to My Deliveries so user sees the new delivery and can track it while paying in popup
+                setTimeout(() =>
+                {
+                  router.push('/customer/deliveries', 'root', 'replace');
+                }, 400);
+                // Payment will complete in popup; callback/success page will refresh deliveries
                 return;
               } catch (navErr) {
                 console.error('Failed to navigate popup to authorizationUrl:', navErr);
@@ -755,12 +805,12 @@ const Book = () =>
         console.warn('[Book] Failed to clear form data:', e);
       }
 
-      setToastMsg('Delivery booked successfully!');
+      setToastMsg('Delivery booked successfully! Redirecting to your deliveries…');
       setShowToast(true);
       setTimeout(() =>
       {
         router.push('/customer/deliveries', 'root', 'replace');
-      }, 1500);
+      }, 600);
     } catch (err) {
       const data = err?.response?.data || err?.data;
       if (data?.errors && Array.isArray(data.errors)) {
@@ -828,8 +878,10 @@ const Book = () =>
         });
 
         if (response && response.data) {
-          setEstimatedPrice(response.data);
-          setDistanceKm(response.data.distance);
+          // Store inner payload so we have estimatedPrice, distance, pricingBreakdown (backend is source of truth)
+          const payload = response.data?.data ?? response.data;
+          setEstimatedPrice(payload);
+          setDistanceKm(payload.distance ?? response.data?.distance);
         }
       } catch (error) {
         console.error("Failed to fetch price estimate:", error);
@@ -901,58 +953,71 @@ const Book = () =>
   const getPricingBreakdown = () =>
   {
     if (estimatedPrice) {
-      // Use the applied delivery type fee which updates immediately on selection
+      const pb = estimatedPrice.pricingBreakdown;
+      // Prefer backend breakdown so displayed price matches stored price after create
+      if (pb && (estimatedPrice.estimatedPrice != null || pb.total != null)) {
+        const total = Number(estimatedPrice.estimatedPrice ?? pb.total ?? 0);
+        return {
+          total,
+          deliveryCharge: Number(pb.subtotal ?? total),
+          baseFare: Number(pb.baseFare ?? 0),
+          deliveryTypeFee: Number(pb.smartRideFee ?? 0),
+          distance: Number(estimatedPrice.distance ?? 0),
+          distanceCharge: Number(pb.distanceCharge ?? 0),
+          perKmRate: 0,
+          discountAmount: Number(pb.discount ?? 0),
+          discountPercentage: pb.discount ? (total + pb.discount) > 0 ? Math.round((pb.discount / (total + pb.discount)) * 100) : 0 : 0,
+          smartRideFee: Number(pb.smartRideFee ?? 0),
+          errandFee: Number(pb.errandFee ?? 0)
+        };
+      }
+      // Fallback if backend didn't return breakdown
       const deliveryTypeFee = appliedDeliveryTypeFee || 0;
       const distance = estimatedPrice.distance || 0;
-
-      // Always use correct pricing: ₦500 base (first 2km), ₦150/km after that
       const baseFare = 500;
       const distanceCharge = distance > 2 ? (distance - 2) * 150 : 0;
-
       return {
         total: baseFare + distanceCharge + deliveryTypeFee,
         deliveryCharge: baseFare + distanceCharge + deliveryTypeFee,
-        baseFare: 500, // Force correct base fare
+        baseFare,
         deliveryTypeFee,
         distance,
         distanceCharge,
-        perKmRate: 150, // Force correct per km rate
+        perKmRate: 150,
         discountAmount: estimatedPrice.pricingBreakdown?.discountAmount || 0,
-        discountPercentage: estimatedPrice.pricingBreakdown?.discountPercentage || 0
-      }
+        discountPercentage: estimatedPrice.pricingBreakdown?.discountPercentage || 0,
+        smartRideFee: 0,
+        errandFee: 0
+      };
     }
-    // Return safe defaults to prevent UI crashes
     return {
       total: 0,
-      baseFare: 500,
+      baseFare: 0,
       deliveryTypeFee: appliedDeliveryTypeFee || 0,
-      deliveryCharge: 500 + (appliedDeliveryTypeFee || 0),
+      deliveryCharge: appliedDeliveryTypeFee || 0,
       distance: 0,
       distanceCharge: 0,
-      perKmRate: 150,
+      perKmRate: 0,
       discountAmount: 0,
-      discountPercentage: 0
+      discountPercentage: 0,
+      smartRideFee: 0,
+      errandFee: 0
     };
   };
 
   const calculateTotal = () =>
   {
     const pricing = getPricingBreakdown();
-    const base = 500; // Base fare
-    const perKmRate = 150; // Per km rate after 2km
+    // Use backend total when available so it matches the price stored when delivery is created
+    if (pricing.total != null && pricing.total > 0) return pricing.total;
+
+    const base = 500;
+    const perKmRate = 150;
     const dtFee = Number(pricing.deliveryTypeFee || 0);
     const discount = Number(pricing.discountAmount || 0);
-
-    // Prefer using measured distance from state (set by backend estimate), fallback to pricing.distance
     const dist = (typeof distanceKm === 'number' && distanceKm > 0) ? Number(distanceKm) : Number(pricing.distance || 0);
-
-    // Distance charge: first 2km covered by base fare, charge ₦150/km after that
     let distanceCharge = 0;
-    if (dist > 2) {
-      const extraKm = dist - 2; // Use exact distance, not rounded
-      distanceCharge = extraKm * perKmRate;
-    }
-
+    if (dist > 2) distanceCharge = (dist - 2) * perKmRate;
     return Math.max(0, base + distanceCharge + dtFee - discount);
   };
 
@@ -984,11 +1049,21 @@ const Book = () =>
               <SmartRideBooking embedMode={true} initialData={{
                 senderName: formData.senderName,
                 senderPhone: formData.senderPhone,
-                pickupAddress: formData.pickupStreet || formData.pickupAddress || '',
-                deliveryAddress: formData.deliveryStreet || formData.deliveryAddress || '',
+                pickupAddress: formData.pickupStreet || formData.pickupAddress || (pickupAddressObj?.street || '') || '',
+                deliveryAddress: formData.deliveryStreet || formData.deliveryAddress || (deliveryAddressObj?.street || '') || '',
+                pickupPlace: pickupAddressObj || (pickupCoordinates?.lat ? { street: formData.pickupStreet || formData.pickupAddress, coordinates: pickupCoordinates } : null),
+                deliveryPlace: deliveryAddressObj || (deliveryCoordinates?.lat ? { street: formData.deliveryStreet || formData.deliveryAddress, coordinates: deliveryCoordinates } : null),
                 pickupDate: formData.pickupDate,
+                recipientName: formData.recipientName,
+                recipientPhone: formData.recipientPhone,
                 recipientEmail: formData.recipientEmail,
+                sizeCategory: formData.sizeCategory,
+                weightCategory: formData.weightCategory,
+                dimensions: formData.dimensions,
+                weight: formData.weight,
                 packageDescription: formData.packageDescription,
+                paymentMethod: formData.paymentMethod,
+                paymentNotes: formData.paymentNotes,
                 image: formData.image
               }} onClose={() =>
               {
@@ -1559,74 +1634,85 @@ const Book = () =>
 
 
 
-                  {/* Package Image Upload - Redesigned */}
+                  {/* Package Images Upload — up to 5 */}
                   <div className="mb-6">
-                    <label className="block text-sm font-medium text-[#0F172A] mb-3">Package Image (optional)</label>
-
-                    {/* Image Preview */}
-                    {formData.image && formData.image instanceof File && (
-                      <div className="mb-3">
-                        <img
-                          src={URL.createObjectURL(formData.image)}
-                          alt="Package preview"
-                          className="w-full h-48 object-cover rounded-xl border-2 border-[#00B75A]"
-                          onLoad={(e) => URL.revokeObjectURL(e.target.src)}
-                          onError={(e) =>
-                          {
-                            e.target.style.display = 'none';
-                            console.error('Failed to load image preview');
-                          }}
-                        />
-                      </div>
-                    )}
-
-                    <div className="border-2 border-dashed border-gray-300 rounded-xl p-6 hover:border-[#00B75A] transition-colors cursor-pointer bg-[#F8F9FA]">
-                      <input
-                        type="file"
-                        accept="image/*"
-                        id="package-image-upload"
-                        onChange={(e) => setFormData({ ...formData, image: e.target.files && e.target.files[0] ? e.target.files[0] : null })}
-                        className="hidden"
-                      />
-                      <label htmlFor="package-image-upload" className="cursor-pointer flex flex-col items-center justify-center text-center">
-                        {formData.image ? (
-                          <div className="w-full">
-                            <div className="flex items-center justify-between mb-2">
-                              <div className="flex items-center gap-2">
-                                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                                  <path d="M21 19V5c0-1.1-.9-2-2-2H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2zM8.5 13.5l2.5 3.01L14.5 12l4.5 6H5l3.5-4.5z" fill="#00B75A" />
-                                </svg>
-                                <span className="text-sm font-medium text-[#0F172A]">{formData.image.name}</span>
-                              </div>
-                              <button
-                                type="button"
-                                onClick={(e) =>
-                                {
-                                  e.preventDefault();
-                                  e.stopPropagation();
-                                  setFormData({ ...formData, image: null });
-                                }}
-                                className="text-red-500 hover:text-red-700"
-                              >
-                                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                                  <path d="M6 19c0 1.1.9 2 2 2h8c1.1 0 2-.9 2-2V7H6v12zM19 4h-3.5l-1-1h-5l-1 1H5v2h14V4z" fill="currentColor" />
-                                </svg>
-                              </button>
-                            </div>
-                            <p className="text-xs text-[#64748B]">Click to change image</p>
-                          </div>
-                        ) : (
-                          <>
-                            <svg width="48" height="48" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" className="mb-3">
-                              <path d="M21 19V5c0-1.1-.9-2-2-2H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2zM8.5 13.5l2.5 3.01L14.5 12l4.5 6H5l3.5-4.5z" fill="#94A3B8" />
-                            </svg>
-                            <p className="text-sm font-medium text-[#0F172A] mb-1">Click to upload package image</p>
-                            <p className="text-xs text-[#64748B]">PNG, JPG up to 10MB</p>
-                          </>
-                        )}
+                    <div className="flex items-center justify-between mb-3">
+                      <label className="block text-sm font-medium text-[#0F172A]">
+                        Package Images <span className="text-[#94A3B8] font-normal">(optional · up to 5)</span>
                       </label>
+                      {(formData.images || []).length > 0 && (
+                        <span className="text-xs text-[#64748B]">{(formData.images || []).length}/5 added</span>
+                      )}
                     </div>
+
+                    {/* Thumbnail row */}
+                    <div className="flex flex-wrap gap-3">
+                      {(formData.images || []).map((file, idx) => (
+                        <div
+                          key={idx}
+                          className="relative w-24 h-24 rounded-xl overflow-hidden border-2 border-[#00B75A] flex-shrink-0"
+                        >
+                          <img
+                            src={URL.createObjectURL(file)}
+                            alt={`Package ${idx + 1}`}
+                            className="w-full h-full object-cover"
+                          />
+                          {/* Remove button */}
+                          <button
+                            type="button"
+                            onClick={() =>
+                            {
+                              const updated = (formData.images || []).filter((_, i) => i !== idx);
+                              setFormData({ ...formData, images: updated });
+                            }}
+                            className="absolute top-1 right-1 w-5 h-5 bg-red-500 rounded-full flex items-center justify-center hover:bg-red-600 transition-colors"
+                            title="Remove image"
+                          >
+                            <svg width="10" height="10" viewBox="0 0 24 24" fill="none">
+                              <path d="M18 6L6 18M6 6l12 12" stroke="white" strokeWidth="3" strokeLinecap="round" />
+                            </svg>
+                          </button>
+                        </div>
+                      ))}
+
+                      {/* Add tile — shown while under the limit */}
+                      {(formData.images || []).length < 5 && (
+                        <>
+                          <input
+                            type="file"
+                            accept="image/*"
+                            multiple
+                            id="package-image-upload"
+                            className="hidden"
+                            onChange={(e) =>
+                            {
+                              const incoming = Array.from(e.target.files || []);
+                              const existing = formData.images || [];
+                              const combined = [...existing, ...incoming].slice(0, 5);
+                              setFormData({ ...formData, images: combined });
+                              e.target.value = ''; // reset so same file can be re-added
+                            }}
+                          />
+                          <label
+                            htmlFor="package-image-upload"
+                            className="w-24 h-24 rounded-xl border-2 border-dashed border-gray-300 hover:border-[#00B75A] transition-colors cursor-pointer flex flex-col items-center justify-center bg-[#F8F9FA] hover:bg-[#F0FDF4] flex-shrink-0"
+                          >
+                            <svg width="28" height="28" viewBox="0 0 24 24" fill="none" className="mb-1">
+                              <path d="M12 5v14M5 12h14" stroke="#94A3B8" strokeWidth="2.5" strokeLinecap="round" />
+                            </svg>
+                            <span className="text-[10px] text-[#94A3B8] text-center leading-tight px-1">
+                              {(formData.images || []).length === 0 ? 'Add photos' : 'Add more'}
+                            </span>
+                          </label>
+                        </>
+                      )}
+                    </div>
+
+                    {(formData.images || []).length === 0 && (
+                      <p className="text-xs text-[#94A3B8] mt-2">PNG, JPG, WebP up to 10MB each</p>
+                    )}
                   </div>
+
 
                   {/* Payment Method - exact copy from SmartRide */}
                   <div className="mb-6">
@@ -1717,6 +1803,29 @@ const Book = () =>
                   </div>
                 </div>
 
+                {/* Discount / Launch offer notice */}
+                {(() =>
+                {
+                  const pricing = getPricingBreakdown();
+                  const hasDiscount = (pricing.discountAmount ?? 0) > 0;
+                  const note = estimatedPrice?.note;
+                  const showNote = note && typeof note === 'string' && note.trim();
+                  if (!hasDiscount && !showNote) return null;
+                  return (
+                    <div className="mb-4 rounded-xl p-4 flex items-start gap-3 bg-green-50 border border-green-200">
+                      <span className="text-green-600 flex-shrink-0 mt-0.5" aria-hidden>✓</span>
+                      <div className="flex-1 min-w-0">
+                        {hasDiscount && (
+                          <p className="text-sm font-medium text-green-800 mb-1">
+                            You&apos;re eligible for a discount of ₦{(pricing.discountAmount ?? 0).toLocaleString()} on this delivery.
+                          </p>
+                        )}
+                        {showNote && <p className="text-xs text-green-700">{note.trim()}</p>}
+                      </div>
+                    </div>
+                  );
+                })()}
+
                 {/* Cost Breakdown */}
                 <div className="bg-[#F0FDF4] rounded-xl p-4 md:p-6 mb-6">
                   <h3 className="text-base font-semibold text-[#0F172A] mb-4">Cost Breakdown</h3>
@@ -1729,28 +1838,30 @@ const Book = () =>
                           {/* Base Fare */}
                           <div className="flex justify-between items-center text-[#0F172A]">
                             <span className="text-sm md:text-base">Base Fare</span>
-                            <span className="text-sm md:text-base font-medium">₦{pricing.baseFare.toLocaleString()}</span>
+                            <span className="text-sm md:text-base font-medium">₦{(pricing.baseFare ?? 0).toLocaleString()}</span>
                           </div>
 
-
-
-
-                          {/* Batch Discount */}
-                          {pricing.discountAmount > 0 && (
-                            <div className="flex justify-between items-center text-green-700">
-                              <span className="text-sm">Batch Discount ({pricing.discountPercentage}%)</span>
-                              <span className="text-sm font-medium">-₦{pricing.discountAmount.toLocaleString()}</span>
+                          {/* Distance charge (from backend) */}
+                          {(pricing.distanceCharge ?? 0) > 0 && (
+                            <div className="flex justify-between items-center text-[#0F172A]">
+                              <span className="text-sm md:text-base">Distance ({pricing.distance?.toFixed(1) ?? 0} km)</span>
+                              <span className="text-sm md:text-base font-medium">₦{(pricing.distanceCharge ?? 0).toLocaleString()}</span>
                             </div>
                           )}
 
-                          {/* Insurance removed */}
+                          {/* Smart Ride fee */}
+                          {(pricing.smartRideFee ?? pricing.deliveryTypeFee ?? 0) > 0 && (
+                            <div className="flex justify-between items-center text-[#0F172A]">
+                              <span className="text-sm md:text-base">Smart Ride</span>
+                              <span className="text-sm md:text-base font-medium">₦{(pricing.smartRideFee ?? pricing.deliveryTypeFee ?? 0).toLocaleString()}</span>
+                            </div>
+                          )}
 
-                          {/* Total */}
-                          {/* Delivery type fee (e.g., Express/SmartRide) */}
-                          {pricing.deliveryTypeFee > 0 && (
-                            <div className="sr-only">
-                              <span>{(formData.deliveryType || '').toString().toUpperCase()}</span>
-                              <span>₦{pricing.deliveryTypeFee.toLocaleString()}</span>
+                          {/* Batch / Launch discount */}
+                          {(pricing.discountAmount ?? 0) > 0 && (
+                            <div className="flex justify-between items-center text-green-700">
+                              <span className="text-sm">Discount{pricing.discountPercentage ? ` (${pricing.discountPercentage}%)` : ''}</span>
+                              <span className="text-sm font-medium">-₦{(pricing.discountAmount ?? 0).toLocaleString()}</span>
                             </div>
                           )}
 

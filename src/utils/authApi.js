@@ -607,6 +607,11 @@ export async function getRiderDeliveries(page = 1, limit = 10) {
   return apiClient.get(`/api/driver/my-deliveries?page=${page}&limit=${limit}`);
 }
 
+export async function getRiderDeliveryById(deliveryId) {
+  if (!deliveryId) throw new Error('deliveryId is required');
+  return apiClient.get(`/api/driver/deliveries/${deliveryId}`);
+}
+
 export async function updateDeliveryStatus(deliveryId, statusData) {
   if (!deliveryId) throw new Error("deliveryId is required");
   return apiClient.put(
@@ -675,10 +680,17 @@ export async function uploadRiderProfileImage(file) {
 
 export async function createDelivery(payload) {
   if (payload instanceof FormData) {
-    return apiClient.post("/api/customer/deliveries", payload);
+    // IMPORTANT: delete the default Content-Type so axios auto-sets
+    // "multipart/form-data; boundary=..." which multer requires.
+    // If Content-Type: application/json is left in place, multer never
+    // parses req.files and images are silently dropped.
+    return apiClient.post("/api/customer/deliveries", payload, {
+      headers: { "Content-Type": undefined },
+    });
   }
   return apiClient.post("/api/customer/deliveries", payload);
 }
+
 
 export async function getDeliveryEstimate(params) {
   const {
@@ -705,6 +717,23 @@ export async function getDeliveryEstimate(params) {
 }
 
 // Payment-related client helpers
+/**
+ * Verify payment by Paystack reference (no auth required on backend).
+ * Uses same API base URL as rest of app. Call after redirect from Paystack.
+ */
+export async function verifyPaymentByReference(reference) {
+  if (!reference || typeof reference !== "string") throw new Error("reference is required");
+  const res = await apiClient.get(`/api/payment/verify-reference/${encodeURIComponent(reference.trim())}`);
+  return res.data;
+}
+
+/** Authenticated verify (uses auth cookie). Same API base as rest of app. */
+export async function verifyPayment(paymentId) {
+  if (!paymentId) throw new Error("paymentId is required");
+  const res = await apiClient.get(`/api/payment/verify/${encodeURIComponent(paymentId)}`);
+  return res.data;
+}
+
 export async function getPaymentStatus(paymentId) {
   if (!paymentId) throw new Error("paymentId is required");
   return apiClient.get(`/api/payment/status/${paymentId}`);
@@ -736,6 +765,17 @@ export async function getCustomerDeliveries(options = {}) {
 export async function getDeliveryById(deliveryId) {
   if (!deliveryId) throw new Error("deliveryId is required");
   return apiClient.get(`/api/customer/deliveries/${deliveryId}`);
+}
+
+/**
+ * Fetch PDF receipt for a paid delivery. Returns blob; caller should trigger download.
+ */
+export async function getDeliveryReceiptPdf(deliveryId) {
+  if (!deliveryId) throw new Error("deliveryId is required");
+  const response = await apiClient.get(`/api/customer/deliveries/${deliveryId}/receipt`, {
+    responseType: "blob",
+  });
+  return response.data;
 }
 
 export async function rateDriver(deliveryId, payload) {
@@ -905,15 +945,62 @@ export async function payDebt(payload = {}) {
 }
 
 /**
- * Request payout (driver)
+ * Resolve bank account number to account name (Paystack). Requires bank code + 10-digit account number.
+ * @param {string} bankCode - Bank code (e.g. 058)
+ * @param {string} accountNumber - 10-digit account number
+ * @returns {Promise<{ accountName: string }>}
+ */
+export async function resolveBankAccount(bankCode, accountNumber) {
+  const code = (bankCode || "").trim();
+  const num = (accountNumber || "").replace(/\D/g, "");
+  if (!code || num.length < 10) throw new Error("Bank code and 10-digit account number are required");
+  const res = await apiClient.get("/api/driver/bank/resolve-account", {
+    params: { bankCode: code, accountNumber: num },
+  });
+  const data = res?.data?.data ?? res?.data;
+  return { accountName: data?.accountName ?? data?.account_name };
+}
+
+/**
+ * Update driver bank details. If rider has withdrawal PIN set, include withdrawalPin to confirm.
+ * @param {object} payload - { bankCode, accountNumber, accountName, withdrawalPin? }
+ */
+export async function updateBankDetails(payload) {
+  const { bankCode, accountNumber, accountName, withdrawalPin } = payload;
+  if (!bankCode || !accountNumber || !accountName)
+    throw new Error("Bank code, account number and account name are required");
+  const body = { bankCode, accountNumber, accountName };
+  if (withdrawalPin != null && withdrawalPin !== "") body.withdrawalPin = withdrawalPin;
+  return apiClient.put("/api/driver/bank-details", body);
+}
+
+/**
+ * Set or change withdrawal PIN
+ * @param {object} payload - { currentPassword? (when setting), currentPin? (when changing), newPin }
+ */
+export async function setWithdrawalPin(payload) {
+  const { currentPassword, currentPin, newPin } = payload;
+  if (!newPin || newPin.length < 4 || newPin.length > 6 || !/^\d+$/.test(newPin))
+    throw new Error("New PIN must be 4-6 digits");
+  return apiClient.post("/api/driver/withdrawal-pin", {
+    currentPassword: currentPassword || undefined,
+    currentPin: currentPin || undefined,
+    newPin,
+  });
+}
+
+/**
+ * Request payout (driver). Requires bank details and withdrawal PIN.
  * @param {number} amount - Payout amount
+ * @param {string} withdrawalPin - 4-6 digit PIN
  * @returns {Promise} Payout request result
  */
-export async function requestPayout(amount) {
+export async function requestPayout(amount, withdrawalPin) {
   if (!amount || amount <= 0)
     throw new Error("Valid payout amount is required");
-  const payload = { amount };
-  return apiClient.post("/api/driver/payout/request", payload);
+  if (!withdrawalPin || typeof withdrawalPin !== "string" || withdrawalPin.length < 4 || withdrawalPin.length > 6 || !/^\d+$/.test(withdrawalPin))
+    throw new Error("Withdrawal PIN must be 4-6 digits");
+  return apiClient.post("/api/driver/payout/request", { amount, withdrawalPin });
 }
 
 /**
@@ -1036,6 +1123,7 @@ export default {
   createDelivery,
   getCustomerDeliveries,
   getDeliveryById,
+  getDeliveryReceiptPdf,
   getDeliveryByTracking,
   getNearbyRiders,
   rateDriver,

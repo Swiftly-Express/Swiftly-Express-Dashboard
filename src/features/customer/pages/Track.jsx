@@ -7,7 +7,8 @@ import Loader from '../../../components/Loader';
 import TrackingMap from '../../../components/TrackingMap';
 import DeliveryChat from '../../../components/DeliveryChat';
 // RatingModal is mounted globally in CustomerLayout and triggered via window events
-import { getDeliveryByTracking, rateDriver } from '../../../utils/authApi';
+import { getDeliveryByTracking, rateDriver, initializePayment, verifyPaymentByReference } from '../../../utils/authApi';
+import { getCookie, setCookie, deleteCookie, getJSONCookie } from '../../../utils/cookies';
 import socketService from '../../../services/socket.service'; // NEW
 import { playNotificationSound } from '../../../utils/notificationSound';
 import BlockIcon from '../../../icons/Blockicon';
@@ -19,8 +20,72 @@ const sideBottomShadow = {
   boxShadow: '2px 2px 4px rgba(0,0,0,0.06), -2px 2px 4px rgba(0,0,0,0.06), 0 4px 8px rgba(0,0,0,0.08)'
 };
 
+// Gallery component for package images in customer track page
+const PackageImageGallery = ({ images }) =>
+{
+  const [lightboxUrl, setLightboxUrl] = React.useState(null);
+  const [errored, setErrored] = React.useState({});
+
+  const validImages = images.filter((_, i) => !errored[i]);
+
+  return (
+    <>
+      {/* Thumbnail row */}
+      <div className="flex gap-3 overflow-x-auto pb-1">
+        {images.map((url, i) => (
+          !errored[i] && (
+            <div
+              key={i}
+              onClick={() => setLightboxUrl(url)}
+              className="flex-shrink-0 w-32 h-32 rounded-xl overflow-hidden bg-gray-100 border border-gray-200 cursor-pointer hover:opacity-90 transition-opacity shadow-sm"
+            >
+              <img
+                src={url}
+                alt={`Package image ${i + 1}`}
+                className="w-full h-full object-cover"
+                onError={() => setErrored(prev => ({ ...prev, [i]: true }))}
+              />
+            </div>
+          )
+        ))}
+        {validImages.length === 0 && (
+          <div className="w-full h-40 rounded-xl bg-gray-50 border-2 border-dashed border-gray-200 flex flex-col items-center justify-center">
+            <svg width="40" height="40" viewBox="0 0 24 24" fill="none" className="mb-2 opacity-40">
+              <path d="M21 19V5c0-1.1-.9-2-2-2H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2zM8.5 13.5l2.5 3.01L14.5 12l4.5 6H5l3.5-4.5z" fill="#CBD5E1" />
+            </svg>
+            <p className="text-xs text-[#94A3B8]">No package images available</p>
+          </div>
+        )}
+      </div>
+
+      {/* Lightbox */}
+      {lightboxUrl && (
+        <div
+          style={{ position: 'fixed', inset: 0, backgroundColor: 'rgba(0,0,0,0.85)', zIndex: 99999, display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+          onClick={() => setLightboxUrl(null)}
+        >
+          <button
+            onClick={() => setLightboxUrl(null)}
+            style={{ position: 'absolute', top: 16, right: 16, background: 'rgba(255,255,255,0.15)', border: 'none', color: '#fff', fontSize: 28, cursor: 'pointer', borderRadius: '50%', width: 44, height: 44, display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+            aria-label="Close image"
+          >✕</button>
+          <img
+            src={lightboxUrl}
+            alt="Package"
+            style={{ maxWidth: '92vw', maxHeight: '88vh', objectFit: 'contain', borderRadius: 12, boxShadow: '0 8px 40px rgba(0,0,0,0.6)' }}
+            onClick={(e) => e.stopPropagation()}
+          />
+        </div>
+      )}
+    </>
+  );
+};
+
+
+
 // Format Nigerian phone for display; normalize for tel: link (0xxx → +234xxx)
-const formatNigerianPhone = (phone) => {
+const formatNigerianPhone = (phone) =>
+{
   if (!phone || typeof phone !== 'string') return '';
   const cleaned = phone.replace(/[\s\-()]/g, '').replace(/[^0-9+]/g, '');
   if (cleaned.length < 7) return phone;
@@ -29,7 +94,8 @@ const formatNigerianPhone = (phone) => {
   if (cleaned.startsWith('234')) return `+234 ${cleaned.slice(3, 6)} ${cleaned.slice(6, 9)} ${cleaned.slice(9)}`;
   return cleaned.length >= 10 ? `${cleaned.slice(0, 4)} ${cleaned.slice(4, 7)} ${cleaned.slice(7)}` : phone;
 };
-const normalizePhoneForTel = (phone) => {
+const normalizePhoneForTel = (phone) =>
+{
   if (!phone || typeof phone !== 'string') return '';
   let cleaned = phone.replace(/[\s\-()]/g, '').replace(/[^0-9+]/g, '');
   if (cleaned.startsWith('+234')) return cleaned;
@@ -39,7 +105,8 @@ const normalizePhoneForTel = (phone) => {
   return cleaned ? `+234${cleaned}` : '';
 };
 
-const Track = () => {
+const Track = () =>
+{
   const [trackingId, setTrackingId] = useState('');
   const [deliveryData, setDeliveryData] = useState(null);
   const [loading, setLoading] = useState(false);
@@ -47,14 +114,17 @@ const Track = () => {
   const [showToast, setShowToast] = useState(false);
   const [driverLocation, setDriverLocation] = useState(null);
   const [hasRated, setHasRated] = useState(false);
+  const [isPaymentProcessing, setIsPaymentProcessing] = useState(false);
   const params = useParams();
 
   // Auto-fetch when a trackingId is present in the URL (e.g. /customer/track/SX-... or /track/SX-...)
-  useEffect(() => {
+  useEffect(() =>
+  {
     const paramId = params?.trackingId;
     if (!paramId) return;
 
-    const fetchByParam = async () => {
+    const fetchByParam = async () =>
+    {
       setTrackingId(paramId);
       setLoading(true);
       try {
@@ -76,8 +146,10 @@ const Track = () => {
   }, [params?.trackingId]);
 
   // Listen for delivery updates and refresh if the current delivery changes
-  useEffect(() => {
-    const handleDeliveryUpdated = (event) => {
+  useEffect(() =>
+  {
+    const handleDeliveryUpdated = (event) =>
+    {
       if (deliveryData && event.detail) {
         const updatedDeliveryId = event.detail.deliveryId || event.detail.id;
         const currentDeliveryId = deliveryData._id || deliveryData.id;
@@ -109,7 +181,8 @@ const Track = () => {
             !deliveryData.rating &&
             !deliveryData.customerRating) {
             console.log('[Track] ⭐ Triggering rating modal in 1.5s for delivery:', deliveryData._id || deliveryData.id);
-            setTimeout(() => {
+            setTimeout(() =>
+            {
               console.log('[Track] 🚀 Dispatching rating:show event now!', deliveryData);
               window.dispatchEvent(new CustomEvent('rating:show', { detail: deliveryData }));
             }, 1500);
@@ -129,14 +202,16 @@ const Track = () => {
       socketService.connect();
       socketService.joinRoom(deliveryId);
 
-      const handleLocationUpdate = (data) => {
+      const handleLocationUpdate = (data) =>
+      {
         if (data && data.location) {
           console.log('[Track] Driver location updated:', data.location);
           setDriverLocation(data.location);
         }
       };
 
-      const handleStatusUpdate = (data) => {
+      const handleStatusUpdate = (data) =>
+      {
         console.log('[Track] Socket status update received:', data);
         if (data) {
           const newStatus = data.status || data.newStatus;
@@ -164,7 +239,8 @@ const Track = () => {
               !deliveryData.rating &&
               !deliveryData.customerRating) {
               console.log('[Track] ⭐ Triggering rating modal in 1.5s for delivery (socket):', deliveryData._id || deliveryData.id);
-              setTimeout(() => {
+              setTimeout(() =>
+              {
                 console.log('[Track] 🚀 Dispatching rating:show event now (socket)!', deliveryData);
                 window.dispatchEvent(new CustomEvent('rating:show', { detail: deliveryData }));
               }, 1500);
@@ -194,7 +270,8 @@ const Track = () => {
         }
       }
 
-      socketCleanup = () => {
+      socketCleanup = () =>
+      {
         socketService.leaveRoom(deliveryId);
         socketService.off('delivery:location:updated', handleLocationUpdate);
         socketService.off('delivery:statusChanged', handleStatusUpdate);
@@ -202,13 +279,15 @@ const Track = () => {
       };
     }
 
-    return () => {
+    return () =>
+    {
       window.removeEventListener('delivery:updated', handleDeliveryUpdated);
       socketCleanup();
     };
   }, [deliveryData]);
 
-  const handleTrack = async (e) => {
+  const handleTrack = async (e) =>
+  {
     e.preventDefault();
 
     if (!trackingId.trim()) {
@@ -237,7 +316,8 @@ const Track = () => {
         console.log('[Track] ⭐ Delivery completed and not rated, triggering modal in 2s');
         // Play notification sound for completed delivery
         playNotificationSound();
-        setTimeout(() => {
+        setTimeout(() =>
+        {
           console.log('[Track] 🚀 Dispatching rating:show event for tracked delivery!', data);
           window.dispatchEvent(new CustomEvent('rating:show', { detail: data }));
         }, 2000);
@@ -253,7 +333,8 @@ const Track = () => {
     }
   };
 
-  const getStatusColor = (status) => {
+  const getStatusColor = (status) =>
+  {
     const statusLower = status?.toLowerCase() || '';
     if (statusLower === 'delivered') return 'bg-green-500';
     if (statusLower === 'in-transit' || statusLower === 'in transit') return 'bg-blue-500';
@@ -262,7 +343,8 @@ const Track = () => {
     return 'bg-gray-400';
   };
 
-  const getStatusBadge = (status) => {
+  const getStatusBadge = (status) =>
+  {
     const statusLower = status?.toLowerCase() || '';
     if (statusLower === 'delivered') return 'bg-green-100 text-green-700';
     if (statusLower === 'in-transit' || statusLower === 'in transit') return 'bg-[#00B75A] text-[#FFFFFF]';
@@ -271,7 +353,8 @@ const Track = () => {
     return 'bg-gray-100 text-gray-700';
   };
 
-  const formatDate = (dateString) => {
+  const formatDate = (dateString) =>
+  {
     if (!dateString) return 'N/A';
     try {
       const date = new Date(dateString);
@@ -285,7 +368,8 @@ const Track = () => {
     }
   };
 
-  const formatTime = (dateString) => {
+  const formatTime = (dateString) =>
+  {
     if (!dateString) return '';
     try {
       const date = new Date(dateString);
@@ -314,7 +398,8 @@ const Track = () => {
   const recipientEmail = recipientEmailRaw && String(recipientEmailRaw).trim() ? String(recipientEmailRaw).trim() : 'N/A';
   const recipientAddressLine = deliveryData?.deliveryAddress?.street || deliveryData?.deliveryAddress?.address || deliveryData?.deliveryAddress || deliveryData?.deliveryAddressString || '';
   // Weight: avoid appending " kg" if value already contains "kg" (fixes "0-5 kg kg")
-  const weightDisplay = (() => {
+  const weightDisplay = (() =>
+  {
     const w = deliveryData?.packageDetails?.weight;
     if (!w) return 'N/A';
     const s = String(w).trim();
@@ -322,8 +407,194 @@ const Track = () => {
     return s ? `${s} kg` : 'N/A';
   })();
 
+  const refetchDelivery = async () =>
+  {
+    const id = params?.trackingId || trackingId || deliveryData?.trackingNumber || deliveryData?.trackingId;
+    if (!id) return;
+    try {
+      const response = await getDeliveryByTracking(id);
+      const data = response?.data?.delivery || response?.delivery || response?.data || response;
+      setDeliveryData(data);
+    } catch (e) {
+      console.warn('[Track] Refetch after payment failed', e);
+    }
+  };
+
+  useEffect(() =>
+  {
+    const onPaymentCompleted = () =>
+    {
+      refetchDelivery();
+      setToastMsg('Payment completed successfully.');
+      setShowToast(true);
+    };
+    window.addEventListener('payment:completed', onPaymentCompleted);
+    return () => window.removeEventListener('payment:completed', onPaymentCompleted);
+  }, [params?.trackingId, trackingId, deliveryData?.trackingNumber]);
+
+  // Refetch delivery when user returns to this tab (e.g. after completing payment in popup).
+  // If we have a pending_payment_id cookie (user just came back from Paystack), verify once then refetch.
+  useEffect(() =>
+  {
+    const onVisibilityChange = async () =>
+    {
+      if (document.visibilityState !== 'visible') return;
+      const pendingRef = getCookie('pending_payment_id');
+      if (pendingRef && deliveryData) {
+        try {
+          await verifyPaymentByReference(pendingRef);
+          deleteCookie('pending_payment_id');
+          deleteCookie('pending_payment_delivery_id');
+        } catch (e) {
+          console.warn('[Track] Verify by reference on visibility failed', e);
+        }
+      }
+      if (deliveryData) refetchDelivery();
+    };
+    document.addEventListener('visibilitychange', onVisibilityChange);
+    return () => document.removeEventListener('visibilitychange', onVisibilityChange);
+  }, [params?.trackingId, trackingId, deliveryData?.trackingNumber]);
+
+  const handlePayNow = async () =>
+  {
+    const deliveryId = deliveryData?._id || deliveryData?.id;
+    if (!deliveryId) {
+      setToastMsg('Unable to start payment.');
+      setShowToast(true);
+      return;
+    }
+    const amountRaw = deliveryData?.price ?? deliveryData?.total ?? deliveryData?.amount ?? 0;
+    const amount = typeof amountRaw === 'string' ? parseFloat(amountRaw.replace(/[^0-9.-]+/g, '')) : Number(amountRaw) || 0;
+    const email = deliveryData?.recipientInfo?.email || deliveryData?.recipientEmail || (getJSONCookie && getJSONCookie('user_data')?.email) || 'customer@swiftlyxpress.com';
+
+    let paymentWindow = null;
+    try {
+      paymentWindow = window.open('', '_blank');
+      if (paymentWindow) paymentWindow.document.write('<p>Preparing payment...</p>');
+    } catch (e) {
+      paymentWindow = null;
+    }
+
+    try {
+      setIsPaymentProcessing(true);
+      setToastMsg('Preparing payment...');
+      setShowToast(true);
+
+      const initJson = await initializePayment(deliveryId, {
+        amount,
+        currency: 'NGN',
+        email,
+        callback_url: `${window.location.origin}/customer/payment/callback`,
+        metadata: { deliveryId },
+      });
+
+      const initPayload = initJson?.data || initJson;
+      const paymentObj = initPayload?.data?.payment || initPayload?.payment || initPayload?.data;
+      const paymentReference = paymentObj?.reference || paymentObj?.id || paymentObj?.paymentId;
+      const authorizationUrl = paymentObj?.authorizationUrl || paymentObj?.authorization_url || paymentObj?.url || paymentObj?.payment_url;
+
+      if (deliveryId) setCookie('pending_payment_delivery_id', String(deliveryId), 1);
+      if (paymentReference) setCookie('pending_payment_id', String(paymentReference), 1);
+
+      const cleanupOnCancel = () =>
+      {
+        try {
+          deleteCookie('pending_payment_delivery_id');
+          deleteCookie('pending_payment_id');
+        } catch (e) { }
+        setIsPaymentProcessing(false);
+      };
+
+      if (authorizationUrl) {
+        try {
+          if (paymentWindow) paymentWindow.location.href = authorizationUrl;
+          else window.open(authorizationUrl, '_blank');
+
+          const popupInterval = setInterval(async () =>
+          {
+            try {
+              if (!paymentWindow || paymentWindow.closed) {
+                clearInterval(popupInterval);
+
+                // Wait briefly for the PaymentSuccess page to finish deleting cookies
+                // and dispatching events, then always verify + refetch regardless.
+                await new Promise(r => setTimeout(r, 1800));
+
+                const pendingRef = getCookie('pending_payment_id');
+                const pendingDelivery = getCookie('pending_payment_delivery_id');
+                console.log('[Track] Popup closed. pendingRef:', pendingRef, 'pendingDelivery:', pendingDelivery);
+
+                // If the cookies are still there the user may have abandoned payment,
+                // but we still verify to be sure (Paystack may have succeeded anyway).
+                if (pendingRef) {
+                  try {
+                    console.log('[Track] Verifying payment reference after popup close:', pendingRef);
+                    await verifyPaymentByReference(pendingRef);
+                    deleteCookie('pending_payment_id');
+                    deleteCookie('pending_payment_delivery_id');
+                  } catch (ve) {
+                    console.warn('[Track] Post-popup verify failed:', ve?.response?.status, ve?.message);
+                    // Clean up cookies either way
+                    deleteCookie('pending_payment_id');
+                    deleteCookie('pending_payment_delivery_id');
+                  }
+                }
+
+                // Always re-fetch the delivery to reflect the latest payment status.
+                setIsPaymentProcessing(false);
+                await refetchDelivery();
+
+                // Dispatch event so other listeners (e.g. MyDeliveries) can refresh too.
+                window.dispatchEvent(new CustomEvent('payment:completed', { detail: { deliveryId: pendingDelivery } }));
+                window.dispatchEvent(new Event('deliveries:refresh'));
+              }
+            } catch (e) {
+              clearInterval(popupInterval);
+              setIsPaymentProcessing(false);
+            }
+          }, 1000);
+          return;
+        } catch (navErr) {
+          console.warn('[Track] Failed to open payment URL', navErr);
+        }
+      }
+
+
+      if (paymentReference) {
+        try {
+          if (paymentWindow) paymentWindow.close();
+        } catch (e) { }
+        const PaystackPop = (await import('@paystack/inline-js')).default;
+        const paystackPublicKey = import.meta.env.VITE_PAYSTACK_PUBLIC_KEY || 'pk_test_xxxx';
+        const handler = PaystackPop.setup({
+          key: paystackPublicKey,
+          email,
+          amount: Math.round((amount || 0) * 100),
+          ref: paymentReference,
+          onClose: cleanupOnCancel,
+          callback: () =>
+          {
+            try {
+              deleteCookie('pending_payment_delivery_id');
+              deleteCookie('pending_payment_id');
+            } catch (e) { }
+            window.location.href = '/customer/payment/callback';
+          },
+        });
+        handler.openIframe();
+      }
+    } catch (err) {
+      console.error('[Track] Payment init error', err);
+      setToastMsg(err?.message || 'Failed to start payment');
+      setShowToast(true);
+    } finally {
+      setIsPaymentProcessing(false);
+    }
+  };
+
   // Handle rating submission
-  const handleSubmitRating = async (ratingData) => {
+  const handleSubmitRating = async (ratingData) =>
+  {
     try {
       console.log('[Track] Submitting rating:', ratingData);
       // Only send rating field - backend doesn't accept comment or driverId
@@ -475,10 +746,70 @@ const Track = () => {
                   <DeliveryChat
                     deliveryId={deliveryData._id || deliveryData.id}
                     currentUserRole="customer"
+                    canSend={!!deliveryData.driver}
                     maxHeight="280px"
                   />
                 </div>
               )}
+
+              {/* Payment information and Pay now */}
+              <div className="bg-white rounded-2xl p-6" style={sideBottomShadow}>
+                <YummyText>
+                  <div className="text-sm font-medium text-[#0F172A] mb-4">Payment</div>
+                  <div className="space-y-3">
+                    <div className="flex justify-between items-center">
+                      <span className="text-sm text-[#64748B]">Amount</span>
+                      <span className="text-sm font-medium text-[#0F172A]">
+                        ₦{(deliveryData.price != null ? Number(deliveryData.price) : 0).toLocaleString('en-NG', { minimumFractionDigits: 2 })}
+                      </span>
+                    </div>
+                    <div className="border-t border-gray-200 my-3" />
+                    <div className="flex justify-between items-center">
+                      <span className="text-sm text-[#64748B]">Method</span>
+                      <span className="text-sm font-medium text-[#0F172A] capitalize">
+                        {(deliveryData.paymentMethod || deliveryData.payment?.method || 'Cash').replace(/_/g, ' ')}
+                      </span>
+                    </div>
+                    <div className="border-t border-gray-200 my-3" />
+                    <div className="flex justify-between items-center">
+                      <span className="text-sm text-[#64748B]">Status</span>
+                      {(() =>
+                      {
+                        const ps = (deliveryData.paymentStatus || deliveryData.payment?.status || '').toLowerCase();
+                        if (ps === 'paid') {
+                          return <span className="px-3 py-1 rounded-full text-xs font-medium bg-green-100 text-green-700">Paid</span>;
+                        }
+                        const method = (deliveryData.paymentMethod || deliveryData.payment?.method || '').toString().toLowerCase();
+                        if (method === 'cash' || method === 'cash_on_delivery' || method === 'cod') {
+                          return <span className="px-3 py-1 rounded-full text-xs font-medium bg-gray-100 text-gray-700">Pay on delivery</span>;
+                        }
+                        return <span className="px-3 py-1 rounded-full text-xs font-medium bg-amber-100 text-amber-700">Unpaid</span>;
+                      })()}
+                    </div>
+                    {(() =>
+                    {
+                      const paymentStatus = (deliveryData.paymentStatus || deliveryData.payment?.status || '').toLowerCase();
+                      const method = (deliveryData.paymentMethod || deliveryData.payment?.method || '').toString().toLowerCase().trim();
+                      const isCod = method === 'cash' || method === 'cash_on_delivery' || method === 'cod';
+                      const canPay = (paymentStatus === 'pending' || paymentStatus === 'unpaid' || paymentStatus === 'failed') &&
+                        deliveryData.status?.toLowerCase() !== 'cancelled';
+                      if (!canPay) return null;
+                      return (
+                        <div className="pt-3">
+                          <button
+                            type="button"
+                            onClick={handlePayNow}
+                            disabled={isPaymentProcessing}
+                            className="w-full py-3 bg-[#00B75A] hover:bg-[#00a352] disabled:opacity-50 disabled:cursor-not-allowed text-white rounded-xl font-medium transition-colors"
+                          >
+                            {isPaymentProcessing ? 'Preparing payment...' : (isCod ? 'Pay online instead' : 'Pay now')}
+                          </button>
+                        </div>
+                      );
+                    })()}
+                  </div>
+                </YummyText>
+              </div>
 
               {/* Package Details and Recipient Information */}
               <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
@@ -527,6 +858,15 @@ const Track = () => {
                         <span className="text-sm text-[#64748B]">Weight</span>
                         <span className="text-sm font-medium text-[#0F172A]">
                           {weightDisplay}
+                        </span>
+                      </div>
+
+                      <div className="border-t border-gray-200 my-3"></div>
+
+                      <div className="flex justify-between items-center">
+                        <span className="text-sm text-[#64748B]">Dimensions</span>
+                        <span className="text-sm font-medium text-[#0F172A]">
+                          {deliveryData.packageDetails?.dimensions || 'N/A'}
                         </span>
                       </div>
 
@@ -592,6 +932,52 @@ const Track = () => {
                   </YummyText>
                 </div>
               </div>
+
+              {/* Package Images */}
+              {(() =>
+              {
+                // Collect all image URLs — check packageDetails.images FIRST (canonical field).
+                // Use a helper that skips empty arrays, so a top-level `images: []` default
+                // doesn't short-circuit and hide real images in packageDetails.images.
+                const nonEmpty = (v) => Array.isArray(v) ? v.length > 0 : Boolean(v);
+                const rawImages =
+                  (nonEmpty(deliveryData?.packageDetails?.images) && deliveryData.packageDetails.images) ||
+                  (nonEmpty(deliveryData?.packageDetails?.image) && deliveryData.packageDetails.image) ||
+                  (nonEmpty(deliveryData?.images) && deliveryData.images) ||
+                  (nonEmpty(deliveryData?.image) && deliveryData.image) ||
+                  (nonEmpty(deliveryData?.packageImage) && deliveryData.packageImage) ||
+                  null;
+
+                const imageList = (() =>
+                {
+                  if (!rawImages) return [];
+                  const arr = Array.isArray(rawImages) ? rawImages : [rawImages];
+                  return arr
+                    .map(img =>
+                    {
+                      if (!img) return null;
+                      if (typeof img === 'string') return img.trim();
+                      if (typeof img === 'object') return img.url || img.src || img.path || null;
+                      return null;
+                    })
+                    .filter(Boolean);
+                })();
+
+                // Don't render the card at all if there are no images
+                if (imageList.length === 0) return null;
+
+                return (
+                  <div className="bg-white rounded-2xl p-6" style={sideBottomShadow}>
+                    <YummyText>
+                      <div className="text-sm font-medium text-[#0F172A] mb-4">
+                        Package Images {imageList.length > 1 && <span className="text-[#00B75A] font-normal">({imageList.length})</span>}
+                      </div>
+                    </YummyText>
+                    <PackageImageGallery images={imageList} />
+                  </div>
+                );
+              })()}
+
 
               {/* Tracking History */}
               <div className="bg-white rounded-2xl p-6" style={sideBottomShadow}>

@@ -1,13 +1,10 @@
 import React, { useEffect, useState } from 'react';
 import { IonPage, IonContent, IonSpinner } from '@ionic/react';
 import { useLocation, useHistory } from 'react-router-dom';
-import axios from 'axios';
 import { getCookie, deleteCookie } from '../../../utils/cookies';
-import { getPaymentStatus } from '../../../utils/authApi';
+import { verifyPaymentByReference, verifyPayment, getPaymentStatus, getDeliveryReceiptPdf } from '../../../utils/authApi';
 import CustomerLayout from '../components/CustomerLayout';
 import { YummyText } from '../../../components/YummyText';
-
-const API_BASE = import.meta.env.VITE_API_BASE_URL || 'https://api.swiftlyxpress.com';
 
 const useQuery = (search) => new URLSearchParams(search);
 
@@ -21,6 +18,7 @@ const PaymentSuccess = () => {
     const [success, setSuccess] = useState(false);
     const [deliveryId, setDeliveryId] = useState(null);
     const [countdown, setCountdown] = useState(3);
+    const [downloadingPdf, setDownloadingPdf] = useState(false);
 
     useEffect(() => {
         let redirectTimer;
@@ -54,60 +52,44 @@ const PaymentSuccess = () => {
 
                 setStatusMsg('Contacting payment gateway to verify transaction...');
 
-                // Use axios so we attach Authorization header when available from cookies
+                // Use authApi helpers so we always hit the same API base as the rest of the app (no wrong URL).
                 let final = null;
                 let verifyError = null;
                 try {
-                    const token = getCookie('customer_token') || getCookie('auth_token') || getCookie('rider_token') || getCookie('admin_token');
-                    console.log('[PaymentSuccess] Token available:', !!token, token ? `(${token.substring(0, 20)}...)` : '');
-
-                    const headers = { Accept: 'application/json' };
-                    if (token) headers.Authorization = `Bearer ${token}`;
-
-                    console.log('[PaymentSuccess] Calling verify endpoint:', `${API_BASE}/api/payment/verify/${encodeURIComponent(paymentId)}`);
+                    console.log('[PaymentSuccess] Calling verifyPaymentByReference (same API base as app)');
                     try {
-                        const r = await axios.get(`${API_BASE}/api/payment/verify/${encodeURIComponent(paymentId)}`, {
-                            headers,
-                            withCredentials: true
-                        });
-                        final = r.data;
-                        console.log('[PaymentSuccess] Verify response:', final);
+                        final = await verifyPaymentByReference(paymentId);
+                        console.log('[PaymentSuccess] Verify-reference response:', final);
                     } catch (ve) {
-                        console.warn('[PaymentSuccess] Verify call failed:', ve.response?.status, ve.response?.data || ve.message);
+                        console.warn('[PaymentSuccess] Verify-reference failed:', ve.response?.status, ve.response?.data?.message || ve.message);
                         verifyError = ve;
-                        // If backend failed because we passed a delivery identifier where it expected an ObjectId,
-                        // retry using the pending_payment_id cookie if available and different from the attempted id.
-                        const msg = ve.response?.data?.message || ve.message || '';
-                        if (/Cast to ObjectId failed/i.test(msg) && pendingCookie && pendingCookie !== paymentId) {
-                            try {
-                                console.log('[PaymentSuccess] Retrying verify with pending_payment_id cookie:', pendingCookie);
-                                const r2 = await axios.get(`${API_BASE}/api/payment/verify/${encodeURIComponent(pendingCookie)}`, {
-                                    headers,
-                                    withCredentials: true
-                                });
-                                final = r2.data;
-                                console.log('[PaymentSuccess] Verify (retry) response:', final);
-                            } catch (retryErr) {
-                                console.warn('[PaymentSuccess] Verify retry failed:', retryErr.response?.status, retryErr.response?.data || retryErr.message);
+                    }
+
+                    if (!final || (final && Object.keys(final).length === 0)) {
+                        console.log('[PaymentSuccess] Trying authenticated verify');
+                        try {
+                            final = await verifyPayment(paymentId);
+                        } catch (ve2) {
+                            verifyError = ve2;
+                            if (pendingCookie && pendingCookie !== paymentId) {
+                                try {
+                                    final = await verifyPayment(pendingCookie);
+                                } catch (retryErr) { /* ignore */ }
                             }
                         }
                     }
 
                     if (!final || (final && Object.keys(final).length === 0)) {
-                        console.log('[PaymentSuccess] Verify returned empty, trying status endpoint');
                         try {
-                            // use api helper for status endpoint
-                            final = await getPaymentStatus(paymentId);
-                            console.log('[PaymentSuccess] Status response (via api):', final);
-                        } catch (se) {
-                            console.warn('[PaymentSuccess] Status call failed:', se?.status || se?.message || se);
-                        }
+                            const statusRes = await getPaymentStatus(paymentId);
+                            final = statusRes?.data;
+                        } catch (se) { /* ignore */ }
                     }
                 } catch (xe) {
                     console.error('[PaymentSuccess] Payment verification network error', xe);
                 }
 
-                // If we got a 401 but we reached this page via Paystack callback, assume payment was successful
+                // If we got 401 from authenticated verify but reached via Paystack callback, assume success (legacy fallback)
                 // (Paystack only redirects to callback on success)
                 if (!final && verifyError?.response?.status === 401) {
                     console.log('[PaymentSuccess] Got 401 but reached via Paystack callback - assuming payment succeeded');
@@ -119,6 +101,10 @@ const PaymentSuccess = () => {
                     try {
                         window.dispatchEvent(new CustomEvent('payment:completed', { detail: { deliveryId: candidateDelivery } }));
                         window.dispatchEvent(new Event('deliveries:refresh'));
+                        if (window.opener && !window.opener.closed) {
+                            window.opener.dispatchEvent(new CustomEvent('payment:completed', { detail: { deliveryId: candidateDelivery } }));
+                            window.opener.dispatchEvent(new Event('deliveries:refresh'));
+                        }
                         if (candidateDelivery) {
                             window.dispatchEvent(new CustomEvent('delivery:updated', { detail: { id: candidateDelivery, deliveryId: candidateDelivery } }));
                         }
@@ -143,6 +129,10 @@ const PaymentSuccess = () => {
                     try {
                         window.dispatchEvent(new CustomEvent('payment:completed', { detail: { deliveryId: candidateDelivery } }));
                         window.dispatchEvent(new Event('deliveries:refresh'));
+                        if (window.opener && !window.opener.closed) {
+                            window.opener.dispatchEvent(new CustomEvent('payment:completed', { detail: { deliveryId: candidateDelivery } }));
+                            window.opener.dispatchEvent(new Event('deliveries:refresh'));
+                        }
                         if (candidateDelivery) {
                             window.dispatchEvent(new CustomEvent('delivery:updated', { detail: { id: candidateDelivery, deliveryId: candidateDelivery } }));
                         }
@@ -167,7 +157,7 @@ const PaymentSuccess = () => {
                     final?.data?.success === true ||
                     // If we got any response without explicit failure, assume success
                     (!final?.error && !final?.data?.error && final?.status !== 'failed' && final?.status !== 'error');
-                const foundDelivery = final?.deliveryId || final?.data?.deliveryId || final?.data?.metadata?.deliveryId || final?.metadata?.deliveryId || candidateDelivery;
+                const foundDelivery = final?.deliveryId || final?.data?.deliveryId || final?.data?.delivery?.id || final?.data?.metadata?.deliveryId || final?.metadata?.deliveryId || candidateDelivery;
 
                 console.log('[PaymentSuccess] Success determination:', { isSuccess, foundDelivery, finalStatus: final?.status, finalSuccess: final?.success, fullResponse: final });
 
@@ -179,8 +169,13 @@ const PaymentSuccess = () => {
                     try { deleteCookie('pending_payment_delivery_id'); deleteCookie('pending_payment_id'); } catch (e) { /* ignore */ }
                     // Notify app that payment completed so UIs can refresh
                     try {
-                        window.dispatchEvent(new CustomEvent('payment:completed', { detail: { deliveryId: foundDelivery || candidateDelivery } }));
+                        const did = foundDelivery || candidateDelivery;
+                        window.dispatchEvent(new CustomEvent('payment:completed', { detail: { deliveryId: did } }));
                         window.dispatchEvent(new Event('deliveries:refresh'));
+                        if (window.opener && !window.opener.closed) {
+                            window.opener.dispatchEvent(new CustomEvent('payment:completed', { detail: { deliveryId: did } }));
+                            window.opener.dispatchEvent(new Event('deliveries:refresh'));
+                        }
                         if (foundDelivery || candidateDelivery) {
                             window.dispatchEvent(new CustomEvent('delivery:updated', { detail: { id: foundDelivery || candidateDelivery, deliveryId: foundDelivery || candidateDelivery } }));
                         }
@@ -204,8 +199,13 @@ const PaymentSuccess = () => {
                     try { deleteCookie('pending_payment_delivery_id'); deleteCookie('pending_payment_id'); } catch (e) { /* ignore */ }
                     // Notify app that payment completed
                     try {
-                        window.dispatchEvent(new CustomEvent('payment:completed', { detail: { deliveryId: foundDelivery || candidateDelivery } }));
+                        const did = foundDelivery || candidateDelivery;
+                        window.dispatchEvent(new CustomEvent('payment:completed', { detail: { deliveryId: did } }));
                         window.dispatchEvent(new Event('deliveries:refresh'));
+                        if (window.opener && !window.opener.closed) {
+                            window.opener.dispatchEvent(new CustomEvent('payment:completed', { detail: { deliveryId: did } }));
+                            window.opener.dispatchEvent(new Event('deliveries:refresh'));
+                        }
                         if (foundDelivery || candidateDelivery) {
                             window.dispatchEvent(new CustomEvent('delivery:updated', { detail: { id: foundDelivery || candidateDelivery, deliveryId: foundDelivery || candidateDelivery } }));
                         }
@@ -230,6 +230,10 @@ const PaymentSuccess = () => {
                     const candidateDelivery = query.get('deliveryId') || getCookie('pending_payment_delivery_id');
                     window.dispatchEvent(new CustomEvent('payment:completed', { detail: { deliveryId: candidateDelivery } }));
                     window.dispatchEvent(new Event('deliveries:refresh'));
+                    if (window.opener && !window.opener.closed) {
+                        window.opener.dispatchEvent(new CustomEvent('payment:completed', { detail: { deliveryId: candidateDelivery } }));
+                        window.opener.dispatchEvent(new Event('deliveries:refresh'));
+                    }
                     if (candidateDelivery) {
                         window.dispatchEvent(new CustomEvent('delivery:updated', { detail: { id: candidateDelivery, deliveryId: candidateDelivery } }));
                     }
@@ -291,6 +295,26 @@ const PaymentSuccess = () => {
         }, 100);
     };
 
+    const handleDownloadReceiptPdf = async () => {
+        if (!deliveryId) return;
+        setDownloadingPdf(true);
+        try {
+            const blob = await getDeliveryReceiptPdf(deliveryId);
+            const url = window.URL.createObjectURL(blob);
+            const link = document.createElement('a');
+            link.href = url;
+            link.download = `receipt-${deliveryId}.pdf`;
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+            window.URL.revokeObjectURL(url);
+        } catch (err) {
+            console.error('Failed to download receipt PDF:', err);
+        } finally {
+            setDownloadingPdf(false);
+        }
+    };
+
     return (
         <IonPage>
             <CustomerLayout>
@@ -344,7 +368,19 @@ const PaymentSuccess = () => {
                                             <p className="text-sm text-[#64748B] mb-4">{statusMsg}</p>
 
                                             {success && (
-                                                <p className="text-sm text-[#00B75A] font-medium">Closing in {countdown} seconds...</p>
+                                                <>
+                                                    {deliveryId && (
+                                                        <button
+                                                            type="button"
+                                                            onClick={handleDownloadReceiptPdf}
+                                                            disabled={downloadingPdf}
+                                                            className="inline-block text-sm font-medium text-[#0F172A] underline hover:no-underline mb-3 disabled:opacity-50"
+                                                        >
+                                                            {downloadingPdf ? 'Downloading…' : 'Download receipt (PDF)'}
+                                                        </button>
+                                                    )}
+                                                    <p className="text-sm text-[#00B75A] font-medium">Closing in {countdown} seconds...</p>
+                                                </>
                                             )}
                                         </YummyText>
                                     </div>

@@ -104,6 +104,12 @@ const CustomerSidebar = () => {
       label: 'My Deliveries'
     },
     {
+      id: 'transactions',
+      to: '/customer/transactions',
+      icon: '/documenticon.svg',
+      label: 'Transactions'
+    },
+    {
       id: 'Book',
       to: '/customer/book',
       icon: '/bookicon.svg',
