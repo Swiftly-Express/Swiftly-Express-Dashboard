@@ -104,7 +104,7 @@ class SocketService {
     });
   }
 
-  onConnected(callback) {
+  onConnected(callback) { v
     this.connect();
     if (this.socket.connected) {
       callback();
