@@ -3,7 +3,7 @@ import { getDeliveryMessages, sendDeliveryMessage } from '../utils/authApi';
 import socketService from '../services/socket.service';
 import { YummyText } from './YummyText';
 
-const DeliveryChat = ({ deliveryId, currentUserRole = 'customer', className = '', maxHeight = '280px' }) => {
+const DeliveryChat = ({ deliveryId, currentUserRole = 'customer', className = '', maxHeight = '280px', canSend = true }) => {
   const [messages, setMessages] = useState([]);
   const [loading, setLoading] = useState(true);
   const [sending, setSending] = useState(false);
@@ -48,12 +48,11 @@ const DeliveryChat = ({ deliveryId, currentUserRole = 'customer', className = ''
     const unsubConnect = socketService.onConnect(joinDeliveryRoom);
 
     const handleNewMessage = (data) => {
-      if (data?.deliveryId === deliveryId && data?.message) {
-        setMessages((prev) => {
-          if (prev.some((m) => (m._id || m.id) === (data.message._id || data.message.id))) return prev;
-          return [...prev, data.message];
-        });
-      }
+      if (!data?.message) return;
+      setMessages((prev) => {
+        if (prev.some((m) => (m._id || m.id) === (data.message._id || data.message.id))) return prev;
+        return [...prev, data.message];
+      });
     };
     socketService.on('delivery:chat:message', handleNewMessage);
 
@@ -69,28 +68,6 @@ const DeliveryChat = ({ deliveryId, currentUserRole = 'customer', className = ''
     if (listRef.current) listRef.current.scrollTop = listRef.current.scrollHeight;
   }, [messages]);
 
-  // Auto-refresh messages when not typing (polling fallback)
-  useEffect(() => {
-    if (!deliveryId || isTyping) return;
-
-    const refreshMessages = async () => {
-      try {
-        const res = await getDeliveryMessages(deliveryId);
-        const list = res?.data?.messages || res?.messages || [];
-        if (Array.isArray(list)) {
-          setMessages(list);
-        }
-      } catch (e) {
-        console.error('[ExpressChat] Failed to refresh messages:', e);
-      }
-    };
-
-    // Poll every 3 seconds when not typing
-    const interval = setInterval(refreshMessages, 3000);
-
-    return () => clearInterval(interval);
-  }, [deliveryId, isTyping]);
-
   // Cleanup typing timeout on unmount
   useEffect(() => {
     return () => {
@@ -102,6 +79,7 @@ const DeliveryChat = ({ deliveryId, currentUserRole = 'customer', className = ''
 
   const handleSend = async (e) => {
     e?.preventDefault();
+    if (!canSend) return;
     const text = (inputValue || '').trim();
     if (!text || !deliveryId || sending) return;
     setSending(true);
@@ -146,6 +124,8 @@ const DeliveryChat = ({ deliveryId, currentUserRole = 'customer', className = ''
       >
         {loading ? (
           <p className="text-sm text-[#64748B]">Loading messages...</p>
+        ) : messages.length === 0 && !canSend ? (
+          <p className="text-sm text-[#64748B]">Chat will be available when a rider is assigned to this delivery.</p>
         ) : messages.length === 0 ? (
           <p className="text-sm text-[#64748B]">No messages yet. Say hello!</p>
         ) : (
@@ -179,37 +159,43 @@ const DeliveryChat = ({ deliveryId, currentUserRole = 'customer', className = ''
         )}
       </div>
       <form onSubmit={handleSend} className="p-3 border-t border-gray-100 flex gap-2">
-        <input
-          type="text"
-          value={inputValue}
-          onChange={(e) => {
-            setInputValue(e.target.value);
+        {canSend ? (
+          <>
+            <input
+              type="text"
+              value={inputValue}
+              onChange={(e) => {
+                setInputValue(e.target.value);
 
-            // Mark as typing
-            setIsTyping(true);
+                // Mark as typing
+                setIsTyping(true);
 
-            // Clear existing timeout
-            if (typingTimeoutRef.current) {
-              clearTimeout(typingTimeoutRef.current);
-            }
+                // Clear existing timeout
+                if (typingTimeoutRef.current) {
+                  clearTimeout(typingTimeoutRef.current);
+                }
 
-            // Set new timeout to mark as not typing after 2 seconds of inactivity
-            typingTimeoutRef.current = setTimeout(() => {
-              setIsTyping(false);
-            }, 2000);
-          }}
-          placeholder="Type a message..."
-          className="flex-1 px-3 py-2 rounded-lg border border-gray-200 text-sm text-[#0F172A] placeholder:text-[#94A3B8] focus:outline-none focus:ring-2 focus:ring-[#00B75A] focus:border-transparent"
-          maxLength={2000}
-          disabled={sending}
-        />
-        <button
-          type="submit"
-          disabled={sending || !inputValue.trim()}
-          className="px-4 py-2 rounded-lg bg-[#00B75A] text-white text-sm font-medium hover:bg-[#00a352] disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-        >
-          {sending ? '…' : 'Send'}
-        </button>
+                // Set new timeout to mark as not typing after 2 seconds of inactivity
+                typingTimeoutRef.current = setTimeout(() => {
+                  setIsTyping(false);
+                }, 2000);
+              }}
+              placeholder="Type a message..."
+              className="flex-1 px-3 py-2 rounded-lg border border-gray-200 text-sm text-[#0F172A] placeholder:text-[#94A3B8] focus:outline-none focus:ring-2 focus:ring-[#00B75A] focus:border-transparent"
+              maxLength={2000}
+              disabled={sending}
+            />
+            <button
+              type="submit"
+              disabled={sending || !inputValue.trim()}
+              className="px-4 py-2 rounded-lg bg-[#00B75A] text-white text-sm font-medium hover:bg-[#00a352] disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+            >
+              {sending ? '…' : 'Send'}
+            </button>
+          </>
+        ) : (
+          <p className="text-sm text-[#64748B] py-1 w-full">Chat is available once a rider has been assigned.</p>
+        )}
       </form>
     </div>
   );

@@ -670,39 +670,20 @@ const AvailableOrders = () =>
     };
   }, [orders.length]);
 
-  // Auto-poll for new orders every 5 seconds (fallback for when socket events don't fire)
+  // Socket: refetch when a new job becomes available (no polling)
   useEffect(() =>
   {
-    let pollInterval;
-    let isActive = true;
-
-    console.log('[AvailableOrders] 🔄 Starting auto-polling for new orders (every 5s)');
-
-    // Only poll if we have orders array initialized (means component is mounted properly)
-    pollInterval = setInterval(() =>
+    socketService.connect();
+    const handleJobAvailable = () =>
     {
-      if (isActive) {
-        fetchAvailableJobs(true); // silent=true to avoid spamming logs
-      }
-    }, 5000);
-
-    const handleLogout = () =>
-    {
-      console.log('[AvailableOrders] 🛑 Logout detected - stopping polling');
-      isActive = false;
-      if (pollInterval) clearInterval(pollInterval);
+      fetchAvailableJobs(true);
     };
-
-    window.addEventListener('user:logout', handleLogout);
-
+    socketService.on('job:available', handleJobAvailable);
     return () =>
     {
-      console.log('[AvailableOrders] 🛑 Stopping auto-polling');
-      isActive = false;
-      if (pollInterval) clearInterval(pollInterval);
-      window.removeEventListener('user:logout', handleLogout);
+      socketService.off('job:available', handleJobAvailable);
     };
-  }, []); // Empty deps - run once on mount
+  }, []);
 
   const fetchAvailableJobs = async (silent = false) =>
   {
@@ -1299,147 +1280,95 @@ const AvailableOrders = () =>
                     {
                       console.log('[AvailableOrders] Full order object:', JSON.stringify(selectedOrder, null, 2));
 
-                      // Function to extract image URL from various possible formats
-                      const extractImageUrl = (value) =>
+                      // ── Collect ALL images from the canonical field first ──────────────
+                      const nonEmpty = (v) => Array.isArray(v) ? v.length > 0 : Boolean(v);
+                      const rawImgField =
+                        (nonEmpty(selectedOrder?.packageDetails?.images) && selectedOrder.packageDetails.images) ||
+                        (nonEmpty(selectedOrder?.packageDetails?.image) && selectedOrder.packageDetails.image) ||
+                        (nonEmpty(selectedOrder?.images) && selectedOrder.images) ||
+                        (nonEmpty(selectedOrder?.image) && selectedOrder.image) ||
+                        (nonEmpty(selectedOrder?.packageImage) && selectedOrder.packageImage) ||
+                        null;
+                      const allImageUrls = (() =>
                       {
-                        if (!value) return null;
-
-                        // If it's already a string URL
-                        if (typeof value === 'string') {
-                          const trimmed = value.trim();
-                          // Check if it looks like a URL
-                          if (trimmed.startsWith('http') || trimmed.startsWith('/') || trimmed.includes('uploads') || /\.(jpg|jpeg|png|gif|webp|svg)/i.test(trimmed)) {
-                            console.log('[AvailableOrders] Found string URL:', trimmed);
-                            return trimmed;
-                          }
-                        }
-
-                        // If it's an object with url/path/src properties
-                        if (typeof value === 'object' && value !== null) {
-                          const url = value.url || value.path || value.src || value.href || value.location || value.uri;
-                          if (url) {
-                            console.log('[AvailableOrders] Found URL in object:', url);
-                            return extractImageUrl(url);
-                          }
-                        }
-
-                        // If it's an array, get the first item
-                        if (Array.isArray(value) && value.length > 0) {
-                          console.log('[AvailableOrders] Found array, extracting first item');
-                          return extractImageUrl(value[0]);
-                        }
-
-                        return null;
-                      };
-
-                      // List of all possible field names to check
-                      const fieldCandidates = [
-                        // Direct fields
-                        'image', 'images', 'img', 'photo', 'picture',
-                        'packageImage', 'package_image', 'packageImg',
-                        'imageUrl', 'image_url', 'imgUrl', 'img_url',
-                        // Nested in packageDetails
-                        'packageDetails', 'package_details',
-                        // Nested in package
-                        'package', 'pkg',
-                        // Nested in payload/data
-                        'payload', 'data',
-                        // Media fields
-                        'media', 'file', 'attachment'
-                      ];
-
-                      let imageUrl = null;
-
-                      // First pass: Check direct fields
-                      for (const field of fieldCandidates) {
-                        if (selectedOrder[field]) {
-                          console.log(`[AvailableOrders] Checking field '${field}':`, selectedOrder[field]);
-                          imageUrl = extractImageUrl(selectedOrder[field]);
-                          if (imageUrl) break;
-
-                          // If field is an object, check its nested image properties
-                          if (typeof selectedOrder[field] === 'object' && selectedOrder[field] !== null) {
-                            const nested = selectedOrder[field];
-                            for (const nestedField of ['image', 'images', 'img', 'photo', 'picture', 'imageUrl', 'image_url']) {
-                              if (nested[nestedField]) {
-                                console.log(`[AvailableOrders] Checking nested '${field}.${nestedField}':`, nested[nestedField]);
-                                imageUrl = extractImageUrl(nested[nestedField]);
-                                if (imageUrl) break;
-                              }
-                            }
-                            if (imageUrl) break;
-                          }
-                        }
-                      }
-
-                      // Second pass: Deep scan all properties for URLs
-                      if (!imageUrl) {
-                        console.log('[AvailableOrders] No direct image found, deep scanning...');
-                        const urlPattern = /^(https?:\/\/|\/|\.\.\/|uploads\/|images\/).*\.(jpg|jpeg|png|gif|webp|svg)/i;
-                        const partialPattern = /(uploads|images|media|cdn|s3|cloudinary|imgbb|imgur).*\.(jpg|jpeg|png|gif|webp|svg)/i;
-
-                        const deepScan = (obj, path = '') =>
+                        if (!rawImgField) return [];
+                        const arr = Array.isArray(rawImgField) ? rawImgField : [rawImgField];
+                        return arr.map(v =>
                         {
-                          if (!obj || typeof obj !== 'object') return null;
+                          if (!v) return null;
+                          if (typeof v === 'string') return v.trim();
+                          if (typeof v === 'object') return v.url || v.src || v.path || null;
+                          return null;
+                        }).filter(Boolean);
+                      })();
 
-                          for (const [key, value] of Object.entries(obj)) {
-                            const currentPath = path ? `${path}.${key}` : key;
 
-                            if (typeof value === 'string') {
-                              const trimmed = value.trim();
-                              if (urlPattern.test(trimmed) || partialPattern.test(trimmed)) {
-                                console.log(`[AvailableOrders] Found URL in deep scan at '${currentPath}':`, trimmed);
-                                return trimmed;
-                              }
-                            } else if (Array.isArray(value)) {
-                              for (let i = 0; i < value.length; i++) {
-                                const found = deepScan(value[i], `${currentPath}[${i}]`);
-                                if (found) return found;
-                              }
-                            } else if (typeof value === 'object' && value !== null) {
-                              const found = deepScan(value, currentPath);
-                              if (found) return found;
+                      // ── Fallback: deep-scan for at least one image if needed ──────────
+                      if (allImageUrls.length === 0) {
+                        // Function to extract image URL from various possible formats
+                        const extractImageUrl = (value) =>
+                        {
+                          if (!value) return null;
+                          if (typeof value === 'string') {
+                            const trimmed = value.trim();
+                            if (trimmed.startsWith('http') || trimmed.startsWith('/') || trimmed.includes('uploads') || /\.(jpg|jpeg|png|gif|webp|svg)/i.test(trimmed)) {
+                              return trimmed;
                             }
                           }
+                          if (typeof value === 'object' && value !== null) {
+                            const url = value.url || value.path || value.src || value.href || value.location || value.uri;
+                            if (url) return extractImageUrl(url);
+                          }
+                          if (Array.isArray(value) && value.length > 0) return extractImageUrl(value[0]);
                           return null;
                         };
 
-                        imageUrl = deepScan(selectedOrder);
+                        const imageFields = ['image', 'images', 'img', 'photo', 'picture', 'packageImage', 'imageUrl', 'image_url'];
+                        let imageUrl = null;
+                        for (const field of imageFields) {
+                          if (selectedOrder[field]) { imageUrl = extractImageUrl(selectedOrder[field]); if (imageUrl) break; }
+                        }
+                        for (const field of imageFields) {
+                          if (selectedOrder?.packageDetails?.[field]) { imageUrl = extractImageUrl(selectedOrder.packageDetails[field]); if (imageUrl) break; }
+                        }
+                        if (imageUrl) allImageUrls.push(imageUrl);
                       }
 
-                      if (imageUrl) {
-                        console.log('[AvailableOrders] ✅ Final image URL:', imageUrl);
-                        return (
-                          <div className="mb-4">
-                            <div className="text-xs font-medium text-[#0F172A] mb-2">Package Image</div>
-                            <div className="w-full h-56 rounded-xl overflow-hidden bg-gray-100 border-2 border-[#00B75A]">
-                              <img
-                                src={imageUrl}
-                                alt="Package"
-                                className="w-full h-full object-cover"
-                                onError={(e) =>
-                                {
-                                  console.error('[AvailableOrders] Image failed to load:', imageUrl);
-                                  e.target.parentElement.innerHTML = '<div class="flex items-center justify-center h-full text-xs text-red-500">Failed to load image</div>';
-                                }}
-                              />
-                            </div>
-                          </div>
-                        );
-                      }
-
-                      console.log('[AvailableOrders] ❌ No image found in order');
+                      // ── Render ───────────────────────────────────────────────────────
                       return (
                         <div className="mb-4">
-                          <div className="text-xs font-medium text-[#0F172A] mb-2">Package Image</div>
-                          <div className="w-full h-56 rounded-xl overflow-hidden bg-gray-100 border-2 border-gray-200 flex items-center justify-center">
-                            <div className="text-center px-4">
-                              <svg width="48" height="48" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" className="mx-auto mb-2">
-                                <path d="M21 19V5c0-1.1-.9-2-2-2H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2zM8.5 13.5l2.5 3.01L14.5 12l4.5 6H5l3.5-4.5z" fill="#CBD5E1" />
-                              </svg>
-                              <p className="text-xs text-[#94A3B8]">No package image uploaded</p>
-                            </div>
+                          <div className="text-xs font-medium text-[#0F172A] mb-2">
+                            Package Images
+                            {allImageUrls.length > 1 && (
+                              <span className="ml-1 text-[#00B75A]">({allImageUrls.length})</span>
+                            )}
                           </div>
+                          {allImageUrls.length > 0 ? (
+                            <div className="flex gap-3 overflow-x-auto pb-1">
+                              {allImageUrls.map((url, i) => (
+                                <div key={i} className="flex-shrink-0 w-28 h-28 rounded-xl overflow-hidden bg-gray-100 border-2 border-[#00B75A]">
+                                  <img
+                                    src={url}
+                                    alt={`Package ${i + 1}`}
+                                    className="w-full h-full object-cover"
+                                    onError={(e) =>
+                                    {
+                                      e.target.parentElement.innerHTML = '<div class="flex items-center justify-center h-full text-xs text-red-500">Failed to load</div>';
+                                    }}
+                                  />
+                                </div>
+                              ))}
+                            </div>
+                          ) : (
+                            <div className="w-full h-32 rounded-xl overflow-hidden bg-gray-100 border-2 border-gray-200 flex items-center justify-center">
+                              <div className="text-center px-4">
+                                <svg width="36" height="36" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" className="mx-auto mb-2">
+                                  <path d="M21 19V5c0-1.1-.9-2-2-2H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2zM8.5 13.5l2.5 3.01L14.5 12l4.5 6H5l3.5-4.5z" fill="#CBD5E1" />
+                                </svg>
+                                <p className="text-xs text-[#94A3B8]">No package images uploaded</p>
+                              </div>
+                            </div>
+                          )}
                         </div>
                       );
                     })()}

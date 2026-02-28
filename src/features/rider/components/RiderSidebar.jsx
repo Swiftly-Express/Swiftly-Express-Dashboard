@@ -3,6 +3,7 @@ import { useIonRouter } from '@ionic/react';
 import { YummyText } from '../../../components/YummyText';
 import { logout as apiLogout, getAvailableJobs, getRiderDeliveries } from '../../../utils/authApi';
 import { getCookie, deleteCookie } from '../../../utils/cookies';
+import socketService from '../../../services/socket.service';
 import React, { useEffect, useState } from 'react';
 
 const SidebarButton = ({ to, active, icon, label, count }) => {
@@ -143,20 +144,20 @@ const RiderSidebar = () => {
   const [mobileOpen, setMobileOpen] = useState(false);
 
   useEffect(() => {
-    // Initial fetch
     fetchCounts();
 
-    // Poll every 30 seconds
-    const countInterval = setInterval(fetchCounts, 30000);
-
-    // Listen for events that should trigger refresh
     const handleRefresh = () => {
       fetchCounts();
     };
 
+    socketService.connect();
+    socketService.on('job:available', handleRefresh);
+
     window.addEventListener('delivery:accepted', handleRefresh);
     window.addEventListener('delivery:updated', handleRefresh);
     window.addEventListener('delivery:completed', handleRefresh);
+    window.addEventListener('delivery:cancelled', handleRefresh);
+    window.addEventListener('delivery:deleted', handleRefresh);
 
     const toggle = () => setMobileOpen((s) => !s);
     const close = () => setMobileOpen(false);
@@ -164,10 +165,12 @@ const RiderSidebar = () => {
     window.addEventListener('rider:closeMobileSidebar', close);
 
     return () => {
-      clearInterval(countInterval);
+      socketService.off('job:available', handleRefresh);
       window.removeEventListener('delivery:accepted', handleRefresh);
       window.removeEventListener('delivery:updated', handleRefresh);
       window.removeEventListener('delivery:completed', handleRefresh);
+      window.removeEventListener('delivery:cancelled', handleRefresh);
+      window.removeEventListener('delivery:deleted', handleRefresh);
       window.removeEventListener('rider:toggleMobileSidebar', toggle);
       window.removeEventListener('rider:closeMobileSidebar', close);
     };

@@ -10,9 +10,9 @@ import GoogleMapsAutocomplete from '../../../components/GoogleMapsAutocomplete';
 import CustomerLayout from '../components/CustomerLayout';
 import { YummyText } from '../../../components/YummyText';
 import { createDelivery, isAuthenticated, cancelDelivery, getDeliveryEstimate, getCustomerProfile } from '../../../utils/authApi';
-import socketService from '../../../services/socket.service';
 import { calculateDistance } from '../../../utils/pricing';
 import SmartRideBooking from '../../smartride-booking/Smartride-Booking';
+import socketService from '../../../services/socket.service';
 import axios from 'axios';
 import { getCookie, setCookie, setJSONCookie, getJSONCookie, deleteCookie } from '../../../utils/cookies';
 
@@ -30,7 +30,8 @@ const apiClient = axios.create({
 
 // Add request interceptor to attach auth token
 apiClient.interceptors.request.use(
-  (config) => {
+  (config) =>
+  {
     const riderToken = getCookie("rider_token");
     const customerToken = getCookie("customer_token");
     const adminToken = getCookie("admin_token");
@@ -51,7 +52,8 @@ const sideBottomShadow = {
   boxShadow: '2px 4px 4px rgba(0,0,0,0.06), -2px 4px 4px rgba(0,0,0,0.06), 0 4px 8px rgba(0,0,0,0.08)'
 };
 
-const Book = () => {
+const Book = () =>
+{
   const [formData, setFormData] = useState({
     deliveryType: 'express',
     senderName: '',
@@ -118,7 +120,8 @@ const Book = () => {
 
   const selectedDeliveryType = deliveryTypes.find(t => t.value === formData.deliveryType);
 
-  const handleDeliveryTypeSelect = (value) => {
+  const handleDeliveryTypeSelect = (value) =>
+  {
     // If user selected Smart Ride, open Smart Ride inline on this page
     if (value === 'smart_ride') {
       setFormData({ ...formData, deliveryType: value });
@@ -142,23 +145,27 @@ const Book = () => {
   };
 
   // Ensure delivery type fee applied immediately when user selects a type
-  useEffect(() => {
+  useEffect(() =>
+  {
     const dt = (formData.deliveryType || '').toString().toLowerCase();
     const fee = dt === 'express' ? 400 : (dt === 'smart_ride' ? 600 : 0);
     setAppliedDeliveryTypeFee(fee);
   }, [formData.deliveryType]);
 
-  useEffect(() => {
+  useEffect(() =>
+  {
     if (!isAuthenticated()) {
       setToastMsg('Please log in to book a delivery');
       setShowToast(true);
-      setTimeout(() => {
+      setTimeout(() =>
+      {
         router.push('/auth/customer/login', 'root', 'replace');
       }, 2000);
     }
 
     // Listen for postMessage from payment callback popup
-    const handlePaymentMessage = (event) => {
+    const handlePaymentMessage = (event) =>
+    {
       console.log('[Book] Received postMessage:', event.data);
       if (event.data?.type === 'PAYMENT_REDIRECT') {
         const targetUrl = event.data.url || event.data.fullUrl;
@@ -179,11 +186,58 @@ const Book = () => {
   // Inline SmartRide state: open if ?delivery=smart_ride present
   const [showSmartRide, setShowSmartRide] = useState(false);
 
-  useEffect(() => {
+  // Restore form data when returning from Smart Ride (user switched delivery type to Express)
+  useEffect(() =>
+  {
+    try {
+      const raw = sessionStorage.getItem('booking_form_data');
+      if (!raw) return;
+      const data = JSON.parse(raw);
+      sessionStorage.removeItem('booking_form_data');
+
+      setFormData(prev => ({
+        ...prev,
+        deliveryType: data.deliveryType === 'express' ? 'express' : prev.deliveryType,
+        senderName: data.senderName ?? prev.senderName,
+        senderPhone: data.senderPhone ?? prev.senderPhone,
+        recipientName: data.recipientName ?? prev.recipientName,
+        recipientPhone: data.recipientPhone ?? prev.recipientPhone,
+        recipientEmail: data.recipientEmail ?? prev.recipientEmail,
+        pickupStreet: data.pickupAddress ?? data.pickupStreet ?? prev.pickupStreet,
+        deliveryStreet: data.deliveryAddress ?? data.deliveryStreet ?? prev.deliveryStreet,
+        pickupDate: data.pickupDate ?? prev.pickupDate,
+        sizeCategory: data.sizeCategory ?? prev.sizeCategory,
+        weightCategory: data.weightCategory ?? prev.weightCategory,
+        dimensions: data.dimensions ?? prev.dimensions,
+        weight: data.weight ?? prev.weight,
+        packageDescription: data.packageDescription ?? prev.packageDescription,
+        paymentMethod: data.paymentMethod ?? prev.paymentMethod,
+        paymentNotes: data.paymentNotes ?? prev.paymentNotes,
+        image: data.image ?? prev.image,
+        images: data.images ?? prev.images,
+      }));
+
+      if (data.pickupPlace?.coordinates) {
+        setPickupAddressObj(data.pickupPlace);
+        setPickupCoordinates({ lat: data.pickupPlace.coordinates.lat, lng: data.pickupPlace.coordinates.lng });
+      }
+      if (data.deliveryPlace?.coordinates) {
+        setDeliveryAddressObj(data.deliveryPlace);
+        setDeliveryCoordinates({ lat: data.deliveryPlace.coordinates.lat, lng: data.deliveryPlace.coordinates.lng });
+      }
+    } catch (e) {
+      console.warn('[Book] Failed to restore booking_form_data from sessionStorage', e);
+      try { sessionStorage.removeItem('booking_form_data'); } catch (e2) { }
+    }
+  }, []);
+
+  useEffect(() =>
+  {
     const sp = new URLSearchParams(window.location.search);
     if (sp.get('delivery') === 'smart_ride') setShowSmartRide(true);
 
-    const onPop = () => {
+    const onPop = () =>
+    {
       const p = new URLSearchParams(window.location.search);
       setShowSmartRide(p.get('delivery') === 'smart_ride');
     };
@@ -192,7 +246,8 @@ const Book = () => {
     return () => window.removeEventListener('popstate', onPop);
   }, []);
 
-  useEffect(() => {
+  useEffect(() =>
+  {
     const check = () => setIsMobile(window.innerWidth <= 768);
     check();
     window.addEventListener('resize', check);
@@ -220,7 +275,8 @@ const Book = () => {
   }, []);
 
   // Initialize dimensions and weightCategory based on defaults
-  useEffect(() => {
+  useEffect(() =>
+  {
     const weightMap = { small: 'light', big: 'heavy', very_big: 'very_heavy' };
     const dimsMap = { small: [30, 30, 30], big: [50, 40, 30], very_big: [80, 60, 50] };
     const base = dimsMap[formData.sizeCategory] || dimsMap.small;
@@ -231,12 +287,14 @@ const Book = () => {
   }, []);
 
   // Auto-fill sender details from logged-in customer profile (Express & Smart Ride); fields remain editable
-  useEffect(() => {
+  useEffect(() =>
+  {
     const token = getCookie('customer_token') || getCookie('auth_token');
     if (!token) return;
 
     let cancelled = false;
-    (async () => {
+    (async () =>
+    {
       try {
         const res = await getCustomerProfile();
         if (cancelled) return;
@@ -263,7 +321,8 @@ const Book = () => {
     return () => { cancelled = true; };
   }, []);
 
-  const handleChange = (e) => {
+  const handleChange = (e) =>
+  {
     const name = e.target.name;
     setFormData({
       ...formData,
@@ -273,7 +332,8 @@ const Book = () => {
   };
 
   // Map API validation field paths to form field key and user-friendly message
-  const getFieldErrorFromApi = (apiField, apiMessage) => {
+  const getFieldErrorFromApi = (apiField, apiMessage) =>
+  {
     const lower = (apiField || '').toLowerCase();
     if (lower.includes('packagedetails.description')) return { key: 'packageDescription', msg: 'Please describe the contents of your package.' };
     if (lower.includes('pickupaddress')) return { key: 'pickupStreet', msg: 'Please enter or select a valid pickup address.' };
@@ -287,7 +347,8 @@ const Book = () => {
     return { key: 'packageDescription', msg: apiMessage || 'Please check this field.' };
   };
 
-  const handleSubmit = async () => {
+  const handleSubmit = async () =>
+  {
     console.log('[Book] handleSubmit called', { paymentMethod: formData.paymentMethod });
     setIsSubmitting(true);
     setFieldErrors({});
@@ -310,9 +371,11 @@ const Book = () => {
           if (res.results && res.results.length > 0) {
             const result = res.results.find(r => r.types && r.types.some(t => ['street_address', 'premise', 'establishment', 'route', 'postal_town', 'locality'].includes(t))) || res.results[0];
             const components = result.address_components || [];
-            const extract = (componentsList) => {
+            const extract = (componentsList) =>
+            {
               const out = { streetNumber: '', route: '', premise: '', subpremise: '', name: '', city: '', state: '', postal_code: '', country: '' };
-              componentsList.forEach(component => {
+              componentsList.forEach(component =>
+              {
                 const types = component.types || [];
                 if (types.includes('street_number')) out.streetNumber = component.long_name;
                 if (types.includes('route')) out.route = component.long_name;
@@ -366,9 +429,11 @@ const Book = () => {
           if (res.results && res.results.length > 0) {
             const result = res.results.find(r => r.types && r.types.some(t => ['street_address', 'premise', 'establishment', 'route', 'postal_town', 'locality'].includes(t))) || res.results[0];
             const components = result.address_components || [];
-            const extract = (componentsList) => {
+            const extract = (componentsList) =>
+            {
               const out = { streetNumber: '', route: '', premise: '', subpremise: '', name: '', city: '', state: '', postal_code: '', country: '' };
-              componentsList.forEach(component => {
+              componentsList.forEach(component =>
+              {
                 const types = component.types || [];
                 if (types.includes('street_number')) out.streetNumber = component.long_name;
                 if (types.includes('route')) out.route = component.long_name;
@@ -503,15 +568,20 @@ const Book = () => {
         method: normalizedPaymentMethod,
         deliveryType: formData.deliveryType
       };
-      // Smart Ride: orders are posted to riders pool (first-come, first-serve). Do not invite a specific rider.
+      // Smart Ride only: customer can request a specific rider; Express goes to pool
+      if (formData.deliveryType === 'smart_ride' && selectedRiderId) {
+        payload.invitedDriver = selectedRiderId;
+      }
 
       // If user selected online payment, create delivery record first (draft/pending),
       // then call payment initialize endpoint with the returned deliveryId.
       let response;
-      if (formData.image) {
+      const imageFiles = formData.images || (formData.image ? [formData.image] : []);
+      if (imageFiles.length > 0) {
         const fd = new FormData();
-        fd.append('images', formData.image);
-        Object.entries(payload).forEach(([k, v]) => {
+        imageFiles.forEach(file => fd.append('images', file));
+        Object.entries(payload).forEach(([k, v]) =>
+        {
           if (v === undefined || v === null) {
             fd.append(k, '');
           } else if (typeof v === 'object') {
@@ -596,7 +666,8 @@ const Book = () => {
           } catch (e) { /* ignore */ }
 
           // helper: cancel delivery if payment not completed
-          const cleanupOnPaymentCancel = async (did) => {
+          const cleanupOnPaymentCancel = async (did) =>
+          {
             try {
               console.log('[Book] Payment window closed without completion for delivery:', did);
               // Don't cancel the booking - user can try paying again
@@ -627,8 +698,12 @@ const Book = () => {
                   window.open(authorizationUrl, '_blank');
                 }
                 setIsProcessingPayment(false);
-                // Do not proceed further; payment will complete on hosted page
-                // The callback page will handle the redirect back to success
+                // Redirect main window to My Deliveries so user sees the new delivery and can track it while paying in popup
+                setTimeout(() =>
+                {
+                  router.push('/customer/deliveries', 'root', 'replace');
+                }, 400);
+                // Payment will complete in popup; callback/success page will refresh deliveries
                 return;
               } catch (navErr) {
                 console.error('Failed to navigate popup to authorizationUrl:', navErr);
@@ -657,7 +732,8 @@ const Book = () => {
                     }
                   ]
                 },
-                onSuccess: async (transaction) => {
+                onSuccess: async (transaction) =>
+                {
                   console.log('Payment successful (inline):', transaction);
                   setToastMsg('Payment successful! Redirecting...');
                   setShowToast(true);
@@ -683,7 +759,8 @@ const Book = () => {
                     const didPart = deliveryId ? `&deliveryId=${encodeURIComponent(deliveryId)}` : '';
                     const target = `/customer/payment/success?paymentId=${pidEnc}${didPart}`;
 
-                    setTimeout(() => {
+                    setTimeout(() =>
+                    {
                       router.push(target, 'root', 'replace');
                     }, 350);
                   } catch (err) {
@@ -692,7 +769,8 @@ const Book = () => {
                     setIsSubmitting(false);
                   }
                 },
-                onCancel: async () => {
+                onCancel: async () =>
+                {
                   console.log('Payment cancelled by user');
                   // rollback delivery on cancel
                   try { await cleanupOnPaymentCancel(deliveryId); } catch (e) { console.warn(e); }
@@ -735,6 +813,7 @@ const Book = () => {
       try {
         if ((formData.deliveryType || '').toString().toLowerCase() === 'smart_ride' && deliveryId) {
           setBookingStatus('searching');
+          socketService.connect();
           socketService.onConnected(() => {
             try {
               socketService.joinRoom(`delivery:${deliveryId}`);
@@ -747,7 +826,7 @@ const Book = () => {
                 const rider = payload?.rider || payload?.driver || payload?.assignedRider || payload?.data?.rider;
                 setAssignedRider(rider || payload);
                 setBookingStatus('rider_found');
-                setToastMsg('A rider has accepted your delivery');
+                setToastMsg('A rider has accepted your delivery!');
                 setShowToast(true);
               } catch (e) { console.warn('[Book] assigned handler error', e); }
             };
@@ -758,7 +837,6 @@ const Book = () => {
             socketService.on('delivery:status', handleAssigned);
 
             // Store cleanup on the socket instance so we can remove listeners later when navigating
-            // We'll remove them after redirect below.
             socketService._lastDeliveryListeners = { deliveryId, handleAssigned };
           });
         }
@@ -784,10 +862,10 @@ const Book = () => {
         console.warn('[Book] Failed to clear form data:', e);
       }
 
-      setToastMsg('Delivery booked successfully!');
+      setToastMsg('Delivery booked successfully! Redirecting to your deliveries…');
       setShowToast(true);
       // If Smart Ride, allow a short delay so socket may deliver assignment event
-      const redirectDelay = (formData.deliveryType === 'smart_ride') ? 5000 : 1500;
+      const redirectDelay = (formData.deliveryType === 'smart_ride') ? 5000 : 600;
       setTimeout(() => {
         // cleanup socket listeners for this delivery to avoid leaks
         try {
@@ -807,7 +885,8 @@ const Book = () => {
       const data = err?.response?.data || err?.data;
       if (data?.errors && Array.isArray(data.errors)) {
         const next = {};
-        data.errors.forEach((e) => {
+        data.errors.forEach((e) =>
+        {
           const { key, msg } = getFieldErrorFromApi(e.field, e.message);
           if (key && msg) next[key] = msg;
         });
@@ -823,7 +902,8 @@ const Book = () => {
     }
   };
 
-  const saveDraft = async () => {
+  const saveDraft = async () =>
+  {
     setIsSubmitting(true);
     try {
       const draftsRaw = getJSONCookie('delivery_drafts');
@@ -847,8 +927,10 @@ const Book = () => {
   };
 
   // Fetch price estimation when relevant fields change
-  useEffect(() => {
-    const fetchEstimate = async () => {
+  useEffect(() =>
+  {
+    const fetchEstimate = async () =>
+    {
       if (!pickupCoordinates?.lat || !deliveryCoordinates?.lat) {
         setEstimatedPrice(null);
         return;
@@ -866,8 +948,10 @@ const Book = () => {
         });
 
         if (response && response.data) {
-          setEstimatedPrice(response.data);
-          setDistanceKm(response.data.distance);
+          // Store inner payload so we have estimatedPrice, distance, pricingBreakdown (backend is source of truth)
+          const payload = response.data?.data ?? response.data;
+          setEstimatedPrice(payload);
+          setDistanceKm(payload.distance ?? response.data?.distance);
         }
       } catch (error) {
         console.error("Failed to fetch price estimate:", error);
@@ -883,12 +967,50 @@ const Book = () => {
     return () => clearTimeout(debounceTimer);
   }, [pickupCoordinates, deliveryCoordinates, formData.deliveryType, isSpecialErrand]);
 
-  // Smart Ride: Orders go directly to pool for any available rider to accept (first-come, first-serve)
-  // No need to fetch or display nearby riders to customer
+  // Fetch nearby riders only for Smart Ride when pickup location is set
+  useEffect(() =>
+  {
+    if (formData.deliveryType !== 'smart_ride') {
+      setNearbyRiders([]);
+      setNearbyPricing(null);
+      setSelectedRiderId(null);
+      return;
+    }
+    const lat = pickupCoordinates?.lat;
+    const lng = pickupCoordinates?.lng;
+    if (typeof lat !== 'number' || typeof lng !== 'number' || lat === 0 || lng === 0) {
+      setNearbyRiders([]);
+      setNearbyPricing(null);
+      return;
+    }
+    let cancelled = false;
+    setNearbyRidersLoading(true);
+    getNearbyRiders({ lat, lng, radiusKm: 25, limit: 10 })
+      .then((res) =>
+      {
+        if (cancelled) return;
+        const data = res?.data?.data || res?.data;
+        setNearbyRiders(Array.isArray(data?.riders) ? data.riders : []);
+        setNearbyPricing(data?.pricing || null);
+      })
+      .catch(() =>
+      {
+        if (!cancelled) {
+          setNearbyRiders([]);
+          setNearbyPricing(null);
+        }
+      })
+      .finally(() =>
+      {
+        if (!cancelled) setNearbyRidersLoading(false);
+      });
+    return () => { cancelled = true; };
+  }, [formData.deliveryType, pickupCoordinates?.lat, pickupCoordinates?.lng]);
 
   // Calculate distance whenever addresses change - KEEPING THIS FOR NOW BUT IS REDUNDANT WITH BACKEND RESPONSE potentially
   // If backend returns distance, we can use that.
-  useEffect(() => {
+  useEffect(() =>
+  {
     if (pickupCoordinates && deliveryCoordinates &&
       pickupCoordinates.lat !== 0 && deliveryCoordinates.lat !== 0) {
       const dist = calculateDistance(pickupCoordinates, deliveryCoordinates);
@@ -898,63 +1020,79 @@ const Book = () => {
     }
   }, [pickupCoordinates, deliveryCoordinates]);
 
-  const getPricingBreakdown = () => {
+  const getPricingBreakdown = () =>
+  {
     if (estimatedPrice) {
-      // Use the applied delivery type fee which updates immediately on selection
+      const pb = estimatedPrice.pricingBreakdown;
+      // Prefer backend breakdown so displayed price matches stored price after create
+      if (pb && (estimatedPrice.estimatedPrice != null || pb.total != null)) {
+        const total = Number(estimatedPrice.estimatedPrice ?? pb.total ?? 0);
+        return {
+          total,
+          deliveryCharge: Number(pb.subtotal ?? total),
+          baseFare: Number(pb.baseFare ?? 0),
+          deliveryTypeFee: Number(pb.smartRideFee ?? 0),
+          distance: Number(estimatedPrice.distance ?? 0),
+          distanceCharge: Number(pb.distanceCharge ?? 0),
+          perKmRate: 0,
+          discountAmount: Number(pb.discount ?? 0),
+          discountPercentage: pb.discount ? (total + pb.discount) > 0 ? Math.round((pb.discount / (total + pb.discount)) * 100) : 0 : 0,
+          smartRideFee: Number(pb.smartRideFee ?? 0),
+          errandFee: Number(pb.errandFee ?? 0)
+        };
+      }
+      // Fallback if backend didn't return breakdown
       const deliveryTypeFee = appliedDeliveryTypeFee || 0;
       const distance = estimatedPrice.distance || 0;
-
-      // Always use correct pricing: ₦500 base (first 2km), ₦150/km after that
       const baseFare = 500;
       const distanceCharge = distance > 2 ? (distance - 2) * 150 : 0;
-
       return {
         total: baseFare + distanceCharge + deliveryTypeFee,
         deliveryCharge: baseFare + distanceCharge + deliveryTypeFee,
-        baseFare: 500, // Force correct base fare
+        baseFare,
         deliveryTypeFee,
         distance,
         distanceCharge,
-        perKmRate: 150, // Force correct per km rate
+        perKmRate: 150,
         discountAmount: estimatedPrice.pricingBreakdown?.discountAmount || 0,
-        discountPercentage: estimatedPrice.pricingBreakdown?.discountPercentage || 0
-      }
+        discountPercentage: estimatedPrice.pricingBreakdown?.discountPercentage || 0,
+        smartRideFee: 0,
+        errandFee: 0
+      };
     }
-    // Return safe defaults to prevent UI crashes
     return {
       total: 0,
-      baseFare: 500,
+      baseFare: 0,
       deliveryTypeFee: appliedDeliveryTypeFee || 0,
-      deliveryCharge: 500 + (appliedDeliveryTypeFee || 0),
+      deliveryCharge: appliedDeliveryTypeFee || 0,
       distance: 0,
       distanceCharge: 0,
-      perKmRate: 150,
+      perKmRate: 0,
       discountAmount: 0,
-      discountPercentage: 0
+      discountPercentage: 0,
+      smartRideFee: 0,
+      errandFee: 0
     };
   };
 
-  const calculateTotal = () => {
+  const calculateTotal = () =>
+  {
     const pricing = getPricingBreakdown();
-    const base = 500; // Base fare
-    const perKmRate = 150; // Per km rate after 2km
+    // Use backend total when available so it matches the price stored when delivery is created
+    if (pricing.total != null && pricing.total > 0) return pricing.total;
+
+    const base = 500;
+    const perKmRate = 150;
     const dtFee = Number(pricing.deliveryTypeFee || 0);
     const discount = Number(pricing.discountAmount || 0);
-
-    // Prefer using measured distance from state (set by backend estimate), fallback to pricing.distance
     const dist = (typeof distanceKm === 'number' && distanceKm > 0) ? Number(distanceKm) : Number(pricing.distance || 0);
-
-    // Distance charge: first 2km covered by base fare, charge ₦150/km after that
     let distanceCharge = 0;
-    if (dist > 2) {
-      const extraKm = dist - 2; // Use exact distance, not rounded
-      distanceCharge = extraKm * perKmRate;
-    }
-
+    if (dist > 2) distanceCharge = (dist - 2) * perKmRate;
     return Math.max(0, base + distanceCharge + dtFee - discount);
   };
 
-  const getBaseRate = () => {
+  const getBaseRate = () =>
+  {
     // Logic for base rate display
     return getPricingBreakdown().deliveryCharge || 0;
   };
@@ -981,13 +1119,24 @@ const Book = () => {
               <SmartRideBooking embedMode={true} initialData={{
                 senderName: formData.senderName,
                 senderPhone: formData.senderPhone,
-                pickupAddress: formData.pickupStreet || formData.pickupAddress || '',
-                deliveryAddress: formData.deliveryStreet || formData.deliveryAddress || '',
+                pickupAddress: formData.pickupStreet || formData.pickupAddress || (pickupAddressObj?.street || '') || '',
+                deliveryAddress: formData.deliveryStreet || formData.deliveryAddress || (deliveryAddressObj?.street || '') || '',
+                pickupPlace: pickupAddressObj || (pickupCoordinates?.lat ? { street: formData.pickupStreet || formData.pickupAddress, coordinates: pickupCoordinates } : null),
+                deliveryPlace: deliveryAddressObj || (deliveryCoordinates?.lat ? { street: formData.deliveryStreet || formData.deliveryAddress, coordinates: deliveryCoordinates } : null),
                 pickupDate: formData.pickupDate,
+                recipientName: formData.recipientName,
+                recipientPhone: formData.recipientPhone,
                 recipientEmail: formData.recipientEmail,
+                sizeCategory: formData.sizeCategory,
+                weightCategory: formData.weightCategory,
+                dimensions: formData.dimensions,
+                weight: formData.weight,
                 packageDescription: formData.packageDescription,
+                paymentMethod: formData.paymentMethod,
+                paymentNotes: formData.paymentNotes,
                 image: formData.image
-              }} onClose={() => {
+              }} onClose={() =>
+              {
                 setShowSmartRide(false);
                 // Reset all Smart Ride related state so next booking starts fresh
                 setBookingStatus(null);
@@ -1040,7 +1189,8 @@ const Book = () => {
                   <label className="block text-sm font-medium text-[#0F172A] mb-2">Delivery Type</label>
                   <StyledDropdown
                     value={selectedDeliveryType?.label || 'Select delivery type'}
-                    onChange={(label) => {
+                    onChange={(label) =>
+                    {
                       const selected = deliveryTypes.find(t => t.label === label);
                       if (selected) handleDeliveryTypeSelect(selected.value);
                     }}
@@ -1106,12 +1256,14 @@ const Book = () => {
                         </div>
                         <GoogleMapsAutocomplete
                           value={formData.pickupStreet}
-                          onChange={(value) => {
+                          onChange={(value) =>
+                          {
                             setFormData(prev => ({ ...prev, pickupStreet: value }));
                             if (fieldErrors.pickupStreet) setFieldErrors(prev => ({ ...prev, pickupStreet: undefined }));
                           }}
                           placeholder="Enter pickup address"
-                          onPlaceSelect={(place) => {
+                          onPlaceSelect={(place) =>
+                          {
                             setFormData(prev => ({ ...prev, pickupStreet: place.street || place.formatted_address || '' }));
                             setPickupCoordinates(place.coordinates || { lat: 0, lng: 0 });
                             setPickupAddressObj(place);
@@ -1190,12 +1342,14 @@ const Book = () => {
                         </div>
                         <GoogleMapsAutocomplete
                           value={formData.deliveryStreet}
-                          onChange={(value) => {
+                          onChange={(value) =>
+                          {
                             setFormData(prev => ({ ...prev, deliveryStreet: value }));
                             if (fieldErrors.deliveryStreet) setFieldErrors(prev => ({ ...prev, deliveryStreet: undefined }));
                           }}
                           placeholder="Enter delivery address"
-                          onPlaceSelect={(place) => {
+                          onPlaceSelect={(place) =>
+                          {
                             setFormData(prev => ({ ...prev, deliveryStreet: place.street || place.formatted_address || '' }));
                             setDeliveryCoordinates(place.coordinates || { lat: 0, lng: 0 });
                             setDeliveryAddressObj(place);
@@ -1247,7 +1401,8 @@ const Book = () => {
                                 formData.sizeCategory === 'very_big' ? 'Very Big' :
                                   'Size Category'
                           }
-                          onChange={(label) => {
+                          onChange={(label) =>
+                          {
                             const valueMap = { 'Small': 'small', 'Medium': 'big', 'Very Big': 'very_big' };
                             const defaultScaleMap = { small: 85, big: 100, very_big: 120 };
                             const cat = valueMap[label];
@@ -1302,7 +1457,8 @@ const Book = () => {
                             max="130"
                             name="sizeScale"
                             value={formData.sizeScale}
-                            onChange={(e) => {
+                            onChange={(e) =>
+                            {
                               const scale = parseInt(e.target.value, 10);
                               const dimsMap = { small: [30, 30, 30], big: [50, 40, 30], very_big: [80, 60, 50] };
                               // Determine category from scale thresholds
@@ -1327,14 +1483,16 @@ const Book = () => {
                                 // ignore
                               }
                             }}
-                            onMouseMove={(e) => {
+                            onMouseMove={(e) =>
+                            {
                               if (!sliderRef.current) return;
                               const val = parseInt(sliderRef.current.value, 10);
                               const min = 70; const max = 130;
                               const percent = (val - min) / (max - min);
                               setSliderBubble({ percent, value: val });
                             }}
-                            onMouseLeave={() => {
+                            onMouseLeave={() =>
+                            {
                               if (hideBubbleTimeout.current) clearTimeout(hideBubbleTimeout.current);
                               hideBubbleTimeout.current = setTimeout(() => setSliderBubble(null), 800);
                             }}
@@ -1436,7 +1594,8 @@ const Book = () => {
                                 formData.weightCategory === 'very_heavy' ? 'Very Heavy' :
                                   'Weight Category'
                           }
-                          onChange={(label) => {
+                          onChange={(label) =>
+                          {
                             const valueMap = { 'Light': 'light', 'Heavy': 'heavy', 'Very Heavy': 'very_heavy' };
                             setFormData({ ...formData, weightCategory: valueMap[label] });
                           }}
@@ -1512,72 +1671,136 @@ const Book = () => {
                     {fieldErrors.packageDescription && <p id="packageDescription-error" className="text-sm text-red-600 mt-1.5" role="alert">{fieldErrors.packageDescription}</p>}
                   </div>
 
-                  {/* Package Image Upload - Redesigned */}
-                  <div className="mb-6">
-                    <label className="block text-sm font-medium text-[#0F172A] mb-3">Package Image (optional)</label>
-
-                    {/* Image Preview */}
-                    {formData.image && formData.image instanceof File && (
-                      <div className="mb-3">
-                        <img
-                          src={URL.createObjectURL(formData.image)}
-                          alt="Package preview"
-                          className="w-full h-48 object-cover rounded-xl border-2 border-[#00B75A]"
-                          onLoad={(e) => URL.revokeObjectURL(e.target.src)}
-                          onError={(e) => {
-                            e.target.style.display = 'none';
-                            console.error('Failed to load image preview');
-                          }}
-                        />
+                  {/* Riders nearby — Smart Ride only: customer can request a rider; Express goes to pool */}
+                  {formData.deliveryType === 'smart_ride' && pickupCoordinates?.lat && pickupCoordinates?.lng && (
+                    <div className="mb-6 bg-[#F8F9FA] rounded-2xl p-4 border border-gray-200">
+                      <div className="flex items-center justify-between mb-3">
+                        <span className="text-sm font-semibold text-[#0F172A]">Riders nearby (Smart Ride)</span>
+                        {nearbyPricing?.deliveryStartsFrom != null && (
+                          <span className="text-xs text-[#64748B]">From ₦{Number(nearbyPricing.deliveryStartsFrom).toLocaleString()}</span>
+                        )}
                       </div>
-                    )}
-
-                    <div className="border-2 border-dashed border-gray-300 rounded-xl p-6 hover:border-[#00B75A] transition-colors cursor-pointer bg-[#F8F9FA]">
-                      <input
-                        type="file"
-                        accept="image/*"
-                        id="package-image-upload"
-                        onChange={(e) => setFormData({ ...formData, image: e.target.files && e.target.files[0] ? e.target.files[0] : null })}
-                        className="hidden"
-                      />
-                      <label htmlFor="package-image-upload" className="cursor-pointer flex flex-col items-center justify-center text-center">
-                        {formData.image ? (
-                          <div className="w-full">
-                            <div className="flex items-center justify-between mb-2">
-                              <div className="flex items-center gap-2">
-                                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                                  <path d="M21 19V5c0-1.1-.9-2-2-2H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2zM8.5 13.5l2.5 3.01L14.5 12l4.5 6H5l3.5-4.5z" fill="#00B75A" />
-                                </svg>
-                                <span className="text-sm font-medium text-[#0F172A]">{formData.image.name}</span>
+                      <p className="text-xs text-[#64748B] mb-2">Request a rider to accept your delivery. They can accept or decline.</p>
+                      {nearbyRidersLoading ? (
+                        <p className="text-sm text-[#64748B]">Loading riders...</p>
+                      ) : nearbyRiders.length === 0 ? (
+                        <p className="text-sm text-[#64748B]">No riders in range. Your order will be visible to all riders when you book.</p>
+                      ) : (
+                        <ul className="space-y-2 max-h-40 overflow-y-auto">
+                          {nearbyRiders.slice(0, 5).map((r) => (
+                            <li key={r.riderId} className="flex items-center gap-3 py-2 px-3 bg-white rounded-xl border border-gray-100">
+                              {r.profileImage ? (
+                                <img src={r.profileImage} alt="" className="w-10 h-10 rounded-full object-cover" />
+                              ) : (
+                                <div className="w-10 h-10 rounded-full bg-[#00B75A]/20 flex items-center justify-center text-[#0F172A] font-semibold text-sm">
+                                  {(r.fullName || 'R').charAt(0)}
+                                </div>
+                              )}
+                              <div className="flex-1 min-w-0">
+                                <p className="text-sm font-medium text-[#0F172A] truncate">{r.fullName}</p>
+                                <p className="text-xs text-[#64748B]">{r.ratingDisplay}</p>
                               </div>
+                              {r.distanceKm != null && (
+                                <div className="text-right text-xs text-[#64748B]">
+                                  <p>{r.distanceKm} km</p>
+                                  {r.estimatedArrivalMinutes != null && <p>~{r.estimatedArrivalMinutes} min</p>}
+                                </div>
+                              )}
                               <button
                                 type="button"
-                                onClick={(e) => {
-                                  e.preventDefault();
-                                  e.stopPropagation();
-                                  setFormData({ ...formData, image: null });
-                                }}
-                                className="text-red-500 hover:text-red-700"
+                                onClick={() => setSelectedRiderId(selectedRiderId === r.riderId ? null : r.riderId)}
+                                className={`px-3 py-1.5 rounded-lg text-xs font-medium whitespace-nowrap ${selectedRiderId === r.riderId ? 'bg-[#00B75A] text-white' : 'bg-[#F8F9FA] text-[#0F172A] border border-gray-200 hover:border-[#00B75A]'}`}
                               >
-                                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                                  <path d="M6 19c0 1.1.9 2 2 2h8c1.1 0 2-.9 2-2V7H6v12zM19 4h-3.5l-1-1h-5l-1 1H5v2h14V4z" fill="currentColor" />
-                                </svg>
+                                {selectedRiderId === r.riderId ? 'Requested' : 'Request this rider'}
                               </button>
-                            </div>
-                            <p className="text-xs text-[#64748B]">Click to change image</p>
-                          </div>
-                        ) : (
-                          <>
-                            <svg width="48" height="48" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" className="mb-3">
-                              <path d="M21 19V5c0-1.1-.9-2-2-2H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2zM8.5 13.5l2.5 3.01L14.5 12l4.5 6H5l3.5-4.5z" fill="#94A3B8" />
-                            </svg>
-                            <p className="text-sm font-medium text-[#0F172A] mb-1">Click to upload package image</p>
-                            <p className="text-xs text-[#64748B]">PNG, JPG up to 10MB</p>
-                          </>
-                        )}
-                      </label>
+                            </li>
+                          ))}
+                        </ul>
+                      )}
                     </div>
+                  )}
+
+
+
+                  {/* Package Images Upload — up to 5 */}
+                  <div className="mb-6">
+                    <div className="flex items-center justify-between mb-3">
+                      <label className="block text-sm font-medium text-[#0F172A]">
+                        Package Images <span className="text-[#94A3B8] font-normal">(optional · up to 5)</span>
+                      </label>
+                      {(formData.images || []).length > 0 && (
+                        <span className="text-xs text-[#64748B]">{(formData.images || []).length}/5 added</span>
+                      )}
+                    </div>
+
+                    {/* Thumbnail row */}
+                    <div className="flex flex-wrap gap-3">
+                      {(formData.images || []).map((file, idx) => (
+                        <div
+                          key={idx}
+                          className="relative w-24 h-24 rounded-xl overflow-hidden border-2 border-[#00B75A] flex-shrink-0"
+                        >
+                          <img
+                            src={URL.createObjectURL(file)}
+                            alt={`Package ${idx + 1}`}
+                            className="w-full h-full object-cover"
+                          />
+                          {/* Remove button */}
+                          <button
+                            type="button"
+                            onClick={() =>
+                            {
+                              const updated = (formData.images || []).filter((_, i) => i !== idx);
+                              setFormData({ ...formData, images: updated });
+                            }}
+                            className="absolute top-1 right-1 w-5 h-5 bg-red-500 rounded-full flex items-center justify-center hover:bg-red-600 transition-colors"
+                            title="Remove image"
+                          >
+                            <svg width="10" height="10" viewBox="0 0 24 24" fill="none">
+                              <path d="M18 6L6 18M6 6l12 12" stroke="white" strokeWidth="3" strokeLinecap="round" />
+                            </svg>
+                          </button>
+                        </div>
+                      ))}
+
+                      {/* Add tile — shown while under the limit */}
+                      {(formData.images || []).length < 5 && (
+                        <>
+                          <input
+                            type="file"
+                            accept="image/*"
+                            multiple
+                            id="package-image-upload"
+                            className="hidden"
+                            onChange={(e) =>
+                            {
+                              const incoming = Array.from(e.target.files || []);
+                              const existing = formData.images || [];
+                              const combined = [...existing, ...incoming].slice(0, 5);
+                              setFormData({ ...formData, images: combined });
+                              e.target.value = ''; // reset so same file can be re-added
+                            }}
+                          />
+                          <label
+                            htmlFor="package-image-upload"
+                            className="w-24 h-24 rounded-xl border-2 border-dashed border-gray-300 hover:border-[#00B75A] transition-colors cursor-pointer flex flex-col items-center justify-center bg-[#F8F9FA] hover:bg-[#F0FDF4] flex-shrink-0"
+                          >
+                            <svg width="28" height="28" viewBox="0 0 24 24" fill="none" className="mb-1">
+                              <path d="M12 5v14M5 12h14" stroke="#94A3B8" strokeWidth="2.5" strokeLinecap="round" />
+                            </svg>
+                            <span className="text-[10px] text-[#94A3B8] text-center leading-tight px-1">
+                              {(formData.images || []).length === 0 ? 'Add photos' : 'Add more'}
+                            </span>
+                          </label>
+                        </>
+                      )}
+                    </div>
+
+                    {(formData.images || []).length === 0 && (
+                      <p className="text-xs text-[#94A3B8] mt-2">PNG, JPG, WebP up to 10MB each</p>
+                    )}
                   </div>
+
 
                   {/* Payment Method - exact copy from SmartRide */}
                   <div className="mb-6">
@@ -1668,39 +1891,65 @@ const Book = () => {
                   </div>
                 </div>
 
+                {/* Discount / Launch offer notice */}
+                {(() =>
+                {
+                  const pricing = getPricingBreakdown();
+                  const hasDiscount = (pricing.discountAmount ?? 0) > 0;
+                  const note = estimatedPrice?.note;
+                  const showNote = note && typeof note === 'string' && note.trim();
+                  if (!hasDiscount && !showNote) return null;
+                  return (
+                    <div className="mb-4 rounded-xl p-4 flex items-start gap-3 bg-green-50 border border-green-200">
+                      <span className="text-green-600 flex-shrink-0 mt-0.5" aria-hidden>✓</span>
+                      <div className="flex-1 min-w-0">
+                        {hasDiscount && (
+                          <p className="text-sm font-medium text-green-800 mb-1">
+                            You&apos;re eligible for a discount of ₦{(pricing.discountAmount ?? 0).toLocaleString()} on this delivery.
+                          </p>
+                        )}
+                        {showNote && <p className="text-xs text-green-700">{note.trim()}</p>}
+                      </div>
+                    </div>
+                  );
+                })()}
+
                 {/* Cost Breakdown */}
                 <div className="bg-[#F0FDF4] rounded-xl p-4 md:p-6 mb-6">
                   <h3 className="text-base font-semibold text-[#0F172A] mb-4">Cost Breakdown</h3>
                   <div className="space-y-2.5">
-                    {(() => {
+                    {(() =>
+                    {
                       const pricing = getPricingBreakdown();
                       return (
                         <>
                           {/* Base Fare */}
                           <div className="flex justify-between items-center text-[#0F172A]">
                             <span className="text-sm md:text-base">Base Fare</span>
-                            <span className="text-sm md:text-base font-medium">₦{pricing.baseFare.toLocaleString()}</span>
+                            <span className="text-sm md:text-base font-medium">₦{(pricing.baseFare ?? 0).toLocaleString()}</span>
                           </div>
 
-
-
-
-                          {/* Batch Discount */}
-                          {pricing.discountAmount > 0 && (
-                            <div className="flex justify-between items-center text-green-700">
-                              <span className="text-sm">Batch Discount ({pricing.discountPercentage}%)</span>
-                              <span className="text-sm font-medium">-₦{pricing.discountAmount.toLocaleString()}</span>
+                          {/* Distance charge (from backend) */}
+                          {(pricing.distanceCharge ?? 0) > 0 && (
+                            <div className="flex justify-between items-center text-[#0F172A]">
+                              <span className="text-sm md:text-base">Distance ({pricing.distance?.toFixed(1) ?? 0} km)</span>
+                              <span className="text-sm md:text-base font-medium">₦{(pricing.distanceCharge ?? 0).toLocaleString()}</span>
                             </div>
                           )}
 
-                          {/* Insurance removed */}
+                          {/* Smart Ride fee */}
+                          {(pricing.smartRideFee ?? pricing.deliveryTypeFee ?? 0) > 0 && (
+                            <div className="flex justify-between items-center text-[#0F172A]">
+                              <span className="text-sm md:text-base">Smart Ride</span>
+                              <span className="text-sm md:text-base font-medium">₦{(pricing.smartRideFee ?? pricing.deliveryTypeFee ?? 0).toLocaleString()}</span>
+                            </div>
+                          )}
 
-                          {/* Total */}
-                          {/* Delivery type fee (e.g., Express/SmartRide) */}
-                          {pricing.deliveryTypeFee > 0 && (
-                            <div className="sr-only">
-                              <span>{(formData.deliveryType || '').toString().toUpperCase()}</span>
-                              <span>₦{pricing.deliveryTypeFee.toLocaleString()}</span>
+                          {/* Batch / Launch discount */}
+                          {(pricing.discountAmount ?? 0) > 0 && (
+                            <div className="flex justify-between items-center text-green-700">
+                              <span className="text-sm">Discount{pricing.discountPercentage ? ` (${pricing.discountPercentage}%)` : ''}</span>
+                              <span className="text-sm font-medium">-₦{(pricing.discountAmount ?? 0).toLocaleString()}</span>
                             </div>
                           )}
 
@@ -1774,7 +2023,8 @@ const Book = () => {
 
                 <div className="p-6 overflow-y-auto h-[calc(100%-88px)]">
                   <button
-                    onClick={() => {
+                    onClick={() =>
+                    {
                       setFormData({ ...formData, paymentMethod: 'cash' });
                       setTimeout(() => setShowPaymentDrawer(false), 150);
                     }}
@@ -1808,7 +2058,8 @@ const Book = () => {
                   </button>
 
                   <button
-                    onClick={() => {
+                    onClick={() =>
+                    {
                       setFormData({ ...formData, paymentMethod: 'card' });
                       setTimeout(() => setShowPaymentDrawer(false), 150);
                     }}
@@ -1849,7 +2100,8 @@ const Book = () => {
                   </button>
 
                   <button
-                    onClick={() => {
+                    onClick={() =>
+                    {
                       setFormData({ ...formData, paymentMethod: 'transfer' });
                       setTimeout(() => setShowPaymentDrawer(false), 150);
                     }}
@@ -1911,7 +2163,8 @@ const Book = () => {
 
                   <div className="p-6 overflow-y-auto max-h-[70vh]">
                     <button
-                      onClick={() => {
+                      onClick={() =>
+                      {
                         setFormData({ ...formData, paymentMethod: 'cash' });
                         setTimeout(() => setShowPaymentDrawer(false), 150);
                       }}
@@ -1945,7 +2198,8 @@ const Book = () => {
                     </button>
 
                     <button
-                      onClick={() => {
+                      onClick={() =>
+                      {
                         setFormData({ ...formData, paymentMethod: 'card' });
                         setTimeout(() => setShowPaymentDrawer(false), 150);
                       }}
@@ -1986,7 +2240,8 @@ const Book = () => {
                     </button>
 
                     <button
-                      onClick={() => {
+                      onClick={() =>
+                      {
                         setFormData({ ...formData, paymentMethod: 'transfer' });
                         setTimeout(() => setShowPaymentDrawer(false), 150);
                       }}

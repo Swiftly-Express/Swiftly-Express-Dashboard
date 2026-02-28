@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { useHistory } from 'react-router-dom';
 import AdminSidebar from './AdminSidebar';
 import { YummyText } from '../../../components/YummyText';
 import { getCookie } from '../../../utils/cookies';
@@ -14,8 +15,10 @@ import {
   notifyNewUserRegistration,
   notifyNewKYCSubmission
 } from '../../../utils/pushNotifications';
+import { getNotificationRoute } from '../../../utils/notificationNavigation';
 
 const AdminLayout = ({ children }) => {
+  const history = useHistory();
   const [showNotifications, setShowNotifications] = useState(false);
   const [notifications, setNotifications] = useState([]);
   const [unreadCount, setUnreadCount] = useState(0);
@@ -197,9 +200,13 @@ const AdminLayout = ({ children }) => {
       console.warn('[AdminLayout] Failed to register socket listeners:', e);
     }
 
-    const notificationInterval = setInterval(() => {
-      checkNotifications();
-    }, 30000);
+    const handleNotificationNew = (payload) => {
+      if (payload && payload._id) {
+        setNotifications((prev) => [{ ...payload, isRead: false, read: false }, ...prev]);
+        setUnreadCount((c) => c + 1);
+      }
+    };
+    socketService.on('notification:new', handleNotificationNew);
 
     const handleKycUpdate = () => {
 
@@ -233,15 +240,14 @@ const AdminLayout = ({ children }) => {
     window.addEventListener('debt:updated', handleDebtUpdated);
 
     return () => {
-      clearInterval(notificationInterval);
       window.removeEventListener('kyc:updated', handleKycUpdate);
       window.removeEventListener('user:created', handleUserCreated);
       window.removeEventListener('kyc:submitted', handleKycSubmittedWindow);
       window.removeEventListener('verification:completed', handleVerificationCompleted);
       window.removeEventListener('debt:updated', handleDebtUpdated);
 
-      // Clean up socket listeners
       try {
+        socketService.off('notification:new', handleNotificationNew);
         socketService.off('user:registered', handleUserRegistered);
         socketService.off('kyc:submitted', handleKYCSubmitted);
       } catch (e) {
@@ -403,6 +409,9 @@ const AdminLayout = ({ children }) => {
                               if (!isRead) {
                                 handleMarkAsRead(notifId, e);
                               }
+                              const route = getNotificationRoute(notification, 'admin');
+                              setShowNotifications(false);
+                              history.push(route);
                             }}
                           >
                             <div className="flex items-start gap-3">

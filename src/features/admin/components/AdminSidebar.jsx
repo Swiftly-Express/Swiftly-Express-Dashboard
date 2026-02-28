@@ -12,6 +12,7 @@ import KycIcon from '../../../icons/Kycicon';
 import AnalyzeIcon from '../../../icons/Analyzeicon';
 import SettingsIcon from '../../../icons/Settingsicon';
 import ToybikeIcon from '../../../icons/Toybikeicon';
+import RevenueIcon from '../../../icons/Revenueicon';
 import { getPendingVerifications, getAllDeliveries } from '../../../utils/adminApi';
 
 const SidebarButton = ({ to, active, icon, label, count }) => {
@@ -147,6 +148,12 @@ const AdminSidebar = () => {
       icon: <BlockIcon />,
       label: 'Manage Orders',
       count: ordersCount || undefined,
+    },
+    {
+      id: 'payouts',
+      to: '/admin/payouts',
+      icon: <RevenueIcon />,
+      label: 'Payouts',
     },
     {
       id: 'kyc-approvals',
