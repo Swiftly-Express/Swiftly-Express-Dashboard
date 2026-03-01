@@ -65,9 +65,13 @@ const OrderCard = ({
               {priority}
             </span>
           )}
-          {smartRide && (
-            <span className="px-3 py-1 rounded-lg text-xs font-normal bg-[#00D68F] text-white">
-              SmartRide
+          {smartRide ? (
+            <span className="px-3 py-1 rounded-lg text-xs font-semibold bg-[#00D68F] text-white">
+              ⚡ SmartRide
+            </span>
+          ) : (
+            <span className="px-3 py-1 rounded-lg text-xs font-normal bg-blue-100 text-blue-700">
+              Express
             </span>
           )}
           {size && (
@@ -950,11 +954,13 @@ const AvailableOrders = () =>
   const filteredOrders = orders.filter(order =>
   {
     if (activeTab === 'express') return !order.smartRide && order.deliveryType !== 'smart_ride';
-    if (activeTab === 'express') return !order.smartRide && order.deliveryType !== 'smart_ride';
+    if (activeTab === 'smartride') return order.smartRide === true || order.deliveryType === 'smart_ride';
+    if (activeTab === 'nearby') return parseFloat(order.distance) <= 2.5;
     return true;
   });
 
   const expressCount = orders.filter(o => !o.smartRide && o.deliveryType !== 'smart_ride').length;
+  const smartRideCount = orders.filter(o => o.smartRide === true || o.deliveryType === 'smart_ride').length;
   const nearbyCount = orders.filter(o => parseFloat(o.distance) <= 2.5).length;
 
   const handleRefresh = async (event) =>
@@ -1149,13 +1155,11 @@ const AvailableOrders = () =>
             {/* Filter Tabs (single responsive row) */}
             <div className="mb-6">
               <div className="overflow-x-auto -mx-4 sm:mx-0 px-4 sm:px-0">
-                <div className="inline-flex items-center gap-2 bg-gray-50 p-1 rounded-full whitespace-nowrap">
-                  <YummyText>
+                <YummyText>
+                  <div className="inline-flex items-center gap-1 bg-gray-50 p-1 rounded-full whitespace-nowrap">
                     <button
                       onClick={() => setActiveTab('all')}
-                      className={`inline-block flex-shrink-0 min-w-[88px] sm:min-w-[120px] px-3 sm:px-5 py-1 rounded-full text-sm font-normal transition-colors ${activeTab === 'all'
-                        ? 'text-[#00B75A] bg-white shadow-sm'
-                        : 'text-[#64748B]'
+                      className={`inline-block flex-shrink-0 px-4 py-1.5 rounded-full text-sm font-normal transition-colors ${activeTab === 'all' ? 'text-[#00B75A] bg-white shadow-sm' : 'text-[#64748B]'
                         }`}
                     >
                       All ({orders.length})
@@ -1163,24 +1167,29 @@ const AvailableOrders = () =>
 
                     <button
                       onClick={() => setActiveTab('express')}
-                      className={`inline-block flex-shrink-0 min-w-[88px] sm:min-w-[120px] px-3 sm:px-5 py-1 rounded-full text-sm font-normal transition-colors ${activeTab === 'express'
-                        ? 'text-[#00B75A] bg-white shadow-sm'
-                        : 'text-[#64748B]'
+                      className={`inline-block flex-shrink-0 px-4 py-1.5 rounded-full text-sm font-normal transition-colors ${activeTab === 'express' ? 'text-[#00B75A] bg-white shadow-sm' : 'text-[#64748B]'
                         }`}
                     >
                       Express ({expressCount})
                     </button>
+
+                    <button
+                      onClick={() => setActiveTab('smartride')}
+                      className={`inline-block flex-shrink-0 px-4 py-1.5 rounded-full text-sm font-normal transition-colors ${activeTab === 'smartride' ? 'text-[#00D68F] bg-white shadow-sm font-medium' : 'text-[#64748B]'
+                        }`}
+                    >
+                      ⚡ SmartRide ({smartRideCount})
+                    </button>
+
                     <button
                       onClick={() => setActiveTab('nearby')}
-                      className={`inline-block flex-shrink-0 min-w-[88px] sm:min-w-[120px] px-3 sm:px-5 py-1 rounded-full text-sm font-normal transition-colors ${activeTab === 'nearby'
-                        ? 'text-[#00B75A] bg-white shadow-sm'
-                        : 'text-[#64748B]'
+                      className={`inline-block flex-shrink-0 px-4 py-1.5 rounded-full text-sm font-normal transition-colors ${activeTab === 'nearby' ? 'text-[#00B75A] bg-white shadow-sm' : 'text-[#64748B]'
                         }`}
                     >
                       Nearby ({nearbyCount})
                     </button>
-                  </YummyText>
-                </div>
+                  </div>
+                </YummyText>
               </div>
             </div>
 

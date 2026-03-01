@@ -622,7 +622,8 @@ const Earnings = () =>
     }
   };
 
-  const handleResolveAccountName = async () => {
+  const handleResolveAccountName = async () =>
+  {
     const effectiveBankCode = (bankCode === '__other__' ? bankCodeOther : bankCode).trim();
     const num = (bankAccountNumber || '').replace(/\D/g, '');
     if (!effectiveBankCode || num.length < 10) {
@@ -645,7 +646,8 @@ const Earnings = () =>
     }
   };
 
-  const handleSaveBankDetails = async () => {
+  const handleSaveBankDetails = async () =>
+  {
     const effectiveBankCode = (bankCode === '__other__' ? bankCodeOther : bankCode).trim();
     if (!effectiveBankCode || !bankAccountNumber.trim() || !bankAccountName.trim()) {
       setToastMsg('Please select your bank (or enter bank code), account number and account name');
@@ -687,7 +689,8 @@ const Earnings = () =>
     }
   };
 
-  const handleSavePin = async () => {
+  const handleSavePin = async () =>
+  {
     if (!pinNewPin || pinNewPin.length < 4 || pinNewPin.length > 6 || !/^\d+$/.test(pinNewPin)) {
       setToastMsg('New PIN must be 4-6 digits');
       setShowToast(true);
@@ -756,10 +759,18 @@ const Earnings = () =>
     return `₦${num.toLocaleString('en-NG', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
   };
 
-  const todayDeliveries = earnings?.todayDeliveries || earnings?.deliveries || [];
+  // todayDeliveries from backend is now a COUNT (number), not an array of objects
+  const todayDeliveriesCount = typeof earnings?.todayDeliveries === 'number'
+    ? earnings.todayDeliveries
+    : (Array.isArray(earnings?.todayDeliveries) ? earnings.todayDeliveries.length : 0);
 
-  // Use ONLY real weekly data from API - no mock data
-  const weekDeliveries = earnings?.weeklyTrend || earnings?.weeklyDeliveries || [];
+  // weeklyDeliveries count
+  const weeklyDeliveriesCount = typeof earnings?.weeklyDeliveries === 'number'
+    ? earnings.weeklyDeliveries
+    : 0;
+
+  // weeklyTrend is an array of { date, earnings, deliveries } — used for the chart
+  const weeklyTrendData = Array.isArray(earnings?.weeklyTrend) ? earnings.weeklyTrend : [];
 
   // Calculate totals from API data - using actual API response keys
   const todayEarningsRaw = earnings?.todayEarnings || earnings?.todayTotal || earnings?.today || 0;
@@ -783,13 +794,8 @@ const Earnings = () =>
   const nextPayoutDateRaw = nextPayoutObj?.date || nextPayoutObj?.scheduledAt || earnings?.nextPayoutDate || earnings?.upcomingDate || null;
   const nextPayoutDate = nextPayoutDateRaw ? new Date(nextPayoutDateRaw) : null;
 
-  const totalToday = todayDeliveries.reduce((sum, delivery) =>
-  {
-    const raw = typeof delivery.total === 'string' ? delivery.total : String(delivery.total || '0');
-    const cleaned = raw.replace(/[$₦N,\s]/g, '');
-    const parsed = parseFloat(cleaned) || 0;
-    return sum + parsed;
-  }, 0);
+  // totalToday is just todayEarningsRaw (already computed from backend)
+  const totalToday = todayEarningsRaw;
 
   // Show loading state
   if (loading) {
@@ -981,7 +987,7 @@ const Earnings = () =>
               iconBg="bg-green-50"
               title="Today's Earnings"
               value={todayEarnings}
-              subtitle={earnings?.todayChange || `${todayDeliveries.length} deliveries today`}
+              subtitle={earnings?.todayChange || `${todayDeliveriesCount} deliveries today`}
               debtAmount={earnings?.outstandingBalance > 0 ? formatCurrency(earnings.outstandingBalance) : null}
             />
             <StatCard
@@ -1022,28 +1028,28 @@ const Earnings = () =>
 
             {/* Simple Bar Chart */}
             <div className="h-64 flex items-end justify-between gap-2 md:gap-4 px-2 md:px-4">
-              {weekDeliveries.length === 0 ? (
+              {weeklyTrendData.length === 0 ? (
                 <div className="w-full flex items-center justify-center">
                   <div className="text-center">
-                    <p className="text-[#64748B] mb-2">No weekly trend data from API</p>
-                    <p className="text-sm text-[#94A3B8]">Weekly breakdown will appear when the backend provides it. Current total: ₦{(earnings?.totalEarnings || 0).toLocaleString('en-NG')}</p>
+                    <p className="text-[#64748B] mb-2">No weekly trend data yet</p>
+                    <p className="text-sm text-[#94A3B8]">Complete deliveries this week to see your earnings chart. Weekly total: {weeklyEarnings}</p>
                   </div>
                 </div>
               ) : (
-                weekDeliveries.map((day, index) =>
+                weeklyTrendData.map((day, index) =>
                 {
                   // Calculate max earnings from the week for proper scaling
-                  const allEarnings = weekDeliveries.map(d =>
-                  {
-                    const val = typeof d.earnings === 'number' ? d.earnings : parseFloat(String(d.earnings).replace(/[$N,]/g, ''));
-                    return isNaN(val) ? 0 : val;
-                  });
+                  const allEarnings = weeklyTrendData.map(d => Number(d.earnings) || 0);
                   const maxEarnings = Math.max(...allEarnings, 1);
 
-                  const earningsValue = typeof day.earnings === 'number' ? day.earnings : parseFloat(String(day.earnings).replace(/[$N,]/g, ''));
+                  const earningsValue = Number(day.earnings) || 0;
                   const heightPercent = (earningsValue / maxEarnings) * 100;
                   // Ensure minimum 10% height for visibility
                   const height = Math.max(heightPercent, 10);
+                  // Format label: show day abbreviation from date string e.g. '2026-03-01' → 'Sun'
+                  const dayLabel = day.date
+                    ? new Date(day.date + 'T12:00:00').toLocaleDateString('en-NG', { weekday: 'short' })
+                    : `D${index + 1}`;
 
                   return (
                     <div key={index} className="flex-1 flex flex-col items-center justify-end h-full">
@@ -1051,14 +1057,13 @@ const Earnings = () =>
                         <div
                           className="w-full bg-[#00D68F] rounded-t-lg transition-all hover:bg-[#00B876] cursor-pointer relative group"
                           style={{ height: `${height}%`, minHeight: '24px' }}
-                          title={`${day.day}: ₦${earningsValue.toFixed(2)}`}
                         >
                           {/* Tooltip on hover */}
                           <div className="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 px-2 py-1 bg-gray-900 text-white text-xs rounded opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap pointer-events-none">
-                            ₦{earningsValue.toLocaleString('en-NG', { minimumFractionDigits: 0, maximumFractionDigits: 0 })}
+                            {dayLabel}: ₦{earningsValue.toLocaleString('en-NG', { minimumFractionDigits: 0 })}
                           </div>
                         </div>
-                        <div className="text-xs text-[#64748B] mt-2 font-medium">{day.day.slice(0, 3)}</div>
+                        <div className="text-xs text-[#64748B] mt-2 font-medium">{dayLabel}</div>
                       </YummyText>
                     </div>
                   );
@@ -1107,47 +1112,20 @@ const Earnings = () =>
                 {/* Table */}
                 <div className="overflow-x-auto">
                   <div className="max-h-[400px] overflow-y-auto">
-                    {todayDeliveries.length === 0 ? (
+                    {todayDeliveriesCount === 0 ? (
                       <div className="text-center py-12">
-                        <p className="text-[#64748B] mb-2">No detailed delivery data available</p>
-                        <p className="text-sm text-[#94A3B8]">The API doesn't provide today's delivery breakdown yet. Total deliveries: {totalDeliveries}</p>
+                        <p className="text-[#64748B] mb-2">No deliveries completed today</p>
+                        <p className="text-sm text-[#94A3B8]">Your today's delivery breakdown will appear here once you complete a delivery today. All-time total: {totalDeliveries}</p>
                       </div>
                     ) : (
-                      <table className="w-full">
-                        <thead className="sticky top-0 bg-white z-10">
-                          <tr className="border-b border-gray-200">
-                            <th className="text-left py-3 px-4 text-sm font-medium text-[#64748B] bg-white">Order ID</th>
-                            <th className="text-left py-3 px-4 text-sm font-medium text-[#64748B] bg-white">Time</th>
-                            <th className="text-left py-3 px-4 text-sm font-medium text-[#64748B] bg-white">Route</th>
-                            <th className="text-left py-3 px-4 text-sm font-medium text-[#64748B] bg-white">Distance</th>
-                            <th className="text-left py-3 px-4 text-sm font-medium text-[#64748B] bg-white">Base Pay</th>
-                            <th className="text-left py-3 px-4 text-sm font-medium text-[#64748B] bg-white">Tips</th>
-                            <th className="text-right py-3 px-4 text-sm font-medium text-[#64748B] bg-white">Total</th>
-                          </tr>
-                        </thead>
-                        <tbody>
-                          {todayDeliveries.map((delivery, index) => (
-                            <tr key={index} className="border-b border-gray-100 hover:bg-gray-50">
-                              <td className="py-4 px-4 text-sm text-[#0F172A]">{delivery.orderId}</td>
-                              <td className="py-4 px-4 text-sm text-[#64748B]">{delivery.time}</td>
-                              <td className="py-4 px-4 text-sm text-[#0F172A]">
-                                <div className="flex items-center gap-2">
-                                  <span>{delivery.from}</span>
-                                  <IonIcon icon={arrowForward} className="text-[#64748B]" style={{ fontSize: '14px' }} />
-                                  <span>{delivery.to}</span>
-                                </div>
-                              </td>
-                              <td className="py-4 px-4 text-sm text-[#64748B]">{delivery.distance}</td>
-                              <td className="py-4 px-4 text-sm text-[#0F172A]">{delivery.basePay}</td>
-                              <td className="py-4 px-4 text-sm text-[#00D68F] font-medium">{delivery.tips}</td>
-                              <td className="py-4 px-4 text-sm text-[#0F172A] font-medium text-right">{delivery.total}</td>
-                            </tr>
-                          ))}
-                        </tbody>
-                      </table>
+                      <div className="text-center py-12">
+                        <p className="text-[#64748B] font-medium mb-1">{todayDeliveriesCount} {todayDeliveriesCount === 1 ? 'delivery' : 'deliveries'} completed today</p>
+                        <p className="text-2xl font-semibold text-[#00D68F]">{todayEarnings}</p>
+                        <p className="text-sm text-[#94A3B8] mt-1">Total earned today</p>
+                      </div>
                     )}
                   </div>
-                  {todayDeliveries.length > 0 && (
+                  {todayDeliveriesCount > 0 && (
                     <div className="border-t border-gray-200 bg-gray-50 px-4 py-4 flex items-center justify-between">
                       <span className="text-sm font-medium text-[#0F172A]">Total Today</span>
                       <span className="text-xl font-medium text-[#00D68F]">{formatCurrency(totalToday)}</span>
@@ -1174,10 +1152,10 @@ const Earnings = () =>
                 {/* Table */}
                 <div className="overflow-x-auto">
                   <div className="max-h-[400px] overflow-y-auto">
-                    {weekDeliveries.length === 0 ? (
+                    {weeklyTrendData.length === 0 || weeklyDeliveriesCount === 0 ? (
                       <div className="text-center py-12">
-                        <p className="text-[#64748B] mb-2">No weekly breakdown available</p>
-                        <p className="text-sm text-[#94A3B8]">The API will provide day-by-day breakdown soon. Monthly deliveries: {monthlyDeliveries}</p>
+                        <p className="text-[#64748B] mb-2">No deliveries this week yet</p>
+                        <p className="text-sm text-[#94A3B8]">Complete deliveries this week to see your day-by-day breakdown.</p>
                       </div>
                     ) : (
                       <table className="w-full">
@@ -1185,25 +1163,22 @@ const Earnings = () =>
                           <tr className="border-b border-gray-200">
                             <th className="text-left py-3 px-4 text-sm font-medium text-[#64748B] bg-white">Day</th>
                             <th className="text-left py-3 px-4 text-sm font-medium text-[#64748B] bg-white">Deliveries</th>
-                            <th className="text-left py-3 px-4 text-sm font-medium text-[#64748B] bg-white">Base Earnings</th>
-                            <th className="text-left py-3 px-4 text-sm font-medium text-[#64748B] bg-white">Tips</th>
-                            <th className="text-right py-3 px-4 text-sm font-medium text-[#64748B] bg-white">Total</th>
+                            <th className="text-right py-3 px-4 text-sm font-medium text-[#64748B] bg-white">Earnings</th>
                           </tr>
                         </thead>
                         <tbody>
-                          {weekDeliveries.map((day, index) =>
+                          {weeklyTrendData.map((day, index) =>
                           {
-                            const earningsValue = typeof day.earnings === 'number' ? day.earnings : parseFloat(String(day.earnings).replace(/[$N,]/g, ''));
-                            const basePay = earningsValue * 0.85; // Assuming ~85% is base pay
-                            const tips = earningsValue * 0.15; // Assuming ~15% is tips
+                            const earningsValue = Number(day.earnings) || 0;
+                            const dayLabel = day.date
+                              ? new Date(day.date + 'T12:00:00').toLocaleDateString('en-NG', { weekday: 'long', month: 'short', day: 'numeric' })
+                              : `Day ${index + 1}`;
 
                             return (
-                              <tr key={index} className="border-b border-gray-100 hover:bg-gray-50">
-                                <td className="py-4 px-4 text-sm text-[#0F172A]">{day.day}</td>
+                              <tr key={index} className={`border-b border-gray-100 hover:bg-gray-50 ${earningsValue > 0 ? '' : 'opacity-40'}`}>
+                                <td className="py-4 px-4 text-sm text-[#0F172A]">{dayLabel}</td>
                                 <td className="py-4 px-4 text-sm text-[#64748B]">{day.deliveries || 0}</td>
-                                <td className="py-4 px-4 text-sm text-[#0F172A]">₦{basePay.toFixed(2)}</td>
-                                <td className="py-4 px-4 text-sm text-[#00D68F] font-medium">+₦{tips.toFixed(2)}</td>
-                                <td className="py-4 px-4 text-sm text-[#0F172A] font-medium text-right">₦{earningsValue.toFixed(2)}</td>
+                                <td className="py-4 px-4 text-sm text-[#0F172A] font-medium text-right">{formatCurrency(earningsValue)}</td>
                               </tr>
                             );
                           })}
@@ -1211,7 +1186,7 @@ const Earnings = () =>
                       </table>
                     )}
                   </div>
-                  {weekDeliveries.length > 0 && (
+                  {weeklyDeliveriesCount > 0 && (
                     <div className="border-t border-gray-200 bg-gray-50 px-4 py-4 flex items-center justify-between">
                       <span className="text-sm font-medium text-[#0F172A]">Total This Week</span>
                       <span className="text-xl font-medium text-[#00D68F]">{weeklyEarnings}</span>
@@ -1253,7 +1228,8 @@ const Earnings = () =>
                 <div className="mt-4 pt-4 border-t border-gray-200">
                   <div className="text-xs text-[#64748B] mb-1">Current bank account</div>
                   <div className="text-sm text-[#0F172A]">
-                    {(() => {
+                    {(() =>
+                    {
                       const bankName = NIGERIAN_BANKS.find((b) => b.code === bankDetails.bankCode)?.name;
                       return (
                         <>

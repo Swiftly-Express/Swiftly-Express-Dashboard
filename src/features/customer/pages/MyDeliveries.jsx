@@ -171,10 +171,17 @@ const DeliveryCard = ({ delivery, onCancelDelivery }) =>
               <YummyText className="text-base md:text-lg font-medium text-[#0F172A] truncate">
                 {delivery.packageDetails?.description || 'Package'}
               </YummyText>
-              <div className="flex items-center gap-2">
+              <div className="flex items-center gap-2 flex-wrap">
                 <span className={`px-3 py-1 rounded-full text-xs font-medium ${statusStyle.bg} ${statusStyle.color} w-fit`}>
                   {delivery.status || 'Pending'}
                 </span>
+
+                {/* Ride type tag */}
+                {(delivery.deliveryType === 'smart_ride' || delivery.smartRide === true) ? (
+                  <span className="px-2.5 py-1 rounded-full text-xs font-semibold bg-[#00D68F] text-white">⚡ SmartRide</span>
+                ) : (
+                  <span className="px-2.5 py-1 rounded-full text-xs font-normal bg-blue-100 text-blue-700">Express</span>
+                )}
 
                 {/* Payment tag on customer side: show Paid, Cash, or nothing (Make Payment button will show for unpaid online/bank) */}
                 {paymentStatus === 'paid' && (

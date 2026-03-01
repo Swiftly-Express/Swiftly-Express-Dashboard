@@ -190,6 +190,17 @@ const DeliveryDetail = () =>
         socketService.connect();
         socketService.joinRoom(deliveryId);
 
+        // Listen for payment received in real-time
+        const handlePaymentReceived = (data) =>
+        {
+            if (data && (data.deliveryId === deliveryId || data.trackingNumber === delivery?.trackingNumber)) {
+                setDelivery(prev => prev ? { ...prev, paymentStatus: 'paid' } : prev);
+                setToastMsg('💰 Payment received! Payment status updated.');
+                setShowToast(true);
+            }
+        };
+        socketService.on('payment:received', handlePaymentReceived);
+
         if (navigator.geolocation) {
             const watchId = navigator.geolocation.watchPosition(
                 (pos) =>
@@ -204,10 +215,15 @@ const DeliveryDetail = () =>
             return () =>
             {
                 navigator.geolocation.clearWatch(watchId);
+                socketService.off('payment:received', handlePaymentReceived);
                 socketService.leaveRoom(deliveryId);
             };
         }
-        return () => socketService.leaveRoom(deliveryId);
+        return () =>
+        {
+            socketService.off('payment:received', handlePaymentReceived);
+            socketService.leaveRoom(deliveryId);
+        };
     }, [delivery, deliveryId]);
 
     // ── Status update ─────────────────────────────────────────────────────────
@@ -322,15 +338,32 @@ const DeliveryDetail = () =>
                                     <div className="text-sm text-[#64748B] mt-0.5">{packageId}</div>
                                 </div>
                                 {delivery && (
-                                    <div className="flex items-center gap-2">
+                                    <div className="flex items-center gap-2 flex-wrap">
+                                        {/* Delivery status */}
                                         <span className={`px-3 py-1 rounded-full text-xs font-medium ${getStatusColor(delivery.status)}`}>
                                             {statusStr}
                                         </span>
-                                        {paymentStatus === 'paid' && (
-                                            <span className="px-2 py-0.5 rounded-full text-xs bg-green-100 text-green-700">Paid</span>
-                                        )}
-                                        {paymentStatus !== 'paid' && isCash && (
-                                            <span className="px-2 py-0.5 rounded-full text-xs bg-white text-green-600 border border-green-300">Cash</span>
+
+                                        {/* Payment status badge */}
+                                        {paymentStatus === 'paid' ? (
+                                            <span className="flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-medium bg-green-100 text-green-700">
+                                                <svg width="10" height="10" viewBox="0 0 12 12" fill="none">
+                                                    <path d="M2 6l3 3 5-5" stroke="#15803d" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+                                                </svg>
+                                                Paid
+                                            </span>
+                                        ) : isCash ? (
+                                            <span className="flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-medium bg-gray-100 text-gray-600 border border-gray-200">
+                                                Cash on Delivery
+                                            </span>
+                                        ) : (
+                                            <span className="flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-medium bg-amber-100 text-amber-700">
+                                                <svg width="10" height="10" viewBox="0 0 12 12" fill="none">
+                                                    <circle cx="6" cy="6" r="5" stroke="#b45309" strokeWidth="1.5" />
+                                                    <path d="M6 3.5v3M6 8v.5" stroke="#b45309" strokeWidth="1.5" strokeLinecap="round" />
+                                                </svg>
+                                                Not Paid
+                                            </span>
                                         )}
                                     </div>
                                 )}
@@ -356,8 +389,8 @@ const DeliveryDetail = () =>
                                 <div className="bg-gradient-to-r from-[#00B75A] to-[#00D68F] rounded-2xl p-4 text-white" style={sideBottomShadow}>
                                     <YummyText>
                                         <div className="text-xs opacity-80 mb-1">Your Earnings</div>
-                                        <div className="text-2xl font-semibold">₦{Number(delivery.earningsBreakdown.driverEarnings || 0).toLocaleString()}</div>
-                                        <div className="text-xs opacity-70 mt-0.5">of ₦{Number(delivery.earningsBreakdown.deliveryTotal || 0).toLocaleString()} total</div>
+                                        <div className="text-2xl font-semibold">₦{Number(delivery.earningsBreakdown.driverEarnings || 0).toLocaleString('en-NG', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</div>
+                                        <div className="text-xs opacity-70 mt-0.5">of ₦{Number(delivery.earningsBreakdown.deliveryTotal || 0).toLocaleString('en-NG', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} total</div>
                                     </YummyText>
                                 </div>
                             )}
@@ -519,6 +552,88 @@ const DeliveryDetail = () =>
                                                 {delivery.specialInstructions || delivery.notes || delivery.packageDetails?.description || '—'}
                                             </div>
                                         </div>
+                                    </div>
+                                </YummyText>
+                            </div>
+
+                            {/* ── Payment Details ── */}
+                            <div className="bg-white rounded-2xl p-5" style={sideBottomShadow}>
+                                <YummyText>
+                                    <div className="text-sm font-medium text-[#0F172A] mb-4">Payment</div>
+                                    <div className="space-y-3">
+                                        {/* Amount */}
+                                        <div className="flex justify-between items-center">
+                                            <span className="text-xs text-[#64748B]">Amount</span>
+                                            <span className="text-sm font-semibold text-[#0F172A]">
+                                                ₦{Number(delivery.price ?? delivery.total ?? 0).toLocaleString('en-NG', { minimumFractionDigits: 2 })}
+                                            </span>
+                                        </div>
+                                        <div className="border-t border-gray-100" />
+
+                                        {/* Your earnings */}
+                                        {(delivery.riderEarnings != null || delivery.earningsBreakdown?.driverEarnings != null) && (
+                                            <>
+                                                <div className="flex justify-between items-center">
+                                                    <span className="text-xs text-[#64748B]">Your Earnings</span>
+                                                    <span className="text-sm font-semibold text-[#00B75A]">
+                                                        ₦{Number(delivery.riderEarnings ?? delivery.earningsBreakdown?.driverEarnings ?? 0).toLocaleString('en-NG', { minimumFractionDigits: 2 })}
+                                                    </span>
+                                                </div>
+                                                <div className="border-t border-gray-100" />
+                                            </>
+                                        )}
+
+                                        {/* Method */}
+                                        <div className="flex justify-between items-center">
+                                            <span className="text-xs text-[#64748B]">Method</span>
+                                            <span className="text-sm font-medium text-[#0F172A] capitalize">
+                                                {(delivery.paymentMethod || delivery.payment?.method || 'Not specified').replace(/_/g, ' ')}
+                                            </span>
+                                        </div>
+                                        <div className="border-t border-gray-100" />
+
+                                        {/* Status */}
+                                        <div className="flex justify-between items-center">
+                                            <span className="text-xs text-[#64748B]">Payment Status</span>
+                                            {paymentStatus === 'paid' ? (
+                                                <span className="flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-medium bg-green-100 text-green-700">
+                                                    <svg width="10" height="10" viewBox="0 0 12 12" fill="none">
+                                                        <path d="M2 6l3 3 5-5" stroke="#15803d" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+                                                    </svg>
+                                                    Paid
+                                                </span>
+                                            ) : isCash ? (
+                                                <span className="px-3 py-1 rounded-full text-xs font-medium bg-gray-100 text-gray-600">
+                                                    Cash on Delivery
+                                                </span>
+                                            ) : paymentStatus === 'failed' ? (
+                                                <span className="flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-medium bg-red-100 text-red-600">
+                                                    Payment Failed
+                                                </span>
+                                            ) : (
+                                                <span className="flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-medium bg-amber-100 text-amber-700">
+                                                    <svg width="10" height="10" viewBox="0 0 12 12" fill="none">
+                                                        <circle cx="6" cy="6" r="5" stroke="#b45309" strokeWidth="1.5" />
+                                                        <path d="M6 3.5v3M6 8v.5" stroke="#b45309" strokeWidth="1.5" strokeLinecap="round" />
+                                                    </svg>
+                                                    Not Paid Yet
+                                                </span>
+                                            )}
+                                        </div>
+
+                                        {/* Cash note for driver */}
+                                        {isCash && paymentStatus !== 'paid' && (
+                                            <div className="mt-2 p-3 bg-blue-50 rounded-xl">
+                                                <p className="text-xs text-blue-700 font-medium">💵 Collect payment in cash upon delivery</p>
+                                            </div>
+                                        )}
+
+                                        {/* Awaiting note for online payment */}
+                                        {!isCash && paymentStatus !== 'paid' && paymentStatus !== 'failed' && (
+                                            <div className="mt-2 p-3 bg-amber-50 rounded-xl">
+                                                <p className="text-xs text-amber-700 font-medium">⏳ Awaiting customer payment — you'll be notified when paid</p>
+                                            </div>
+                                        )}
                                     </div>
                                 </YummyText>
                             </div>

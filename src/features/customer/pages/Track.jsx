@@ -249,9 +249,20 @@ const Track = () =>
         }
       };
 
+      const handlePaymentConfirmed = (data) =>
+      {
+        console.log('[Track] 💳 payment:confirmed socket event:', data);
+        if (data && (data.deliveryId === deliveryId || data.trackingNumber === deliveryData?.trackingNumber)) {
+          setDeliveryData(prev => (prev ? { ...prev, paymentStatus: 'paid' } : prev));
+          setToastMsg('✅ Payment confirmed! Delivery is now in progress.');
+          setShowToast(true);
+        }
+      };
+
       socketService.on('delivery:location:updated', handleLocationUpdate);
       socketService.on('delivery:statusChanged', handleStatusUpdate);
       socketService.on('delivery:updated', handleStatusUpdate);
+      socketService.on('payment:confirmed', handlePaymentConfirmed);
 
       // Initialize driver location from deliveryData: prefer currentLocation, then estimatedRiderLocation
       if (deliveryData.currentLocation) {
@@ -276,6 +287,7 @@ const Track = () =>
         socketService.off('delivery:location:updated', handleLocationUpdate);
         socketService.off('delivery:statusChanged', handleStatusUpdate);
         socketService.off('delivery:updated', handleStatusUpdate);
+        socketService.off('payment:confirmed', handlePaymentConfirmed);
       };
     }
 

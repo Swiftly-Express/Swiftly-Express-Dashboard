@@ -265,6 +265,42 @@ const ActiveDeliveries = () =>
     };
   }, [showChatModal, selectedDeliveryForChat]);
 
+  // Listen for payment:received and earnings:updated socket events
+  useEffect(() =>
+  {
+    const handlePaymentReceived = (data) =>
+    {
+      console.log('[ActiveDeliveries] 💰 payment:received event:', data);
+      setToastMsg(`Payment received for delivery ${data.trackingNumber || ''}! Your earnings have been updated.`);
+      setShowToast(true);
+      fetchActiveDeliveries(); // Refresh to show updated payment status
+    };
+
+    const handleEarningsUpdated = (data) =>
+    {
+      console.log('[ActiveDeliveries] 📊 earnings:updated event:', data);
+      setToastMsg(`Delivery ${data.trackingNumber || ''} completed! Earnings have been credited.`);
+      setShowToast(true);
+      fetchActiveDeliveries();
+    };
+
+    try {
+      socketService.connect();
+      socketService.on('payment:received', handlePaymentReceived);
+      socketService.on('earnings:updated', handleEarningsUpdated);
+    } catch (e) {
+      console.warn('[ActiveDeliveries] Failed to set up payment/earnings listeners:', e);
+    }
+
+    return () =>
+    {
+      try {
+        socketService.off('payment:received', handlePaymentReceived);
+        socketService.off('earnings:updated', handleEarningsUpdated);
+      } catch (e) { }
+    };
+  }, []);
+
   // Fetch rider's active deliveries on mount
   useEffect(() =>
   {
@@ -445,103 +481,49 @@ const ActiveDeliveries = () =>
         status: newStatus
       };
 
-      // Get rider's current location (REQUIRED by backend)
-      if (navigator.geolocation) {
-        console.log('[ActiveDeliveries] 🔍 Requesting location...');
-        console.log('[ActiveDeliveries] URL protocol:', window.location.protocol);
-        console.log('[ActiveDeliveries] Secure context:', window.isSecureContext);
+      // Get rider's current location — ONLY required for 'in-transit' status
+      // For 'picked-up' and 'delivered', we skip GPS to allow instant status updates
+      if (newStatus === 'in-transit' && navigator.geolocation) {
+        console.log('[ActiveDeliveries] 🔍 Requesting location for in-transit...');
 
         let position = null;
         let lastError = null;
 
-        // Attempt 1: High accuracy (GPS when available) for better position
+        // Single attempt with a reasonable timeout
         try {
-          console.log('[ActiveDeliveries] Attempt 1: High-accuracy request...');
           position = await new Promise((resolve, reject) =>
           {
             navigator.geolocation.getCurrentPosition(
               resolve,
               reject,
               {
-                enableHighAccuracy: true,
-                timeout: 15000,
-                maximumAge: 0
+                enableHighAccuracy: false,   // Network-based is fine and much faster
+                timeout: 8000,               // 8 seconds max
+                maximumAge: 30000            // Accept a cached position up to 30s old
               }
             );
           });
-          console.log('[ActiveDeliveries] ✅ Attempt 1 succeeded');
+          console.log('[ActiveDeliveries] ✅ Location obtained:', position.coords);
         } catch (err) {
-          console.log('[ActiveDeliveries] ❌ Attempt 1 failed:', err);
+          console.log('[ActiveDeliveries] ⚠️ Location unavailable, proceeding without it:', err);
           lastError = err;
         }
 
-        // Attempt 2: Longer timeout, still prefer fresh position
-        if (!position) {
-          try {
-            console.log('[ActiveDeliveries] Attempt 2: Longer timeout...');
-            position = await new Promise((resolve, reject) =>
-            {
-              navigator.geolocation.getCurrentPosition(
-                resolve,
-                reject,
-                {
-                  enableHighAccuracy: true,
-                  timeout: 25000,
-                  maximumAge: 5000
-                }
-              );
-            });
-            console.log('[ActiveDeliveries] ✅ Attempt 2 succeeded');
-          } catch (err) {
-            console.log('[ActiveDeliveries] ❌ Attempt 2 failed:', err);
-            lastError = err;
-          }
-        }
-
-        // Attempt 3: Minimal options
-        if (!position) {
-          try {
-            console.log('[ActiveDeliveries] Attempt 3: Minimal options...');
-            position = await new Promise((resolve, reject) =>
-            {
-              navigator.geolocation.getCurrentPosition(resolve, reject);
-            });
-            console.log('[ActiveDeliveries] ✅ Attempt 3 succeeded');
-          } catch (err) {
-            console.log('[ActiveDeliveries] ❌ Attempt 3 failed:', err);
-            lastError = err;
-          }
-        }
-
-        if (!position) {
-          console.error('[ActiveDeliveries] All location attempts failed:', lastError);
-
-          // Detailed troubleshooting message
-          if (lastError.code === 1) {
-            setToastMsg('Location denied, please enable location and Turn off VPN if active');
-          } else if (lastError.code === 2) {
-            setToastMsg('Device location unavailable.');
-          } else if (lastError.code === 3) {
-            setToastMsg('Location timeout ');
+        if (position) {
+          statusUpdate.currentLocation = {
+            lat: position.coords.latitude,
+            lng: position.coords.longitude
+          };
+        } else {
+          // Location failed but we won't block the status update for in-transit either
+          // Just warn the rider
+          if (lastError?.code === 1) {
+            setToastMsg('Location denied — status updated without location tracking.');
           } else {
-            setToastMsg('Location error. Try: page Refresh, or use different browser');
+            setToastMsg('Location unavailable — status updated without location tracking.');
           }
-
           setShowToast(true);
-          setUpdatingStatus(null);
-          return;
         }
-
-        statusUpdate.currentLocation = {
-          lat: position.coords.latitude,
-          lng: position.coords.longitude
-        };
-        console.log('[ActiveDeliveries] ✅ Location obtained:', statusUpdate.currentLocation);
-      } else {
-        setToastMsg('Geolocation not supported by your browser');
-        setShowToast(true);
-        setUpdatingStatus(null);
-        return;
       }
 
       const response = await updateDeliveryStatus(deliveryId, statusUpdate);
@@ -855,7 +837,11 @@ const ActiveDeliveries = () =>
                     statusColor={getStatusColor(delivery.status)}
                     distance={stats[delivery._id || delivery.id]?.distance || (delivery.distance ? `${delivery.distance} km` : (delivery.distanceInKm ? `${delivery.distanceInKm} km` : 'N/A'))}
                     time={stats[delivery._id || delivery.id]?.duration ? `${stats[delivery._id || delivery.id]?.duration}` : (delivery.estimatedTime || delivery.estimatedDuration || (delivery.estimatedTimeMinutes ? `${delivery.estimatedTimeMinutes} min` : 'Est. N/A'))}
-                    price={delivery.amount ? `₦${Number(delivery.amount).toFixed(2)}` : (delivery.price ? `₦${Number(delivery.price).toFixed(2)}` : '₦0.00')}
+                    price={(() =>
+                    {
+                      const amount = Number(delivery.amount || delivery.price || 0);
+                      return `₦${amount.toLocaleString('en-NG', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+                    })()}
                     pickupName={delivery.pickup?.name || delivery.pickupName || delivery.senderName || 'Pickup Location'}
                     pickupAddress={pickupAddressText}
                     pickupPhone={pickupPhone}
@@ -877,6 +863,7 @@ const ActiveDeliveries = () =>
                     deliveryId={delivery._id || delivery.id}
                     onRouteStats={handleRouteStats}
                     paymentStatus={((delivery.paymentStatus || delivery.payment?.status) || '').toLowerCase()}
+                    deliveryType={delivery.deliveryType || (delivery.smartRide ? 'smart_ride' : 'express')}
                     deliveryRaw={delivery}
                     unreadCounts={unreadCounts}
                     setShowChatModal={setShowChatModal}
@@ -1047,6 +1034,7 @@ const DeliveryCard = ({
   deliveryId,
   onRouteStats,
   paymentStatus,
+  deliveryType,
   deliveryRaw,
   unreadCounts = {},
   setShowChatModal,
@@ -1094,10 +1082,16 @@ const DeliveryCard = ({
               <div className={isMobile ? "text-xl font-semibold text-[#00D68F]" : "text-2xl font-normal text-[#00D68F]"}>
                 {price}
               </div>
-              <div className="flex items-center gap-2 mt-1">
+              <div className="flex items-center gap-2 mt-1 flex-wrap">
                 <span className={`px-2 py-0.5 rounded-full text-xs font-normal ${statusColor}`}>
                   {status}
                 </span>
+                {/* Ride type tag */}
+                {(deliveryType === 'smart_ride') ? (
+                  <span className="px-2.5 py-0.5 rounded-full text-xs font-semibold bg-[#00D68F] text-white">⚡ SmartRide</span>
+                ) : (
+                  <span className="px-2.5 py-0.5 rounded-full text-xs font-normal bg-blue-100 text-blue-700">Express</span>
+                )}
                 {/* Payment tag: show Paid, Yet to pay (for online/bank unpaid), or Cash (for COD) */}
                 {paymentStatus === 'paid' && (
                   <span className="px-2 py-0.5 rounded-full text-xs font-normal bg-green-100 text-green-700">Paid</span>
@@ -1122,8 +1116,8 @@ const DeliveryCard = ({
             <div className="mt-2 pt-2 border-t border-[#00D68F]/20">
               <div className="text-xs text-[#64748B]">Earnings</div>
               <div className="flex flex-wrap gap-3 text-sm">
-                <span className="text-[#0F172A]">Your earnings: <strong className="text-[#00D68F]">₦{Number(deliveryRaw.earningsBreakdown.driverEarnings || 0).toLocaleString()}</strong></span>
-                <span className="text-[#64748B]">Total: ₦{Number(deliveryRaw.earningsBreakdown.deliveryTotal || 0).toLocaleString()}</span>
+                <span className="text-[#0F172A]">Your earnings: <strong className="text-[#00D68F]">₦{Number(deliveryRaw.earningsBreakdown.driverEarnings || 0).toLocaleString('en-NG', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</strong></span>
+                <span className="text-[#64748B]">Total: ₦{Number(deliveryRaw.earningsBreakdown.deliveryTotal || 0).toLocaleString('en-NG', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
               </div>
             </div>
           )}
