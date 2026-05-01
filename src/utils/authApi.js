@@ -8,7 +8,8 @@ import {
 } from "./cookies";
 
 const BASE_URL =
-  import.meta.env.VITE_API_BASE_URL || "https://api.swiftlyxpress.com";
+  import.meta.env.VITE_API_BASE_URL ||
+  "https://wise-grub-formally.ngrok-free.app";
 
 const apiClient = axios.create({
   baseURL: BASE_URL,

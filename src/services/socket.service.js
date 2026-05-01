@@ -5,7 +5,8 @@ class SocketService {
   constructor() {
     this.socket = null;
     this.baseURL =
-      import.meta.env.VITE_API_BASE_URL || "https://api.swiftlyxpress.com";
+      import.meta.env.VITE_API_BASE_URL ||
+      "https://wise-grub-formally.ngrok-free.app";
   }
 
   getAuthToken() {
