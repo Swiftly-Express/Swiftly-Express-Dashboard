@@ -12,6 +12,7 @@
   ],
   
   "env": {
-    "VITE_API_BASE_URL": "https://api.swiftlyxpress.com"
+    "VITE_API_BASE_URL_1": "https://api.swiftlyxpress.com",
+        "VITE_API_BASE_URL": "https://wise-grub-formally.ngrok-free.app"
   }
 }

@@ -402,7 +402,7 @@ const AuthCallback = () => {
                 addLog('🔐 CODE EXCHANGE FLOW - Have authorization code, will exchange for tokens');
                 setStatus('Connecting to server...');
 
-                const rawBase = import.meta.env.VITE_API_BASE_URL || 'https://api.swiftlyxpress.com';
+                const rawBase = import.meta.env.VITE_API_BASE_URL || 'https://wise-grub-formally.ngrok-free.app';
                 addLog('🌐 Raw API base URL from env', rawBase);
 
                 const base = (typeof window !== 'undefined' && rawBase.startsWith('/'))
