@@ -20,7 +20,7 @@ import "./theme/variable.css";
 import ErrorBoundary from "./components/ErrorBoundary";
 import { DeliveryProvider } from "./contexts/DeliveryContext";
 
-/* Public pages have been archived and removed from active routes */
+import LandingPage from "./components/LandingPage";
 
 /* Auth pages */
 import RoleSelect from "./features/auth/pages/RoleSelect";
@@ -294,7 +294,7 @@ const App = () =>
               </Route>
 
               <Route exact path="/">
-                <Redirect to="/auth/role-select" />
+                <LandingPage />
               </Route>
             </IonRouterOutlet>
           </ErrorBoundary>
